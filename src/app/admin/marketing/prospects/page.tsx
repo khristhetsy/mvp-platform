@@ -55,7 +55,7 @@ export default async function ProspectsPage({ searchParams }: Props) {
                 content: (
                   <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, padding: 16, boxShadow: "0 1px 3px rgb(12 35 64 / 0.06)" }}>
                     <h3 style={{ fontSize: 13, fontWeight: 800, marginBottom: 4 }}>Verified &amp; corrected</h3>
-                    <p style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Emails checked, gaps enriched where possible, phones flagged for consent. When you&rsquo;re happy with the list, move on to score how to approach it.</p>
+                    <p style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Emails checked at the domain level (the mailbox itself isn&rsquo;t confirmed). Missing details are only saved once you accept a suggestion, and guessed emails stay held back from sends. When you&rsquo;re happy with the list, move on to score how to approach it.</p>
                   </div>
                 ),
               },

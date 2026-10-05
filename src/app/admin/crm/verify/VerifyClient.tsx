@@ -4,7 +4,8 @@ import type { VerifyStats } from "@/lib/verify/store";
 
 export function VerifyClient({ stats, searchReady }: { stats: VerifyStats; searchReady: boolean }) {
   const cards = [
-    { label: "Valid", value: stats.valid, color: "#0F6E56" },
+    // "valid" only means the domain accepts mail: the mailbox itself is not confirmed.
+    { label: "Domain OK", value: stats.valid, color: "#0F6E56" },
     { label: "Risky", value: stats.risky, color: "#92400E" },
     { label: "Invalid", value: stats.invalid, color: "#B91C1C" },
     { label: "Unverified", value: stats.unverified, color: "#475569" },
@@ -33,7 +34,7 @@ export function VerifyClient({ stats, searchReady }: { stats: VerifyStats; searc
       </section>
 
       <p className="text-[11px] leading-relaxed text-slate-500">
-        Note: true mailbox verification needs port 25, which serverless blocks — the free tier confirms domain deliverability (MX) and flags role/invalid addresses. Pattern-inferred addresses stay risky and are never cold-sent until a provider confirms them.
+        Note: true mailbox verification needs port 25, which serverless blocks. &ldquo;Domain OK&rdquo; means the company&apos;s domain accepts mail; it does not confirm the person&apos;s mailbox exists. Company inboxes (info@, contact@) and invalid addresses are flagged. Pattern-guessed addresses stay risky and are held back from every send.
       </p>
     </div>
   );

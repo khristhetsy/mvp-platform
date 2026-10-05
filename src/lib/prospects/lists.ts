@@ -5,6 +5,7 @@
 
 import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
 import { splitName } from "@/lib/contacts/types";
+import { NOT_GUESSED_FILTER } from "@/lib/marketing/sendable";
 
 export interface ProspectFilters {
   side?: string;        // founder | investor
@@ -96,6 +97,8 @@ export async function saveMatchesToList(
   let added = 0;
   for (let offset = 0; offset < SAVE_CAP; offset += PAGE) {
     const { data } = await applyFilters(db.from("crm_contacts").select("id, name, email, company"), f)
+      // Pattern-guessed addresses never go on a send list (spec D7).
+      .or(NOT_GUESSED_FILTER)
       .order("lead_prescore", { ascending: false, nullsFirst: false })
       .range(offset, offset + PAGE - 1);
     const rows = (data ?? []) as Array<{ email: string | null; name: string | null; company: string | null }>;

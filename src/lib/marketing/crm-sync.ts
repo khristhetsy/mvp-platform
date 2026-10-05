@@ -3,6 +3,7 @@
 // re-running is safe, additive, and cleans up bad values. Batched for the ~22K set.
 
 import { marketingDb } from "@/lib/marketing/db";
+import { NOT_GUESSED_FILTER } from "@/lib/marketing/sendable";
 
 function splitName(name: string | null): { first: string; last: string } {
   const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
@@ -25,6 +26,8 @@ export async function syncCrmToMarketing(offset: number, limit = 500): Promise<C
     .select("name, email, company, raw", { count: "exact" })
     .eq("source", "odoo")
     .not("email", "is", null)
+    // Pattern-guessed addresses never reach the send list (spec D7).
+    .or(NOT_GUESSED_FILTER)
     .order("synced_at", { ascending: false })
     .range(offset, offset + limit - 1);
 

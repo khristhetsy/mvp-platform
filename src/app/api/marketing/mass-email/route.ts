@@ -134,15 +134,18 @@ export async function POST(req: NextRequest): Promise<Response> {
 
   if (crmIds.length === 0) return NextResponse.json({ error: "No contacts in the selection." }, { status: 400 });
 
-  const { recipients, skippedNoEmail } = await crmIdsToMarketingContacts(crmIds);
-  if (recipients.length === 0) return NextResponse.json({ error: "None of the selected contacts have an email address." }, { status: 400 });
+  const { recipients, skippedNoEmail, skippedGuess } = await crmIdsToMarketingContacts(crmIds);
+  if (recipients.length === 0) {
+    const why = skippedGuess > 0 ? "None of the selected contacts have a confirmed email address (guessed addresses are held back)." : "None of the selected contacts have an email address.";
+    return NextResponse.json({ error: why }, { status: 400 });
+  }
 
   // ── SEQUENCE: enroll the selection ─────────────────────────────────────────
   if (d.action === "sequence") {
     if (!d.sequenceId) return NextResponse.json({ error: "Pick a sequence." }, { status: 400 });
     const listId = await createHiddenList(recipients.map((r) => r.id), `(Sequence) ${new Date().toISOString().slice(0, 10)}`);
     const { enrolled } = await enrollList(d.sequenceId, listId);
-    return NextResponse.json({ ok: true, enrolled, skippedNoEmail });
+    return NextResponse.json({ ok: true, enrolled, skippedNoEmail, skippedGuess });
   }
 
   // ── SEND ───────────────────────────────────────────────────────────────────
@@ -165,7 +168,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     // Log to the sales timeline so the send shows on each contact + their open opps.
     const gmailEmails = recipients.map((rc) => rc.email);
     after(() => logOutboundEmailActivity(gmailEmails, subject || "(no subject)", profile.id, 1000));
-    return NextResponse.json({ ok: true, channel: "gmail", sent, skipped, failed, skippedNoEmail });
+    return NextResponse.json({ ok: true, channel: "gmail", sent, skipped, failed, skippedNoEmail, skippedGuess });
   }
 
   // iCapOS: hidden list + campaign + sendCampaign (full tracking + analytics).
@@ -187,7 +190,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     // Log to the sales timeline so the send shows on each contact + their open opps.
     const icaposEmails = recipients.map((r) => r.email);
     after(() => logOutboundEmailActivity(icaposEmails, subject || "(no subject)", profile.id, 1000));
-    return NextResponse.json({ ok: true, channel: "icapos", campaignId: campaign.id, ...result, skippedNoEmail });
+    return NextResponse.json({ ok: true, channel: "icapos", campaignId: campaign.id, ...result, skippedNoEmail, skippedGuess });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "Send failed." }, { status: 400 });
   }

@@ -12,6 +12,7 @@ import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
 import { resolveContactIds } from "@/lib/sales/bulk-targets";
+import { isUnconfirmedGuess } from "@/lib/marketing/sendable";
 
 export const dynamic = "force-dynamic";
 
@@ -62,27 +63,30 @@ export async function POST(req: NextRequest): Promise<Response> {
   if (crmIds.length === 0) return NextResponse.json({ error: "No contacts selected." }, { status: 400 });
 
   // 2. Pull email/name/company for those contacts (chunked to stay under URL limits).
-  type CrmRow = { id: string; name: string | null; email: string | null; company: string | null };
+  type CrmRow = { id: string; name: string | null; email: string | null; company: string | null; email_source: string | null };
   const crmRows: CrmRow[] = [];
   for (let i = 0; i < crmIds.length; i += 500) {
     const chunk = crmIds.slice(i, i + 500);
-    const { data } = await db.from("crm_contacts").select("id, name, email, company").in("id", chunk);
+    const { data } = await db.from("crm_contacts").select("id, name, email, company, email_source").in("id", chunk);
     crmRows.push(...((data ?? []) as CrmRow[]));
   }
 
   // 3. Upsert the marketing_contacts mirror (dedupe by email; skip contacts with none).
   const byEmail = new Map<string, { email: string; first_name: string | null; last_name: string | null; company: string | null; source: string }>();
   let skippedNoEmail = 0;
+  let skippedGuess = 0;
   for (const r of crmRows) {
     const email = (r.email ?? "").trim().toLowerCase();
     if (!email) { skippedNoEmail++; continue; }
+    // Pattern-guessed addresses never go on a send list (spec D7).
+    if (isUnconfirmedGuess(r)) { skippedGuess++; continue; }
     if (byEmail.has(email)) continue;
     const { first, last } = splitName(r.name ?? "");
     byEmail.set(email, { email, first_name: first, last_name: last, company: r.company ?? null, source: "crm" });
   }
   const mirrorRows = [...byEmail.values()];
   if (mirrorRows.length === 0) {
-    return NextResponse.json({ error: "None of the selected contacts have an email address — they can't be added to a marketing list." }, { status: 400 });
+    return NextResponse.json({ error: skippedGuess > 0 ? "None of the selected contacts have a confirmed email address (guessed addresses are held back), so they can't be added to a marketing list." : "None of the selected contacts have an email address — they can't be added to a marketing list." }, { status: 400 });
   }
 
   const { data: upserted, error: upErr } = await db
@@ -115,5 +119,5 @@ export async function POST(req: NextRequest): Promise<Response> {
   const { error: memErr } = await db.from("marketing_list_contacts").upsert(memberships, { onConflict: "list_id,contact_id" });
   if (memErr) return NextResponse.json({ error: memErr.message }, { status: 500 });
 
-  return NextResponse.json({ ok: true, listId, listName, created, added: contactIds.length, skippedNoEmail });
+  return NextResponse.json({ ok: true, listId, listName, created, added: contactIds.length, skippedNoEmail, skippedGuess });
 }

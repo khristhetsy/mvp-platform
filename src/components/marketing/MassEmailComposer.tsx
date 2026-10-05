@@ -157,7 +157,7 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
       const j = await r.json();
       if (!r.ok) { setMsg(j.error ?? "Send failed."); return; }
       onSent?.(j.sent ?? 0);
-      setResult(`Sent ${j.sent ?? 0}${j.failed ? `, ${j.failed} failed` : ""}${j.skipped ? `, ${j.skipped} skipped` : ""}${j.skippedNoEmail ? `, ${j.skippedNoEmail} no-email` : ""}.`);
+      setResult(`Sent ${j.sent ?? 0}${j.failed ? `, ${j.failed} failed` : ""}${j.skipped ? `, ${j.skipped} skipped` : ""}${j.skippedNoEmail ? `, ${j.skippedNoEmail} no-email` : ""}${j.skippedGuess ? `, ${j.skippedGuess} held back (guessed email)` : ""}.`);
     } finally { setBusy(false); }
   }
   async function doEnroll() {
@@ -167,7 +167,7 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
       const r = await post({ action: "sequence", sequenceId });
       const j = await r.json();
       if (!r.ok) { setMsg(j.error ?? "Enroll failed."); return; }
-      setResult(`Enrolled ${j.enrolled ?? 0} contact${j.enrolled === 1 ? "" : "s"}${j.skippedNoEmail ? `, ${j.skippedNoEmail} no-email` : ""}.`);
+      setResult(`Enrolled ${j.enrolled ?? 0} contact${j.enrolled === 1 ? "" : "s"}${j.skippedNoEmail ? `, ${j.skippedNoEmail} no-email` : ""}${j.skippedGuess ? `, ${j.skippedGuess} held back (guessed email)` : ""}.`);
     } finally { setBusy(false); }
   }
 

@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>iCapOS Contact Finder Mockups</title>
+<style>
+:root{
+  --bg:#f5f6f8; --panel:#ffffff; --ink:#14171f; --muted:#5d6472; --line:#e3e6eb;
+  --brand:#1f4fd8; --brand-soft:#e8eefc; --ok:#13814b; --ok-soft:#e5f5ec;
+  --warn:#a35f00; --warn-soft:#fdf1df; --bad:#b42318; --bad-soft:#fdeceb;
+  --radius:10px; --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#0f1115;--panel:#171a21;--ink:#e8eaee;--muted:#9aa1ad;--line:#2a2f3a;
+  --brand:#6f94ff;--brand-soft:#1c2540;--ok:#4cc38a;--ok-soft:#14291f;--warn:#f0b35a;--warn-soft:#2e2414;--bad:#ff7a6e;--bad-soft:#331a18;}
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font);background:var(--bg);color:var(--ink);font-size:14px;line-height:1.45}
+header{background:var(--panel);border-bottom:1px solid var(--line);padding:12px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:5}
+.logo{font-weight:700;font-size:16px}
+.logo span{color:var(--brand)}
+.credits{margin-left:auto;font-size:12px;color:var(--muted)}
+nav{display:flex;gap:4px;overflow-x:auto;padding:8px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+nav button{border:0;background:none;color:var(--muted);padding:8px 12px;border-radius:8px;font:inherit;white-space:nowrap;cursor:pointer}
+nav button.active{background:var(--brand-soft);color:var(--brand);font-weight:600}
+main{max-width:1100px;margin:0 auto;padding:16px}
+.screen{display:none}
+.screen.active{display:block}
+.note{font-size:12px;color:var(--muted);margin:0 0 12px}
+h1{font-size:20px;margin:4px 0 4px}
+h2{font-size:15px;margin:0 0 10px}
+.grid{display:grid;gap:12px}
+.g4{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+.g2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+.kpi .label{color:var(--muted);font-size:12px}
+.kpi .val{font-size:24px;font-weight:700;margin-top:4px}
+.kpi .sub{font-size:12px;color:var(--muted)}
+label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px}
+input,select,textarea{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row > *{flex:1 1 160px}
+.btn{display:inline-block;border:0;border-radius:8px;padding:9px 14px;font:inherit;font-weight:600;cursor:pointer;background:var(--brand);color:#fff}
+.btn.ghost{background:transparent;color:var(--brand);border:1px solid var(--line)}
+.btn.sm{padding:5px 10px;font-size:12px}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--muted);font-weight:600;font-size:12px}
+.pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}
+.pill.info{background:var(--brand-soft);color:var(--brand)}
+.bar{height:8px;background:var(--line);border-radius:999px;overflow:hidden}
+.bar > div{height:100%;background:var(--brand)}
+.drop{border:2px dashed var(--line);border-radius:var(--radius);padding:28px;text-align:center;color:var(--muted)}
+.steps{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.steps div{flex:1 1 120px;padding:8px;border-radius:8px;background:var(--panel);border:1px solid var(--line);font-size:12px;color:var(--muted)}
+.steps div.on{border-color:var(--brand);color:var(--brand);font-weight:600}
+.toggle{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.toggle:last-child{border-bottom:0}
+.sw{width:38px;height:22px;border-radius:999px;background:var(--brand);position:relative;flex:0 0 38px}
+.sw::after{content:"";position:absolute;top:3px;right:3px;width:16px;height:16px;border-radius:50%;background:#fff}
+.sw.off{background:var(--line)}
+.sw.off::after{right:auto;left:3px}
+code{font-family:ui-monospace,Menlo,monospace;font-size:12px;background:var(--bg);padding:1px 5px;border-radius:4px}
+.spec{margin-top:12px;font-size:12px;color:var(--muted);border-left:3px solid var(--brand);padding-left:10px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">iCapOS <span>Contact Finder</span></div>
+  <div class="credits">Internal tool · Sample data only</div>
+</header>
+
+<nav id="nav">
+  <button data-s="dash" class="active">1. Dashboard</button>
+  <button data-s="single">2. Single lookup</button>
+  <button data-s="bulk">3. Bulk upload</button>
+  <button data-s="results">4. Results</button>
+  <button data-s="patterns">5. Domain patterns</button>
+  <button data-s="providers">6. Free providers</button>
+  <button data-s="compliance">7. Compliance</button>
+</nav>
+
+<main>
+
+<!-- 1. DASHBOARD -->
+<section class="screen active" id="dash">
+  <p class="note">All names, domains and numbers below are fictional placeholders.</p>
+  <h1>Dashboard</h1>
+  <div class="grid g4" style="margin:12px 0">
+    <div class="card kpi"><div class="label">Lookups this month</div><div class="val">412</div><div class="sub">Pattern finder plus providers</div></div>
+    <div class="card kpi"><div class="label">Emails verified</div><div class="val">287</div><div class="sub">Mail server accepted</div></div>
+    <div class="card kpi"><div class="label">Apollo free credits left</div><div class="val">9,140</div><div class="sub">of 10,000 per year</div></div>
+    <div class="card kpi"><div class="label">Mobile credits left</div><div class="val">104</div><div class="sub">Apollo 120/yr + Kaspr 5/mo</div></div>
+  </div>
+  <div class="grid g2">
+    <div class="card">
+      <h2>Find rate by source</h2>
+      <p class="note">Measured from your own lookups, not vendor claims.</p>
+      <label>Pattern finder (built in house)</label><div class="bar"><div style="width:62%"></div></div>
+      <label>Apollo free tier</label><div class="bar"><div style="width:48%"></div></div>
+      <label>Kaspr free tier</label><div class="bar"><div style="width:30%"></div></div>
+    </div>
+    <div class="card">
+      <h2>Recent lookups</h2>
+      <div class="table-wrap"><table>
+        <tr><th>Name</th><th>Domain</th><th>Status</th></tr>
+        <tr><td>Alex Martin</td><td>examplefund.com</td><td><span class="pill ok">Verified</span></td></tr>
+        <tr><td>Sam Rivera</td><td>sampleventures.io</td><td><span class="pill warn">Catch all</span></td></tr>
+        <tr><td>Jordan Lee</td><td>demo-capital.com</td><td><span class="pill bad">Not found</span></td></tr>
+      </table></div>
+    </div>
+  </div>
+  <div class="spec">Build note: find rate per source is computed as verified results divided by lookups sent to that source. Store per lookup so the team can compare sources with real data.</div>
+</section>
+
+<!-- 2. SINGLE LOOKUP -->
+<section class="screen" id="single">
+  <h1>Single lookup</h1>
+  <p class="note">Enter a name and company domain. The tool generates likely formats and checks each one against the domain's mail server.</p>
+  <div class="grid g2">
+    <div class="card">
+      <h2>Person</h2>
+      <div class="row">
+        <div><label>First name</label><input value="Alex"></div>
+        <div><label>Last name</label><input value="Martin"></div>
+      </div>
+      <label>Company domain</label><input value="examplefund.com">
+      <label>LinkedIn URL (optional, reference only)</label><input placeholder="linkedin.com/in/...">
+      <label>Lawful basis for this contact</label>
+      <select><option>Legitimate interest: B2B prospecting</option><option>Consent</option><option>Existing relationship</option></select>
+      <div class="row" style="margin-top:14px"><button class="btn">Find email</button><button class="btn ghost">Also try free providers</button></div>
+    </div>
+    <div class="card">
+      <h2>Candidates tested</h2>
+      <div class="table-wrap"><table>
+        <tr><th>Format</th><th>Address</th><th>Server result</th></tr>
+        <tr><td><code>first.last</code></td><td>alex.martin@examplefund.com</td><td><span class="pill ok">Accepted</span></td></tr>
+        <tr><td><code>flast</code></td><td>amartin@examplefund.com</td><td><span class="pill bad">Rejected</span></td></tr>
+        <tr><td><code>first</code></td><td>alex@examplefund.com</td><td><span class="pill bad">Rejected</span></td></tr>
+        <tr><td><code>firstlast</code></td><td>alexmartin@examplefund.com</td><td><span class="pill bad">Rejected</span></td></tr>
+      </table></div>
+      <div style="margin-top:12px" class="row">
+        <div><span class="pill ok">Best match</span> alex.martin@examplefund.com</div>
+        <button class="btn sm">Save to list</button>
+      </div>
+      <p class="note" style="margin-top:10px">Phone: not found by pattern finder. Use a free provider credit to try.</p>
+    </div>
+  </div>
+  <div class="spec">Build note: check MX records, open an SMTP session, send RCPT TO without sending mail. If the server accepts every address, mark the domain "catch all" and do not claim verification. Throttle checks per domain to avoid being blocked.</div>
+</section>
+
+<!-- 3. BULK UPLOAD -->
+<section class="screen" id="bulk">
+  <h1>Bulk upload</h1>
+  <div class="steps"><div class="on">Step 1. Upload</div><div class="on">Step 2. Map columns</div><div>Step 3. Run</div><div>Step 4. Review</div></div>
+  <div class="grid g2">
+    <div class="card">
+      <h2>Upload CSV</h2>
+      <div class="drop">Drop a CSV here or tap to choose<br><small>Columns needed: first name, last name, domain</small></div>
+      <p class="note" style="margin-top:10px">targets_october.csv · 250 rows</p>
+    </div>
+    <div class="card">
+      <h2>Map columns</h2>
+      <label>First name</label><select><option>first_name</option></select>
+      <label>Last name</label><select><option>last_name</option></select>
+      <label>Domain</label><select><option>company_website</option></select>
+      <label>Source of this list (stored for access requests)</label><input value="Conference attendee list, Sept 2026">
+      <label>Use free provider credits?</label>
+      <select><option>No, pattern finder only (free)</option><option>Yes, only if pattern finder fails</option></select>
+      <button class="btn" style="margin-top:14px">Start run</button>
+    </div>
+  </div>
+  <div class="card" style="margin-top:12px">
+    <h2>Run progress</h2>
+    <div class="bar"><div style="width:44%"></div></div>
+    <p class="note" style="margin-top:8px">110 of 250 processed · 68 verified · 19 catch all · 23 not found</p>
+  </div>
+  <div class="spec">Build note: process as a background job queue. Strip duplicates and check the suppression list before any lookup runs.</div>
+</section>
+
+<!-- 4. RESULTS -->
+<section class="screen" id="results">
+  <h1>Results</h1>
+  <div class="row" style="margin:10px 0">
+    <input placeholder="Search name or domain">
+    <select><option>All statuses</option><option>Verified</option><option>Catch all</option><option>Not found</option></select>
+    <button class="btn ghost" style="flex:0 0 auto">Export CSV</button>
+  </div>
+  <div class="card table-wrap">
+    <table>
+      <tr><th>Name</th><th>Email</th><th>Phone</th><th>Status</th><th>Source</th><th>Found</th><th></th></tr>
+      <tr><td>Alex Martin</td><td>alex.martin@examplefund.com</td><td>None</td><td><span class="pill ok">Verified</span></td><td>Pattern finder</td><td>Oct 5</td><td><button class="btn sm ghost">Remove</button></td></tr>
+      <tr><td>Sam Rivera</td><td>sam@sampleventures.io</td><td>None</td><td><span class="pill warn">Catch all</span></td><td>Pattern finder</td><td>Oct 5</td><td><button class="btn sm ghost">Remove</button></td></tr>
+      <tr><td>Taylor Brooks</td><td>t.brooks@placeholder-co.com</td><td>+1 555 010 0199</td><td><span class="pill ok">Verified</span></td><td>Apollo free</td><td>Oct 4</td><td><button class="btn sm ghost">Remove</button></td></tr>
+      <tr><td>Jordan Lee</td><td>None</td><td>None</td><td><span class="pill bad">Not found</span></td><td>All sources</td><td>Oct 4</td><td><button class="btn sm ghost">Remove</button></td></tr>
+      <tr><td>Morgan Chen</td><td>morgan.chen@testgroup.fr</td><td>None</td><td><span class="pill info">Opted out</span></td><td>Suppressed</td><td>Oct 3</td><td></td></tr>
+    </table>
+  </div>
+  <div class="spec">Build note: every record stores source, lookup date, lawful basis and retention expiry. Opted out contacts stay as a hashed entry in the suppression list so they are never looked up again.</div>
+</section>
+
+<!-- 5. DOMAIN PATTERNS -->
+<section class="screen" id="patterns">
+  <h1>Domain patterns</h1>
+  <p class="note">Once one address is verified at a company, its format is reused for colleagues at the same domain. This saves checks and raises the find rate.</p>
+  <div class="card table-wrap">
+    <table>
+      <tr><th>Domain</th><th>Learned format</th><th>Verified samples</th><th>Catch all</th><th>Last checked</th></tr>
+      <tr><td>examplefund.com</td><td><code>first.last</code></td><td>4</td><td>No</td><td>Oct 5</td></tr>
+      <tr><td>placeholder-co.com</td><td><code>f.last</code></td><td>2</td><td>No</td><td>Oct 4</td></tr>
+      <tr><td>sampleventures.io</td><td><code>first</code> (unconfirmed)</td><td>0</td><td>Yes</td><td>Oct 5</td></tr>
+    </table>
+  </div>
+  <div class="card" style="margin-top:12px">
+    <h2>Format library (tried in this order)</h2>
+    <p><code>first.last</code> <code>flast</code> <code>first</code> <code>firstlast</code> <code>f.last</code> <code>first_last</code> <code>last.first</code> <code>firstl</code></p>
+    <div class="spec">Build note: reorder this list automatically by which formats verify most often across your own data.</div>
+  </div>
+</section>
+
+<!-- 6. FREE PROVIDERS -->
+<section class="screen" id="providers">
+  <h1>Free providers</h1>
+  <p class="note">Used only when the pattern finder fails, so free credits last longer. Allowances are as published by each provider and may change.</p>
+  <div class="grid g2">
+    <div class="card">
+      <h2>Apollo (free plan)</h2>
+      <p class="note">10,000 email credits per year, 120 mobile credits per year</p>
+      <label>API key</label><input type="password" placeholder="Paste your own key">
+      <label>Emails used</label><div class="bar"><div style="width:9%"></div></div>
+      <label>Mobiles used</label><div class="bar"><div style="width:13%"></div></div>
+      <div class="toggle"><span>Use for emails</span><span class="sw"></span></div>
+      <div class="toggle"><span>Use for mobiles</span><span class="sw"></span></div>
+    </div>
+    <div class="card">
+      <h2>Kaspr (free plan)</h2>
+      <p class="note">5 phone and 5 email credits per month, via its Chrome extension</p>
+      <label>Monthly credits used</label><div class="bar"><div style="width:40%"></div></div>
+      <div class="toggle"><span>Log manual reveals here</span><span class="sw"></span></div>
+      <p class="note">Kaspr works in the browser, so reveals are entered manually or imported.</p>
+    </div>
+  </div>
+  <div class="card" style="margin-top:12px">
+    <h2>Lookup order</h2>
+    <p><span class="pill info">1</span> Suppression list check &nbsp; <span class="pill info">2</span> Known domain pattern &nbsp; <span class="pill info">3</span> Pattern finder &nbsp; <span class="pill info">4</span> Apollo free &nbsp; <span class="pill info">5</span> Manual Kaspr</p>
+  </div>
+</section>
+
+<!-- 7. COMPLIANCE -->
+<section class="screen" id="compliance">
+  <h1>Compliance</h1>
+  <p class="note">Controls based on the issues the CNIL cited in its Kaspr decision: data users had hidden, long retention, missing notice, and vague answers to access requests. Confirm settings with counsel.</p>
+  <div class="grid g2">
+    <div class="card">
+      <h2>Collection rules</h2>
+      <div class="toggle"><span>Only use domains and public business data, never hidden profile fields</span><span class="sw"></span></div>
+      <div class="toggle"><span>Require a lawful basis on every lookup</span><span class="sw"></span></div>
+      <div class="toggle"><span>Record the exact source of each record</span><span class="sw"></span></div>
+      <div class="toggle"><span>Block personal email domains (gmail, outlook)</span><span class="sw"></span></div>
+    </div>
+    <div class="card">
+      <h2>Retention</h2>
+      <label>Delete records not contacted after</label>
+      <select><option>12 months</option><option>6 months</option><option>24 months</option></select>
+      <div class="toggle"><span>Do not reset the clock when a record is updated</span><span class="sw"></span></div>
+      <p class="note">Kaspr was cited for restarting a five year clock on each update.</p>
+    </div>
+    <div class="card">
+      <h2>Notice and access requests</h2>
+      <label>First contact notice (shown in outreach footer)</label>
+      <textarea rows="3">We found your business email via your company's public domain. Reply STOP to be removed, or ask us what data we hold and where it came from.</textarea>
+      <label>Notice languages</label><select><option>English and French</option><option>English only</option></select>
+      <button class="btn ghost" style="margin-top:12px">Export one person's data and source</button>
+    </div>
+    <div class="card">
+      <h2>Suppression list</h2>
+      <label>Add email or domain</label>
+      <div class="row"><input placeholder="name@company.com"><button class="btn" style="flex:0 0 auto">Add</button></div>
+      <p class="note" style="margin-top:10px">38 entries · stored as hashes</p>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<script>
+document.getElementById('nav').addEventListener('click', function(e){
+  var b = e.target.closest('button'); if(!b) return;
+  document.querySelectorAll('nav button').forEach(function(x){x.classList.toggle('active', x===b);});
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.toggle('active', s.id===b.dataset.s);});
+  window.scrollTo(0,0);
+});
+</script>
+</body>
+</html>

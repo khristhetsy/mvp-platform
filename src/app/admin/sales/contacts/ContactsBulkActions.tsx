@@ -146,7 +146,7 @@ export function ContactsBulkActions({ target, count, selectAllMatching, matching
       const res = await fetch("/api/marketing/lists/from-contacts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...target, ...dest }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Couldn't create the list.");
-      setListResult(`${data.created ? "Created list" : "Updated list"} “${data.listName}” — ${data.added.toLocaleString()} contact${data.added === 1 ? "" : "s"} added${data.skippedNoEmail ? `, ${data.skippedNoEmail.toLocaleString()} skipped (no email)` : ""}.`);
+      setListResult(`${data.created ? "Created list" : "Updated list"} “${data.listName}” — ${data.added.toLocaleString()} contact${data.added === 1 ? "" : "s"} added${data.skippedNoEmail ? `, ${data.skippedNoEmail.toLocaleString()} skipped (no email)` : ""}${data.skippedGuess ? `, ${data.skippedGuess.toLocaleString()} held back (guessed email)` : ""}.`);
       setListName(""); setListDesc(""); setAddToListId("");
       onClear();
       fetch("/api/marketing/lists").then((r) => (r.ok ? r.json() : [])).then((d) => setExistingLists(Array.isArray(d) ? d : [])).catch(() => {});

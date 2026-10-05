@@ -115,6 +115,8 @@ export type FounderFieldsRow = {
   name: string | null;
   email: string | null;
   email_status: string | null;
+  /** "profile" = pattern-guessed address (see lib/marketing/sendable.ts). */
+  email_source?: string | null;
   suppressed: boolean | null;
   company: string | null;
   country: string | null;

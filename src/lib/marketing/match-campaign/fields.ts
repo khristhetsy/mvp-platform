@@ -7,6 +7,7 @@ import { buildCompanyMatchProfile } from "@/lib/matching/contact-match";
 import type { CompanyMatchProfile } from "@/lib/matching/investor-company-matching";
 import { firstValidEmail } from "@/lib/marketing/recipient";
 import type { ExcludedReason, FounderFieldsRow } from "./types";
+import { isUnconfirmedGuess } from "@/lib/marketing/sendable";
 
 /**
  * Funding stage vocabulary shared by founder and investor Odoo records. Values
@@ -77,6 +78,9 @@ export function checkFounder(row: FounderFieldsRow, opts: CheckOptions): Exclude
   if (!opts.includeInferred && isGuessedData(row)) return "unconfirmed_data";
   if (!row.email || !row.email.trim()) return "no_email";
   if (!firstValidEmail(row.email) || row.email_status === "invalid") return "invalid_email";
+  // A pattern-guessed address is never sent, even when verified-only is off (spec D7).
+  // Reported as "email_unverified": the excluded_reason DB constraint allows no new value without a migration.
+  if (isUnconfirmedGuess(row)) return "email_unverified";
   if (row.suppressed || opts.unsubscribed) return "suppressed";
   if (opts.verifiedOnly && row.email_status !== "valid") return "email_unverified";
   if (opts.excludeEu && isEuCountry(row.country)) return "eu_excluded";

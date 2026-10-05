@@ -5,6 +5,7 @@
  */
 
 import { marketingDb } from "./db";
+import { isUnconfirmedGuess } from "@/lib/marketing/sendable";
 
 function splitName(name: string): { first: string | null; last: string | null } {
   const n = (name ?? "").trim();
@@ -32,28 +33,30 @@ export type MarketingRecipient = { id: string; email: string; first_name: string
  * crm_contacts ids → upserted marketing_contacts (by email). Returns the mirror rows
  * (id + email + name/company for personalization) and how many were skipped for no email.
  */
-export async function crmIdsToMarketingContacts(crmIds: string[]): Promise<{ recipients: MarketingRecipient[]; skippedNoEmail: number }> {
-  if (!crmIds.length) return { recipients: [], skippedNoEmail: 0 };
+export async function crmIdsToMarketingContacts(crmIds: string[]): Promise<{ recipients: MarketingRecipient[]; skippedNoEmail: number; skippedGuess: number }> {
+  if (!crmIds.length) return { recipients: [], skippedNoEmail: 0, skippedGuess: 0 };
   const db = await marketingDb();
-  const rows: { id: string; name: string | null; email: string | null; company: string | null }[] = [];
+  const rows: { id: string; name: string | null; email: string | null; company: string | null; email_source: string | null }[] = [];
   for (let i = 0; i < crmIds.length; i += 500) {
     const chunk = crmIds.slice(i, i + 500);
-    const { data } = await db.from("crm_contacts").select("id, name, email, company").in("id", chunk);
+    const { data } = await db.from("crm_contacts").select("id, name, email, company, email_source").in("id", chunk);
     rows.push(...((data ?? []) as typeof rows));
   }
   const byEmail = new Map<string, { email: string; first_name: string | null; last_name: string | null; company: string | null; source: string }>();
   let skippedNoEmail = 0;
+  let skippedGuess = 0;
   for (const r of rows) {
     const email = (r.email ?? "").trim().toLowerCase();
     if (!email) { skippedNoEmail++; continue; }
+    if (isUnconfirmedGuess(r)) { skippedGuess++; continue; }
     if (byEmail.has(email)) continue;
     const { first, last } = splitName(r.name ?? "");
     byEmail.set(email, { email, first_name: first, last_name: last, company: r.company ?? null, source: "crm" });
   }
   const mirror = [...byEmail.values()];
-  if (mirror.length === 0) return { recipients: [], skippedNoEmail };
+  if (mirror.length === 0) return { recipients: [], skippedNoEmail, skippedGuess };
   const { data: up } = await db.from("marketing_contacts").upsert(mirror, { onConflict: "email" }).select("id, email, first_name, company");
-  return { recipients: ((up ?? []) as MarketingRecipient[]), skippedNoEmail };
+  return { recipients: ((up ?? []) as MarketingRecipient[]), skippedNoEmail, skippedGuess };
 }
 
 /** Create a hidden (archived) list holding these marketing_contacts — the vehicle a
