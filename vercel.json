@@ -45,6 +45,10 @@
       "schedule": "*/15 * * * *"
     },
     {
+      "path": "/api/cron/verify-emails",
+      "schedule": "*/15 * * * *"
+    },
+    {
       "path": "/api/cron/match-rematch",
       "schedule": "30 23 * * *"
     },
