@@ -6,9 +6,11 @@ import { useRouter } from "next/navigation";
 import { MetricCard } from "@/components/MetricCard";
 import { OdooPager } from "@/components/admin/OdooPager";
 import { WorkspaceSection } from "@/components/admin/company-workspace/WorkspaceSection";
-import { Highlight, NoSearchMatches, SearchCount } from "@/components/ui/SearchStatus";
+import { NoSearchMatches, SearchCount } from "@/components/ui/SearchStatus";
 import { matchRows, type SearchField } from "@/lib/ui/live-search";
 import {
+  MESSAGE_TZ,
+  MESSAGE_TZ_LABEL,
   METRICS,
   PERIOD_KINDS,
   PREVIOUS_LABEL,
@@ -23,7 +25,7 @@ import {
   inRange,
   metricItems,
   metricValue,
-  parisDay,
+  localDay,
   periodLabel,
   receivedType,
   shiftAnchor,
@@ -42,6 +44,7 @@ import {
 } from "@/lib/analytics/message-activity-metrics";
 import { ActivityChart } from "./ActivityChart";
 import { ItemDialogs, type OpenList } from "./ItemDialogs";
+import { PersonHeatTable, type HeatRow } from "./PersonHeatTable";
 
 const PERIOD_LABEL: Record<PeriodKind, string> = {
   day: "Daily", week: "Weekly", month: "Monthly", quarter: "Quarterly", year: "Annually", custom: "Custom",
@@ -50,12 +53,7 @@ const PERIOD_LABEL: Record<PeriodKind, string> = {
 type Audience = "founder" | "investor" | "all";
 type PlanFilter = "all" | "professional" | "basic" | "free";
 
-type Row = {
-  person: MessagePerson;
-  received: ReceivedItem[];
-  sent: SentItem[];
-  last: string;
-};
+type Row = HeatRow;
 
 export function MessageActivityClient({
   data,
@@ -117,12 +115,12 @@ export function MessageActivityClient({
     const prev = { received: [] as ReceivedItem[], sent: [] as SentItem[] };
     for (const r of data.received) {
       if (people.get(r.personKey)?.role !== "founder") continue;
-      const d = parisDay(r.at);
+      const d = localDay(r.at);
       if (inRange(d, range)) cur.received.push(r);
       else if (inRange(d, compareTo)) prev.received.push(r);
     }
     for (const s of data.sent) {
-      const d = parisDay(s.at);
+      const d = localDay(s.at);
       if (inRange(d, range)) cur.sent.push(s);
       else if (inRange(d, compareTo)) prev.sent.push(s);
     }
@@ -211,12 +209,12 @@ export function MessageActivityClient({
       return r;
     };
     for (const it of data.received) {
-      if (!inRange(parisDay(it.at), range)) continue;
+      if (!inRange(localDay(it.at), range)) continue;
       const r = get(it.personKey);
       if (r) { r.received.push(it); if (it.at > r.last) r.last = it.at; }
     }
     for (const it of data.sent) {
-      if (!inRange(parisDay(it.at), range)) continue;
+      if (!inRange(localDay(it.at), range)) continue;
       const r = get(it.personKey);
       if (r) { r.sent.push(it); if (it.at > r.last) r.last = it.at; }
     }
@@ -233,6 +231,7 @@ export function MessageActivityClient({
     { label: "plan", get: (r) => r.person.plan },
   ];
   const result = matchRows(filtered, fields, query);
+  const audienceRows = rows.filter((r) => audience === "all" || r.person.role === audience).length;
 
   const openReceived = (person: MessagePerson | null, type: ReceivedType | "all") => {
     const col = RECEIVED_COLUMNS.find((c) => c.type === type);
@@ -257,30 +256,6 @@ export function MessageActivityClient({
     });
   };
 
-  const cell = (n: number, onClick: () => void, strong = false) =>
-    n ? (
-      <button
-        type="button"
-        onClick={onClick}
-        className={`tabular-nums underline decoration-dotted underline-offset-4 hover:text-[#2E78F5] ${strong ? "font-semibold text-slate-950" : "text-[#1A6CE4]"}`}
-        aria-label={`View ${n} items`}
-      >
-        {n}
-      </button>
-    ) : (
-      <span className="tabular-nums text-slate-300">0</span>
-    );
-
-  const th = "px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500 whitespace-nowrap";
-  const thN = `${th} text-right`;
-  const colHead = (label: string, onClick: () => void, extra = "", key = label) => (
-    <th key={key} className={`${thN} ${extra}`}>
-      <button type="button" onClick={onClick} className="uppercase tracking-[0.06em] underline decoration-dotted underline-offset-4 hover:text-[#1A6CE4]" title={`View all ${label.toLowerCase()} in this period`}>
-        {label}
-      </button>
-    </th>
-  );
-
   const seg = (active: boolean) =>
     `px-3 py-1.5 text-xs font-medium ${active ? "bg-[#1A6CE4] text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`;
 
@@ -292,7 +267,7 @@ export function MessageActivityClient({
           <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">Analytics</p>
           <h1 className="mt-0.5 text-[22px] font-medium tracking-tight text-slate-950">Founder and investor messages</h1>
           <p className="mt-1 text-xs text-slate-500">
-            What iCapOS sent to founders, and to investors on their behalf. Paris time. Loaded {new Date(data.generatedAt).toLocaleTimeString("en-GB", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit" })}.
+            What iCapOS sent to founders, and to investors on their behalf. All times are {MESSAGE_TZ_LABEL}. Loaded {new Date(data.generatedAt).toLocaleTimeString("en-US", { timeZone: MESSAGE_TZ, hour: "numeric", minute: "2-digit" })}.
           </p>
         </div>
         <Link href="/admin/message-activity/goals" className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">
@@ -381,7 +356,7 @@ export function MessageActivityClient({
       </div>
 
       <div className="mb-6">
-        <WorkspaceSection icon="ti-users" tone="gray" title="By person" subtitle="Tap any number to see the items behind it">
+        <WorkspaceSection icon="ti-users" tone="gray" title="By person" subtitle="Company stays pinned; scroll sideways for every type. Tap a cell to see the items behind it">
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <div className="inline-flex overflow-hidden rounded-lg border border-slate-200" role="group" aria-label="Who">
               {(["founder", "investor", "all"] as Audience[]).map((a) => (
@@ -415,68 +390,15 @@ export function MessageActivityClient({
               Nothing was sent to {audience === "investor" ? "investors" : "founders"} in this period.
             </p>
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-              <table className="w-full min-w-[1100px] border-collapse text-[13px]">
-                <thead className="border-b border-slate-200 bg-slate-50">
-                  <tr>
-                    <th colSpan={4} />
-                    <th colSpan={7} className="border-l border-slate-200 px-3 pt-2 text-center text-[11px] font-semibold uppercase tracking-[0.06em] text-[#185FA5]">Received</th>
-                    <th colSpan={4} className="border-l border-slate-200 px-3 pt-2 text-center text-[11px] font-semibold uppercase tracking-[0.06em] text-[#0F6E56]">Sent to investors</th>
-                  </tr>
-                  <tr>
-                    <th className={`${th} sticky left-0 bg-slate-50`}>Company</th>
-                    <th className={th}>Name</th>
-                    <th className={th}>Plan</th>
-                    <th className={th}>Last activity</th>
-                    {RECEIVED_COLUMNS.map((c, i) => colHead(c.short, () => openReceived(null, c.type), i === 0 ? "border-l border-slate-200" : ""))}
-                    {colHead("Total", () => openReceived(null, "all"), "", "received-total")}
-                    {SENT_COLUMNS.map((c, i) => colHead(c.short, () => openSent(null, c.kind), i === 0 ? "border-l border-slate-200" : ""))}
-                    {colHead("Total", () => openSent(null, "all"), "", "sent-total")}
-                  </tr>
-                </thead>
-                <tbody>
-                  {result.rows.map((r) => (
-                    <tr key={r.person.key} className="border-t border-slate-100 hover:bg-slate-50/60">
-                      <td className="sticky left-0 bg-white px-3 py-2 font-semibold text-slate-900">
-                        <Highlight text={r.person.company ?? "No company on file"} query={query} />
-                      </td>
-                      <td className="px-3 py-2">
-                        <span className="text-slate-900"><Highlight text={r.person.name} query={query} /></span>
-                        {r.person.name !== r.person.email ? (
-                          <span className="block font-mono text-[11px] text-slate-500"><Highlight text={r.person.email} query={query} /></span>
-                        ) : null}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2 text-slate-700">
-                        <Highlight text={r.person.role === "investor" ? "Investor" : r.person.plan} query={query} />
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2 text-slate-700">
-                        {shortDay(parisDay(r.last))}
-                        <span className="block font-mono text-[11px] text-slate-500">
-                          {new Date(r.last).toLocaleTimeString("en-GB", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit" })}
-                        </span>
-                      </td>
-                      {RECEIVED_COLUMNS.map((c, i) => (
-                        <td key={c.type} className={`px-3 py-2 text-right ${i === 0 ? "border-l border-slate-100" : ""}`}>
-                          {cell(r.received.filter((x) => receivedType(x) === c.type).length, () => openReceived(r.person, c.type))}
-                        </td>
-                      ))}
-                      <td className="px-3 py-2 text-right">{cell(r.received.length, () => openReceived(r.person, "all"), true)}</td>
-                      {SENT_COLUMNS.map((c, i) => (
-                        <td key={c.kind} className={`px-3 py-2 text-right ${i === 0 ? "border-l border-slate-100" : ""}`}>
-                          {cell(r.sent.filter((x) => x.kind === c.kind).length, () => openSent(r.person, c.kind))}
-                        </td>
-                      ))}
-                      <td className="px-3 py-2 text-right">
-                        {cell(r.sent.length, () => openSent(r.person, "all"), true)}
-                        {data.queued[r.person.key] ? (
-                          <span className="block text-[11px] text-slate-500">{data.queued[r.person.key]} queued</span>
-                        ) : null}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <PersonHeatTable
+              rows={result.rows}
+              totalLabel={`${result.rows.length} of ${audienceRows} ${audience === "founder" ? "founders" : audience === "investor" ? "investors" : "people"}`}
+              query={query}
+              data={data}
+              current={range.start <= today && range.end >= today}
+              openReceived={openReceived}
+              openSent={openSent}
+            />
           )}
           <p className="mt-2 text-[11px] text-slate-500">
             Sources: email_log, notifications, investor_outreach_recipients, founder_manual_outreach_recipients, prospect_intro_requests.

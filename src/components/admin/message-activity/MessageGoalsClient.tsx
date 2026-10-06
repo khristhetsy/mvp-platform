@@ -10,6 +10,8 @@ import {
   METRICS,
   MONTHS,
   fmtGoal,
+  localDay,
+  localTime,
   goalAt,
   monthDays,
   monthLabel,
@@ -188,7 +190,7 @@ export function MessageGoalsClient({
                   {log.slice(0, 50).map((e) => (
                     <tr key={e.id} className="border-t border-slate-100">
                       <td className="whitespace-nowrap px-3 py-2 font-mono text-[12px] text-slate-500">
-                        {new Date(e.createdAt).toLocaleString("en-GB", { timeZone: "Europe/Paris", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        {`${shortDay(localDay(e.createdAt))} ${e.createdAt.slice(0, 4)} ${localTime(e.createdAt)}`}
                       </td>
                       <td className="px-3 py-2 text-slate-900">{METRICS.find((m) => m.key === e.metricKey)?.label}</td>
                       <td className="px-3 py-2 text-slate-700">{changeText(e)}</td>
@@ -208,7 +210,7 @@ export function MessageGoalsClient({
       </div>
       <p className="text-[11px] text-slate-500">
         Monthly actuals count every founder, with no plan or search filter. Pace compares this month&apos;s actual so far with the goal
-        prorated to today. Emails are logged from {shortDay(emailLogStart)} {emailLogStart.slice(0, 4)}.
+        prorated to today. Months and dates are Pacific time. Emails are logged from {shortDay(emailLogStart)} {emailLogStart.slice(0, 4)}.
       </p>
 
       {editing ? (

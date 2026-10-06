@@ -5,8 +5,8 @@ import {
   goalAt,
   goalForRange,
   metricValue,
-  parisDay,
-  parisDayStartUtc,
+  localDay,
+  dayStartUtc,
   periodLabel,
   periodRange,
   previousRange,
@@ -44,15 +44,15 @@ describe("periods", () => {
   });
 });
 
-describe("Paris days", () => {
-  it("starts a Paris day at the right UTC instant, summer and winter", () => {
-    expect(parisDayStartUtc("2026-10-06").toISOString()).toBe("2026-10-05T22:00:00.000Z");
-    expect(parisDayStartUtc("2026-12-01").toISOString()).toBe("2026-11-30T23:00:00.000Z");
+describe("Pacific days", () => {
+  it("starts a Pacific day at the right UTC instant, summer and winter", () => {
+    expect(dayStartUtc("2026-10-06").toISOString()).toBe("2026-10-06T07:00:00.000Z");
+    expect(dayStartUtc("2026-12-01").toISOString()).toBe("2026-12-01T08:00:00.000Z");
   });
 
-  it("reads the Paris calendar day of an instant", () => {
-    expect(parisDay("2026-10-05T22:30:00Z")).toBe("2026-10-06");
-    expect(parisDay("2026-10-05T21:30:00Z")).toBe("2026-10-05");
+  it("reads the Pacific calendar day of an instant", () => {
+    expect(localDay("2026-10-06T07:30:00Z")).toBe("2026-10-06");
+    expect(localDay("2026-10-06T06:30:00Z")).toBe("2026-10-05");
   });
 
   it("buckets a week by day and a year by month", () => {
