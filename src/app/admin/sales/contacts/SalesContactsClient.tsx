@@ -208,7 +208,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
 
   const viewAs = searchParams.get("viewAs");
   const paramsStr = contactsParams(spec, sort, viewAs);
-  const { groups, expanded, facets, dynGroups, dynLoading, error: queryError, toggleGroup, goPage, reload } =
+  const { groups, expanded, facets, countsLoading, dynGroups, dynLoading, error: queryError, toggleGroup, goPage, reload } =
     useContactsQuery({ spec, groupBy, sort, viewAs, role });
   const visibleColumns = useMemo(() => ALL_COLUMNS.filter((c) => c.always || visibleCols.includes(c.key)), [visibleCols]);
   const gridCols = useMemo(() => visibleColumns.map((c) => c.width).join(" "), [visibleColumns]);
@@ -888,18 +888,23 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
         )}
 
         {(groupBy === "profile"
-          ? GROUP_DEFS.map((g) => ({ id: g.id as string, label: g.label as string, count: facets.counts[g.id] ?? groups[g.id]?.total ?? 0 }))
+          ? GROUP_DEFS.map((g) => ({ id: g.id as string, label: g.label as string, count: (facets.counts[g.id] ?? groups[g.id]?.total ?? null) as number | null }))
           : dynGroups
         ).map((g) => {
           const gs = groups[g.id];
-          const count = g.count;
+          // Unknown count: "…" while counting, no badge if counting failed (the error banner says why), never a false 0.
+          const count: number | null = g.count;
           const isOpen = !!expanded[g.id];
           return (
             <div key={g.id}>
               <button type="button" onClick={() => toggleGroup(g.id)} style={{ width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 8, padding: "9px 14px", background: "#E6F1FB", border: "none", borderTop: "0.5px solid #e2e6ed", cursor: "pointer" }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0C447C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0, transform: isOpen ? "rotate(90deg)" : "none", transition: "transform 120ms" }}><polyline points="9 6 15 12 9 18" /></svg>
                 <span style={{ fontSize: 12.5, fontWeight: 600, color: "#0C447C" }}>{g.label}</span>
-                <span style={{ fontSize: 11, color: "#185FA5", background: "#B5D4F4", borderRadius: 10, padding: "1px 8px" }}>{count.toLocaleString()}</span>
+                {count != null ? (
+                  <span style={{ fontSize: 11, color: "#185FA5", background: "#B5D4F4", borderRadius: 10, padding: "1px 8px" }}>{count.toLocaleString()}</span>
+                ) : countsLoading ? (
+                  <span aria-label="Counting" style={{ fontSize: 11, color: "#185FA5", background: "#B5D4F4", borderRadius: 10, padding: "1px 8px" }}>…</span>
+                ) : null}
               </button>
               {isOpen && (
                 <div>
