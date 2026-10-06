@@ -166,6 +166,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
               { href: "/admin/analytics", label: "Overview" },
               { href: "/admin/funnels",   label: "Activation funnels" },
               { href: "/admin/reports",   label: "Reports"   },
+              { href: "/admin/message-activity", label: "Founder and investor messages" },
               { href: "/admin/insights",  label: "Insights"  },
             ],
           },
