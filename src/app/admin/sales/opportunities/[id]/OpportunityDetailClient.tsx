@@ -17,6 +17,10 @@ type Opp = {
   lead_assignees: string[];
 };
 
+// Gear menu rows (same look as the Contacts gear menu).
+const menuItem: React.CSSProperties = { display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "8px 12px", fontSize: 12.5, color: "var(--foreground)", background: "none", border: "none", textAlign: "left", textDecoration: "none", cursor: "pointer" };
+const menuIcon: React.CSSProperties = { fontSize: 15, width: 16, color: "var(--muted-foreground)" };
+
 const money = (c: number | null) => (c == null ? "—" : `$${(c / 100).toLocaleString()}`);
 function mrr(o: Pick<Opp, "value_cents" | "billing">): string {
   if (o.value_cents == null) return "—";
@@ -55,6 +59,14 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
   const [o, setO] = useState<Opp>(initial);
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  // Esc closes the gear menu.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setMenuOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [menuOpen]);
   const [tab, setTab] = useState<"notes" | "activity" | "extra" | "founder" | "tasks">("notes");
   const [noteInput, setNoteInput] = useState("");
   const [oppTasks, setOppTasks] = useState<OTask[]>([]);
@@ -214,39 +226,50 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
       </div>
 
       <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, overflow: "hidden" }}>
-        {/* Action bar */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 16px", borderBottom: "0.5px solid #eef1f5", flexWrap: "wrap" }}>
+        {/* Gear menu (every action) + stage bar, one row */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderBottom: "0.5px solid #eef1f5", flexWrap: "wrap" }}>
           {o.status !== "open" && <span style={{ fontSize: 11.5, fontWeight: 600, color: statusColor, background: "var(--muted)", borderRadius: 10, padding: "5px 12px" }}>{o.status.toUpperCase()}</span>}
-          <div style={{ width: 8 }} />
-          {o.contact_phone && <a href={`tel:${o.contact_phone.replace(/[^+\d]/g, "")}`} target="_blank" rel="noopener noreferrer" onClick={() => logTouch("call")} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 12px", textDecoration: "none" }}><i className="ti ti-phone" aria-hidden="true" /> Call</a>}
-          {o.contact_email && <a href={`/admin/inbox?compose=1&to=${encodeURIComponent(o.contact_email)}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11.5, fontWeight: 600, color: "#4338CA", background: "#EEF2FF", border: "0.5px solid #C7D2FE", borderRadius: 7, padding: "7px 12px", textDecoration: "none" }}><i className="ti ti-mail" aria-hidden="true" /> Email</a>}
-          {o.contact_phone && <a href={`sms:${o.contact_phone.replace(/[^+\d]/g, "")}`} target="_blank" rel="noopener noreferrer" onClick={() => logTouch("message")} style={{ fontSize: 11.5, fontWeight: 600, color: "#854F0B", background: "#FAEEDA", border: "0.5px solid #F4D9A0", borderRadius: 7, padding: "7px 12px", textDecoration: "none" }}><i className="ti ti-message" aria-hidden="true" /> Message</a>}
-          <button type="button" onClick={() => logTouch("call")} disabled={busy} title="Record a call you made (e.g. via your phone system)" style={{ fontSize: 11.5, fontWeight: 600, color: "#0F6E56", background: "#E1F5EE", border: "0.5px solid #9FE1CB", borderRadius: 7, padding: "7px 12px", cursor: "pointer" }}><i className="ti ti-phone-plus" aria-hidden="true" /> Log call</button>
-          {o.contact_email && (
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <select
-                value={enrollSeqId}
-                onChange={(e) => { setEnrollSeqId(e.target.value); setEnrollMsg(null); }}
-                disabled={busy}
-                title="Enroll this opportunity's contact into a marketing sequence"
-                style={{ fontSize: 11.5, border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 7, padding: "6px 8px", maxWidth: 180, cursor: "pointer", background: "#fff" }}
-              >
-                <option value="">Enroll in sequence…</option>
-                {sequences.map((sq) => <option key={sq.id} value={sq.id}>{sq.name}</option>)}
-              </select>
-              <button type="button" onClick={enrollSequence} disabled={busy || !enrollSeqId} style={{ fontSize: 12, fontWeight: 600, color: "#4338CA", background: "#EEF2FF", border: "0.5px solid #C7D2FE", borderRadius: 7, padding: "6px 11px", cursor: "pointer", opacity: !enrollSeqId ? 0.5 : 1 }}>Enroll</button>
-              {enrollMsg && <span style={{ fontSize: 11, color: enrollMsg.startsWith("Enrolled") ? "#0F6E56" : "#A32D2D" }}>{enrollMsg}</span>}
-            </span>
-          )}
-          <div style={{ flex: 1 }} />
-          <button type="button" onClick={() => setEditing((v) => !v)} disabled={busy} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 7, padding: "7px 13px", cursor: "pointer" }}>{editing ? "Close edit" : "Edit"}</button>
-          {nextStage && o.status === "open" && <button type="button" onClick={() => patch({ stageId: nextStage.id })} disabled={busy} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 7, padding: "7px 13px", cursor: "pointer" }}>Advance →</button>}
-          <button type="button" onClick={del} disabled={busy} style={{ fontSize: 12, color: "#A32D2D", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 7, padding: "7px 13px", cursor: "pointer" }}>Delete</button>
-        </div>
-
-        {/* Stage bar */}
-        <div style={{ display: "flex", padding: "12px 16px", borderBottom: "0.5px solid #eef1f5", overflowX: "auto" }}>
-          {stages.map((s, i) => {
+          <div style={{ position: "relative" }}>
+            <button type="button" onClick={() => setMenuOpen((v) => !v)} aria-label="Actions" aria-haspopup="menu" aria-expanded={menuOpen} title="Actions"
+              style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 34, height: 32, border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, background: menuOpen ? "#EEF4FF" : "#fff", cursor: "pointer" }}>
+              <i className="ti ti-settings" style={{ fontSize: 16 }} aria-hidden="true" />
+            </button>
+            {menuOpen && (
+              <>
+                <div onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
+                <div role="menu" style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 50, width: 250, background: "#fff", border: "0.5px solid #cbd5e1", borderRadius: 10, boxShadow: "0 14px 30px rgba(0,0,0,.14)", padding: "4px 0" }}>
+                  {o.contact_phone && <a role="menuitem" href={`tel:${o.contact_phone.replace(/[^+\d]/g, "")}`} target="_blank" rel="noopener noreferrer" onClick={() => { logTouch("call"); setMenuOpen(false); }} style={menuItem}><i className="ti ti-phone" style={menuIcon} aria-hidden="true" />Call</a>}
+                  {o.contact_email && <a role="menuitem" href={`/admin/inbox?compose=1&to=${encodeURIComponent(o.contact_email)}`} target="_blank" rel="noopener noreferrer" onClick={() => setMenuOpen(false)} style={menuItem}><i className="ti ti-mail" style={menuIcon} aria-hidden="true" />Email</a>}
+                  {o.contact_phone && <a role="menuitem" href={`sms:${o.contact_phone.replace(/[^+\d]/g, "")}`} target="_blank" rel="noopener noreferrer" onClick={() => { logTouch("message"); setMenuOpen(false); }} style={menuItem}><i className="ti ti-message" style={menuIcon} aria-hidden="true" />Message</a>}
+                  <button type="button" role="menuitem" onClick={() => { logTouch("call"); setMenuOpen(false); }} disabled={busy} title="Record a call you made (e.g. via your phone system)" style={menuItem}><i className="ti ti-phone-plus" style={menuIcon} aria-hidden="true" />Log call</button>
+                  {o.contact_crm_id && <Link role="menuitem" href={`/admin/sales/contracts/send?contact=${o.contact_crm_id}`} onClick={() => setMenuOpen(false)} style={menuItem}><i className="ti ti-file-text" style={menuIcon} aria-hidden="true" />Contracts</Link>}
+                  {o.contact_email && (
+                    <div style={{ borderTop: "0.5px solid #eef1f5", margin: "4px 0 0", padding: "8px 12px", display: "flex", alignItems: "center", gap: 6 }}>
+                      <select
+                        value={enrollSeqId}
+                        onChange={(e) => { setEnrollSeqId(e.target.value); setEnrollMsg(null); }}
+                        disabled={busy}
+                        title="Enroll this opportunity's contact into a marketing sequence"
+                        style={{ fontSize: 11.5, border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 7, padding: "6px 8px", flex: 1, minWidth: 0, cursor: "pointer", background: "#fff" }}
+                      >
+                        <option value="">Enroll in sequence…</option>
+                        {sequences.map((sq) => <option key={sq.id} value={sq.id}>{sq.name}</option>)}
+                      </select>
+                      <button type="button" onClick={enrollSequence} disabled={busy || !enrollSeqId} style={{ fontSize: 12, fontWeight: 600, color: "#4338CA", background: "#EEF2FF", border: "0.5px solid #C7D2FE", borderRadius: 7, padding: "6px 11px", cursor: "pointer", opacity: !enrollSeqId ? 0.5 : 1 }}>Enroll</button>
+                    </div>
+                  )}
+                  <div style={{ borderTop: "0.5px solid #eef1f5", margin: "4px 0" }} />
+                  {nextStage && o.status === "open" && <button type="button" role="menuitem" onClick={() => { patch({ stageId: nextStage.id }); setMenuOpen(false); }} disabled={busy} style={menuItem}><i className="ti ti-arrow-right" style={menuIcon} aria-hidden="true" />Advance to {nextStage.name}</button>}
+                  <button type="button" role="menuitem" onClick={() => { setEditing((v) => !v); setMenuOpen(false); }} disabled={busy} style={menuItem}><i className="ti ti-edit" style={menuIcon} aria-hidden="true" />{editing ? "Close edit" : "Edit"}</button>
+                  <div style={{ borderTop: "0.5px solid #eef1f5", margin: "4px 0" }} />
+                  <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); del(); }} disabled={busy} style={{ ...menuItem, color: "#A32D2D" }}><i className="ti ti-trash" style={{ ...menuIcon, color: "#A32D2D" }} aria-hidden="true" />Delete</button>
+                </div>
+              </>
+            )}
+          </div>
+          {enrollMsg && <span style={{ fontSize: 11, color: enrollMsg.startsWith("Enrolled") ? "#0F6E56" : "#A32D2D" }}>{enrollMsg}</span>}
+          <div style={{ display: "flex", overflowX: "auto", minWidth: 0 }}>
+            {stages.map((s, i) => {
             const active = s.id === o.stage_id;
             const done = s.sort_order < currentSort;
             return (
@@ -260,6 +283,7 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
               </button>
             );
           })}
+          </div>
         </div>
 
         <div style={{ padding: 16 }}>
