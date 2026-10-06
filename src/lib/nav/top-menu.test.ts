@@ -78,7 +78,7 @@ describe("toApps: admin", () => {
 
   it("single-page apps have no menu", () => {
     expect(byLabel(apps, "Contacts").entries).toEqual([]);
-    expect(byLabel(apps, "Contacts").href).toBe("/admin/sales/contacts");
+    expect(byLabel(apps, "Contacts").href).toBe("/admin/contacts");
   });
 
   it("groups Operational Tools into dropdowns", () => {

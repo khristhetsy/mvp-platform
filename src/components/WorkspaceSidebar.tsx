@@ -395,7 +395,7 @@ export function WorkspaceSidebar({
   const deptAllows = useMemo(() => {
     // Paths every department can always reach, regardless of their scoped grants.
     // Contacts is the universal shared list (each member sees only their assigned rows).
-    const universal = ["/admin/sales/contacts"];
+    const universal = ["/admin/contacts", "/admin/sales/contacts"];
     return (href: string) => {
       if (workspace !== "admin") return true;
       if (universal.some((p) => href === p || href.startsWith(`${p}/`))) return true;

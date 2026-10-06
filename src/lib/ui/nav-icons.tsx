@@ -162,6 +162,7 @@ export const workspaceNavIconByHref: Record<string, LucideIcon> = {
   // ── Admin ────────────────────────────────────────────────────────────────
   "/admin": LayoutDashboard,
   "/admin/dashboard": LayoutDashboard,
+  "/admin/contacts": Users,
   "/admin/sales/contacts": Users,
   "/admin/ceo": Crown,
   "/admin/ir-funnel": Filter,

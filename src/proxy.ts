@@ -126,6 +126,8 @@ const DEPARTMENT_EXEMPT_PREFIXES = [
   "/admin/home",
   // Sign-in landing: forwards to the Home grid or the Dashboard (company-wide choice).
   "/admin/start",
+  // Contacts on its own page: the universal shared list (rows are scoped per member).
+  "/admin/contacts",
   "/admin/profile",
   "/admin/ceo",
   "/admin/calendar",
