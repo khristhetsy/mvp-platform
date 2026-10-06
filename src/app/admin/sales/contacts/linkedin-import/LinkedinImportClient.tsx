@@ -11,6 +11,7 @@ import Link from "next/link";
 import { OdooPager } from "@/components/admin/OdooPager";
 import { downloadCsv } from "@/components/admin/ToolbarGear";
 import { decideMatch, parseConnectionsCsv, type LinkedinConnection, type MatchCandidate, type MatchKind } from "@/lib/contacts/linkedin-import";
+import { LinkedinFillPanel } from "./LinkedinFillPanel";
 
 type Step = "upload" | "match" | "import" | "enrich";
 type Action = "new" | "merge" | "skip";
@@ -279,7 +280,7 @@ export function LinkedinImportClient({ initialStep }: { initialStep: Step }) {
         </div>
       )}
 
-      {step === "enrich" && <EnrichPanel />}
+      {step === "enrich" && <><EnrichPanel /><LinkedinFillPanel /></>}
     </div>
   );
 }
