@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { MarketingSequence, MarketingTemplate, MarketingList } from "@/lib/marketing/types";
 import { ApproverPicker } from "./ApproverPicker";
+import { SchedulePanel, SCHEDULES_CHANGED } from "./SchedulePanel";
 import { confirmDialog } from "@/components/ui/ConfirmDialog";
 import { OdooSearchBar, EMPTY_SEARCH, textMatch, type SearchState } from "@/components/admin/OdooSearchBar";
 import { ToolbarGear, NewButton, downloadCsv, type GearItem } from "@/components/admin/ToolbarGear";
@@ -224,6 +225,21 @@ export function SequencesClient({ sequences, templates, lists, defaultSender }: 
   const [openIds, setOpenIds] = useState<Record<string, boolean>>({});
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [rowMsg, setRowMsg] = useState<Record<string, string>>({});
+  // Sequence schedules (scheduled sends, PT), keyed by sequence id.
+  const [schedules, setSchedules] = useState<Record<string, { label: string; enabled: boolean }>>({});
+  const [scheduleFor, setScheduleFor] = useState<{ id: string; name: string } | null>(null);
+  useEffect(() => {
+    const loadSchedules = async () => {
+      try {
+        const res = await fetch("/api/marketing/sequence-schedules");
+        const rows: { sequence_id: string; label: string; enabled: boolean }[] = res.ok ? await res.json() : [];
+        setSchedules(Object.fromEntries(rows.map((r) => [r.sequence_id, { label: r.label, enabled: r.enabled }])));
+      } catch { /* the column just shows "Not scheduled" */ }
+    };
+    void loadSchedules();
+    window.addEventListener(SCHEDULES_CHANGED, loadSchedules);
+    return () => window.removeEventListener(SCHEDULES_CHANGED, loadSchedules);
+  }, []);
   const deptOf = (s: MarketingSequence) => departmentOf(s.department ?? null);
   const enrolledOf = (s: MarketingSequence) => s.enrollment_count ?? 0;
   const visibleSequences = sequences.filter((s) => {
@@ -291,6 +307,7 @@ export function SequencesClient({ sequences, templates, lists, defaultSender }: 
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
                   <div style={{ fontWeight: 500, fontSize: 14, color: "var(--foreground)" }}>{seq.name}</div>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <button type="button" onClick={() => setScheduleFor({ id: seq.id, name: seq.name })} title={schedules[seq.id]?.label ?? "Schedule sends"} style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6, border: "0.5px solid var(--border)", background: "#fff", cursor: "pointer", color: schedules[seq.id] ? "#185FA5" : "var(--muted-foreground)", display: "inline-flex", alignItems: "center", gap: 4, maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><i className="ti ti-clock" aria-hidden="true" />{schedules[seq.id] ? schedules[seq.id].label : "Schedule"}</button>
                     <ApproverPicker sequenceId={seq.id} initialApproverId={(seq as { approver_id?: string | null }).approver_id ?? null} />
                     <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: sc.bg, color: sc.color, fontWeight: 500 }}>
                       {seq.status.charAt(0).toUpperCase() + seq.status.slice(1)}
@@ -569,15 +586,15 @@ export function SequencesClient({ sequences, templates, lists, defaultSender }: 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>{list.map((seq) => <div key={seq.id}>{renderCard(seq)}</div>)}</div>
               ) : (
                 <div style={{ ...card, overflow: "hidden" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1.8fr 150px 90px 60px 80px 1fr 150px", gap: 8, padding: "8px 14px", background: "var(--muted)", fontSize: 10.5, fontWeight: 500, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                    <span>Sequence</span><span>Department</span><span>Status</span><span>Steps</span><span>Enrolled</span><span>Approver</span><span style={{ textAlign: "right" }}>Actions</span>
+                  <div style={{ display: "grid", gridTemplateColumns: "1.6fr 130px 80px 50px 70px 1fr 1.3fr 150px", gap: 8, padding: "8px 14px", background: "var(--muted)", fontSize: 10.5, fontWeight: 500, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                    <span>Sequence</span><span>Department</span><span>Status</span><span>Steps</span><span>Enrolled</span><span>Approver</span><span>Schedule (PT)</span><span style={{ textAlign: "right" }}>Actions</span>
                   </div>
                   {list.map((seq) => {
                     const sc = statusColors[seq.status] ?? statusColors.draft;
                     const open = !!openIds[seq.id];
                     return (
                       <div key={seq.id}>
-                        <div style={{ display: "grid", gridTemplateColumns: "1.8fr 150px 90px 60px 80px 1fr 150px", gap: 8, alignItems: "center", padding: "9px 14px", borderTop: "0.5px solid #eef1f5", fontSize: 12.5, background: open ? "#F5F9FF" : undefined }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1.6fr 130px 80px 50px 70px 1fr 1.3fr 150px", gap: 8, alignItems: "center", padding: "9px 14px", borderTop: "0.5px solid #eef1f5", fontSize: 12.5, background: open ? "#F5F9FF" : undefined }}>
                           <button type="button" onClick={() => setOpenIds((o) => ({ ...o, [seq.id]: !open }))} style={{ textAlign: "left", background: "none", border: "none", cursor: "pointer", fontWeight: 500, color: "var(--foreground)", padding: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{seq.name}</button>
                           <select value={deptOf(seq)} onChange={(e) => void moveToDepartment(seq, e.target.value)} style={{ fontSize: 11.5, padding: "3px 6px", borderRadius: 6, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)" }}>
                             {[...DEPARTMENTS, UNASSIGNED].map((d) => <option key={d} value={d}>{d}</option>)}
@@ -586,7 +603,11 @@ export function SequencesClient({ sequences, templates, lists, defaultSender }: 
                           <span>{seq.steps?.length ?? 0}</span>
                           <span>{enrolledOf(seq) || "—"}</span>
                           <span style={{ minWidth: 0 }}><ApproverPicker sequenceId={seq.id} initialApproverId={seq.approver_id ?? null} /></span>
+                          <span style={{ minWidth: 0, fontSize: 11.5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: schedules[seq.id] ? "#185FA5" : "var(--muted-foreground)" }} title={schedules[seq.id]?.label}>
+                            {schedules[seq.id] ? <><i className="ti ti-repeat" aria-hidden="true" /> {schedules[seq.id].label}</> : "Not scheduled"}
+                          </span>
                           <span style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
+                            {seq.kind !== "partner" ? <button type="button" onClick={() => setScheduleFor({ id: seq.id, name: seq.name })} title="Schedule sends" aria-label="Schedule sends" style={{ border: "0.5px solid var(--border)", background: "#fff", borderRadius: 6, padding: "3px 7px", cursor: "pointer", color: schedules[seq.id] ? "#185FA5" : "var(--muted-foreground)", fontSize: 13 }}><i className="ti ti-clock" aria-hidden="true" /></button> : null}
                             <button type="button" onClick={() => setOpenIds((o) => ({ ...o, [seq.id]: !open }))} title={open ? "Close" : "View"} aria-label="View" style={{ border: "0.5px solid var(--border)", background: "#fff", borderRadius: 6, padding: "3px 7px", cursor: "pointer", color: "#185FA5", fontSize: 13 }}><i className={`ti ${open ? "ti-eye-off" : "ti-eye"}`} aria-hidden="true" /></button>
                             <button type="button" onClick={() => void saveAs(seq)} title="Save as…" aria-label="Save as" style={{ border: "0.5px solid var(--border)", background: "#fff", borderRadius: 6, padding: "3px 7px", cursor: "pointer", color: "var(--muted-foreground)", fontSize: 13 }}><i className="ti ti-copy" aria-hidden="true" /></button>
                             <button type="button" onClick={() => void handleDeleteSequence(seq.id, seq.name)} title="Delete" aria-label="Delete" style={{ border: "0.5px solid #F7C1C1", background: "#fff", borderRadius: 6, padding: "3px 7px", cursor: "pointer", color: "#A32D2D", fontSize: 13 }}><i className="ti ti-trash" aria-hidden="true" /></button>
@@ -603,6 +624,7 @@ export function SequencesClient({ sequences, templates, lists, defaultSender }: 
           ))}
         </div>
       )}
+      {scheduleFor ? <SchedulePanel sequenceId={scheduleFor.id} sequenceName={scheduleFor.name} onClose={() => setScheduleFor(null)} onSaved={() => undefined} /> : null}
     </div>
   );
 }

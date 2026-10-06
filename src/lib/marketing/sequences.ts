@@ -441,7 +441,7 @@ export async function getPendingBatches(): Promise<PendingBatch[]> {
 // Release (send) a pending batch. Processes at most `limit` recipients per call so a
 // large batch (e.g. 500) never exceeds the serverless time budget — the caller loops
 // until `remaining` reaches 0. The batch stays "pending" until fully drained.
-export async function releaseSequenceBatch(batchId: string, releasedBy: string, limit = 50): Promise<{ sent: number; failed: number; remaining: number }> {
+export async function releaseSequenceBatch(batchId: string, releasedBy: string | null, limit = 50): Promise<{ sent: number; failed: number; remaining: number }> {
   const db = await marketingDb();
   const { data: batch } = await db.from("marketing_sequence_batches").select("*").eq("id", batchId).maybeSingle();
   if (!batch) throw new Error("Batch not found.");
