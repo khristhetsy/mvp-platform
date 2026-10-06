@@ -29,6 +29,7 @@ const MENU_OVERRIDES = { "/admin/sales": SALES_HUB_TABS, "/admin/ir": IR_HUB_TAB
 /** One distinct icon per admin hub on the launcher and Home tiles (the sidebar keeps its own icons). */
 export const TILE_ICONS: Record<string, LucideIcon> = {
   "/admin": LayoutDashboard,
+  "/admin/contacts": Contact,
   "/admin/sales/contacts": Contact,
   "/admin/ceo": Crown,
   "/admin/sales": TrendingUp,

@@ -81,7 +81,7 @@ export function useGatedNav(workspace: WorkspaceId): GatedNav {
       if (dept && !dept.unrestricted) return true;
       return perms.permissions.includes(item.requiredPermission);
     };
-    const universal = ["/admin/sales/contacts"];
+    const universal = ["/admin/contacts", "/admin/sales/contacts"];
     const deptAllows = (href: string): boolean => {
       if (!isAdmin) return true;
       if (universal.some((p) => href === p || href.startsWith(`${p}/`))) return true;
