@@ -155,6 +155,14 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
     expected_close: initial.expected_close ?? "", source: initial.source ?? "", notes: initial.notes ?? "",
   });
 
+  // The stage bar closes deals: Won marks the deal won, Loss marks it lost, and any
+  // other stage reopens a closed deal.
+  function stagePatch(s: Stage): Record<string, unknown> {
+    if (s.is_won) return { stageId: s.id, status: "won" };
+    if (/^los[st]$/i.test(s.name.trim())) return { stageId: s.id, status: "lost" };
+    return o.status === "won" || o.status === "lost" ? { stageId: s.id, status: "open" } : { stageId: s.id };
+  }
+
   async function patch(body: Record<string, unknown>) {
     setBusy(true);
     try {
@@ -195,7 +203,6 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
   }
 
   const currentSort = stages.find((s) => s.id === o.stage_id)?.sort_order ?? -1;
-  const wonStage = stages.find((s) => s.is_won);
   const nextStage = stages.find((s) => s.sort_order > currentSort && !s.is_won);
   const statusColor = o.status === "won" ? "#0F6E56" : o.status === "lost" ? "#A32D2D" : o.status === "archived" ? "#5F5E5A" : "#185FA5";
 
@@ -209,8 +216,6 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
       <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, overflow: "hidden" }}>
         {/* Action bar */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 16px", borderBottom: "0.5px solid #eef1f5", flexWrap: "wrap" }}>
-          {wonStage && o.status === "open" && <button type="button" onClick={() => patch({ status: "won", stageId: wonStage.id })} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 14px", cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /> Won</button>}
-          {o.status === "open" && <button type="button" onClick={() => patch({ status: "lost" })} disabled={busy} style={{ fontSize: 12, color: "#A32D2D", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 7, padding: "7px 14px", cursor: "pointer" }}>Lost</button>}
           {o.status !== "open" && <span style={{ fontSize: 11.5, fontWeight: 600, color: statusColor, background: "var(--muted)", borderRadius: 10, padding: "5px 12px" }}>{o.status.toUpperCase()}</span>}
           <div style={{ width: 8 }} />
           {o.contact_phone && <a href={`tel:${o.contact_phone.replace(/[^+\d]/g, "")}`} target="_blank" rel="noopener noreferrer" onClick={() => logTouch("call")} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 12px", textDecoration: "none" }}><i className="ti ti-phone" aria-hidden="true" /> Call</a>}
@@ -245,7 +250,7 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
             const active = s.id === o.stage_id;
             const done = s.sort_order < currentSort;
             return (
-              <button type="button" key={s.id} onClick={() => patch({ stageId: s.id })} disabled={busy}
+              <button type="button" key={s.id} onClick={() => patch(stagePatch(s))} disabled={busy}
                 style={{ fontSize: 11, whiteSpace: "nowrap", cursor: "pointer", border: "none",
                   color: active ? "#fff" : done ? "#0F6E56" : "var(--muted-foreground)",
                   background: active ? "#2E78F5" : s.is_won ? "#E1F5EE" : "var(--muted)",

@@ -91,6 +91,8 @@ export async function GET(req: NextRequest): Promise<Response> {
 
 const addSchema = z.object({
   name: z.string().min(1).max(200),
+  // Membership: the same four values the Founders / Investors / Advisors / Other groups use.
+  contactType: z.enum(["founder", "investor", "advisor", "other"]).optional(),
   email: z.string().email().optional().or(z.literal("")),
   company: z.string().max(200).optional(),
   phone: z.string().max(60).optional(),
@@ -113,7 +115,7 @@ export async function POST(req: NextRequest): Promise<Response> {
   const externalId = parsed.data.email?.trim().toLowerCase() || `manual:${crypto.randomUUID()}`;
   const { data, error } = await db()
     .from("crm_contacts")
-    .insert({ name: parsed.data.name.trim(), email: parsed.data.email || null, company: parsed.data.company || null, phone: parsed.data.phone || null, source: "manual", external_id: externalId, owner_id: ownerId, assignee_ids: scope.isManager ? [] : [profile.id] })
+    .insert({ name: parsed.data.name.trim(), contact_type: parsed.data.contactType ?? null, email: parsed.data.email || null, company: parsed.data.company || null, phone: parsed.data.phone || null, source: "manual", external_id: externalId, owner_id: ownerId, assignee_ids: scope.isManager ? [] : [profile.id] })
     .select("id, name, email, company, phone, source")
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
