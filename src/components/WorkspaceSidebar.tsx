@@ -270,12 +270,12 @@ export function WorkspaceSidebar({
   const pathname = usePathname();
   const [flyout, setFlyout] = useState<string | null>(null);
   // Compact rail: folded (icons, flyouts) or unfolded (labels, accordion groups). Remembered.
-  const [unfolded, setUnfolded] = useState(false);
+  const [unfolded, setUnfolded] = useState(!compact);
   const [accordion, setAccordion] = useState<Record<string, boolean>>({});
   // eslint-disable-next-line react-hooks/set-state-in-effect -- read the remembered state after hydration
-  useEffect(() => { try { setUnfolded(window.localStorage.getItem("admin.sidebar") === "open"); } catch { /* ignore */ } }, []);
+  useEffect(() => { try { const v = window.localStorage.getItem(compact ? "admin.sidebar" : "admin.sidebar.classic"); setUnfolded(v ? v === "open" : !compact); } catch { /* ignore */ } }, [compact]);
   function toggleUnfolded() {
-    setUnfolded((v) => { const next = !v; try { window.localStorage.setItem("admin.sidebar", next ? "open" : "rail"); } catch { /* ignore */ } return next; });
+    setUnfolded((v) => { const next = !v; try { window.localStorage.setItem(compact ? "admin.sidebar" : "admin.sidebar.classic", next ? "open" : "rail"); } catch { /* ignore */ } return next; });
     setFlyout(null);
   }
   // eslint-disable-next-line react-hooks/set-state-in-effect -- close the flyout after navigating
@@ -741,6 +741,44 @@ export function WorkspaceSidebar({
         <aside aria-label={`${label} rail`} className={`relative z-30 hidden h-screen shrink-0 flex-col border-r border-slate-200/80 bg-[var(--surface-sidebar)] transition-[width] duration-150 lg:flex ${unfolded ? "w-56" : "w-11"}`}>
           {unfolded ? wide : rail}
           {/* Edge handle — the second way to fold / unfold, always at mid-height. */}
+          <button type="button" onClick={toggleUnfolded} aria-label={unfolded ? "Collapse sidebar" : "Expand sidebar"} title={unfolded ? "Collapse" : "Expand"}
+            className="absolute -right-2.5 top-1/2 z-40 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-500 shadow-sm hover:text-slate-900">
+            {unfolded ? <ChevronLeft className="h-3 w-3" strokeWidth={2.5} aria-hidden /> : <ChevronRight className="h-3 w-3" strokeWidth={2.5} aria-hidden />}
+          </button>
+        </aside>
+      </>
+    );
+  }
+
+  // Classic admin: desktop hubs expand in place, with Collapse folding to the icon rail.
+  // Phones keep the drawer (drill-in) exactly as before.
+  if (workspace === "admin") {
+    const expanded = (
+      <>
+        <div className="border-b border-slate-200/80 bg-[var(--surface-sidebar)] px-4 py-4">
+          <Link href="/" className="block">
+            <IcapOSLogo height={32} />
+          </Link>
+          <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">{label}</p>
+        </div>
+        <div className="min-h-0 flex-1">{wide}</div>
+        <div className="space-y-2 border-t border-slate-200/80 bg-[var(--surface-sidebar)] p-3">
+          {planBadge ? <div>{planBadge}</div> : null}
+          <LanguageSwitcher />
+        </div>
+      </>
+    );
+    return (
+      <>
+        {mobileOpen ? (
+          <button type="button" className="fixed inset-0 z-40 bg-[var(--blue)]/20 lg:hidden" aria-label="Close navigation" onClick={onClose} />
+        ) : null}
+        <aside aria-label={`${label} sidebar`}
+          className={`fixed inset-y-0 left-0 z-50 flex min-h-0 w-64 shrink-0 flex-col border-r border-slate-200/80 bg-[var(--surface-sidebar)] shadow-[var(--shadow-panel)] transition-transform lg:hidden ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}>
+          {nav}
+        </aside>
+        <aside aria-label={`${label} sidebar`} className={`relative z-30 hidden h-screen shrink-0 flex-col border-r border-slate-200/80 bg-[var(--surface-sidebar)] transition-[width] duration-150 lg:flex ${unfolded ? "w-64" : "w-11"}`}>
+          {unfolded ? expanded : rail}
           <button type="button" onClick={toggleUnfolded} aria-label={unfolded ? "Collapse sidebar" : "Expand sidebar"} title={unfolded ? "Collapse" : "Expand"}
             className="absolute -right-2.5 top-1/2 z-40 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-500 shadow-sm hover:text-slate-900">
             {unfolded ? <ChevronLeft className="h-3 w-3" strokeWidth={2.5} aria-hidden /> : <ChevronRight className="h-3 w-3" strokeWidth={2.5} aria-hidden />}

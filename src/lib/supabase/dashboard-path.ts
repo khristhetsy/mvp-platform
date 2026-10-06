@@ -7,8 +7,9 @@ import type { UserRole } from "./types";
 const dashboardByRole: Record<UserRole, string> = {
   founder: "/founder",
   investor: "/investor/dashboard",
-  admin: "/admin",
-  analyst: "/admin",
+  // Admins go through the start page, which follows the company-wide setting (Home grid or Dashboard).
+  admin: "/admin/start",
+  analyst: "/admin/start",
 };
 
 export function dashboardForRole(role: UserRole) {
