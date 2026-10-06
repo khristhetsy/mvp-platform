@@ -36,6 +36,7 @@ const LABELS: Record<string, Label> = {
   "/api/marketing/process-scheduled": { name: "Scheduled campaigns", group: "Marketing", description: "Sends campaigns whose scheduled time has passed" },
   "/api/cron/match-followups": { name: "Match campaign follow ups", group: "Marketing", description: "Sends due Match campaign follow ups and creates call tasks" },
   "/api/cron/verify-emails": { name: "Email verification", group: "Marketing", description: "Checks unverified contact emails with the free domain check, 15 minutes at a time" },
+  "/api/cron/learn-domain-patterns": { name: "Company email formats", group: "Marketing", description: "Learns each company's email format from known emails; rebuilds once a day" },
   "/api/cron/match-rematch": { name: "Match campaign daily rematch", group: "Marketing", description: "Rematches founders not yet emailed in campaigns with daily refresh on" },
   "/api/cron/marketing-notifications": { name: "Marketing reminders", group: "Marketing" },
   "/api/cron/sales-forecast-rollup": { name: "Forecast rollup", group: "Sales" },
