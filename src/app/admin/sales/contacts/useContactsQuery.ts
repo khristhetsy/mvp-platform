@@ -48,6 +48,20 @@ export function contactsParams(spec: FilterSpec, sort: Sort, viewAs: string | nu
   return sp.toString();
 }
 
+/** Header counts give up after this long so a stalled database shows an error with Retry, not empty groups. */
+const COUNT_TIMEOUT_MS = 30_000;
+
+async function fetchCounts(url: string): Promise<Response> {
+  try {
+    return await fetch(url, { signal: AbortSignal.timeout(COUNT_TIMEOUT_MS) });
+  } catch (e) {
+    if (e instanceof DOMException && (e.name === "TimeoutError" || e.name === "AbortError")) {
+      throw new Error("Counting contacts is taking too long. The database may be busy, try again in a moment.");
+    }
+    throw e;
+  }
+}
+
 async function readJson(res: Response, fallback: string): Promise<Record<string, unknown>> {
   const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
   if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : `${fallback} (HTTP ${res.status})`);
@@ -68,6 +82,8 @@ export function useContactsQuery({ spec, groupBy, sort, viewAs, role }: Input) {
   const [facets, setFacets] = useState<Facets>({ counts: {}, countries: [] });
   const [dynGroups, setDynGroups] = useState<DynGroup[]>([]);
   const [dynLoading, setDynLoading] = useState(false);
+  // True while the header counts for the current query are being fetched.
+  const [countsLoading, setCountsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   // Bumped whenever the query changes; responses from an older query are dropped.
   const gen = useRef(0);
@@ -100,20 +116,21 @@ export function useContactsQuery({ spec, groupBy, sort, viewAs, role }: Input) {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- new query: reset derived state
     setError(null);
     setGroups({});
+    setCountsLoading(true);
     const qs = params;
     (async () => {
       try {
         if (groupBy === "profile") {
-          const data = await readJson(await fetch(`/api/sales/contacts/facets${qs ? `?${qs}` : ""}`), "Couldn't count contacts");
+          const data = await readJson(await fetchCounts(`/api/sales/contacts/facets${qs ? `?${qs}` : ""}`), "Couldn't count contacts");
           if (g !== gen.current) return;
           setFacets({ counts: (data.counts as Record<string, number>) ?? {}, countries: (data.countries as Facets["countries"]) ?? [] });
           setDynGroups([]);
         } else {
           setDynLoading(true);
           const [dyn, fac] = await Promise.all([
-            readJson(await fetch(`/api/sales/contacts/groups?by=${encodeURIComponent(groupBy)}${qs ? `&${qs}` : ""}`), "Couldn't compute groups"),
+            readJson(await fetchCounts(`/api/sales/contacts/groups?by=${encodeURIComponent(groupBy)}${qs ? `&${qs}` : ""}`), "Couldn't compute groups"),
             // Country list (for the column filter) + role counts still come from facets.
-            readJson(await fetch(`/api/sales/contacts/facets${qs ? `?${qs}` : ""}`), "Couldn't count contacts"),
+            readJson(await fetchCounts(`/api/sales/contacts/facets${qs ? `?${qs}` : ""}`), "Couldn't count contacts"),
           ]);
           if (g !== gen.current) return;
           setDynGroups((dyn.groups as DynGroup[] | undefined) ?? []);
@@ -124,7 +141,7 @@ export function useContactsQuery({ spec, groupBy, sort, viewAs, role }: Input) {
         setError(e instanceof Error ? e.message : "Search failed.");
         setDynGroups([]);
       } finally {
-        if (g === gen.current) setDynLoading(false);
+        if (g === gen.current) { setDynLoading(false); setCountsLoading(false); }
       }
     })();
   }, [params, groupBy, version]);
@@ -172,5 +189,5 @@ export function useContactsQuery({ spec, groupBy, sort, viewAs, role }: Input) {
   /** Refetch everything for the current query (after a bulk write, import, sync…). */
   const reload = useCallback(() => setVersion((v) => v + 1), []);
 
-  return { params, groups: groupsOut, expanded, facets, dynGroups, dynLoading, error, toggleGroup, goPage, reload };
+  return { params, groups: groupsOut, expanded, facets, countsLoading, dynGroups, dynLoading, error, toggleGroup, goPage, reload };
 }
