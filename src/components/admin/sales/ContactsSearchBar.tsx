@@ -78,7 +78,7 @@ export function ContactsSearchBar(p: ContactsSearchBarProps) {
 
   return (
     <div style={{ position: "relative", flex: "1 1 360px", minWidth: 280, maxWidth: 640 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 5, border: "1px solid #cdd9ec", borderRadius: 9, padding: "5px 8px", background: "#fff", flexWrap: "wrap" }}>
+      <div style={{ position: "relative", zIndex: 26, display: "flex", alignItems: "center", gap: 5, border: "1px solid #cdd9ec", borderRadius: 9, padding: "5px 8px", background: "#fff", flexWrap: "wrap" }}>
         {p.spec.conditions.map((c, i) => (
           <span key={i} style={{ display: "inline-flex", alignItems: "center", border: "0.5px solid #B5D4F4", background: "#E6F1FB", borderRadius: 6, overflow: "hidden", fontSize: 11.5 }}>
             <span style={{ padding: "3px 8px", color: "#0C447C" }}>{p.condLabel(c)}</span>
