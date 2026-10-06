@@ -798,6 +798,8 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
             </div>
           )}
           {visibleColumns.map((h) => {
+            // Sales Hub > Contacts: name, company, phone and email filter from the search bar only.
+            const hideHeaderFilter = h.kind === "text" && odooSearch && basePath === "/admin/sales/contacts";
             const filterActive = h.kind === "country" ? countries.length > 0 : h.kind === "text" ? !!textFilter(h.key) : false;
             const sortActive = sort.key === h.key;
             return (
@@ -806,7 +808,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
                   {h.label}
                   {h.sortable && sortActive && <i className={sort.dir === "asc" ? "ti ti-arrow-up" : "ti ti-arrow-down"} style={{ fontSize: 12 }} aria-hidden="true" />}
                 </span>
-                {h.kind !== "none" && (
+                {h.kind !== "none" && !hideHeaderFilter && (
                   <button type="button" onClick={() => (h.kind === "country" ? (setOpenFilter(openFilter === "country" ? null : "country"), setOpenColPicker(false)) : openText(h.key))} aria-label={`Filter ${h.label}`} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, color: filterActive ? "#185FA5" : "var(--muted-foreground)", display: "inline-flex" }}>
                     <i className={filterActive ? "ti ti-filter-filled" : "ti ti-filter"} style={{ fontSize: 13 }} aria-hidden="true" />
                   </button>

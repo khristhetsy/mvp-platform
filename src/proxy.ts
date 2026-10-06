@@ -35,8 +35,8 @@ type WorkspaceZone = "founder" | "investor" | "admin";
 const dashboardByRole: Record<UserRole, string> = {
   founder: "/founder/dashboard",
   investor: "/investor/dashboard",
-  admin: "/admin/dashboard",
-  analyst: "/admin/dashboard",
+  admin: "/admin/start",
+  analyst: "/admin/start",
 };
 
 const allowedRolesByZone: Record<WorkspaceZone, UserRole[]> = {
