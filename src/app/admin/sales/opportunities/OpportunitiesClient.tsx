@@ -234,7 +234,7 @@ export function OpportunitiesClient({ canExport = false, meId = "" }: { canExpor
   }, [filtered, groupBy]);
 
   const cols = OPT_COLS.filter((c) => visibleCols.includes(c.key));
-  const gridCols = ["30px", "1.9fr", "1.1fr", ...cols.map((c) => c.width), "190px"].join(" ");
+  const gridCols = ["30px", "1.9fr", "1.1fr", ...cols.map((c) => c.width), "190px"].map((w) => (w.endsWith("fr") ? `minmax(0, ${w})` : w)).join(" ");
 
   // Selection helpers (over the loaded, filtered rows).
   const filteredIds = useMemo(() => filtered.map((o) => o.id), [filtered]);
@@ -334,7 +334,7 @@ export function OpportunitiesClient({ canExport = false, meId = "" }: { canExpor
             {stages.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </div>
-        {cols.map((c) => <div key={c.key}>{cellValue(o, c.key)}</div>)}
+        {cols.map((c) => <div key={c.key} style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cellValue(o, c.key)}</div>)}
         <div style={{ display: "flex", gap: 5, justifyContent: "flex-end", flexWrap: "wrap" }}>
           {o.status === "open" && <button type="button" onClick={() => patch(o.id, { status: "won" })} disabled={busy} style={btn("#0F6E56")}>Mark sold</button>}
           <Link href={`/admin/sales/opportunities/${o.id}`} style={{ ...btn("#fff", "#185FA5"), textDecoration: "none" }}>Open</Link>
