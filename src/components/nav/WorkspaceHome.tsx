@@ -5,9 +5,9 @@
  * permission gating as the top menu launcher; a tile opens that hub. The look is one of
  * the 10 approved Home styles, chosen company-wide by a super admin (gear on the top bar).
  */
-import { createElement, useMemo, useState, useSyncExternalStore } from "react";
+import { createElement, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, Search } from "lucide-react";
+import { Lock } from "lucide-react";
 import type { WorkspaceId } from "@/lib/workspace-nav";
 import type { TopMenuApp } from "@/lib/nav/top-menu";
 import { DEFAULT_ADMIN_HOME } from "@/lib/settings/admin-home-shape";
@@ -112,16 +112,10 @@ export function WorkspaceHome({ workspace, profileName }: Readonly<{ workspace: 
   const greeting = useGreeting();
   const firstName = (profileName ?? "").trim().split(/\s+/)[0];
   const hello = firstName ? `${greeting}, ${firstName}` : greeting;
-  const [query, setQuery] = useState("");
 
   const pick = (app: TopMenuApp) => { rememberApp(workspace, app.id); router.push(app.href); };
   const grid = (list: TopMenuApp[], tone?: Tone, round?: boolean) =>
     <Grid apps={list} all={apps} tone={tone} round={round} tLabel={tLabel} onPick={pick} />;
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return q ? apps.filter((a) => tLabel(a.label).toLowerCase().includes(q)) : apps;
-  }, [apps, query, tLabel]);
 
   const shell = "min-h-[calc(100vh-6rem)] overflow-hidden rounded-xl";
 
@@ -144,13 +138,8 @@ export function WorkspaceHome({ workspace, profileName }: Readonly<{ workspace: 
       return (
         <div className={`${shell} bg-white px-6 py-8 text-center`}>
           <h1 className="sr-only">Home</h1>
-          <LogoColor className="mx-auto w-44" />
-          <label className="mx-auto mb-6 mt-4 flex max-w-sm items-center gap-2 rounded-full border border-slate-300 px-4 py-2 text-left">
-            <Search className="h-4 w-4 text-slate-400" aria-hidden />
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search apps" aria-label="Search apps"
-              className="w-full bg-transparent text-[14px] outline-none placeholder:text-slate-400" />
-          </label>
-          {filtered.length ? grid(filtered) : <p className="text-[13px] text-slate-500">No app matches &ldquo;{query}&rdquo;.</p>}
+          <LogoColor className="mx-auto mb-8 w-44" />
+          {grid(apps)}
         </div>
       );
     case 5: { // Grouped by work
