@@ -7,6 +7,9 @@ import { CreateListWizard } from "./CreateListWizard";
 import { VerifyClient } from "@/app/admin/crm/verify/VerifyClient";
 import { VerifyContactList } from "./VerifyContactList";
 import { ApproachListView } from "./ApproachListView";
+import { FinderOverview } from "./FinderOverview";
+import { DomainPatterns } from "./DomainPatterns";
+import { RetentionReview } from "./RetentionReview";
 import { SavedListsDirectory } from "./SavedListsDirectory";
 
 export const dynamic = "force-dynamic";
@@ -48,8 +51,18 @@ export default async function ProspectsPage({ searchParams }: Props) {
             completeHref="/admin/marketing/prospects?step=approach"
             completeLabel="Complete stage → AI Approach"
             steps={[
-              { label: "Overview & run", content: <VerifyClient stats={await getVerifyStats()} searchReady={searchConfigured()} /> },
+              {
+                label: "Overview & run",
+                content: (
+                  <div style={{ display: "grid", gap: 16 }}>
+                    <VerifyClient stats={await getVerifyStats()} searchReady={searchConfigured()} />
+                    <FinderOverview />
+                  </div>
+                ),
+              },
               { label: "Verify & correct", content: <VerifyContactList /> },
+              { label: "Company formats", content: <DomainPatterns /> },
+              { label: "Retention", content: <RetentionReview /> },
               {
                 label: "Confirm",
                 content: (
