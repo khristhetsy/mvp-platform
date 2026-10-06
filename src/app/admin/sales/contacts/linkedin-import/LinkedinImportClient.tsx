@@ -419,6 +419,94 @@ function EnrichPanel() {
             ? <Btn primary onClick={() => void run(true)}>Continue all</Btn>
             : <Btn primary disabled={state === "done" || (stats?.pendingCompanies ?? 0) === 0} onClick={() => void run()}>{batches ? "Resume" : "Run all"}</Btn>}
       </div>
+
+      <BioPanel group={group} />
+    </div>
+  );
+}
+
+type BioRow = { contactId: string; name: string | null; company: string | null; bio: string | null; pages: string[]; result: "written" | "no_pages" | "not_described" };
+type BioStats = { total: number; written: number; none: number; pending: number };
+const BIO_RESULT: Record<BioRow["result"], { text: string; bg: string; fg: string }> = {
+  written: { text: "Draft, confirm in contact", bg: "#E6F1FB", fg: "#0C447C" },
+  no_pages: { text: "No page about them", bg: "#F1EFE8", fg: "#444441" },
+  not_described: { text: "Pages too thin", bg: "#F1EFE8", fg: "#444441" },
+};
+
+/** Bio drafts from the firm's own site or event pages. Each one is tagged AI until confirmed. */
+function BioPanel({ group }: { group: Group }) {
+  const [stats, setStats] = useState<BioStats | null>(null);
+  const [rows, setRows] = useState<BioRow[]>([]);
+  const [running, setRunning] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const stop = useRef(false);
+
+  useEffect(() => {
+    let off = false;
+    fetch(`/api/sales/contacts/linkedin-bio?group=${group}`)
+      .then(async (res) => ({ ok: res.ok, d: await res.json() }))
+      .then(({ ok, d }) => { if (off) return; if (ok) { setStats(d as BioStats); setRows([]); } else setMsg(d.error ?? "Couldn't load."); })
+      .catch(() => { if (!off) setMsg("Couldn't load."); });
+    return () => { off = true; };
+  }, [group]);
+
+  async function run() {
+    stop.current = false; setMsg(null); setRunning(true);
+    for (;;) {
+      type BioBatch = { people: number; rows: BioRow[]; budgetReached: boolean; stats: BioStats };
+      let b: BioBatch;
+      try { b = await postJson<BioBatch>("/api/sales/contacts/linkedin-bio", { group, limit: 25 }); }
+      catch (e) { setMsg(e instanceof Error ? e.message : "Bio drafts failed."); break; }
+      setRows((r) => [...b.rows, ...r]);
+      setStats(b.stats);
+      if (b.budgetReached) { setMsg("The Data enrichment budget for this month is used up. The rest stays pending."); break; }
+      if (b.people === 0) { setMsg("Every contact in this group has been checked."); break; }
+      if (stop.current) break;
+    }
+    setRunning(false);
+  }
+
+  return (
+    <div style={{ marginTop: 22, borderTop: "0.5px solid #e3e8f0", paddingTop: 14 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <div style={{ fontSize: 14, fontWeight: 600 }}>Write bios</div>
+        <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
+          {stats ? `${n(stats.written)} drafted · ${n(stats.none)} nothing found · ${n(stats.pending)} left` : "Loading…"}
+        </span>
+        <span style={{ flex: 1 }} />
+        <Link href="/admin/sales/contacts/fill-missing" style={{ fontSize: 12, color: BLUE }}>Fill missing fields (summary, industry, size guesses)</Link>
+      </div>
+      <p style={{ fontSize: 12, color: "var(--muted-foreground)", margin: "6px 0 10px" }}>
+        One search per person. Reads only the firm&apos;s own site or event pages that name them, never LinkedIn or people search sites. Each bio is saved as a draft tagged AI; confirm it in the contact window.
+      </p>
+      {msg && <div style={{ fontSize: 12.5, background: "#FAEEDA", color: "#633806", borderRadius: 8, padding: "9px 12px", marginBottom: 10 }}>{msg}</div>}
+      {rows.length > 0 && (
+        <div style={{ border: "0.5px solid #e3e8f0", borderRadius: 10, overflow: "hidden", background: "#fff", marginBottom: 10 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
+            <colgroup><col style={{ width: "18%" }} /><col style={{ width: "16%" }} /><col style={{ width: "46%" }} /><col style={{ width: "20%" }} /></colgroup>
+            <thead><tr><th style={th}>Name</th><th style={th}>Company</th><th style={th}>Bio draft</th><th style={th}>Result</th></tr></thead>
+            <tbody>
+              {rows.slice(0, PAGE).map((r) => {
+                const rl = BIO_RESULT[r.result];
+                return (
+                  <tr key={r.contactId}>
+                    <td style={td}><Link href={`/admin/sales/contacts/${r.contactId}`} style={{ color: "var(--foreground)" }}>{r.name}</Link></td>
+                    <td style={td}>{r.company ?? "—"}</td>
+                    <td style={{ ...td, whiteSpace: "normal" }} title={r.pages.join("\n")}>{r.bio ?? "—"}</td>
+                    <td style={td}><span style={{ fontSize: 11, background: rl.bg, color: rl.fg, borderRadius: 6, padding: "2px 8px" }}>{rl.text}</span></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+        <Btn disabled={!rows.length} onClick={() => downloadCsv(`linkedin-bios-${group}.csv`, ["Name", "Company", "Bio draft", "Pages", "Result"], rows.map((r) => [r.name, r.company, r.bio, r.pages.join(" "), BIO_RESULT[r.result].text]))}>Export bios</Btn>
+        {running
+          ? <Btn onClick={() => { stop.current = true; setMsg("Pausing after this batch…"); }}>Pause</Btn>
+          : <Btn primary disabled={(stats?.pending ?? 0) === 0} onClick={() => void run()}>Write bios</Btn>}
+      </div>
     </div>
   );
 }
