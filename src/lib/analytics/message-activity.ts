@@ -13,6 +13,9 @@
 // (recipient_user_id, created_at) index by passing the founder and investor ids.
 
 import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
+import { CAP_PERIOD_DAYS, capPeriod, parseUtc } from "@/lib/outreach/investor-cap";
+import { founderEntitlements } from "@/lib/subscriptions/entitlements";
+import type { PlanType } from "@/lib/subscriptions/plans";
 import {
   type GoalEntry,
   type GoalBasis,
@@ -22,8 +25,8 @@ import {
   type ReceivedItem,
   type SentItem,
   METRIC_KEYS,
-  parisDay,
-  parisDayStartUtc,
+  localDay,
+  dayStartUtc,
   addDays,
   type DayRange,
 } from "./message-activity-metrics";
@@ -45,7 +48,7 @@ async function readAll<T>(build: (from: number, to: number) => PromiseLike<{ dat
   }
 }
 
-type ProfileRow = { id: string; full_name: string | null; email: string | null; role: string };
+type ProfileRow = { id: string; full_name: string | null; email: string | null; role: string; created_at: string | null };
 type CompanyRow = { id: string; company_name: string | null; founder_id: string | null; created_at: string };
 type MemberRow = { company_id: string; user_id: string };
 type SubscriptionRow = { profile_id: string; plan_type: string | null; subscription_status: string | null; grandfathered_free: boolean | null; updated_at: string | null };
@@ -57,12 +60,14 @@ function planOf(sub: SubscriptionRow | undefined): Pick<MessagePerson, "plan" | 
     : sub.plan_type === "founder_basic" ? { plan: "Basic", planGroup: "basic" as const }
     : sub.plan_type === "founder_free" ? { plan: sub.grandfathered_free ? "Free (grandfathered)" : "Free", planGroup: "free" as const }
     : { plan: sub.plan_type.replace(/_/g, " "), planGroup: "none" as const };
-  return sub.subscription_status === "pending_payment" ? { ...base, plan: `${base.plan}, payment pending` } : base;
+  // Signed up and picked a plan but never paid: the platform gives them only the
+  // dashboard and settings (access.ts), so they are not counted as on that plan.
+  return sub.subscription_status === "pending_payment" ? { plan: `Not paid (chose ${base.plan})`, planGroup: "none" } : base;
 }
 
 async function loadPeople(db: Db) {
   const [profiles, companies, members, subs] = await Promise.all([
-    readAll<ProfileRow>((a, b) => db.from("profiles").select("id, full_name, email, role").in("role", ["founder", "investor"]).order("id").range(a, b)),
+    readAll<ProfileRow>((a, b) => db.from("profiles").select("id, full_name, email, role, created_at").in("role", ["founder", "investor"]).order("id").range(a, b)),
     readAll<CompanyRow>((a, b) => db.from("companies").select("id, company_name, founder_id, created_at").order("created_at").order("id").range(a, b)),
     readAll<MemberRow>((a, b) => db.from("company_members").select("company_id, user_id").order("company_id").order("user_id").range(a, b)),
     readAll<SubscriptionRow>((a, b) => db.from("subscriptions").select("profile_id, plan_type, subscription_status, grandfathered_free, updated_at").order("updated_at", { ascending: false }).order("id").range(a, b)),
@@ -98,7 +103,8 @@ async function loadPeople(db: Db) {
   for (const c of companies) if (c.founder_id) founderOfCompany.set(c.id, c.founder_id);
   for (const m of members) if (!founderOfCompany.has(m.company_id)) founderOfCompany.set(m.company_id, m.user_id);
 
-  return { people, byEmail, founderOfCompany, companyById };
+  const signupOf = new Map(profiles.map((p) => [p.id, p.created_at]));
+  return { people, byEmail, founderOfCompany, companyById, subOf, signupOf };
 }
 
 type EmailRow = {
@@ -118,6 +124,7 @@ type ManualRow = {
   id: string; company_id: string; name: string | null; email: string | null; status: string;
   last_sent_at: string | null; enrolled_at: string;
 };
+type EnrolledRow = { company_id: string; contact_id: string; email: string | null; enrolled_at: string };
 type ManualCampaignRow = { company_id: string; email_subject: string | null; email_body: string | null };
 type IntroRow = {
   id: string; company_id: string; founder_id: string | null; investor_ref: string; status: string;
@@ -144,18 +151,20 @@ async function loadNotifications(db: Db, ids: string[], fromIso: string, toIso: 
 
 /**
  * Everything sent to founders and investors, and on founders' behalf, between two
- * Paris calendar days (inclusive).
+ * Pacific calendar days (inclusive).
  */
 export async function loadMessageActivity(range: DayRange): Promise<MessageActivityData> {
   const db = serviceRoleClientUntyped();
-  const fromIso = parisDayStartUtc(range.start).toISOString();
-  const toIso = parisDayStartUtc(addDays(range.end, 1)).toISOString();
+  const fromIso = dayStartUtc(range.start).toISOString();
+  const toIso = dayStartUtc(addDays(range.end, 1)).toISOString();
   const inRangeIso = (iso: string | null) => !!iso && iso >= fromIso && iso < toIso;
 
-  const { people, byEmail, founderOfCompany } = await loadPeople(db);
+  const { people, byEmail, founderOfCompany, subOf, signupOf } = await loadPeople(db);
+  const now = new Date();
+  const windowFloor = new Date(now.getTime() - CAP_PERIOD_DAYS * 86_400_000).toISOString();
   const ids = [...people.keys()];
 
-  const [emails, notes, outreach, campaigns, manual, manualCampaigns, intros] = await Promise.all([
+  const [emails, notes, outreach, campaigns, manual, manualCampaigns, intros, enrolled] = await Promise.all([
     readAll<EmailRow>((a, b) =>
       db.from("email_log")
         .select("id, created_at, to_email, recipient_user_id, recipient_role, subject, source, job, status")
@@ -174,6 +183,9 @@ export async function loadMessageActivity(range: DayRange): Promise<MessageActiv
       db.from("founder_manual_outreach").select("company_id, email_subject, email_body").order("company_id").range(a, b)),
     readAll<IntroRow>((a, b) =>
       db.from("prospect_intro_requests").select("id, company_id, founder_id, investor_ref, status, note, handled_at, created_at").order("id").range(a, b)),
+    // DIY enrolments count against the plan allowance when enrolled (investor-cap.ts), sent or not.
+    readAll<EnrolledRow>((a, b) =>
+      db.from("founder_manual_outreach_recipients").select("company_id, contact_id, email, enrolled_at").gte("enrolled_at", windowFloor).order("id").range(a, b)),
   ]);
 
   // Someone emailed with no iCapOS profile still gets a row, keyed by address.
@@ -296,6 +308,34 @@ export async function loadMessageActivity(range: DayRange): Promise<MessageActiv
     });
   }
 
+  // Plan allowance right now, counted the way outreach counts it (investor-cap.ts):
+  // distinct investors reached by DIY enrolment or a sent Founder Preview since the
+  // founder's current 30 day window started.
+  const allowance: MessageActivityData["allowance"] = {};
+  const reachedBy = new Map<string, Array<{ key: string; at: string }>>();
+  const addReach = (companyId: string, key: string, at: string) => {
+    const list = reachedBy.get(companyId) ?? [];
+    list.push({ key, at });
+    reachedBy.set(companyId, list);
+  };
+  for (const o of outreach) {
+    const company = companyOfCampaign.get(o.campaign_id);
+    if (company && o.status === "sent" && o.sent_at && o.sent_at >= windowFloor) addReach(company, o.email?.trim().toLowerCase() || `auto:${o.id}`, o.sent_at);
+  }
+  for (const e of enrolled) addReach(e.company_id, e.email?.trim().toLowerCase() || `diy:${e.contact_id}`, e.enrolled_at);
+  for (const [companyId, founderId] of founderOfCompany) {
+    if (!people.has(founderId) || allowance[founderId]) continue;
+    const sub = subOf.get(founderId);
+    if (!sub || sub.subscription_status === "pending_payment") continue;
+    const cap = founderEntitlements(sub.plan_type as PlanType | null).investorCap;
+    if (!cap) continue;
+    const signup = signupOf.get(founderId);
+    const period = capPeriod(signup ? parseUtc(signup) : now, now);
+    const start = period.start.getTime();
+    const used = new Set((reachedBy.get(companyId) ?? []).filter((r) => parseUtc(r.at).getTime() >= start).map((r) => r.key)).size;
+    allowance[founderId] = { cap, used, resetsAt: period.end.toISOString() };
+  }
+
   received.sort((a, b) => (a.at < b.at ? 1 : -1));
   sent.sort((a, b) => (a.at < b.at ? 1 : -1));
 
@@ -304,6 +344,7 @@ export async function loadMessageActivity(range: DayRange): Promise<MessageActiv
     received,
     sent,
     queued,
+    allowance,
     emailLogStart: EMAIL_LOG_START,
     generatedAt: new Date().toISOString(),
   };
@@ -394,7 +435,7 @@ export async function deleteGoal(id: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
-/** Today's Paris calendar day. */
-export function todayParis(): string {
-  return parisDay(new Date());
+/** Today's Pacific calendar day. */
+export function todayLocal(): string {
+  return localDay(new Date());
 }
