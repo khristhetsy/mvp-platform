@@ -11,6 +11,7 @@
  * Gmail (the address is resolved on the server) and logs a done Email activity.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { OdooStageBar } from "@/components/ui/OdooStageBar";
 import Link from "next/link";
 import { formatRange } from "@/lib/ir/milestones";
 import { MeetingPanel } from "./MeetingPanel";
@@ -130,15 +131,7 @@ export function MatchClient({ matchId, meId }: { matchId: string; meId: string }
       ) : null}
 
       {/* Status bar */}
-      <div className="mb-3 flex flex-wrap gap-0.5 overflow-x-auto">
-        {IR_STAGES.map((s, i) => {
-          const idx = IR_STAGES.indexOf(m.stage), active = s === m.stage, past = i < idx;
-          return <button key={s} type="button" disabled={busy || active} onClick={() => patch({ stage: s })}
-            className={`px-3 py-1.5 text-[11.5px] font-medium ${active ? "bg-indigo-600 text-white" : past ? "bg-indigo-50 text-indigo-700 hover:bg-indigo-100" : "bg-slate-100 text-slate-500 hover:bg-slate-200"} ${i === 0 ? "rounded-l-lg" : ""} ${i === IR_STAGES.length - 1 ? "rounded-r-lg" : ""}`}>
-            {IR_STAGE_LABEL[s]}
-          </button>;
-        })}
-      </div>
+      <OdooStageBar className="mb-3" steps={IR_STAGES.map((s) => ({ key: s, label: IR_STAGE_LABEL[s] }))} current={m.stage} onSelect={(s) => void patch({ stage: s as typeof m.stage })} disabled={busy} />
 
       <div className="rounded-xl border border-slate-200 bg-white">
         <div className="flex flex-wrap items-start gap-3 border-b border-slate-100 p-4">

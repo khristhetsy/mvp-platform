@@ -7,6 +7,7 @@
  * further along the pipeline show their stage and stay ticked; change those on the match.
  */
 import { useEffect, useMemo, useState } from "react";
+import { OdooStageBar } from "@/components/ui/OdooStageBar";
 import Link from "next/link";
 import { IR_STAGE_LABEL, type IrStage } from "@/lib/ir/types";
 
@@ -97,10 +98,7 @@ export function TaskSidePanel({ taskId, onClose, onChanged }: { taskId: string; 
             <div className="space-y-3 border-b border-slate-100 px-4 py-3 text-[12.5px]">
               <div className="flex items-center gap-2">
                 <span className="w-20 text-slate-500">Status</span>
-                <div className="flex overflow-hidden rounded-lg border border-slate-200">
-                  {STATUSES.map(([k, label]) => <button key={k} type="button" aria-pressed={d.task.status === k} onClick={() => d.task.status !== k && void patchTask({ status: k })}
-                    className={`px-2.5 py-1 ${d.task.status === k ? "bg-indigo-600 text-white" : "text-slate-600 hover:bg-slate-50"}`}>{label}</button>)}
-                </div>
+                <OdooStageBar size="sm" steps={STATUSES.map(([k, label]) => ({ key: k, label }))} current={d.task.status} onSelect={(k) => { if (d.task.status !== k) void patchTask({ status: k as Detail["task"]["status"] }); }} />
               </div>
               <div className="flex items-center gap-2"><span className="w-20 text-slate-500">Deadline</span><span className="text-slate-800">{d.task.deadline ? fmt(d.task.deadline) : "None"}</span></div>
               {week ? <div className="flex items-center gap-2"><span className="w-20 text-slate-500">Week</span><span className="text-slate-800">{week.label} · {fmt(week.starts_on)} to {fmt(week.ends_on)}</span></div> : null}

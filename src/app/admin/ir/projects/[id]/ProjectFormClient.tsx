@@ -8,6 +8,7 @@
  *   chatter       Send message · Log note · followers · dated history (messages, notes, activities, stage moves, reports)
  */
 import { useCallback, useEffect, useState } from "react";
+import { OdooStageBar, type StageState } from "@/components/ui/OdooStageBar";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { EntrepreneurProfile } from "@/lib/ir/db";
@@ -95,17 +96,17 @@ export function ProjectFormClient({ projectId, initialTab }: { projectId: string
       <div className="rounded-xl border border-slate-200 bg-white">
         <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-4 py-2.5">
           <Link href={`${base}/pipeline?add=1`} className="rounded-lg bg-violet-700 px-3 py-1.5 text-[12.5px] font-semibold text-white hover:bg-violet-800">Share Project</Link>
-          <div className="flex min-w-0 flex-1 items-center overflow-x-auto">
-            {months.map((m) => {
-              const isCur = curMonth?.id === m.id; const done = m.ends_on < today;
-              return (
-                <div key={m.id} className="flex items-center">
-                  <Stage label={m.label} state={isCur ? "on" : done ? "done" : "todo"} href={`${base}/tasks`} />
-                  {isCur ? weeks.filter((w) => w.parent_id === m.id).map((w) => <Stage key={w.id} label={w.label} hint={w.id === curWeek?.id ? `${daysLeft}d left` : undefined} state={w.id === curWeek?.id ? "on" : w.ends_on < today ? "done" : "todo"} href={`${base}/tasks`} />) : null}
-                </div>
-              );
+          <OdooStageBar
+            className="flex-1"
+            size="sm"
+            ariaLabel="Project months and weeks"
+            steps={months.flatMap((m) => {
+              const isCur = curMonth?.id === m.id;
+              const month = { key: m.id, label: m.label, href: `${base}/tasks`, state: (isCur ? "on" : m.ends_on < today ? "done" : "todo") as StageState };
+              if (!isCur) return [month];
+              return [month, ...weeks.filter((w) => w.parent_id === m.id).map((w) => ({ key: w.id, label: w.label, href: `${base}/tasks`, hint: w.id === curWeek?.id ? `${daysLeft}d left` : undefined, state: (w.id === curWeek?.id ? "on" : w.ends_on < today ? "done" : "todo") as StageState }))];
             })}
-          </div>
+          />
           <select value={p.status} disabled={busy} onChange={(e) => patch({ status: e.target.value })} className={inp} aria-label="Status">{IR_PROJECT_STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}</select>
         </div>
 
@@ -154,10 +155,6 @@ export function ProjectFormClient({ projectId, initialTab }: { projectId: string
 
 function Smart({ href, label, value }: { href: string; label: string; value: string }) {
   return <Link href={href} className="border-l border-slate-200 px-3 py-1.5 first:border-l-0 hover:bg-slate-50"><span className="block text-slate-500">{label}</span><span className="block font-medium text-slate-900">{value}</span></Link>;
-}
-function Stage({ label, hint, state, href }: { label: string; hint?: string; state: "on" | "done" | "todo"; href: string }) {
-  const cls = state === "on" ? "bg-slate-900 text-white" : state === "done" ? "bg-blue-100 text-blue-800" : "bg-slate-100 text-slate-600";
-  return <Link href={href} className={`-ml-1.5 whitespace-nowrap px-3.5 py-1.5 text-[12px] first:ml-0 ${cls}`} style={{ clipPath: "polygon(0 0, calc(100% - 8px) 0, 100% 50%, calc(100% - 8px) 100%, 0 100%, 8px 50%)" }}>{label}{hint ? <span className="ml-1 text-[10.5px] opacity-70">{hint}</span> : null}</Link>;
 }
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <div className="grid grid-cols-[140px_1fr] items-center gap-2"><span className="text-[12.5px] font-medium text-slate-600">{label}</span><span className="min-w-0 text-slate-800">{children}</span></div>;
