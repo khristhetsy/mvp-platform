@@ -54,6 +54,7 @@ export function sourceKeysFor(key: string): string[] {
   if (key === "state") out.add("_state_source");
   if (key === "company") out.add("_company_source");
   if (key === "Industries") out.add("_industry_source");
+  if (key === "Bio") out.add("_bio_source");
   if (isInvestorProfileLabel(key) || key === INVESTOR_PROFILE_LABEL) out.add("_type_source");
   if ((OP_STAGE_LABELS as readonly string[]).includes(key)) { out.add("_stage_source"); out.add("_operating_stage_source"); }
   const fixed: Record<string, string> = {

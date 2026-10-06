@@ -90,6 +90,7 @@ export const AI_FEATURE_META: Record<string, { label: string; group?: string }> 
   // Enrichment
   investor_enrichment: { label: "Investor enrichment" },
   contact_fill: { label: "Contact field fill" },
+  linkedin_bio: { label: "LinkedIn bio drafts" },
   web_search: { label: "Web search" },
   // Voice
   vapi_calls: { label: "Vapi call cost" },

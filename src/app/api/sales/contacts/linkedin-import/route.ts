@@ -119,6 +119,9 @@ export async function POST(req: NextRequest): Promise<Response> {
       company: r.company,
       enrichment_status: r.company ? "pending" : "no_website",
       tags: ["LinkedIn"],
+      // Lead source drives the Contacts "Lead source" filter, so the shared
+      // "LinkedIn without email" favorite can find every imported connection.
+      overrides: { lead_source: "LinkedIn" },
       raw: {
         function: r.position,
         linkedin: liBlock(r),
