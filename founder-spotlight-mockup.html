@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Founder Spotlight Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0A1A40;--blue:#1A6CE4;--hover:#2E78F5;--steel:#185FA5;
+  --bg:#F4F6FA;--card:#FFFFFF;--line:#E3E8F0;--text:#0F172A;--muted:#64748B;--soft:#F1F5F9;
+  --ok:#047857;--okbg:#ECFDF5;--warn:#92400E;--warnbg:#FFFBEB;--bad:#B91C1C;--badbg:#FEF2F2;--tint:#EAF2FD;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0B1220;--card:#111A2E;--line:#22304A;--text:#E6ECF5;--muted:#93A3BC;--soft:#17223A;--tint:#13284A;
+  --okbg:#0E2A22;--ok:#6EE7B7;--warnbg:#2B2110;--warn:#FCD34D;--badbg:#2C1414;--bad:#FCA5A5;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 Inter,system-ui,sans-serif}
+h1,h2,h3{font-family:Archivo,Inter,sans-serif;margin:0}
+a{color:var(--blue);text-decoration:none}
+button{font:inherit;cursor:pointer}
+.wrap{max-width:1180px;margin:0 auto;padding:16px}
+.switch{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 14px}
+.switch button{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:999px;padding:6px 14px;font-size:13px}
+.switch button.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.note{font-size:12px;color:var(--muted);margin:0 0 12px}
+/* Odoo style top bar */
+.topbar{display:flex;align-items:center;gap:14px;background:var(--navy);color:#fff;padding:0 14px;height:46px;border-radius:12px 12px 0 0;overflow-x:auto;white-space:nowrap}
+.topbar .grid{width:18px;height:18px;display:grid;grid-template-columns:repeat(3,4px);gap:3px}
+.topbar .grid i{background:#fff;border-radius:1px;width:4px;height:4px}
+.topbar .app{font-weight:600;font-family:Archivo,Inter,system-ui,sans-serif}
+.topbar nav{display:flex;gap:14px;font-size:13px;color:#B5D4F4}
+.topbar nav span.on{color:#fff;border-bottom:2px solid var(--hover);padding-bottom:2px}
+.topbar .right{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12px;color:#B5D4F4}
+.avatar{width:26px;height:26px;border-radius:50%;background:var(--hover);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:600}
+.frame{background:var(--card);border:1px solid var(--line);border-top:0;border-radius:0 0 12px 12px;padding:18px}
+.crumb{font-size:12px;color:var(--muted)}
+.pagehead{display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:space-between;margin:6px 0 16px}
+.btn{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px}
+.btn:hover{background:var(--soft)}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn.primary:hover{background:var(--hover)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+.grid2{display:grid;gap:16px;grid-template-columns:minmax(0,1fr) 320px}
+.grid-q{display:grid;gap:16px;grid-template-columns:300px minmax(0,1fr)}
+@media (max-width:860px){.grid2,.grid-q{grid-template-columns:1fr}}
+label.f{display:block;font-size:13px;font-weight:500;margin:14px 0 6px}
+input.t,select.t,textarea.t{width:100%;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:8px;padding:8px 10px;font:inherit}
+.hint{font-size:12px;color:var(--muted);margin-top:4px}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;font-size:12px;background:var(--tint);color:var(--steel)}
+.events{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}
+.ev{border:1px solid var(--line);border-radius:10px;overflow:hidden;text-align:left;background:var(--card);color:var(--text);padding:0}
+.ev .ban{height:54px;background:linear-gradient(90deg,#0A1A40,#185FA5)}
+.ev.on{border-color:var(--blue);box-shadow:0 0 0 3px rgba(26,108,228,.18)}
+.ev p{margin:0;padding:6px 10px;font-size:12px}
+.ev p b{display:block;font-size:13px}
+.outline{background:var(--soft);border-radius:10px;padding:12px;margin-top:14px}
+.outline ol{display:grid;grid-template-columns:1fr 1fr;gap:2px 14px;margin:8px 0 6px;padding-left:18px;font-size:12px}
+.drop{border:1.5px dashed #94A3B8;border-radius:10px;padding:16px;text-align:center}
+.checks{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-top:8px;font-size:12px}
+.ok{color:var(--ok)} .bad{color:var(--bad)} .warn{color:var(--warn)}
+.cb{display:flex;gap:8px;align-items:flex-start;font-size:13px;margin-top:12px}
+.disc{font-size:11px;color:var(--muted);line-height:1.6;margin-top:8px}
+ul.clean{list-style:none;padding:0;margin:0}
+.feat li{display:flex;gap:8px;margin:7px 0;font-size:13px}
+/* studio */
+.ros{display:flex;height:34px;border-radius:8px;overflow:hidden;font-size:11px;margin-top:10px}
+.ros div{display:flex;align-items:center;justify-content:center;border-right:2px solid var(--card);color:var(--muted);background:var(--soft)}
+.ros div.show{background:var(--tint);color:var(--steel);font-weight:600}
+.axis{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px}
+.tiles{display:grid;gap:10px;grid-template-columns:repeat(3,1fr);margin-top:14px}
+@media (max-width:640px){.tiles{grid-template-columns:1fr}}
+.tile{border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;gap:12px;align-items:center}
+.ring{width:44px;height:44px;flex:none}
+.tile b{font-size:22px;font-family:Archivo,Inter,sans-serif;display:block;line-height:1.1}
+.tile small{font-size:12px;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{border:0;border-radius:999px;padding:4px 10px;font-size:12px;background:var(--soft);color:var(--muted)}
+.chip.on{background:var(--blue);color:#fff}
+.qrow{display:block;width:100%;text-align:left;border:0;background:none;color:var(--text);padding:9px 8px;border-bottom:1px solid var(--line)}
+.qrow.on{background:var(--tint)}
+.qrow small{display:block;color:var(--muted);font-size:12px}
+.video{aspect-ratio:16/9;background:var(--navy);border-radius:10px;position:relative;overflow:hidden;color:#fff}
+.play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.play span{width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:20px}
+.step{border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:10px}
+.step h4{margin:0 0 8px;font-size:13px;display:flex;gap:8px;align-items:center}
+.n{width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;background:var(--tint);color:var(--steel)}
+.n.done{background:var(--okbg);color:var(--ok)}
+.flag{border-radius:8px;padding:8px 10px;font-size:12px;margin-top:6px}
+.flag.bad{background:var(--badbg)} .flag.warn{background:var(--warnbg)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.lineup li{display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid var(--line);font-size:13px}
+.lineup li:last-child{border-bottom:0}
+.lineup .tm{width:96px;white-space:nowrap;color:var(--muted);font-size:12px}
+.lineup .nm{flex:1}
+.arr{border:0;background:none;color:var(--muted);padding:2px 6px;border-radius:6px}
+.arr:hover{background:var(--soft)}
+/* player */
+.venue{display:flex;gap:2px;background:var(--soft);padding:6px;border-radius:10px;overflow-x:auto;white-space:nowrap;font-size:12px}
+.venue span{padding:6px 10px;border-radius:8px;color:var(--muted)}
+.venue span.on{background:var(--card);color:var(--text);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.intro{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:26px}
+.intro .k{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#85B7EB}
+.intro h2{font-size:28px;color:#fff;margin:4px 0 2px}
+.intro .sub{color:#B5D4F4;font-size:13px}
+.intro .txt{max-width:620px;margin-top:10px;font-size:14px;color:rgba(255,255,255,.9)}
+.bar{height:4px;background:var(--steel);border-radius:3px;margin-top:14px;overflow:hidden}
+.bar i{display:block;height:4px;background:#fff;width:0;transition:width .25s linear}
+.lower{position:absolute;left:16px;bottom:44px;background:var(--blue);padding:8px 12px;border-radius:6px}
+.lower b{display:block;font-size:14px}
+.lower span{font-size:12px}
+.speaker{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:64px;color:#378ADD}
+.ytbar{position:absolute;left:0;right:0;bottom:0;height:30px;background:linear-gradient(transparent,rgba(0,0,0,.5));display:flex;align-items:center;gap:10px;padding:0 12px;font-size:12px}
+.ytbar .prog{flex:1;height:3px;background:rgba(255,255,255,.3);border-radius:2px}
+.ytbar .prog i{display:block;height:3px;width:0;background:#E24B4A;border-radius:2px}
+.lu button{display:flex;width:100%;gap:10px;align-items:center;border:0;background:none;color:var(--text);text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);font-size:13px}
+.lu button.on{background:var(--tint)}
+.lu .i{width:18px;color:var(--muted);font-size:12px}
+.lu .s{color:var(--muted);font-size:12px}
+.hide{display:none!important}
+/* booth */
+.booth-head{display:flex;gap:12px;align-items:center}
+.logo{width:48px;height:48px;border-radius:10px;background:var(--tint);color:var(--steel);display:flex;align-items:center;justify-content:center;font-weight:700;font-family:Archivo,Inter,sans-serif}
+.doc{display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line);font-size:13px}
+.doc span{flex:1}
+.compliance{background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:14px;font-size:12px;color:var(--muted);margin-top:16px}
+.legend{font-size:11px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 style="font-size:20px">Founder Spotlight · built screens</h1>
+  <p class="note">Branch feat/founder-spotlight. Four screens, same data as the build. Sample company Ledgerly. Click through: tabs, the player, the capacity calculator and the lineup arrows all work.</p>
+  <div class="switch" role="tablist">
+    <button class="on" data-s="apply">1 Founder applies</button>
+    <button data-s="studio">2 Admin Spotlight studio</button>
+    <button data-s="player">3 Event player</button>
+    <button data-s="booth">4 Founder booth</button>
+  </div>
+
+  <!-- 1 FOUNDER APPLY -->
+  <section id="apply">
+    <div class="topbar"><span class="grid"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="app">Events</span>
+      <nav><span>Upcoming</span><span class="on">Present at an event</span><span>My registrations</span></nav>
+      <div class="right"><span>Ledgerly</span><span class="avatar">MC</span></div></div>
+    <div class="frame">
+      <div class="crumb">Events › Present at an event</div>
+      <div class="pagehead"><h2 style="font-size:20px">Present at an event</h2></div>
+      <div class="grid2">
+        <div class="card">
+          <span class="pill">✦ Founder Spotlight, included with Professional</span>
+          <div class="row" style="margin-top:12px"><div style="display:inline-flex;border:1px solid var(--line);border-radius:8px;padding:2px">
+            <button class="btn primary" style="padding:5px 10px">Founder Spotlight video</button>
+            <button class="btn" style="border:0;padding:5px 10px">Full presentation</button></div>
+            <span class="hint" style="margin:0">Basic plans see Spotlight only</span></div>
+
+          <label class="f">Choose an event</label>
+          <div class="events">
+            <button class="ev"><div class="ban"></div><p><b>iCFO PE Expo, Australia</b>Oct 20, 2026 · Showcase</p></button>
+            <button class="ev"><div class="ban"></div><p><b>iCFO PE Expo, Singapore</b>Nov 17, 2026 · Showcase</p></button>
+            <button class="ev on"><div class="ban"></div><p><b>iCFO PE Expo, Paris</b>Dec 15, 2026 · Showcase</p></button>
+          </div>
+
+          <label class="f">Talk title</label>
+          <input class="t" value="Closing the books in a day, not a week">
+          <label class="f">Sector track</label>
+          <select class="t"><option>FinTech</option><option>AI / ML</option><option>HealthTech</option></select>
+          <label class="f">One line company summary</label>
+          <input class="t" value="AP automation for mid market finance teams" maxlength="200">
+          <div class="hint">Used for the short introduction played before your pitch.</div>
+
+          <div class="outline"><b style="font-size:13px">What to cover in your 3 minutes</b>
+            <ol><li>Hook and problem</li><li>Solution</li><li>Traction</li><li>Market and model</li><li>Team</li><li>The ask</li></ol>
+            <div class="hint">Use real numbers only and end with the amount you are raising. Before you record, run your deck through the <a href="#">Pitch Deck Analyzer</a> and rehearse in <a href="#">Pitch Practice</a>.</div></div>
+
+          <label class="f">Pitch video <span class="bad">*</span></label>
+          <div class="drop"><div style="font-size:20px;color:var(--blue)">⇪</div><b style="font-size:13px">Choose a different video</b><div class="hint">MP4, MOV or WebM · landscape · 3:00 max · 500 MB max</div></div>
+          <div class="checks"><span class="ok">✓ MP4, MOV or WebM</span><span class="ok">✓ 500 MB or less</span><span class="ok">✓ 3:00 or less · 2:54</span><span class="ok">✓ Landscape (horizontal)</span></div>
+          <div class="hint ok">Uploaded ledgerly_pitch.mp4.</div>
+
+          <label class="cb"><input type="checkbox" checked> Create my virtual booth from my profile when approved</label>
+          <label class="cb"><input type="checkbox" checked> I have read the disclaimer below. My pitch makes no offer of securities and no promise of returns.</label>
+          <p class="disc">iCFO Capital Global, Inc. and iCapOS do not solicit, offer or sell securities, and nothing here is an offer to sell or a solicitation of an offer to buy any security. iCFO Capital Global, Inc. is not an investment adviser and does not give investment, legal or tax advice. Founder presentations, booths, matches and introductions are for educational and informational purposes only. Founders are responsible for their own statements. Investors should do their own due diligence.</p>
+          <button class="btn primary" style="margin-top:12px">Submit application</button>
+        </div>
+        <div style="display:grid;gap:16px;align-content:start">
+          <div class="card"><b>Founder Spotlight includes</b>
+            <p class="hint">Your 3 minute pitch video plays in the Founder Spotlight, with a short intro, a place in the lineup and your own booth.</p>
+            <ul class="clean feat"><li>☑ Place in the Founder Spotlight lineup</li><li>☑ 3 minute pitch video, reviewed by iCFO</li><li>☑ Short introduction before your pitch</li><li>☑ Your own virtual booth</li><li>☐ Investor networking opt-in <span class="hint">(add on)</span></li></ul></div>
+          <div class="card"><b>Your applications</b>
+            <div style="margin-top:10px;font-size:13px" class="row"><span style="flex:1">Closing the books in a day <span class="hint">(Spotlight)</span></span><span class="pill" style="background:var(--warnbg);color:var(--warn)">Change requested</span></div>
+            <div class="flag warn"><span class="warn">Remove the line at 1:42 that says returns are guaranteed, then upload the new cut.</span>
+              <div class="drop" style="margin-top:8px;padding:10px;background:var(--card)"><b style="font-size:12px">Upload pitch video</b></div>
+              <button class="btn primary" style="margin-top:8px;font-size:12px" disabled>Send new video</button></div>
+            <div style="margin-top:12px;font-size:13px" class="row"><span style="flex:1">AP automation at scale <span class="hint">(Spotlight)</span></span><span class="pill">Approved</span></div>
+            <a href="#" style="font-size:12px;font-weight:600" data-go="booth">Finish your booth →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 ADMIN STUDIO -->
+  <section id="studio" class="hide">
+    <div class="topbar"><span class="grid"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="app">Events</span>
+      <nav><span>Events</span><span>Applications</span><span>Registrations</span><span>Sponsors</span><span class="on">Spotlight studio</span><span>Networking</span></nav>
+      <div class="right"><span>⌕</span><span>iCFO Capital Global, Inc.</span><span class="avatar">KT</span></div></div>
+    <div class="frame">
+      <div class="crumb">← iCFO PE Expo, Paris · Dec 15</div>
+      <div class="pagehead"><h2 style="font-size:20px">Spotlight studio</h2>
+        <div class="row"><a class="btn" href="#">YouTube Studio ↗</a><button class="btn primary" data-go="player">Preview player ↗</button></div></div>
+
+      <div class="card">
+        <div class="row" style="justify-content:space-between"><b>Run of show</b><span class="hint" style="margin:0">12:00 PM to 4:00 PM PT · one slot is 3:12 (12s intro plus up to 3:00 pitch)</span></div>
+        <div class="ros"><div style="flex:30">Keynote</div><div class="show" style="flex:75">Showcase A · 23 slots</div><div style="flex:60">Talk show</div><div class="show" style="flex:75">Showcase B · 23 slots</div></div>
+        <div class="axis"><span>12:00</span><span>1:00</span><span>2:00</span><span>3:00</span><span>4:00</span></div>
+        <p class="legend" style="margin:6px 0 0">Example times. Today the Paris sessions have no start and end set, so the Live slots tile reads "Not measured" until you set them.</p>
+        <div class="tiles">
+          <div class="tile"><svg class="ring" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="var(--line)" stroke-width="5"/><circle cx="22" cy="22" r="18" fill="none" stroke="var(--blue)" stroke-width="5" stroke-dasharray="113" stroke-dashoffset="0" transform="rotate(-90 22 22)"/></svg><div><b>46</b><small>Live slots across 2 showcase blocks</small></div></div>
+          <div class="tile"><svg class="ring" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="var(--line)" stroke-width="5"/><circle cx="22" cy="22" r="18" fill="none" stroke="var(--blue)" stroke-width="5" stroke-dasharray="113" stroke-dashoffset="98" transform="rotate(-90 22 22)"/></svg><div><b>6 <small>of 46</small></b><small>Approved pitches in the lineup</small></div></div>
+          <div class="tile"><svg class="ring" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="var(--line)" stroke-width="5" stroke-dasharray="4 4"/></svg><div><b>3</b><small>To review · 1 waiting on a founder change</small></div></div>
+        </div>
+        <label class="hint row" style="margin-top:12px">Planning: if the Spotlight runs <input id="mins" class="t" type="number" min="0" max="600" step="5" value="150" style="width:80px;padding:4px 6px"> minutes, it fits <b id="fits" style="color:var(--text)">46</b> companies.</label>
+      </div>
+
+      <div class="grid-q" style="margin-top:16px">
+        <div class="card" style="padding:10px">
+          <div class="chips"><button class="chip on">To review 3</button><button class="chip">Change requested 1</button><button class="chip">Approved 6</button><button class="chip">Declined 0</button></div>
+          <p class="hint">3 of 10 applications</p>
+          <button class="qrow on"><b>Ledgerly</b><small>FinTech · 2:54 · AI: request change</small></button>
+          <button class="qrow"><b>Veridia Bio</b><small>HealthTech · 3:00</small></button>
+          <button class="qrow"><b>Quanta Grid</b><small>CleanTech · 2:41</small></button>
+        </div>
+        <div class="card">
+          <div class="row" style="justify-content:space-between;align-items:flex-start"><div><b style="font-size:16px">Ledgerly</b><div class="hint" style="margin:0">Maria Chen · maria@ledgerly.example · FinTech · Seed</div><div style="font-size:13px;margin-top:4px">Closing the books in a day, not a week</div><div class="hint" style="margin:0">AP automation for mid market finance teams</div></div><span class="pill">To review</span></div>
+          <div class="video" style="margin-top:12px"><div class="play"><span>▶</span></div><div class="ytbar"><span>0:00 / 2:54</span><div class="prog"><i style="width:0"></i></div><span style="color:#FCD34D">YouTube (Private)</span></div></div>
+          <div class="checks" style="font-size:13px"><span class="ok">✓ MP4, MOV or WebM <span class="hint">video/mp4</span></span><span class="ok">✓ 500 MB or less <span class="hint">212 MB</span></span><span class="ok">✓ 3:00 or less <span class="hint">2:54</span></span><span class="ok">✓ Landscape <span class="hint">1920×1080</span></span></div>
+
+          <div class="step"><h4><span class="n done">✓</span>Upload to YouTube as Private and paste the link</h4>
+            <p class="hint" style="margin:0 0 8px">Download the video above and upload it in YouTube Studio as Private. Trim, music, blur and end screens are in the free Studio editor. YouTube makes automatic captions for step 2. Switch it to Unlisted when approved.</p>
+            <div class="row"><input class="t" style="flex:1" value="https://youtu.be/Lx9pQ2mVb7k"><button class="btn">Save</button></div></div>
+          <div class="step"><h4><span class="n done">✓</span>Paste the captions transcript</h4>
+            <p class="hint" style="margin:0 0 8px">YouTube Studio › Subtitles › the video › Download the automatic captions, then paste the file here. Timestamps are removed for you.</p>
+            <textarea class="t" rows="3" style="font-size:12px">Hi, I'm Maria Chen, CEO of Ledgerly. Finance teams at mid market companies spend a week closing the books… We are raising two million dollars to grow sales…</textarea>
+            <button class="btn" style="margin-top:6px">Save transcript</button></div>
+          <div class="step"><h4><span class="n done">✓</span>AI review against the iCFO standard</h4>
+            <button class="btn">✦ Run again</button>
+            <div class="checks" style="font-size:13px;margin-top:10px"><span class="ok">✓ Hook and problem</span><span class="ok">✓ Solution</span><span class="ok">✓ Traction</span><span class="ok">✓ Market and model</span><span class="warn">⚠ Team</span><span class="ok">✓ The ask</span><span class="ok">✓ Ends with the ask</span></div>
+            <div class="flag bad"><span class="bad">Compliance: "investors get a guaranteed three times return" · promises returns</span></div>
+            <div class="flag warn"><span class="warn">AI recommends: request change. Strong pitch with clear traction; the return claim must go and the team is not mentioned.</span></div>
+            <p class="legend" style="margin:6px 0 0">Read from the transcript only, Oct 5, 2026 10:12. You decide below.</p></div>
+          <div class="step"><h4><span class="n">4</span>Intro read before the pitch</h4>
+            <textarea class="t" rows="2">Maria Chen founded Ledgerly, a seed stage FinTech company that automates accounts payable so mid market finance teams close their books in a day.</textarea>
+            <div class="row" style="margin-top:6px"><button class="btn">✦ Draft with AI</button><button class="btn">Save</button></div></div>
+          <div class="step"><h4><span class="n">5</span>Decide</h4>
+            <label class="hint">Showcase block</label><select class="t" style="margin-top:4px"><option>Showcase A · 12:30 PM</option><option>Showcase B · 2:45 PM</option><option>No block yet (booth only)</option></select>
+            <label class="hint" style="display:block;margin-top:10px">Note to the founder (needed to request a change or decline)</label>
+            <textarea class="t" rows="2" style="margin-top:4px">Remove the line at 1:42 that says returns are guaranteed, and add one sentence on your team. Then upload the new cut.</textarea>
+            <div class="row" style="margin-top:10px"><button class="btn">Decline</button><button class="btn">Request change</button><button class="btn primary">Approve</button></div>
+            <p class="legend" style="margin:6px 0 0">Approve needs the YouTube link from step 1. Approving deletes the uploaded file; YouTube keeps the copy.</p></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <b>Lineup</b><p class="hint" style="margin:2px 0 10px">Plays top to bottom in each block, every 3:12.</p>
+        <p class="legend" style="margin:0 0 4px;font-weight:600">Showcase A · starts 12:30 PM · 3</p>
+        <ol class="clean lineup card" style="padding:0" id="lineup"></ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 PLAYER -->
+  <section id="player" class="hide">
+    <div class="topbar"><span class="app">iCFO PE Expo, Paris</span><div class="right"><span>142 in venue</span><span class="avatar">IN</span></div></div>
+    <div class="frame">
+      <div class="venue"><span>Lobby</span><span>Main Stage</span><span>Talk Show</span><span class="on">★ Founder Spotlight</span><span>Tracks</span><span>Networking</span><span>Sponsor Hall</span><span>Leaderboard</span></div>
+      <div class="chips" style="margin:14px 0 10px" id="tracks"></div>
+      <div class="video" id="stage">
+        <div class="play" id="startBtn"><div style="text-align:center"><button class="btn primary" style="padding:10px 18px">Start the Spotlight</button><div style="font-size:12px;color:#B5D4F4;margin-top:8px" id="startSub"></div></div></div>
+        <div class="intro hide" id="introCard"><div class="k" id="introK">Up next · 12s</div><h2 id="introCo"></h2><div class="sub" id="introSub"></div><div class="txt" id="introTxt"></div><div class="bar"><i id="introBar"></i></div></div>
+        <div class="hide" id="vid"><div class="speaker">◉</div><div class="lower" id="lower"><b id="lowName"></b><span id="lowCo"></span></div><div class="ytbar"><span>▶</span><div class="prog"><i id="vprog"></i></div><span id="vtime">0:00</span></div></div>
+      </div>
+      <div class="row" style="margin-top:10px"><a class="btn" href="#" data-go="booth">▣ Visit booth</a><a class="btn" href="#">◷ Request meeting</a><button class="btn" style="margin-left:auto" id="nextBtn">⏭ Next pitch</button></div>
+      <p class="legend">Demo speed: the 12 second intro runs in real time, each 3 minute pitch is shortened to 8 seconds here. The real player is the YouTube embed and moves on when the video ends.</p>
+      <b style="display:block;margin-top:14px">Lineup</b>
+      <div class="lu card" style="padding:0;margin-top:6px" id="lu"></div>
+      <p class="disc" style="margin-top:14px">iCFO Capital Global, Inc. and iCapOS do not solicit, offer or sell securities, and nothing here is an offer to sell or a solicitation of an offer to buy any security. iCFO Capital Global, Inc. is not an investment adviser and does not give investment, legal or tax advice. Founder presentations, booths, matches and introductions are for educational and informational purposes only. Founders are responsible for their own statements. Investors should do their own due diligence.</p>
+    </div>
+  </section>
+
+  <!-- 4 BOOTH -->
+  <section id="booth" class="hide">
+    <div class="topbar"><span class="app">iCFO PE Expo, Paris</span><nav><span>Sponsor Hall</span><span class="on">Ledgerly booth</span></nav><div class="right"><span class="avatar">IN</span></div></div>
+    <div class="frame">
+      <div class="grid2">
+        <div class="card">
+          <div class="booth-head"><div class="logo">LG</div><div style="flex:1"><b style="font-size:17px">Ledgerly</b><div class="hint" style="margin:0">FinTech · Seed · founder booth</div></div><span class="pill" style="background:var(--okbg);color:var(--ok)">● Rep online</span></div>
+          <div class="video" style="margin-top:12px"><div class="play"><span>▶</span></div><div class="ytbar"><span>Approved Spotlight pitch</span><div class="prog"></div><span>2:54</span></div></div>
+          <p style="font-size:14px">AP automation for mid market finance teams.</p>
+          <b style="font-size:13px">Downloads</b>
+          <div class="doc">▤ <span>One pager.pdf</span><a href="#">Download</a></div>
+          <div class="doc">▤ <span>Pitch deck.pdf</span><a href="#">Download</a></div>
+          <div class="row" style="margin-top:12px"><button class="btn">Request contact</button><button class="btn primary">Join meeting</button></div>
+        </div>
+        <div class="card" style="align-self:start"><b>Founder view: booth portal</b>
+          <p class="hint">Created on approval from the founder's profile. The founder finishes it in the existing booth portal (/sponsor/&lt;id&gt;).</p>
+          <ul class="clean feat"><li>✎ Edit summary and website</li><li>⇪ Add PDF downloads</li><li>◷ Add a meeting link</li><li>● Rep online toggle</li><li>☰ Opt in leads from investors</li></ul>
+        </div>
+      </div>
+      <div class="compliance"><b style="color:var(--text)">Important compliance notice</b><br>iCapOS provides technology and diligence infrastructure for review purposes only. Nothing on this platform is investment advice, a recommendation, or a guarantee of funding, investor participation, allocations, returns, or liquidity. Private offerings are risky and may result in loss of capital. Investors must conduct independent due diligence and issuers should obtain appropriate legal review.</div>
+    </div>
+  </section>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.switch button');
+function show(id){
+  document.querySelectorAll('section').forEach(s=>s.classList.toggle('hide',s.id!==id));
+  tabs.forEach(t=>t.classList.toggle('on',t.dataset.s===id));
+  window.scrollTo({top:0});
+}
+tabs.forEach(t=>t.addEventListener('click',()=>show(t.dataset.s)));
+document.querySelectorAll('[data-go]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();show(a.dataset.go)}));
+
+// capacity calculator: floor(minutes*60/192)
+const mins=document.getElementById('mins'),fits=document.getElementById('fits');
+mins.addEventListener('input',()=>{const m=Number(mins.value);fits.textContent=m>0?Math.floor(m*60/192):0});
+
+// studio lineup reorder
+let lineup=['Veridia Bio','Northwind Robotics','Atlas Health'];
+const SLOT=192,START=12*60+30;
+function fmt(totalMin){const h=Math.floor(totalMin/60),m=Math.floor(totalMin%60),s=Math.round((totalMin*60)%60);const hh=((h+11)%12)+1;return hh+':'+String(m).padStart(2,'0')+(s?':'+String(s).padStart(2,'0'):'')+' PM'}
+function drawLineup(){
+  const ol=document.getElementById('lineup');ol.innerHTML='';
+  lineup.forEach((n,i)=>{const li=document.createElement('li');
+    li.innerHTML=`<span class="tm">${fmt(START+i*SLOT/60)}</span><span class="nm">${n}</span><button class="arr" aria-label="Move up" ${i===0?'disabled':''}>↑</button><button class="arr" aria-label="Move down" ${i===lineup.length-1?'disabled':''}>↓</button>`;
+    const [up,down]=li.querySelectorAll('button');
+    up.onclick=()=>{[lineup[i-1],lineup[i]]=[lineup[i],lineup[i-1]];drawLineup()};
+    down.onclick=()=>{[lineup[i+1],lineup[i]]=[lineup[i],lineup[i+1]];drawLineup()};
+    ol.appendChild(li)});
+}
+drawLineup();
+
+// player simulation
+const items=[
+ {co:'Veridia Bio',name:'Dr. Ana Ruiz',sec:'HealthTech',intro:'Dr. Ana Ruiz founded Veridia Bio, a seed stage HealthTech company building at home kidney monitoring for dialysis patients.'},
+ {co:'Ledgerly',name:'Maria Chen',sec:'FinTech',intro:'Maria Chen founded Ledgerly, a seed stage FinTech company that automates accounts payable so mid market finance teams close their books in a day.'},
+ {co:'Quanta Grid',name:'Sam Okafor',sec:'CleanTech',intro:'Sam Okafor leads Quanta Grid, a pre seed CleanTech company that balances building energy loads with software instead of new hardware.'},
+ {co:'Northwind Robotics',name:'Lena Park',sec:'AI / ML',intro:'Lena Park founded Northwind Robotics, a Series A AI company whose vision models guide warehouse picking robots.'},
+ {co:'PayRoute',name:'Omar Haddad',sec:'FinTech',intro:'Omar Haddad founded PayRoute, a seed stage FinTech company routing cross border supplier payments for importers.'},
+];
+let track='all',list=items,idx=0,timer=null,phase='ready';
+const $=id=>document.getElementById(id);
+function drawTracks(){
+  const counts={};items.forEach(i=>counts[i.sec]=(counts[i.sec]||0)+1);
+  const box=$('tracks');box.innerHTML='';
+  [['all','All tracks '+items.length],...Object.entries(counts).map(([k,v])=>[k,k+' '+v])].forEach(([k,label])=>{
+    const b=document.createElement('button');b.className='chip'+(track===k?' on':'');b.textContent=label;
+    b.onclick=()=>{track=k;list=k==='all'?items:items.filter(i=>i.sec===k);drawTracks();goTo(0)};box.appendChild(b)});
+  $('startSub').textContent=list.length+' founder pitches, about 3 minutes each';
+}
+function drawLU(){
+  const lu=$('lu');lu.innerHTML='';
+  list.forEach((it,i)=>{const b=document.createElement('button');b.className=(i===idx&&phase!=='ready')?'on':'';
+    b.innerHTML=`<span class="i">${i+1}</span><span style="flex:1">${it.co}</span><span class="s">${it.sec}</span>`;b.onclick=()=>goTo(i);lu.appendChild(b)});
+}
+function stop(){clearInterval(timer);timer=null}
+function goTo(i){
+  stop();idx=i;phase='intro';const it=list[idx];
+  $('startBtn').classList.add('hide');$('vid').classList.add('hide');$('introCard').classList.remove('hide');
+  $('introCo').textContent=it.co;$('introSub').textContent=it.name+' · '+it.sec;$('introTxt').textContent=it.intro;
+  const t0=Date.now();
+  timer=setInterval(()=>{const el=(Date.now()-t0)/1000,left=Math.max(0,Math.ceil(12-el));
+    $('introK').textContent='Up next · '+left+'s';$('introBar').style.width=Math.min(100,el/12*100)+'%';
+    if(el>=12){stop();playVideo()}},200);
+  drawLU();
+}
+function playVideo(){
+  phase='video';const it=list[idx];
+  $('introCard').classList.add('hide');$('vid').classList.remove('hide');
+  $('lowName').textContent=it.name;$('lowCo').textContent=it.co+' · '+it.sec;$('lower').classList.remove('hide');
+  const t0=Date.now(),DEMO=8;
+  timer=setInterval(()=>{const el=(Date.now()-t0)/1000;
+    $('vprog').style.width=Math.min(100,el/DEMO*100)+'%';
+    const shown=Math.round(el/DEMO*174);$('vtime').textContent=Math.floor(shown/60)+':'+String(shown%60).padStart(2,'0');
+    if(el>3.5)$('lower').classList.add('hide');
+    if(el>=DEMO){stop();goTo(idx+1<list.length?idx+1:0)}},200);
+  drawLU();
+}
+$('startBtn').querySelector('button').onclick=()=>goTo(0);
+$('nextBtn').onclick=()=>goTo(idx+1<list.length?idx+1:0);
+drawTracks();drawLU();
+</script>
+</body>
+</html>
