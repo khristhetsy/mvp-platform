@@ -185,7 +185,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
   const [mapped, setMapped] = useState<ReviewResult | null>(null);
   const [csvPreview, setCsvPreview] = useState<{ total: number; toCreate: number; skippedDupInFile: number; skippedExisting: number; skippedNoName?: number; sample: { name: string; email: string; company: string }[]; created?: number; remembered?: number } | null>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
-  const [addDraft, setAddDraft] = useState({ name: "", email: "", company: "", phone: "" });
+  const [addDraft, setAddDraft] = useState({ name: "", contactType: "", email: "", company: "", phone: "" });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -235,13 +235,13 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
   useEffect(() => { setSelected(new Set()); setSelectAllMatching(false); }, [paramsStr, groupBy]);
 
   async function addContact() {
-    if (!addDraft.name.trim()) return;
+    if (!addDraft.name.trim() || !addDraft.contactType) return;
     setBusy(true); setErr(null);
     try {
       const res = await fetch("/api/sales/contacts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(addDraft) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Add failed.");
-      setAdding(false); setAddDraft({ name: "", email: "", company: "", phone: "" });
+      setAdding(false); setAddDraft({ name: "", contactType: "", email: "", company: "", phone: "" });
       reload();
     } catch (e) { setErr(e instanceof Error ? e.message : "Add failed."); } finally { setBusy(false); }
   }
@@ -704,13 +704,20 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
       )}
 
       {adding && (
-        <div style={{ background: "#F5F9FF", border: "0.5px solid #BFDBFE", borderRadius: 10, padding: 14, marginBottom: 12, display: "grid", gridTemplateColumns: "1.4fr 1.4fr 1fr 1fr auto", gap: 8, alignItems: "center" }}>
+        <div style={{ background: "#F5F9FF", border: "0.5px solid #BFDBFE", borderRadius: 10, padding: 14, marginBottom: 12, display: "grid", gridTemplateColumns: "1.4fr 0.9fr 1.4fr 1fr 1fr auto", gap: 8, alignItems: "center" }}>
           <input value={addDraft.name} onChange={(e) => setAddDraft({ ...addDraft, name: e.target.value })} placeholder="Name *" autoFocus style={inp} />
+          <select value={addDraft.contactType} onChange={(e) => setAddDraft({ ...addDraft, contactType: e.target.value })} aria-label="Membership" style={{ ...inp, color: addDraft.contactType ? "var(--foreground)" : "var(--muted-foreground)" }}>
+            <option value="" disabled>Membership *</option>
+            <option value="founder">Founder</option>
+            <option value="investor">Investor</option>
+            <option value="advisor">Advisor</option>
+            <option value="other">Other</option>
+          </select>
           <input value={addDraft.email} onChange={(e) => setAddDraft({ ...addDraft, email: e.target.value })} placeholder="Email" style={inp} />
           <input value={addDraft.company} onChange={(e) => setAddDraft({ ...addDraft, company: e.target.value })} placeholder="Company" style={inp} />
           <input value={addDraft.phone} onChange={(e) => setAddDraft({ ...addDraft, phone: e.target.value })} placeholder="Phone" style={inp} />
           <div style={{ display: "flex", gap: 6 }}>
-            <button type="button" onClick={addContact} disabled={busy || !addDraft.name.trim()} style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 12px", cursor: "pointer", opacity: busy || !addDraft.name.trim() ? 0.5 : 1 }}>Save</button>
+            <button type="button" onClick={addContact} disabled={busy || !addDraft.name.trim() || !addDraft.contactType} style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 12px", cursor: "pointer", opacity: busy || !addDraft.name.trim() || !addDraft.contactType ? 0.5 : 1 }}>Save</button>
             <button type="button" onClick={() => { setAdding(false); setErr(null); }} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-x" aria-hidden="true" /></button>
           </div>
           {err && <div style={{ gridColumn: "1 / -1", fontSize: 11.5, color: "#A32D2D" }}>{err}</div>}
