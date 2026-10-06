@@ -1,5 +1,7 @@
 {
-  "regions": ["sfo1"],
+  "regions": [
+    "sfo1"
+  ],
   "crons": [
     {
       "path": "/api/cron/social-queue",
@@ -149,8 +151,5 @@
       "path": "/api/cron/support-care",
       "schedule": "*/15 * * * *"
     }
-  ],
-  "regions": [
-    "sfo1"
   ]
 }
