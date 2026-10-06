@@ -19,9 +19,11 @@ const schema = z.object({
   attachPdfs: z.boolean(),
   /** Values typed in the email step for tokens no document or contact provides. */
   typedValues: z.record(z.string(), z.string().max(300)).optional(),
+  /** False: send for review only, no signature request. */
+  signature: z.boolean().optional(),
 });
 
-/** POST — send the selected drafts for signature with one cover email. */
+/** POST — send the selected drafts with one cover email, for signature or (signature: false) for review only. */
 export async function POST(req: Request): Promise<Response> {
   const auth = await requireContractsApi();
   if ("error" in auth) return auth.error;
@@ -35,7 +37,7 @@ export async function POST(req: Request): Promise<Response> {
       sender: { id: actor.userId, name: actor.profile.full_name ?? actor.profile.email ?? "iCFO", email: actor.profile.email ?? null, actorLabel: actor.actorLabel },
     });
     for (const docId of parsed.data.documentIds) {
-      await writeAuditLog(actor.db, { userId: actor.userId, action: "contracts.sent", entityType: "contract_documents", entityId: docId, metadata: { packet_id: result.packetId, delivered: result.delivered } });
+      await writeAuditLog(actor.db, { userId: actor.userId, action: "contracts.sent", entityType: "contract_documents", entityId: docId, metadata: { packet_id: result.packetId, delivered: result.delivered, signature: parsed.data.signature !== false } });
     }
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {

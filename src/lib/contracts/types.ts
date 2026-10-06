@@ -85,7 +85,9 @@ export type ContractStatus =
   | "signed"
   | "declined"
   | "cancelled"
-  | "expired";
+  | "expired"
+  /** Sent for review only: PDFs emailed, no signature requested. */
+  | "shared";
 
 export type Segment = { text: string; b?: boolean; i?: boolean };
 /** Paragraph id → new segments, or null to delete the paragraph. */
@@ -130,6 +132,9 @@ export type ContractDocument = {
   created_at: string;
   updated_at: string;
   sent_at: string | null;
+  /** Opens of the packet page, for documents sent for review only (signing envelopes count their own). */
+  open_count?: number;
+  last_opened_at?: string | null;
   archived_at: string | null;
 };
 
@@ -147,9 +152,10 @@ export const STATUS_LABEL: Record<ContractStatus, string> = {
   declined: "Declined",
   cancelled: "Cancelled",
   expired: "Expired",
+  shared: "Sent, no signature",
 };
 
 /** Statuses after which the follow up stops and nobody chases the prospect. */
-export const STOP_STATUSES: ContractStatus[] = ["changes_requested", "awaiting_countersign", "signed", "declined", "cancelled"];
+export const STOP_STATUSES: ContractStatus[] = ["changes_requested", "awaiting_countersign", "signed", "declined", "cancelled", "shared"];
 
 export const CONTRACTS_BUCKET = "contract-documents";

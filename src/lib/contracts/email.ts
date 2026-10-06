@@ -56,14 +56,14 @@ function paragraphs(text: string) {
     .map((p) => ({ type: "html" as const, html: `<p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#1f2937">${esc(p).replace(/\n/g, "<br>")}</p>` }));
 }
 
-export function buildCoverEmail(input: { subject: string; body: string; url: string; senderName: string }): RenderedEmail {
+export function buildCoverEmail(input: { subject: string; body: string; url: string; senderName: string; reviewOnly?: boolean }): RenderedEmail {
   return renderEmail({
     audience: "shared",
     subject: input.subject,
-    preheader: "Documents for your review and signature.",
+    preheader: input.reviewOnly ? "Documents for your review." : "Documents for your review and signature.",
     context: COMPANY,
-    blocks: [...paragraphs(input.body), { type: "note", text: "No account needed. The link is unique to you." }],
-    primary: { label: "Review and sign", url: input.url },
+    blocks: [...paragraphs(input.body), { type: "note", text: input.reviewOnly ? "The documents are attached. No signature is requested." : "No account needed. The link is unique to you." }],
+    primary: { label: input.reviewOnly ? "View documents" : "Review and sign", url: input.url },
     footer: { reason: `${input.senderName} sent you these documents from ${COMPANY}.` },
   });
 }
@@ -76,8 +76,10 @@ export async function sendCoverEmail(input: {
   senderName: string;
   senderEmail: string | null;
   attachments: Attachment[];
+  /** Review only: no signing link wording. */
+  reviewOnly?: boolean;
 }) {
-  const mail = buildCoverEmail({ subject: input.subject, body: input.body, url: packetUrl(input.token), senderName: input.senderName });
+  const mail = buildCoverEmail({ subject: input.subject, body: input.body, url: packetUrl(input.token), senderName: input.senderName, reviewOnly: input.reviewOnly });
   return send({ to: input.to, fromName: `${input.senderName}, iCFO Capital Global`, replyTo: input.senderEmail, mail, attachments: input.attachments });
 }
 

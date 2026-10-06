@@ -18,6 +18,7 @@ const PILL: Record<ContractStatus, { bg: string; fg: string }> = {
   declined: { bg: "#fdecec", fg: "#A32D2D" },
   cancelled: { bg: "#f1f3f7", fg: "#5a6b87" },
   expired: { bg: "#f1f3f7", fg: "#5a6b87" },
+  shared: { bg: "#f1f3f7", fg: "#3a4a63" },
 };
 
 export function StatusPill({ status, archived }: { status: ContractStatus; archived?: boolean }) {

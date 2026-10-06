@@ -10,7 +10,7 @@ import { errorMessage } from "@/lib/contracts/route-helpers";
 export const dynamic = "force-dynamic";
 
 const LIST_COLS =
-  "id, document_key, version, status, locked, sent_at, created_at, updated_at, archived_at, expires_at, created_by, contact_id, template_id, signature_request_id, source, title, contract_type, page_count, " +
+  "id, document_key, version, status, locked, sent_at, open_count, last_opened_at, created_at, updated_at, archived_at, expires_at, created_by, contact_id, template_id, signature_request_id, source, title, contract_type, page_count, " +
   "template:contract_templates(name, kind), entity:contract_entities(short_name, legal_name), contact:crm_contacts(name, company, email), " +
   "request:signature_requests!contract_documents_signature_request_id_fkey(open_count, last_opened_at)";
 
@@ -53,7 +53,9 @@ export async function GET(req: Request): Promise<Response> {
     const doc = await expireIfDue(actor.db, row as unknown as ContractDocument);
     // Uploaded contracts carry their own title where template documents show the template name.
     const template = row.template ?? (row.source === "upload" ? { name: (row.title as string) ?? "Contract", kind: "upload" } : null);
-    documents.push({ ...row, template, status: doc.status, mine: row.created_by === actor.userId });
+    // Review only documents have no signing request; their opens are counted on the document.
+    const request = row.request ?? (doc.status === "shared" ? { open_count: (row.open_count as number) ?? 0, last_opened_at: (row.last_opened_at as string | null) ?? null } : null);
+    documents.push({ ...row, template, request, status: doc.status, mine: row.created_by === actor.userId });
   }
   return NextResponse.json({ documents, isAdmin: actor.isAdmin });
 }

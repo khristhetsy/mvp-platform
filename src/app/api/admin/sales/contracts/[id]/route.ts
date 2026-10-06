@@ -68,7 +68,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     open: bundleOpenFields(b),
     events: events.data ?? [],
     versions: versions.data ?? [],
-    request: request.data,
+    request: request.data ?? (b.doc.status === "shared" ? { open_count: b.doc.open_count ?? 0, last_opened_at: b.doc.last_opened_at ?? null, viewed_at: null, signed_at: null, response_note: null, expires_at: null } : null),
     packet: packet.data ? { recipient_email: packet.data.recipient_email, sent_at: packet.data.sent_at, delivered: packet.data.delivered } : null,
     renderConfigured: renderConfigured(),
     can: { cancelOrArchive: canCancelOrArchive(actor, b.doc.created_by), delete: actor.isAdmin },
