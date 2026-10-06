@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { OdooStageBar } from "@/components/ui/OdooStageBar";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FounderProfileMirror, type MirrorContact } from "./FounderProfileMirror";
@@ -268,22 +269,12 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
             )}
           </div>
           {enrollMsg && <span style={{ fontSize: 11, color: enrollMsg.startsWith("Enrolled") ? "#0F6E56" : "#A32D2D" }}>{enrollMsg}</span>}
-          <div style={{ display: "flex", overflowX: "auto", minWidth: 0 }}>
-            {stages.map((s, i) => {
-            const active = s.id === o.stage_id;
-            const done = s.sort_order < currentSort;
-            return (
-              <button type="button" key={s.id} onClick={() => patch(stagePatch(s))} disabled={busy}
-                style={{ fontSize: 11, whiteSpace: "nowrap", cursor: "pointer", border: "none",
-                  color: active ? "#fff" : done ? "#0F6E56" : "var(--muted-foreground)",
-                  background: active ? "#2E78F5" : s.is_won ? "#E1F5EE" : "var(--muted)",
-                  padding: "6px 14px", borderRadius: i === 0 ? "6px 0 0 6px" : i === stages.length - 1 ? "0 6px 6px 0" : 0,
-                  borderLeft: i === 0 ? "none" : "0.5px solid #fff" }}>
-                {s.name}
-              </button>
-            );
-          })}
-          </div>
+          <OdooStageBar
+            steps={stages.map((s) => ({ key: s.id, label: s.name }))}
+            current={o.stage_id}
+            onSelect={(id) => { const s = stages.find((x) => x.id === id); if (s) void patch(stagePatch(s)); }}
+            disabled={busy}
+          />
         </div>
 
         <div style={{ padding: 16 }}>

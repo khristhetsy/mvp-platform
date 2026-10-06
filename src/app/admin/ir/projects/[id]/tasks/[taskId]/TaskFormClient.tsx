@@ -7,6 +7,7 @@
  * dated activity — this replaces the free-text Agent Field from Odoo.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { OdooStageBar } from "@/components/ui/OdooStageBar";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { OdooPager } from "@/components/admin/OdooPager";
@@ -175,12 +176,7 @@ export function TaskFormClient({ taskId, meId, initialTab, added, sequenced = nu
       {/* Stage: big chevron bar, click a step to move; ▾ menu to pick or edit */}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-        <div className="flex" role="group" aria-label="Stage">
-          {(["new", "in_progress", "done"] as const).map((st, i) => {
-            const rank = ["new", "in_progress", "done"].indexOf(t.status); const on = t.status === st; const done = i < rank;
-            return <button key={st} type="button" disabled={busy || on} onClick={() => patch({ status: st })} className={`-ml-1.5 px-5 py-2 text-[13px] font-medium first:ml-0 ${on ? "bg-slate-900 text-white" : done ? "bg-blue-100 text-blue-800 hover:bg-blue-200" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`} style={{ clipPath: i === 0 ? "polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%)" : "polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%, 10px 50%)" }}>{STAGE_LABEL[st]}</button>;
-          })}
-        </div>
+        <OdooStageBar size="lg" steps={(["new", "in_progress", "done"] as const).map((st) => ({ key: st, label: STAGE_LABEL[st] }))} current={t.status} onSelect={(st) => void patch({ status: st as typeof t.status })} disabled={busy} />
         <div className="relative">
           <button type="button" onClick={() => setStageMenu((v) => !v)} aria-label="Edit stage" className="rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[13px] text-slate-700 hover:bg-slate-50">▾</button>
           {stageMenu ? <>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { OdooStageBar } from "@/components/ui/OdooStageBar";
 import Link from "next/link";
 import type { FounderJourneyState, JourneyStage } from "@/lib/founder-journey/types";
 import { JOURNEY_STAGES } from "@/lib/founder-journey/types";
@@ -272,35 +273,12 @@ export function FounderJourneyPanel({
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-[var(--shadow-card)]">
       {/* Stepper */}
-      <div className="mb-4 flex items-center">
-        {JOURNEY_STAGES.map((s, i) => {
-          const done = i < stageIndex;
-          const current = i === stageIndex;
-          return (
-            <div key={s} className="flex flex-1 items-center last:flex-none">
-              <div className="flex flex-col items-center text-center">
-                <div
-                  className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
-                    current
-                      ? "bg-indigo-600 text-white ring-4 ring-indigo-100"
-                      : done
-                        ? "bg-emerald-500 text-white"
-                        : "bg-slate-100 text-slate-400"
-                  }`}
-                >
-                  {done ? <i className="ti ti-check" aria-hidden="true" /> : i + 1}
-                </div>
-                <p className={`mt-1.5 text-[11px] font-semibold ${current ? "text-indigo-700" : done ? "text-slate-700" : "text-slate-400"}`}>
-                  {STAGE_META[s].label}
-                </p>
-              </div>
-              {i < JOURNEY_STAGES.length - 1 ? (
-                <div className={`mx-1 h-0.5 flex-1 rounded ${i < stageIndex ? "bg-emerald-400" : "bg-slate-200"}`} />
-              ) : null}
-            </div>
-          );
-        })}
-      </div>
+      <OdooStageBar
+        className="mb-4"
+        ariaLabel="Founder journey"
+        steps={JOURNEY_STAGES.map((s, i) => ({ key: s, label: STAGE_META[s].label, icon: i < stageIndex ? "ti-check" : undefined }))}
+        current={JOURNEY_STAGES[stageIndex] ?? null}
+      />
 
       {/* Current stage summary */}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2.5">
