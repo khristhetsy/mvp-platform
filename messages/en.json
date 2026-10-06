@@ -1095,6 +1095,8 @@
     "acceptanceRate": "Acceptance rate",
     "actionableAdminQueuesAcross": "Actionable admin queues across company reviews, investor approvals, compliance, SPV readiness, remediation, and imports.",
     "activationFunnels": "Activation funnels",
+    "messageActivity": "Founder and investor messages",
+    "messageGoals": "Message goals",
     "activeSpvs": "Active SPVs",
     "activityTimeline": "Activity timeline",
     "adminActionCenter": "Admin Action Center",

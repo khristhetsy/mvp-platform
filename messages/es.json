@@ -1095,6 +1095,8 @@
     "acceptanceRate": "Tasa de aceptación",
     "actionableAdminQueuesAcross": "Colas administrativas accionables para revisiones de empresas, aprobaciones de inversores, cumplimiento, preparación de SPV, remediación e importaciones.",
     "activationFunnels": "Embudos de activación",
+    "messageActivity": "Mensajes de fundadores e inversores",
+    "messageGoals": "Objetivos de mensajes",
     "activeSpvs": "SPV activos",
     "activityTimeline": "Cronología de actividad",
     "adminActionCenter": "Centro de acciones de administración",
