@@ -398,7 +398,11 @@ export function WorkspaceHeader({ workspace, profileName, profileSubtitle, profi
         </button>
         {leading}
         <Link href="/" className="flex shrink-0 items-center self-center">
-          <IcapOSLogo height={28} />
+          {/* Admin: the small stacked logo (157x160 PNG cut from icapos-stack-logo.svg, 31 KB
+              instead of the 1.1 MB source). The sidebar carries the full lockup. */}
+          {workspace === "admin"
+            ? <span role="img" aria-label="iCapOS" className="block h-10 w-10 bg-contain bg-center bg-no-repeat" style={{ backgroundImage: "url(/icapos-stack-logo-sm.png)" }} />
+            : <IcapOSLogo height={28} />}
         </Link>
         <WorkspaceBreadcrumbs workspace={workspace} />
         <span className="hidden rounded-md bg-[var(--blue-muted)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--blue-hover)] sm:inline">

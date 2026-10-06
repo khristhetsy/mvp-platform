@@ -95,17 +95,6 @@ function Grid({ apps, tone = "light", round, tLabel, onPick, all }: Readonly<{
   );
 }
 
-/** Brand lockups from /public, drawn as backgrounds (aspect 713:200, the master artwork). */
-function Logo({ src, className }: Readonly<{ src: string; className: string }>) {
-  const position = className.includes("mx-auto") ? "bg-center" : "bg-left";
-  return (
-    <span role="img" aria-label="iCapOS" className={`block aspect-[713/200] bg-contain bg-no-repeat ${position} ${className}`}
-      style={{ backgroundImage: `url(${src})` }} />
-  );
-}
-const LogoWhite = ({ className }: { className: string }) => <Logo src="/icapos-logo-white.png" className={className} />;
-const LogoColor = ({ className }: { className: string }) => <Logo src="/icapos-logo.svg" className={className} />;
-
 export function WorkspaceHome({ workspace, profileName }: Readonly<{ workspace: WorkspaceId; profileName?: string }>) {
   const router = useRouter();
   const { apps, tLabel } = useTopMenuApps(workspace);
@@ -125,21 +114,20 @@ export function WorkspaceHome({ workspace, profileName }: Readonly<{ workspace: 
       return (
         <div className={shell} style={{ background: BLUE }}>
           <h1 className="sr-only">Home</h1>
-          <div className="px-6 py-8"><LogoWhite className="mb-6 w-40" />{grid(apps, "onBlue")}</div>
+          <div className="px-6 py-8">{grid(apps, "onBlue")}</div>
         </div>
       );
     case 3: // Navy night
       return (
         <div className={shell} style={{ background: "#0E2150" }}>
           <h1 className="sr-only">Home</h1>
-          <div className="px-6 py-8"><LogoWhite className="mb-6 w-32 opacity-90" />{grid(apps, "dark")}</div>
+          <div className="px-6 py-8">{grid(apps, "dark")}</div>
         </div>
       );
     case 4: // Centered search
       return (
         <div className={`${shell} bg-white px-6 py-8 text-center`}>
           <h1 className="sr-only">Home</h1>
-          <LogoColor className="mx-auto mb-8 w-44" />
           {grid(apps)}
         </div>
       );
@@ -155,7 +143,6 @@ export function WorkspaceHome({ workspace, profileName }: Readonly<{ workspace: 
       return (
         <div className={`${shell} bg-slate-50 px-6 py-6`}>
           <h1 className="sr-only">Home</h1>
-          <LogoColor className="mb-2 w-36" />
           {sections.filter((s) => s.list.length).map((s) => (
             <section key={s.label} className="mt-4">
               <h2 className="mx-auto mb-1 max-w-5xl px-2 text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: BLUE }}>{s.label}</h2>
@@ -169,7 +156,6 @@ export function WorkspaceHome({ workspace, profileName }: Readonly<{ workspace: 
       return (
         <div className={`${shell} flex bg-slate-50`}>
           <aside className="hidden w-60 shrink-0 flex-col p-6 text-white md:flex" style={{ background: NAVY }}>
-            <LogoWhite className="w-44" />
             <p className="mt-8 text-[17px] font-semibold">{hello}</p>
             <p className="mt-1 text-[12px] text-white/70">Admin workspace</p>
           </aside>
@@ -182,14 +168,13 @@ export function WorkspaceHome({ workspace, profileName }: Readonly<{ workspace: 
           <h1 className="sr-only">Home</h1>
           <span aria-hidden className="pointer-events-none absolute -bottom-20 -right-16 block h-[420px] w-[420px] bg-contain bg-no-repeat opacity-[0.06]"
             style={{ backgroundImage: "url(/icapos-icon-512.svg)" }} />
-          <div className="relative"><LogoColor className="mb-6 w-36" />{grid(apps)}</div>
+          <div className="relative">{grid(apps)}</div>
         </div>
       );
     case 8: // Cards with descriptions
       return (
         <div className={`${shell} bg-slate-50 px-6 py-6`}>
           <h1 className="sr-only">Home</h1>
-          <LogoColor className="mb-5 w-36" />
           <div className="mx-auto grid max-w-5xl grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3">
             {apps.map((a, i) => {
               const [bg, fg] = tileColor(a, i);
@@ -214,7 +199,7 @@ export function WorkspaceHome({ workspace, profileName }: Readonly<{ workspace: 
         <div className={`${shell} bg-white`}>
           <h1 className="sr-only">Home</h1>
           <div className="h-1" style={{ background: BLUE }} />
-          <div className="px-6 py-8"><LogoColor className="mb-6 w-36" />{grid(apps, "mono", true)}</div>
+          <div className="px-6 py-8">{grid(apps, "mono", true)}</div>
         </div>
       );
     case 10: // Split hero
@@ -222,7 +207,6 @@ export function WorkspaceHome({ workspace, profileName }: Readonly<{ workspace: 
         <div className={`${shell} bg-slate-50`}>
           <h1 className="sr-only">Home</h1>
           <div className="px-6 pb-24 pt-8 text-center text-white" style={{ background: BLUE }}>
-            <LogoWhite className="mx-auto w-44" />
             <p className="mt-2 text-[14px] text-white/85">{hello}</p>
           </div>
           <div className="mx-4 -mt-16 mb-6 rounded-2xl border border-slate-200 bg-white px-2 py-6 sm:mx-8">{grid(apps)}</div>
@@ -233,7 +217,6 @@ export function WorkspaceHome({ workspace, profileName }: Readonly<{ workspace: 
         <div className={`${shell} bg-slate-50`}>
           <h1 className="sr-only">Home</h1>
           <div className="flex flex-wrap items-center gap-4 px-6 py-6 text-white" style={{ background: NAVY }}>
-            <LogoWhite className="w-40" />
             <div className="ml-auto text-right">
               <p className="text-[17px] font-semibold">{hello}</p>
               <p className="text-[12px] text-white/70">Admin workspace</p>
