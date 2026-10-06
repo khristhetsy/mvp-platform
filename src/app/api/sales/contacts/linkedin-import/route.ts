@@ -1,11 +1,11 @@
 /**
  * POST /api/sales/contacts/linkedin-import — LinkedIn Connections.csv into Contacts.
  *
- *   { mode: "match", rows: [{ i, slug, email?, name }] }            ≤ 1,000 rows per call
+ *   { mode: "match", rows: [{ i, slug, email?, name }] }           
  *     → { matches: [{ idx, kind, contact_id, contact_name, contact_company }] }
  *     Every contact that could be the same person: same LinkedIn profile, same email, same name.
  *
- *   { mode: "commit", fileName?, rows: [{ …connection, action, targetId? }] }   ≤ 1,000 rows per call
+ *   { mode: "commit", fileName?, rows: [{ …connection, action, targetId? }] }  
  *     action "new"   → insert as source "linkedin" (external_id = profile slug, so a re-run never
  *                       inserts twice). A same profile or same email found at commit time merges
  *                       instead, in case Contacts changed since the match step.
@@ -23,26 +23,31 @@ import { decideMatch, type MatchCandidate } from "@/lib/contacts/linkedin-import
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
+// Long text is cut to length instead of failing the whole batch, and there is no row cap:
+// one odd row (a very long name, headline or encoded profile URL) must never block an import.
+const txt = (max: number) => z.string().transform((v) => v.slice(0, max));
+const optTxt = (max: number) => z.string().nullable().optional().transform((v) => (v == null ? null : v.slice(0, max)));
+
 const matchSchema = z.object({
   mode: z.literal("match"),
   rows: z.array(z.object({
     i: z.number().int().min(0),
-    slug: z.string().max(200),
-    email: z.string().max(200).nullable().optional(),
-    name: z.string().max(300),
-  })).min(1).max(1000),
+    slug: txt(500),
+    email: optTxt(320),
+    name: txt(500),
+  })).min(1),
 });
 
 const connection = z.object({
-  slug: z.string().min(1).max(200),
-  url: z.string().max(500),
-  firstName: z.string().max(150),
-  lastName: z.string().max(150),
-  name: z.string().min(1).max(300),
-  email: z.string().max(200).nullable(),
-  company: z.string().max(300).nullable(),
-  position: z.string().max(500).nullable(),
-  connectedOn: z.string().max(40).nullable(),
+  slug: z.string().min(1).transform((v) => v.slice(0, 500)),
+  url: txt(1000),
+  firstName: txt(300),
+  lastName: txt(300),
+  name: z.string().min(1).transform((v) => v.slice(0, 500)),
+  email: optTxt(320),
+  company: optTxt(500),
+  position: optTxt(1000),
+  connectedOn: optTxt(40),
   group: z.enum(["investor", "founder", "other"]),
   action: z.enum(["new", "merge", "skip"]),
   targetId: z.string().uuid().nullable().optional(),
@@ -50,7 +55,7 @@ const connection = z.object({
 const commitSchema = z.object({
   mode: z.literal("commit"),
   fileName: z.string().max(200).optional(),
-  rows: z.array(connection).min(1).max(1000),
+  rows: z.array(connection).min(1),
 });
 type Conn = z.infer<typeof connection>;
 type MatchRow = { idx: number; kind: "linkedin" | "email" | "name"; contact_id: string; contact_name: string | null; contact_company: string | null };
@@ -74,7 +79,10 @@ export async function POST(req: NextRequest): Promise<Response> {
   }
 
   const c = commitSchema.safeParse(body);
-  if (!c.success) return NextResponse.json({ error: "Send up to 1,000 connections per request." }, { status: 400 });
+  if (!c.success) {
+    const issue = c.error.issues[0];
+    return NextResponse.json({ error: `A row in this batch couldn't be read (${issue?.path.join(".") || "rows"}: ${issue?.message ?? "invalid"}).` }, { status: 400 });
+  }
   const rows = c.data.rows;
 
   // Re-check "new" rows against the book: a same profile or same email found now merges instead.
