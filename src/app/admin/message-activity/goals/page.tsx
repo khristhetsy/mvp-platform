@@ -1,8 +1,8 @@
 import { AppShell } from "@/components/AppShell";
 import { getTranslations } from "next-intl/server";
 import { requirePermissionPage } from "@/lib/api/permissions";
-import { loadGoals, loadMessageActivity, todayParis } from "@/lib/analytics/message-activity";
-import { METRICS, addMonths, metricValue, parisDay } from "@/lib/analytics/message-activity-metrics";
+import { loadGoals, loadMessageActivity, todayLocal } from "@/lib/analytics/message-activity";
+import { METRICS, addMonths, metricValue, localDay } from "@/lib/analytics/message-activity-metrics";
 import { MessageGoalsClient, type MetricHistory } from "@/components/admin/message-activity/MessageGoalsClient";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function MessageGoalsPage() {
   const t = await getTranslations("adminPages");
   const { profile, effective } = await requirePermissionPage("view_analytics");
-  const today = todayParis();
+  const today = todayLocal();
   const thisMonth = today.slice(0, 7);
   const months = [-3, -2, -1].map((n) => addMonths(`${thisMonth}-01`, n).slice(0, 7));
 
@@ -22,8 +22,8 @@ export default async function MessageGoalsPage() {
   // Monthly actuals per metric: every founder, no plan or search filter.
   const founders = new Set(data.people.filter((p) => p.role === "founder").map((p) => p.key));
   const slice = (month: string) => ({
-    received: data.received.filter((r) => founders.has(r.personKey) && parisDay(r.at).startsWith(month)),
-    sent: data.sent.filter((s) => parisDay(s.at).startsWith(month)),
+    received: data.received.filter((r) => founders.has(r.personKey) && localDay(r.at).startsWith(month)),
+    sent: data.sent.filter((s) => localDay(s.at).startsWith(month)),
   });
   const byMonth = [...months, thisMonth].map(slice);
   const history: MetricHistory[] = METRICS.map((m) => ({

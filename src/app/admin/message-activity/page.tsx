@@ -1,7 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { getTranslations } from "next-intl/server";
 import { requirePermissionPage } from "@/lib/api/permissions";
-import { loadGoals, loadMessageActivity, todayParis } from "@/lib/analytics/message-activity";
+import { loadGoals, loadMessageActivity, todayLocal } from "@/lib/analytics/message-activity";
 import {
   PERIOD_KINDS,
   addDays,
@@ -24,7 +24,7 @@ export default async function MessageActivityPage({ searchParams }: { searchPara
   const t = await getTranslations("adminPages");
   const { profile, effective } = await requirePermissionPage("view_analytics");
   const params = await searchParams;
-  const today = todayParis();
+  const today = todayLocal();
 
   const kind: PeriodKind = (PERIOD_KINDS as string[]).includes(params.p ?? "") ? (params.p as PeriodKind) : "week";
   const anchor = params.a && DAY.test(params.a) && params.a <= today ? params.a : today;

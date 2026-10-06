@@ -20,6 +20,7 @@ const BLUE = "#1A6CE4";
 /** One line per hub for the "Cards with descriptions" style. */
 const DESCRIPTIONS: Record<string, string> = {
   "/admin": "Company overview",
+  "/admin/contacts": "Everyone, one list",
   "/admin/sales/contacts": "Everyone, one list",
   "/admin/ceo": "Leadership view",
   "/admin/sales": "Pipeline and deals",
@@ -39,7 +40,7 @@ const DESCRIPTIONS: Record<string, string> = {
 
 /** Groups for the "Grouped by work" style; hubs not listed go under "More". */
 const GROUPS: Array<{ label: string; hrefs: string[] }> = [
-  { label: "Raise", hrefs: ["/admin", "/admin/ceo", "/admin/ir", "/admin/sales/contacts"] },
+  { label: "Raise", hrefs: ["/admin", "/admin/ceo", "/admin/ir", "/admin/contacts"] },
   { label: "Grow", hrefs: ["/admin/sales", "/admin/marketing", "/admin/social", "/admin/events", "/admin/voice"] },
   { label: "Operate", hrefs: ["/admin/inbox", "/admin/actions", "/admin/companies", "/admin/learning", "/admin/manual"] },
   { label: "Admin", hrefs: ["/admin/users/manage", "/admin/integrations"] },

@@ -22,8 +22,8 @@ import {
   type ReceivedItem,
   type SentItem,
   METRIC_KEYS,
-  parisDay,
-  parisDayStartUtc,
+  localDay,
+  dayStartUtc,
   addDays,
   type DayRange,
 } from "./message-activity-metrics";
@@ -57,7 +57,9 @@ function planOf(sub: SubscriptionRow | undefined): Pick<MessagePerson, "plan" | 
     : sub.plan_type === "founder_basic" ? { plan: "Basic", planGroup: "basic" as const }
     : sub.plan_type === "founder_free" ? { plan: sub.grandfathered_free ? "Free (grandfathered)" : "Free", planGroup: "free" as const }
     : { plan: sub.plan_type.replace(/_/g, " "), planGroup: "none" as const };
-  return sub.subscription_status === "pending_payment" ? { ...base, plan: `${base.plan}, payment pending` } : base;
+  // Signed up and picked a plan but never paid: the platform gives them only the
+  // dashboard and settings (access.ts), so they are not counted as on that plan.
+  return sub.subscription_status === "pending_payment" ? { plan: `Not paid (chose ${base.plan})`, planGroup: "none" } : base;
 }
 
 async function loadPeople(db: Db) {
@@ -144,12 +146,12 @@ async function loadNotifications(db: Db, ids: string[], fromIso: string, toIso: 
 
 /**
  * Everything sent to founders and investors, and on founders' behalf, between two
- * Paris calendar days (inclusive).
+ * Pacific calendar days (inclusive).
  */
 export async function loadMessageActivity(range: DayRange): Promise<MessageActivityData> {
   const db = serviceRoleClientUntyped();
-  const fromIso = parisDayStartUtc(range.start).toISOString();
-  const toIso = parisDayStartUtc(addDays(range.end, 1)).toISOString();
+  const fromIso = dayStartUtc(range.start).toISOString();
+  const toIso = dayStartUtc(addDays(range.end, 1)).toISOString();
   const inRangeIso = (iso: string | null) => !!iso && iso >= fromIso && iso < toIso;
 
   const { people, byEmail, founderOfCompany } = await loadPeople(db);
@@ -394,7 +396,7 @@ export async function deleteGoal(id: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
-/** Today's Paris calendar day. */
-export function todayParis(): string {
-  return parisDay(new Date());
+/** Today's Pacific calendar day. */
+export function todayLocal(): string {
+  return localDay(new Date());
 }

@@ -6,10 +6,11 @@
 // here is plain functions over those rows so the page, the goals page and the
 // tests share one set of rules.
 //
-// Dates are Paris calendar days ("YYYY-MM-DD"), the same clock the rest of the
-// admin activity screens use.
+// Dates are Pacific time calendar days ("YYYY-MM-DD"), the US business clock.
 
-export const MESSAGE_TZ = "Europe/Paris";
+export const MESSAGE_TZ = "America/Los_Angeles";
+/** Shown next to times on screen. */
+export const MESSAGE_TZ_LABEL = "Pacific time";
 
 // ── Rows ────────────────────────────────────────────────────────────────────
 
@@ -193,33 +194,33 @@ export function metricValue(key: MetricKey, data: { received: ReceivedItem[]; se
 
 // ── Calendar days and periods ───────────────────────────────────────────────
 
-const PARIS_PARTS = new Intl.DateTimeFormat("en-CA", {
+const TZ_PARTS = new Intl.DateTimeFormat("en-CA", {
   timeZone: MESSAGE_TZ, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
 });
 
 function parts(d: Date): Record<string, string> {
   const o: Record<string, string> = {};
-  for (const p of PARIS_PARTS.formatToParts(d)) o[p.type] = p.value;
+  for (const p of TZ_PARTS.formatToParts(d)) o[p.type] = p.value;
   return o;
 }
 
-/** Paris calendar day of an instant. */
-export function parisDay(iso: string | Date): string {
+/** Pacific calendar day of an instant. */
+export function localDay(iso: string | Date): string {
   const p = parts(typeof iso === "string" ? new Date(iso) : iso);
   return `${p.year}-${p.month}-${p.day}`;
 }
 
-/** Paris "HH:MM" of an instant. */
-export function parisTime(iso: string): string {
+/** Pacific "HH:MM" of an instant. */
+export function localTime(iso: string): string {
   const p = parts(new Date(iso));
   return `${p.hour}:${p.minute}`;
 }
 
-/** The UTC instant at which a Paris calendar day starts. */
-export function parisDayStartUtc(day: string): Date {
+/** The UTC instant at which a Pacific calendar day starts. */
+export function dayStartUtc(day: string): Date {
   const guess = new Date(`${day}T00:00:00Z`);
-  // Paris is ahead of UTC, so midnight Paris is the evening before in UTC. Find the
-  // offset at that moment and step back by it; re-check once for DST edges.
+  // Read the zone's wall clock at the guessed instant and shift by the difference;
+  // a second pass settles daylight saving edges.
   let t = guess.getTime();
   for (let i = 0; i < 2; i++) {
     const p = parts(new Date(t));
@@ -360,26 +361,26 @@ export function chartBuckets(kind: PeriodKind, r: DayRange): Buckets {
   const days = daysBetween(r.start, r.end);
   if (kind === "day") {
     const keys = Array.from({ length: 24 }, (_, h) => String(h).padStart(2, "0"));
-    return { unit: "hour", keys, keyOf: (iso) => parisTime(iso).slice(0, 2), label: (k) => `${k}:00`, tick: (k) => k };
+    return { unit: "hour", keys, keyOf: (iso) => localTime(iso).slice(0, 2), label: (k) => `${k}:00`, tick: (k) => k };
   }
   if (kind === "year" || (kind === "custom" && days > 120)) {
     const keys: string[] = [];
     for (let m = r.start.slice(0, 7); m <= r.end.slice(0, 7); m = addMonths(`${m}-01`, 1).slice(0, 7)) keys.push(m);
-    return { unit: "month", keys, keyOf: (iso) => parisDay(iso).slice(0, 7), label: monthLabel, tick: (k) => MONTHS[+k.slice(5, 7) - 1] };
+    return { unit: "month", keys, keyOf: (iso) => localDay(iso).slice(0, 7), label: monthLabel, tick: (k) => MONTHS[+k.slice(5, 7) - 1] };
   }
   if (kind === "quarter" || (kind === "custom" && days > 45)) {
     const keys: string[] = [];
     for (let w = addDays(r.start, -weekday(r.start)); w <= r.end; w = addDays(w, 7)) keys.push(w);
     return {
       unit: "week", keys,
-      keyOf: (iso) => { const d = parisDay(iso); return addDays(d, -weekday(d)); },
+      keyOf: (iso) => { const d = localDay(iso); return addDays(d, -weekday(d)); },
       label: (k) => `Week of ${shortDay(k)}`, tick: shortDay,
     };
   }
   const keys: string[] = [];
   for (let d = r.start; d <= r.end; d = addDays(d, 1)) keys.push(d);
   return {
-    unit: "day", keys, keyOf: (iso) => parisDay(iso), label: longDay,
+    unit: "day", keys, keyOf: (iso) => localDay(iso), label: longDay,
     tick: kind === "week" ? (k) => WEEKDAYS[weekday(k)] : (k) => String(+k.slice(8, 10)),
   };
 }

@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import type { EmailLogDetail } from "@/lib/email/email-log";
 import {
   SENT_COLUMNS,
-  parisDay,
-  parisTime,
+  localDay,
+  localTime,
   shortDay,
   longDay,
   sourceLabel,
@@ -42,7 +42,7 @@ function StatusPill({ status }: { status: string }) {
 }
 
 function when(iso: string) {
-  return `${shortDay(parisDay(iso))} ${parisTime(iso)}`;
+  return `${shortDay(localDay(iso))} ${localTime(iso)}`;
 }
 
 /**
@@ -174,7 +174,7 @@ export function ItemDialogs({
       meta.push(
         ["To", p ? `${p.name} <${p.email}>` : "Unknown"],
         ["Company", p?.company ?? "None on file"],
-        ["Sent", `${longDay(parisDay(r.at))} ${parisTime(r.at)} Paris`],
+        ["Sent", `${longDay(localDay(r.at))} ${localTime(r.at)} Pacific`],
         ["Channel", r.channel === "email" ? "Email" : "In-app notification"],
         ["Type", sourceLabel(r.source)],
         ["Status", r.status],
@@ -185,11 +185,11 @@ export function ItemDialogs({
       meta.push(
         ["For founder", p ? `${p.name}${p.company ? ` · ${p.company}` : ""}` : "Unknown"],
         ["Investor", s.investor + (s.investorEmail ? ` <${s.investorEmail}>` : "")],
-        ["Date", `${longDay(parisDay(s.at))} ${parisTime(s.at)} Paris`],
+        ["Date", `${longDay(localDay(s.at))} ${localTime(s.at)} Pacific`],
         ["Type", SENT_COLUMNS.find((c) => c.kind === s.kind)?.label ?? s.kind],
         ["Status", s.status],
       );
-      if (s.handledAt) meta.push(["Handled by iCFO", `${longDay(parisDay(s.handledAt))} ${parisTime(s.handledAt)}`]);
+      if (s.handledAt) meta.push(["Handled by iCFO", `${longDay(localDay(s.handledAt))} ${localTime(s.handledAt)} Pacific`]);
     }
     const text = open.kind === "received" ? open.item.message : open.item.detail;
     body = (

@@ -9,6 +9,8 @@ import { WorkspaceSection } from "@/components/admin/company-workspace/Workspace
 import { Highlight, NoSearchMatches, SearchCount } from "@/components/ui/SearchStatus";
 import { matchRows, type SearchField } from "@/lib/ui/live-search";
 import {
+  MESSAGE_TZ,
+  MESSAGE_TZ_LABEL,
   METRICS,
   PERIOD_KINDS,
   PREVIOUS_LABEL,
@@ -23,7 +25,8 @@ import {
   inRange,
   metricItems,
   metricValue,
-  parisDay,
+  localDay,
+  localTime,
   periodLabel,
   receivedType,
   shiftAnchor,
@@ -117,12 +120,12 @@ export function MessageActivityClient({
     const prev = { received: [] as ReceivedItem[], sent: [] as SentItem[] };
     for (const r of data.received) {
       if (people.get(r.personKey)?.role !== "founder") continue;
-      const d = parisDay(r.at);
+      const d = localDay(r.at);
       if (inRange(d, range)) cur.received.push(r);
       else if (inRange(d, compareTo)) prev.received.push(r);
     }
     for (const s of data.sent) {
-      const d = parisDay(s.at);
+      const d = localDay(s.at);
       if (inRange(d, range)) cur.sent.push(s);
       else if (inRange(d, compareTo)) prev.sent.push(s);
     }
@@ -211,12 +214,12 @@ export function MessageActivityClient({
       return r;
     };
     for (const it of data.received) {
-      if (!inRange(parisDay(it.at), range)) continue;
+      if (!inRange(localDay(it.at), range)) continue;
       const r = get(it.personKey);
       if (r) { r.received.push(it); if (it.at > r.last) r.last = it.at; }
     }
     for (const it of data.sent) {
-      if (!inRange(parisDay(it.at), range)) continue;
+      if (!inRange(localDay(it.at), range)) continue;
       const r = get(it.personKey);
       if (r) { r.sent.push(it); if (it.at > r.last) r.last = it.at; }
     }
@@ -292,7 +295,7 @@ export function MessageActivityClient({
           <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">Analytics</p>
           <h1 className="mt-0.5 text-[22px] font-medium tracking-tight text-slate-950">Founder and investor messages</h1>
           <p className="mt-1 text-xs text-slate-500">
-            What iCapOS sent to founders, and to investors on their behalf. Paris time. Loaded {new Date(data.generatedAt).toLocaleTimeString("en-GB", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit" })}.
+            What iCapOS sent to founders, and to investors on their behalf. All times are {MESSAGE_TZ_LABEL}. Loaded {new Date(data.generatedAt).toLocaleTimeString("en-US", { timeZone: MESSAGE_TZ, hour: "numeric", minute: "2-digit" })}.
           </p>
         </div>
         <Link href="/admin/message-activity/goals" className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">
@@ -450,9 +453,9 @@ export function MessageActivityClient({
                         <Highlight text={r.person.role === "investor" ? "Investor" : r.person.plan} query={query} />
                       </td>
                       <td className="whitespace-nowrap px-3 py-2 text-slate-700">
-                        {shortDay(parisDay(r.last))}
+                        {shortDay(localDay(r.last))}
                         <span className="block font-mono text-[11px] text-slate-500">
-                          {new Date(r.last).toLocaleTimeString("en-GB", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit" })}
+                          {localTime(r.last)}
                         </span>
                       </td>
                       {RECEIVED_COLUMNS.map((c, i) => (

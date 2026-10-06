@@ -116,7 +116,7 @@ export function ActivityChart({
     const every = Math.ceil(n / Math.max(4, Math.floor(pw / 52)));
     const labelAll = bw >= 22;
     const peakI = tot.indexOf(Math.max(...tot));
-    const unitLabel = { hour: "Hour of day (Paris)", day: "Day", week: "Week starting", month: "Month" }[b.unit];
+    const unitLabel = { hour: "Hour of day (Pacific)", day: "Day", week: "Week starting", month: "Month" }[b.unit];
     title = `${who} by ${b.unit}, total ${tot.reduce((a, v) => a + v, 0)}`;
     const gw = Math.max(2, Math.min(30, bw * 0.7));
 
