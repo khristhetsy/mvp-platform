@@ -16,6 +16,7 @@ import { ContactsSearchBar as OdooSearchBar, type SavedSearch as SharedSavedSear
 import { OdooPager } from "@/components/admin/OdooPager";
 import { FieldMappingReview, type ReviewResult, type TargetOption } from "@/components/admin/contacts/FieldMappingReview";
 import { autoMatch, parseCsvCells, splitHeader, SOURCE_LABEL, type ColumnMatch, type CustomField, type MappingSource, type SavedMapping } from "@/lib/contacts/field-mapping";
+import { LAWFUL_BASES, LAWFUL_BASIS_LABEL, type LawfulBasis } from "@/lib/verify/retention";
 
 export type { SalesContact, LastMessage, NextActivity } from "./useContactsQuery";
 
@@ -180,6 +181,9 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
   const [gearMsg, setGearMsg] = useState<string | null>(null);
   const [gearBusy, setGearBusy] = useState(false);
   const [importFile, setImportFile] = useState<ImportFile | null>(null);
+  // Where the list came from and its lawful basis: required to import, stored on each contact.
+  const [prov, setProv] = useState<{ sourceNote: string; lawfulBasis: LawfulBasis }>({ sourceNote: "", lawfulBasis: "legitimate_interest" });
+  const provReady = prov.sourceNote.trim().length >= 3;
   const [review, setReview] = useState<MappingReview | null>(null);
   const [reviewErr, setReviewErr] = useState<string | null>(null);
   const [mapped, setMapped] = useState<ReviewResult | null>(null);
@@ -374,7 +378,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
       reload();
     } catch (e) { setGearMsg(e instanceof Error ? e.message : "Sync failed."); } finally { setGearBusy(false); }
   }
-  function closeImport() { setImportFile(null); setReview(null); setReviewErr(null); setMapped(null); setCsvPreview(null); }
+  function closeImport() { setImportFile(null); setReview(null); setReviewErr(null); setMapped(null); setCsvPreview(null); setProv((p) => ({ ...p, sourceNote: "" })); }
   /** Step 1: read the file, then match its columns (saved mappings first) and open the review. */
   async function onImportFile(f: File | null) {
     if (!f) return;
@@ -404,7 +408,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
     } catch (e) { setGearMsg(e instanceof Error ? e.message : "Couldn't read the file."); } finally { setGearBusy(false); }
   }
   function importBody(mode: "preview" | "commit", f: ImportFile, r: ReviewResult) {
-    return JSON.stringify({ mode, source: f.source, fileName: f.fileName, columns: f.columns, rows: f.rows, mapping: r.mapping, decided: r.decided, remember: r.remember });
+    return JSON.stringify({ mode, source: f.source, fileName: f.fileName, columns: f.columns, rows: f.rows, mapping: r.mapping, decided: r.decided, remember: r.remember, sourceNote: prov.sourceNote.trim(), lawfulBasis: prov.lawfulBasis });
   }
   /** Step 2: the mapping is decided; check the rows against the book. */
   async function previewMapped(r: ReviewResult) {
@@ -689,13 +693,31 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
                 )}
               </>
             )}
+            {csvPreview && csvPreview.created == null ? (
+              <div style={{ display: "grid", gap: 8, marginBottom: 12 }}>
+                <label style={{ fontSize: 11.5, fontWeight: 600, color: "var(--foreground)" }}>
+                  Where did this list come from? *
+                  <input value={prov.sourceNote} onChange={(e) => setProv({ ...prov, sourceNote: e.target.value })} maxLength={200}
+                    placeholder="e.g. Newport Beach expo attendees, Sept 2026"
+                    style={{ display: "block", width: "100%", marginTop: 4, fontSize: 12.5, fontWeight: 400, padding: "7px 9px", border: "0.5px solid #cdd9ec", borderRadius: 7 }} />
+                </label>
+                <label style={{ fontSize: 11.5, fontWeight: 600, color: "var(--foreground)" }}>
+                  Lawful basis *
+                  <select value={prov.lawfulBasis} onChange={(e) => setProv({ ...prov, lawfulBasis: e.target.value as LawfulBasis })}
+                    style={{ display: "block", width: "100%", marginTop: 4, fontSize: 12.5, fontWeight: 400, padding: "7px 9px", border: "0.5px solid #cdd9ec", borderRadius: 7, background: "#fff" }}>
+                    {LAWFUL_BASES.map((b) => <option key={b} value={b}>{LAWFUL_BASIS_LABEL[b]}</option>)}
+                  </select>
+                </label>
+                <p style={{ fontSize: 11, color: "var(--muted-foreground)", margin: 0 }}>Saved on every contact this import creates, for access requests and retention.</p>
+              </div>
+            ) : null}
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
               {csvPreview?.created != null ? (
                 <button type="button" onClick={closeImport} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "7px 14px", cursor: "pointer" }}>Done</button>
               ) : (
                 <>
                   <button type="button" onClick={closeImport} disabled={gearBusy} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid #cdd9ec", borderRadius: 8, padding: "7px 13px", cursor: "pointer" }}>Cancel</button>
-                  <button type="button" onClick={() => void commitCsv()} disabled={gearBusy || !csvPreview || csvPreview.toCreate === 0} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 8, padding: "7px 15px", cursor: "pointer", opacity: gearBusy || !csvPreview || csvPreview.toCreate === 0 ? 0.5 : 1 }}>{gearBusy ? "Importing…" : `Import ${csvPreview?.toCreate ?? 0} contacts`}</button>
+                  <button type="button" onClick={() => void commitCsv()} disabled={gearBusy || !csvPreview || csvPreview.toCreate === 0 || !provReady} title={provReady ? undefined : "Say where this list came from first"} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 8, padding: "7px 15px", cursor: "pointer", opacity: gearBusy || !csvPreview || csvPreview.toCreate === 0 || !provReady ? 0.5 : 1 }}>{gearBusy ? "Importing…" : `Import ${csvPreview?.toCreate ?? 0} contacts`}</button>
                 </>
               )}
             </div>

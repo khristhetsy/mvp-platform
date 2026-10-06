@@ -12,6 +12,10 @@
  *
  * Preview de-dups against existing emails and reports what would be created; commit
  * inserts the new ones as source='manual' (same shape as the single Add contact).
+ *
+ * Provenance (contact finder spec 5.4/5.5): a commit must say where the list came
+ * from (`sourceNote`) and its lawful basis (`lawfulBasis`); both are stored on every
+ * contact it creates, so an access request can be answered and retention applied.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -22,6 +26,7 @@ import { chunk } from "@/lib/supabase/paged";
 import { applyMapping, validateMapping } from "@/lib/contacts/field-mapping";
 import { columnMappingSchema, mappingSourceSchema } from "@/lib/contacts/field-mapping-schema";
 import { ensureCustomFields, loadCustomFields, saveMappings } from "@/lib/contacts/field-mapping-store";
+import { LAWFUL_BASES } from "@/lib/verify/retention";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -46,6 +51,12 @@ const mappedSchema = z.object({
   remember: z.boolean().optional(),
 });
 
+/** Where the list came from and the lawful basis for holding it. Required on commit. */
+const provenanceSchema = z.object({
+  sourceNote: z.string().trim().min(3, "Say where this list came from.").max(200),
+  lawfulBasis: z.enum(LAWFUL_BASES),
+});
+
 /** One contact to insert: top-level columns plus anything that goes into raw. */
 type Candidate = { fields: Record<string, string>; raw: Record<string, unknown> | null };
 
@@ -53,6 +64,10 @@ export async function POST(req: NextRequest): Promise<Response> {
   const profile = await requireRole(["admin", "analyst"]).catch(() => null);
   if (!profile) return NextResponse.json({ error: "Admins only." }, { status: 403 });
   const body = await req.json().catch(() => ({}));
+  const provenance = provenanceSchema.safeParse({ sourceNote: body?.sourceNote, lawfulBasis: body?.lawfulBasis });
+  if (body?.mode === "commit" && !provenance.success) {
+    return NextResponse.json({ error: "Say where this list came from and pick a lawful basis before importing." }, { status: 400 });
+  }
 
   let mode: "preview" | "commit";
   let candidates: Candidate[];
@@ -139,6 +154,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       contact_type: c.fields.contact_type ?? null,
       ...(c.raw ? { raw: c.raw } : {}),
       source: "manual",
+      ...(provenance.success ? { data_source_note: provenance.data.sourceNote, lawful_basis: provenance.data.lawfulBasis } : {}),
       external_id: c.fields.email?.toLowerCase() || `manual:${crypto.randomUUID()}`,
       owner_id: profile.id, assignee_ids: scope.isManager ? [] : [profile.id],
     }))).select("id");
