@@ -9,7 +9,10 @@ import { useRouter } from "next/navigation";
 import type { ListRow } from "@/lib/prospects/store";
 
 type Filters = { status: string; side: string; search: string };
-type Suggestion = { field: "email" | "phone"; value: string; source: "site" | "email" | "profile" | "web"; confident: boolean; note: string; alternatives?: string[] };
+type Suggestion = { id?: string; field: "email" | "phone"; value: string; source: "site" | "email" | "profile" | "web"; confident: boolean; note: string; alternatives?: string[] };
+type LawfulBasis = "legitimate_interest" | "consent" | "existing_relationship";
+type ManualSource = "manual_kaspr" | "manual_apollo" | "manual_other";
+type Reveal = { id: string; email: string; phone: string; source: ManualSource; saving: boolean };
 type SuggState = { loading: boolean; done: boolean; suggestions: Suggestion[]; reason?: string };
 
 const EMAIL_COLOR: Record<string, string> = { valid: "#0F6E56", risky: "#92400E", invalid: "#B91C1C", unverified: "#475569" };
@@ -20,7 +23,7 @@ const LEAD_COLOR: Record<string, string> = {
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 // "valid" only means the domain accepts mail (no mailbox check on serverless).
 const EMAIL_LABEL: Record<string, string> = { valid: "Domain OK", risky: "Risky", invalid: "Invalid", unverified: "Unverified" };
-const GRID = "26px 1.5fr 1fr 1fr 74px 74px 62px";
+const GRID = "26px 1.5fr 1fr 1fr 74px 74px 118px";
 const PAGE = 50;
 
 // LinkedIn = a people-search link (no scraping); opens the profile search in a new tab.
@@ -50,6 +53,9 @@ export function VerifyContactList() {
   const [error, setError] = useState<string | null>(null);
   const [sugg, setSugg] = useState<Record<string, SuggState>>({});
   const [scopeIds, setScopeIds] = useState<string[] | null>(null);
+  // Recorded on every accepted or logged value (spec 5.5). Default per decision 2026-10-06.
+  const [lawfulBasis, setLawfulBasis] = useState<LawfulBasis>("legitimate_interest");
+  const [reveal, setReveal] = useState<Reveal | null>(null);
   const [carried, setCarried] = useState<{ name: string; count: number; hadIds: boolean } | null>(null);
   const pendingCarryRef = useRef<string[] | null>(null);
   const carryAppliedRef = useRef(false);
@@ -91,6 +97,27 @@ export function VerifyContactList() {
     setSugg({});
     setLoading(false);
   }, [f, scopeIds]);
+
+  // Saved suggestions (from earlier runs, or a bulk run) come back with the page,
+  // so review survives a reload.
+  useEffect(() => {
+    const ids = rows.map((r) => r.id);
+    if (ids.length === 0) return;
+    let live = true;
+    fetch(`/api/prospects/suggestions?ids=${ids.join(",")}`)
+      .then((r) => r.json())
+      .then((j: { suggestions?: Record<string, Suggestion[]> }) => {
+        if (!live || !j.suggestions) return;
+        const saved = j.suggestions;
+        setSugg((p) => {
+          const n = { ...p };
+          for (const [id, list] of Object.entries(saved)) if (list.length && !n[id]) n[id] = { loading: false, done: true, suggestions: list };
+          return n;
+        });
+      })
+      .catch(() => { /* saved suggestions are optional */ });
+    return () => { live = false; };
+  }, [rows]);
 
   useEffect(() => {
     if (debounce.current) clearTimeout(debounce.current);
@@ -211,7 +238,7 @@ export function VerifyContactList() {
     try {
       const res = await fetch("/api/prospects/accept-suggestion", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contactId: id, field: s.field, value: s.value, source: s.source }),
+        body: JSON.stringify({ contactId: id, field: s.field, value: s.value, source: s.source, lawfulBasis, suggestionId: s.id }),
       });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error ?? "Accept failed."); }
       setSugg((p) => {
@@ -226,13 +253,44 @@ export function VerifyContactList() {
     }
   }
 
-  // Reject one suggestion → just remove it from the panel (no write).
-  function rejectSugg(id: string, s: Suggestion) {
+  // Reject one suggestion → saved, so it isn't offered again, then removed from the panel.
+  async function rejectSugg(id: string, s: Suggestion) {
+    try {
+      const res = await fetch("/api/prospects/reject-suggestion", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contactId: id, field: s.field, suggestionId: s.id, value: s.value }),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error ?? "Reject failed."); }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Reject failed.");
+      return;
+    }
     setSugg((p) => {
       const cur = p[id]; if (!cur) return p;
       const left = cur.suggestions.filter((x) => !(x.field === s.field && x.value === s.value));
       return { ...p, [id]: { ...cur, suggestions: left, reason: left.length === 0 ? "Dismissed." : cur.reason } };
     });
+  }
+
+  // Log a value revealed by hand in Kaspr / Apollo (spec 5.7).
+  async function saveReveal() {
+    if (!reveal) return;
+    setReveal({ ...reveal, saving: true }); setError(null); setMsg(null);
+    try {
+      const res = await fetch("/api/prospects/manual-reveal", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contactId: reveal.id, email: reveal.email || null, phone: reveal.phone || null, source: reveal.source, lawfulBasis }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error ?? "Save failed.");
+      setMsg(`Saved${d.email ? ` ${d.email}` : ""}${d.email && d.phone ? " and" : ""}${d.phone ? ` ${d.phone}` : ""}.`);
+      setReveal(null);
+      await load();
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Save failed.");
+      setReveal((p) => (p ? { ...p, saving: false } : p));
+    }
   }
 
   const sel8 = "0.5px solid var(--border)";
@@ -268,8 +326,14 @@ export function VerifyContactList() {
         <span style={{ fontSize: 11.5, color: sel.size > 0 ? "#1A4E9E" : "var(--muted-foreground)", fontWeight: 600 }}>
           {sel.size > 0 ? `${sel.size} selected` : `Select contacts to verify`}
         </span>
+        <select value={lawfulBasis} onChange={(e) => setLawfulBasis(e.target.value as LawfulBasis)} title="Recorded on contacts that don't have a lawful basis yet; an existing basis is kept"
+          style={{ marginLeft: "auto", fontSize: 11, padding: "5px 7px", borderRadius: 6, border: "0.5px solid var(--border)", background: "#fff", color: "var(--foreground)" }} aria-label="Lawful basis">
+          <option value="legitimate_interest">Basis: legitimate interest</option>
+          <option value="existing_relationship">Basis: existing relationship</option>
+          <option value="consent">Basis: consent</option>
+        </select>
         <button type="button" onClick={findMissingBulk} disabled={running || sel.size === 0}
-          style={{ marginLeft: "auto", fontSize: 11.5, fontWeight: 700, color: "#fff", background: "#4F46E5", border: "none", borderRadius: 6, padding: "6px 12px", cursor: "pointer", opacity: running || sel.size === 0 ? 0.5 : 1 }}
+          style={{ fontSize: 11.5, fontWeight: 700, color: "#fff", background: "#4F46E5", border: "none", borderRadius: 6, padding: "6px 12px", cursor: "pointer", opacity: running || sel.size === 0 ? 0.5 : 1 }}
           title="Search the internet + company website for missing phone/email on the selected contacts">
           <><i className="ti ti-sparkles" aria-hidden="true" /> Find missing info ({sel.size})</>
         </button>
@@ -318,8 +382,25 @@ export function VerifyContactList() {
                 <button type="button" onClick={() => findMissing(r.id)} title="Suggest missing email/phone from the company website + licensed provider"
                   style={{ fontSize: 12, lineHeight: 1, background: "none", border: "none", cursor: "pointer", padding: 0 }}><i className="ti ti-sparkles" aria-hidden="true" /></button>
               ) : null}
+              <button type="button" onClick={() => setReveal(reveal?.id === r.id ? null : { id: r.id, email: "", phone: "", source: "manual_kaspr", saving: false })} title="Log an email or phone you revealed in Kaspr, Apollo or elsewhere"
+                style={{ fontSize: 10.5, fontWeight: 700, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>Log</button>
+              <a href={`/api/prospects/contact-data/${r.id}`} title="Download everything held on this person and where it came from"
+                style={{ fontSize: 10.5, fontWeight: 700, color: "var(--muted-foreground)", textDecoration: "none" }}>Data</a>
             </div>
           </div>
+          {reveal?.id === r.id ? (
+            <div style={{ padding: "8px 14px 10px 40px", borderBottom: "0.5px solid var(--border)", background: "#FBFCFE", display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+              <span style={{ fontSize: 10.5, fontWeight: 700, color: "var(--muted-foreground)" }}>Log a manual reveal</span>
+              <input value={reveal.email} onChange={(e) => setReveal({ ...reveal, email: e.target.value })} placeholder="email" aria-label="Revealed email" style={{ ...selStyle, minWidth: 180, color: "var(--foreground)" }} />
+              <input value={reveal.phone} onChange={(e) => setReveal({ ...reveal, phone: e.target.value })} placeholder="phone" aria-label="Revealed phone" style={{ ...selStyle, minWidth: 130, color: "var(--foreground)" }} />
+              <select value={reveal.source} onChange={(e) => setReveal({ ...reveal, source: e.target.value as ManualSource })} aria-label="Where it came from" style={selStyle}>
+                <option value="manual_kaspr">From Kaspr</option><option value="manual_apollo">From Apollo</option><option value="manual_other">Other</option>
+              </select>
+              <button type="button" onClick={saveReveal} disabled={reveal.saving || (!reveal.email.trim() && !reveal.phone.trim())}
+                style={{ fontSize: 11, fontWeight: 700, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 5, padding: "5px 11px", cursor: "pointer", opacity: reveal.saving ? 0.5 : 1 }}>{reveal.saving ? "Saving…" : "Save"}</button>
+              <button type="button" onClick={() => setReveal(null)} style={{ fontSize: 11, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>Cancel</button>
+            </div>
+          ) : null}
           {missing && s ? (
             <div style={{ padding: "8px 14px 10px 40px", borderBottom: "0.5px solid var(--border)", background: "#FBFCFE" }}>
               {s.loading ? (

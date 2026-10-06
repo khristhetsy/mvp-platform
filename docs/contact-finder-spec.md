@@ -3,7 +3,7 @@
 **Owner:** Khris Thetsy
 **Date:** 2026-10-05
 **Repo:** iCFO CapitalOS
-**Status:** Step 1 built on `fix/contact-finder-defects` (see 4.10). Steps 2 and 3 not started.
+**Status:** Step 1 live (see 4.10). Step 2 built on `feat/contact-finder-v2` (see 5.9). Step 3 deferred (decision 2026-10-06).
 **Mockups:** `docs/mockups/contact-finder-mockups.html` (7 screens)
 
 ## 1. Summary
@@ -294,6 +294,23 @@ Based on the issues the CNIL cited against Kaspr (December 2024): collecting con
 - **Test:** the retention job selects only expired, never-contacted rows and clears only finder-sourced fields.
 - **Test:** with `APOLLO_API_KEY` unset, the Apollo step is skipped and logs nothing.
 - Manual check: run the backfill on staging and report the share of domains learned (actual number, from the data).
+
+### 5.9 Step 2 as built (2026-10-06)
+
+Decisions taken 2026-10-06: no Step 3 for now; retention 12 months (placeholder until counsel confirms); the Odoo lead list (`odoo` and `odoo-ir`) recorded as legitimate interest; Apollo's free plan has no usable API (API access starts on the Basic plan per DataMagnet, Sept 2026), so 5.6 is replaced by the manual reveal log in 5.7.
+
+| Planned | Built | Why |
+|---|---|---|
+| 5.6 Apollo API provider | Not built; manual reveal log covers Apollo and Kaspr | No API on the free plan; no paid tools |
+| 5.5 notice text in the MJML footer | Not built | Touches every send template; needs counsel's wording first |
+| 5.4 "Source of this list" and lawful basis at import | Lawful basis is chosen on the Verify screen and on each accept/reveal; import fields not built | Import wizard is shared with other flows; one decision at a time |
+| Move `linkedin-enrich.ts` onto the review flow | Not built | That module was being changed in parallel (#183); left for its owner |
+| `lawful_basis` overwritten on each accept | Recorded only when the contact has none | A pre-selected page default must not overwrite a recorded basis such as consent |
+| `retention_expires_at` recomputed on each accept | Set once with `found_at`; a settings change applies to new values only | The clock must never move once started |
+| "Never contacted" = lead_status new | lead_status new AND the found email never placed on a marketing send list (`marketing_contacts`) | Only segment publishing advances lead_status; other send paths don't |
+| Pending review filter | Saved suggestions reload with each page of contacts | Same outcome without a second list query |
+
+Also: accept and manual reveal keep working before the migration runs (provenance is skipped until the columns exist); rejecting the top format guess makes the next run offer the next format; choosing an alternative format logs the saved value as accepted and the original guess as rejected.
 
 ## 6. Step 3: Mailbox verification worker (Option B, optional)
 

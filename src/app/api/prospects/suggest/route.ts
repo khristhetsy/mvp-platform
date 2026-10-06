@@ -20,7 +20,7 @@ export async function POST(req: NextRequest): Promise<Response> {
   if (!parsed.success) return NextResponse.json({ error: "A contactId is required." }, { status: 400 });
 
   try {
-    const result = await suggestForContact(parsed.data.contactId);
+    const result = await suggestForContact(parsed.data.contactId, profile.id ?? null);
     return NextResponse.json(result);
   } catch (err) {
     Sentry.captureException(err);
