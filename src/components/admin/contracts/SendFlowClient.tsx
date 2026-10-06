@@ -8,7 +8,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import Link from "next/link";
 import { Copy, Pencil, Plus, Trash2 } from "lucide-react";
 import { applyEmailTokens, bestDraft, emailTokenValues, EMAIL_TOKENS_BASE, tokensIn, withTypedValues } from "@/lib/contracts/email-tokens";
-import { linkedFieldValues, openFields, plainCurrency } from "@/lib/contracts/fields";
+import { linkedFieldValues, linkedValue, openFields } from "@/lib/contracts/fields";
 import type { TemplateField } from "@/lib/contracts/types";
 import { ContractEditor, loadEditorData, type EditorData, type EditorHandle, type FieldLink } from "./ContractEditor";
 import { TrackingTable } from "./TrackingTable";
@@ -199,7 +199,7 @@ export function SendFlowClient({ contact, isAdmin, senderName }: { contact: Cont
       let diff = false;
       for (const l of linksFor(d.id, data)) {
         const f = e.fields.find((x) => x.token === l.token);
-        if (l.linked && plainCurrency(next[l.token] ?? f?.default_value ?? "") !== l.value) {
+        if (l.linked && linkedValue(l.token, next[l.token] ?? f?.default_value ?? "") !== l.value) {
           next[l.token] = l.value;
           diff = true;
         }
@@ -244,7 +244,7 @@ export function SendFlowClient({ contact, isAdmin, senderName }: { contact: Cont
       {success ? (
         <div style={{ marginBottom: 10 }}>
           <Notice tone={success.delivered ? "ok" : "warn"}>
-            {success.delivered ? `Sent to ${contact.email}. Tracking is below.` : <>The documents are ready for signature, but the email was not delivered. Send this link to {contact.email} yourself: <code style={{ userSelect: "all" }}>{success.url}</code></>}
+            {success.delivered ? `Sent to ${contact.email}. Tracking is below.` : <>The documents are ready, but the email was not delivered. Send this link to {contact.email} yourself: <code style={{ userSelect: "all" }}>{success.url}</code></>}
           </Notice>
         </div>
       ) : null}
@@ -465,6 +465,7 @@ function EmailStep({
   const [attach, setAttach] = useState(true);
   const [preview, setPreview] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [sending, setSending] = useState<"sign" | "review">("sign");
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
   const [typed, setTyped] = useState<Record<string, string>>({});
@@ -583,12 +584,13 @@ function EmailStep({
     setSaved(`Saved "${name}" to the library.`);
   }
 
-  async function send() {
+  async function send(signature = true) {
+    setSending(signature ? "sign" : "review");
     setBusy(true);
     setError(null);
     const r = await api<{ delivered: boolean; url: string }>("/api/admin/sales/contracts/send", {
       method: "POST",
-      body: JSON.stringify({ contactId: contact.id, documentIds: docs.map((d) => d.id), subject, body, emailDraftId: draftId, attachPdfs: attach, typedValues: Object.fromEntries(Object.entries(typed).filter(([k, v]) => v.trim() && !baseValues[k])) }),
+      body: JSON.stringify({ contactId: contact.id, documentIds: docs.map((d) => d.id), subject, body, emailDraftId: draftId, attachPdfs: signature ? attach : true, signature, typedValues: Object.fromEntries(Object.entries(typed).filter(([k, v]) => v.trim() && !baseValues[k])) }),
     });
     setBusy(false);
     if (!r.ok) return setError(r.data.error ?? "Send failed.");
@@ -735,10 +737,14 @@ function EmailStep({
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 14, flexWrap: "wrap" }}>
               <button type="button" onClick={onBack} style={btn()}>Back to editor</button>
               <button type="button" onClick={() => void saveToLibrary()} disabled={!subject.trim() || !body.trim()} style={btn()}>Save to library</button>
+              <button type="button" disabled={busy || Boolean(blockedReason)} title={blockedReason ?? "Email the PDFs for review. No signature request, no signing link."} onClick={() => void send(false)} style={{ ...btn(), border: `2px solid ${BLUE}`, color: BLUE, opacity: busy || blockedReason ? 0.5 : 1 }}>
+                {busy && sending === "review" ? "Rendering and sending…" : "Send"}
+              </button>
               <button type="button" disabled={busy || Boolean(blockedReason)} title={blockedReason ?? undefined} onClick={() => void send()} style={{ ...btn(true), opacity: busy || blockedReason ? 0.5 : 1 }}>
-                {busy ? "Rendering and sending…" : "Send for signature"}
+                {busy && sending === "sign" ? "Rendering and sending…" : "Send for signature"}
               </button>
             </div>
+            {!blockedReason ? <p style={{ fontSize: 11.5, color: MUTED, textAlign: "right", margin: "6px 0 0" }}>Send emails the PDFs for review, always attached. No signature request, no signing link.</p> : null}
             {blockedReason ? <p style={{ fontSize: 11.5, color: "#8a6500", textAlign: "right", margin: "6px 0 0" }}>{blockedReason}</p> : null}
             </>
             )}

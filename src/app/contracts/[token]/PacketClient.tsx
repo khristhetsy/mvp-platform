@@ -52,20 +52,24 @@ export function PacketClient({ token, packet }: { token: string; packet: Packet 
   }
 
   const count = docs.length;
+  // Sent for review only: nothing here asks for a signature.
+  const reviewOnly = docs.every((d) => d.status === "shared");
   return (
     <div style={{ minHeight: "100vh", background: "#eef1f5", fontFamily: "Inter, system-ui, sans-serif", color: NAVY }}>
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", padding: "15px 24px", background: NAVY }}>
         <span style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>
           i<span style={{ color: "#4F94FF" }}>CFO</span> <span style={{ fontSize: 12, fontWeight: 400, color: "#9fd0ff", marginLeft: 8 }}>Capital Global, Inc.</span>
         </span>
-        <span style={{ fontSize: 12, color: "#9fd0ff" }}>Secure signing · {packet.recipientEmail}</span>
+        <span style={{ fontSize: 12, color: "#9fd0ff" }}>{reviewOnly ? "Secure documents" : "Secure signing"} · {packet.recipientEmail}</span>
       </header>
 
       <main style={{ maxWidth: 760, margin: "0 auto", padding: "28px 16px 48px" }}>
         <div style={{ background: "#fff", border: "1px solid #d5deea", borderRadius: 12, padding: "22px 24px" }}>
           <h1 style={{ fontSize: 19, fontWeight: 700, margin: 0 }}>Documents for your review</h1>
           <p style={{ fontSize: 13, color: "#5a6b87", margin: "6px 0 0", lineHeight: 1.6 }}>
-            {count === 1 ? "One agreement." : `${count} independent agreements. You may sign one, some, or none.`} Nothing is binding until signed.
+            {reviewOnly
+              ? `${count === 1 ? "One document" : `${count} documents`} shared for your review. No signature is requested.`
+              : <>{count === 1 ? "One agreement." : `${count} independent agreements. You may sign one, some, or none.`} Nothing is binding until signed.</>}
           </p>
 
           <div style={{ border: "1px solid #d5deea", borderRadius: 10, marginTop: 16, overflow: "hidden" }}>
@@ -97,7 +101,9 @@ export function PacketClient({ token, packet }: { token: string; packet: Packet 
           ) : null}
 
           <div style={{ marginTop: 14, padding: "12px 14px", background: "#f6f8fc", borderRadius: 8, fontSize: 12.5, color: "#5a6b87", lineHeight: 1.65 }}>
-            Questions before signing? Reply to the email you received, or request changes and the document returns to the sender for revision.
+            {reviewOnly
+              ? "Questions? Reply to the email you received."
+              : "Questions before signing? Reply to the email you received, or request changes and the document returns to the sender for revision."}
           </div>
         </div>
       </main>

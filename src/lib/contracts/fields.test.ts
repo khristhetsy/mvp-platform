@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defaultCompanyName, defaultSpvName, formatCurrency, formatDate, formatPercent, groupCurrencyInput, linkedFieldValues, openFields, plainCurrency, resolveValues } from "./fields";
+import { defaultCompanyName, defaultSpvName, formatCurrency, formatDate, formatPercent, groupCurrencyInput, linkedFieldValues, linkedValue, openFields, plainCurrency, resolveValues } from "./fields";
 import type { IssuingEntity, TemplateField } from "./types";
 
 const f = (token: string, required = true, default_value: string | null = null, type: TemplateField["type"] = "text"): TemplateField => ({ token, label: token, type, required, default_value, position_ref: [], sort_order: 0 });
@@ -66,6 +66,13 @@ describe("linked fields", () => {
     const dd = [cf("equity_valuation", "10,000,000"), cf("service_fee")];
     expect(linkedFieldValues(dd, [{ fields: [cf("valuation_cap", "10,000,000")], values: { valuation_cap: "23,000,000" } }])).toEqual({ equity_valuation: "23000000" });
     expect(linkedFieldValues(dd, [{ fields: [cf("pre_money_valuation")], values: { pre_money_valuation: "8000000" } }])).toEqual({ equity_valuation: "8000000" });
+  });
+  it("copies the term sheet company legal name as text", () => {
+    const tf = (token: string, dv: string | null = null) => f(token, true, dv, "text");
+    const dd = [tf("company_name", "PAXION CYBERSECURITY, INC"), cf("service_fee")];
+    expect(linkedFieldValues(dd, [{ fields: [tf("company_name")], values: { company_name: " PAXION CYBERSECURITY, INC. " } }])).toEqual({ company_name: "PAXION CYBERSECURITY, INC." });
+    expect(linkedValue("company_name", " ACME, INC. ")).toBe("ACME, INC.");
+    expect(linkedValue("equity_valuation", "$6,500,000")).toBe("6500000");
   });
   it("does nothing without a term sheet or the field", () => {
     expect(linkedFieldValues([cf("equity_valuation")], [])).toEqual({});

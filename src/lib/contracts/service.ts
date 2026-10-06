@@ -141,7 +141,8 @@ type Prepared = {
   pageCount: number;
   prospectFields: FieldInput[];
   countersign: CountersignField[];
-  expiresAt: string;
+  /** Null for review only sends: nothing to expire. */
+  expiresAt: string | null;
 };
 
 function expiryFor(b: Bundle): string {
@@ -174,6 +175,25 @@ async function prepare(db: Db, b: Bundle): Promise<Prepared> {
   return { b, docx, pdf, pageCount, prospectFields, countersign: placed.countersign, expiresAt: expiryFor(b) };
 }
 
+/** Review only send: the final PDF, no signature boxes placed and none required. */
+async function prepareReview(db: Db, b: Bundle): Promise<Prepared> {
+  if (isUpload(b)) {
+    const pdf = await getFile(db, b.doc.upload_path!);
+    return { b, docx: null, pdf, pageCount: b.doc.page_count ?? 1, prospectFields: [], countersign: [], expiresAt: null };
+  }
+  const docx = await renderBundleDocx(db, b, "final");
+  const pdf = await docxToPdf(docx, `${fileBase(b)}.docx`);
+  const { pageCount } = await readPdfLines(new Uint8Array(pdf));
+  return { b, docx, pdf, pageCount, prospectFields: [], countersign: [], expiresAt: null };
+}
+
+/** Packet page visits count as opens for documents sent for review only. */
+export async function recordPacketOpen(db: Db, packetId: string, docIds: string[]) {
+  if (!docIds.length) return;
+  await db.rpc("contract_record_packet_open", { p_packet_id: packetId });
+  for (const id of docIds) await addEvent(db, id, "opened", "prospect");
+}
+
 export type SendInput = {
   contactId: string;
   documentIds: string[];
@@ -182,6 +202,8 @@ export type SendInput = {
   emailDraftId: string | null;
   attachPdfs: boolean;
   typedValues?: Record<string, string>;
+  /** False: email the PDFs for review only, with no signature request. Defaults to true. */
+  signature?: boolean;
   sender: { id: string; name: string; email: string | null; actorLabel: string };
 };
 
@@ -219,9 +241,13 @@ export async function sendPacket(db: Db, input: SendInput): Promise<{ packetId: 
   if (missing.length) throw new SendBlockedError(`The email uses tokens with no value: ${missing.map((m) => `{{${m}}}`).join(", ")}.`, { missing });
   if (!subject.text.trim() || !body.text.trim()) throw new SendBlockedError("The cover email needs a subject and a body.");
 
-  // Render and place signatures for every document first.
+  const signature = input.signature !== false;
+  // Review only: the PDFs are the delivery, so they are always attached.
+  const attachPdfs = signature ? input.attachPdfs : true;
+
+  // Render (and, when signing, place signatures for) every document first.
   const prepared: Prepared[] = [];
-  for (const b of bundles) prepared.push(await prepare(db, b));
+  for (const b of bundles) prepared.push(signature ? await prepare(db, b) : await prepareReview(db, b));
 
   const token = randomBytes(32).toString("hex");
   const { data: packet, error: pErr } = await db
@@ -234,7 +260,7 @@ export async function sendPacket(db: Db, input: SendInput): Promise<{ packetId: 
       subject: subject.text,
       body: body.text,
       email_draft_id: input.emailDraftId,
-      attach_pdfs: input.attachPdfs,
+      attach_pdfs: attachPdfs,
       sent_by: input.sender.id,
     })
     .select("id")
@@ -248,6 +274,26 @@ export async function sendPacket(db: Db, input: SendInput): Promise<{ packetId: 
     const base = `docs/${b.doc.id}/${fileBase(b)}`;
     if (p.docx) await putFile(db, `${base}.docx`, p.docx, DOCX_MIME);
     await putFile(db, `${base}.pdf`, p.pdf, "application/pdf");
+
+    if (!signature) {
+      await db
+        .from("contract_documents")
+        .update({
+          status: "shared",
+          locked: true,
+          sent_at: now,
+          updated_at: now,
+          docx_path: p.docx ? `${base}.docx` : null,
+          pdf_path: `${base}.pdf`,
+          page_count: p.pageCount,
+          packet_id: packet.id,
+          expires_at: null,
+        })
+        .eq("id", b.doc.id);
+      await addEvent(db, b.doc.id, "sent", input.sender.actorLabel, { to: contact.email, version: b.doc.version, signature: false });
+      attachments.push({ filename: `${fileBase(b)}.pdf`, content: p.pdf });
+      continue;
+    }
 
     let requestId: string;
     if (p.requestId) {
@@ -315,7 +361,7 @@ export async function sendPacket(db: Db, input: SendInput): Promise<{ packetId: 
       })
       .eq("id", b.doc.id);
     await addEvent(db, b.doc.id, "sent", input.sender.actorLabel, { to: contact.email, version: b.doc.version });
-    if (input.attachPdfs) attachments.push({ filename: `${fileBase(b)}.pdf`, content: p.pdf });
+    if (attachPdfs) attachments.push({ filename: `${fileBase(b)}.pdf`, content: p.pdf });
   }
 
   let delivered = false;
@@ -328,6 +374,7 @@ export async function sendPacket(db: Db, input: SendInput): Promise<{ packetId: 
       senderName: input.sender.name,
       senderEmail: input.sender.email,
       attachments,
+      reviewOnly: !signature,
     })).delivered;
   } catch {
     delivered = false;

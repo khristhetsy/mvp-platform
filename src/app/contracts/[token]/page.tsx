@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { loadPacket } from "@/lib/contracts/packet";
+import { recordPacketOpen } from "@/lib/contracts/service";
 import { PacketClient } from "./PacketClient";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +11,8 @@ export const metadata: Metadata = { title: "Documents for your review · iCFO Ca
 export default async function ContractPacketPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const packet = await loadPacket(createServiceRoleClient() as any, token);
+  const db = createServiceRoleClient() as any;
+  const packet = await loadPacket(db, token);
   if (!packet) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#eef1f5", fontFamily: "Inter, system-ui, sans-serif", padding: 20 }}>
@@ -21,5 +23,7 @@ export default async function ContractPacketPage({ params }: { params: Promise<{
       </div>
     );
   }
+  // Review only documents have no signing page, so a visit here is their open.
+  await recordPacketOpen(db, packet.id, packet.documents.filter((d) => d.status === "shared").map((d) => d.id)).catch(() => undefined);
   return <PacketClient token={token} packet={packet} />;
 }

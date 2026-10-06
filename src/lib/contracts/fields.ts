@@ -105,11 +105,20 @@ export function plainCurrency(v: string): string {
 /**
  * Fields on a services agreement that mirror a term sheet field in the same send.
  * The Due Diligence agreement's valuation follows the term sheet's valuation cap
- * (Series A has a pre money valuation instead).
+ * (Series A has a pre money valuation instead), and its company legal name
+ * follows the term sheet's company legal name.
  */
-export const LINKED_FIELDS: { token: string; from: string[] }[] = [{ token: "equity_valuation", from: ["valuation_cap", "pre_money_valuation"] }];
+export const LINKED_FIELDS: { token: string; from: string[]; text?: boolean }[] = [
+  { token: "equity_valuation", from: ["valuation_cap", "pre_money_valuation"] },
+  { token: "company_name", from: ["company_name"], text: true },
+];
 
-/** Linked values for a target document, read from the term sheets in the same send. Values are plain numbers. */
+/** A linked field's value in comparable form: trimmed text for text links, a plain number otherwise. */
+export function linkedValue(token: string, raw: string): string {
+  return LINKED_FIELDS.find((l) => l.token === token)?.text ? raw.trim() : plainCurrency(raw);
+}
+
+/** Linked values for a target document, read from the term sheets in the same send. Numbers are plain; text is trimmed. */
 export function linkedFieldValues(
   targetFields: TemplateField[],
   sources: { fields: TemplateField[]; values: Record<string, string> }[],
@@ -121,7 +130,7 @@ export function linkedFieldValues(
     for (const s of sources) {
       const f = s.fields.find((x) => link.from.includes(x.token));
       if (!f) continue;
-      const v = plainCurrency(s.values[f.token] ?? f.default_value ?? "");
+      const v = linkedValue(link.token, s.values[f.token] ?? f.default_value ?? "");
       if (v) {
         out[link.token] = v;
         break;

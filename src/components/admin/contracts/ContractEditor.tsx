@@ -7,7 +7,7 @@
 // true render (iCapOS renderer, see render-pdf.ts) is one click away in the preview tab.
 
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { groupCurrencyInput, openFields, plainCurrency } from "@/lib/contracts/fields";
+import { groupCurrencyInput, linkedValue, openFields, plainCurrency } from "@/lib/contracts/fields";
 import type { CSSProperties, KeyboardEvent } from "react";
 import type { BodyEdits, IssuingEntity, Segment, TemplateField } from "@/lib/contracts/types";
 import type { ModelBlock, ModelParagraph, ModelSegment } from "@/lib/contracts/docx-engine";
@@ -234,7 +234,7 @@ export const ContractEditor = forwardRef<
     for (const l of links) {
       if (!l.linked || !l.value) continue;
       const f = data.fields.find((x) => x.token === l.token);
-      if (f && plainCurrency(values[l.token] ?? f.default_value ?? "") !== l.value) next[l.token] = l.value;
+      if (f && linkedValue(l.token, values[l.token] ?? f.default_value ?? "") !== l.value) next[l.token] = l.value;
     }
     return next;
   }, [links, values, readOnly, data.fields]);
@@ -660,7 +660,7 @@ function FieldInput({
         {field.label}
         {field.required ? <span style={{ color: open ? "#8a6500" : "#8a93a6" }}> *</span> : null}
         {link?.linked ? (
-          <span title={`Follows the ${link.source} in this send. Type a different number to unlink.`} style={{ marginLeft: 6, fontSize: 10, fontWeight: 700, background: "#e8f0fe", color: BLUE, padding: "1px 7px", borderRadius: 9 }}>
+          <span title={`Follows the ${link.source} in this send. Type a different value to unlink.`} style={{ marginLeft: 6, fontSize: 10, fontWeight: 700, background: "#e8f0fe", color: BLUE, padding: "1px 7px", borderRadius: 9 }}>
             from {link.source}
           </span>
         ) : null}
