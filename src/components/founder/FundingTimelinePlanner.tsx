@@ -242,6 +242,7 @@ export function FundingTimelinePlanner() {
       setRoundType((savedData.roundType as RoundType) ?? "seed");
       setCloseDate(savedData.closeDate ?? (() => { const d = new Date(); d.setMonth(d.getMonth() + 5); return d.toISOString().split("T")[0]; })());
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- restore the saved copy once when it loads; savedData also changes on every save
   }, [loaded]);
 
   useEffect(() => {
@@ -261,7 +262,7 @@ export function FundingTimelinePlanner() {
     return d;
   }, [parsedClose, totalWeeks]);
 
-  const today = new Date();
+  const today = useMemo(() => new Date(), []);
   const weeksUntilStart = weeksBetween(today, startDate);
   const weeksUntilClose = weeksBetween(today, parsedClose);
 
@@ -283,7 +284,6 @@ export function FundingTimelinePlanner() {
       if (today >= phaseStarts[i]) return i;
     }
     return 0;
-    // eslint-disable-next-line react-hooks/preserve-manual-memoization
   }, [today, startDate, phases, phaseStarts]);
 
   const isLate = weeksUntilStart < 0 && weeksUntilClose > 0;

@@ -316,6 +316,7 @@ export function CompanySettingsForm({ company, display }: Props) {
     }
     if (f.type === "select-industry") return <span className="inline-flex rounded-full bg-indigo-50 px-2.5 py-0.5 text-[11px] text-indigo-800">{v}</span>;
     if (f.key === "website") return <span className="text-[#185FA5]">{v}</span>;
+    // eslint-disable-next-line @next/next/no-img-element -- uploaded logo URL, shown as is
     if (f.type === "logo") return <img src={v} alt="Company logo" className="h-8 w-8 rounded-lg object-contain ring-1 ring-slate-200" />;
     if (f.type === "textarea") return <span className="whitespace-pre-wrap text-slate-800">{v.length > 220 ? `${v.slice(0, 220)}…` : v}</span>;
     return <span className="text-slate-800">{v}</span>;
@@ -414,6 +415,7 @@ export function CompanySettingsForm({ company, display }: Props) {
             className="flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 px-4 py-3 hover:border-indigo-300"
           >
             <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) void uploadLogo(file); }} />
+            {/* eslint-disable-next-line @next/next/no-img-element -- uploaded logo URL, shown as is */}
             {v ? <img src={v} alt="Company logo" className="h-10 w-10 rounded-lg object-contain ring-1 ring-slate-200" /> : <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white ring-1 ring-slate-200 text-lg"><i className="ti ti-building" aria-hidden="true" /></div>}
             <span className="text-sm text-slate-600">{logoUploading ? "Uploading…" : v ? "Replace logo" : "Click to upload"} <span className="text-xs text-slate-400">· PNG, JPG, WebP, SVG · max 2 MB</span></span>
           </div>

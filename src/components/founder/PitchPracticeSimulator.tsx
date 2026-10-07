@@ -312,6 +312,7 @@ export function PitchPracticeSimulator() {
       setActiveCategory(savedData.activeCategory ?? null);
       setActiveDifficulty((savedData.activeDifficulty as Difficulty | null) ?? null);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- restore the saved copy once when it loads; savedData also changes on every save
   }, [loaded]);
 
   useEffect(() => {

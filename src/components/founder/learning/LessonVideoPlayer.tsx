@@ -54,6 +54,7 @@ export function LessonVideoPlayer({
       if (current >= marker.startSeconds) active = marker;
     }
     return active.slide;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- progress re-reads the video's current time from the ref
   }, [chapterMarkers, duration, progress]);
 
   const savePosition = useCallback(

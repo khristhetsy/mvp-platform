@@ -189,6 +189,7 @@ export function AdminCourseContentStudio({ courseId, linkedModules }: Props) {
         setLessons([]);
       }
     })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the module's slug and id, not the object, so a refreshed module list doesn't refetch
   }, [selectedModule?.slug, selectedModule?.id]);
 
   async function createLesson() {
@@ -399,6 +400,7 @@ export function AdminCourseContentStudio({ courseId, linkedModules }: Props) {
         })),
       );
     })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the module's slug and id, not the object, so a refreshed module list doesn't refetch
   }, [selectedModule?.slug, selectedModule?.id]);
 
   async function saveStaticLesson(lesson: StaticLessonDraft) {

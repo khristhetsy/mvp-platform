@@ -330,6 +330,7 @@ function Composer({ accounts, googleReady }: { accounts: SocialAccount[]; google
               <div className="mt-2">
                 <div className="flex items-center gap-2">
                   <input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder={hasIg ? "Image URL — required for Instagram (public https JPEG/PNG)" : "Image URL (optional; public https JPEG/PNG)"} className={`flex-1 rounded-lg border px-3 py-2 text-[13px] focus:outline-none ${hasIg && !imageUrl.trim() ? "border-amber-300 bg-amber-50/40 focus:border-amber-400" : "border-slate-200 focus:border-indigo-400"}`} />
+                  {/* eslint-disable-next-line @next/next/no-img-element -- user supplied URL, not a known image host */}
                   {imageUrl.trim() && !badUrl ? <img src={imageUrl.trim()} alt="" className="h-9 w-9 rounded-md border border-slate-200 object-cover" /> : null}
                 </div>
                 {badUrl ? <p className="mt-1 text-[11.5px] text-rose-600">Instagram needs a direct https link to a .jpg or .png file.</p>
