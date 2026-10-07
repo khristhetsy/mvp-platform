@@ -37,6 +37,10 @@
       "schedule": "12 * * * *"
     },
     {
+      "path": "/api/cron/sequence-schedules",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/marketing/process-scheduled",
       "schedule": "*/15 * * * *"
     },
