@@ -192,7 +192,8 @@ export default async function AdminCompaniesPage() {
             description={t("reviewSubmissionsManagePublication")}
           />
 
-          <AdminStageApprovalQueue founders={pendingFounders} />
+          {/* Shown only when a founder is waiting for stage approval; no empty card. */}
+          {pendingFounders.length > 0 ? <AdminStageApprovalQueue founders={pendingFounders} /> : null}
 
           <AdminPendingQuickReview
             companies={companyCards

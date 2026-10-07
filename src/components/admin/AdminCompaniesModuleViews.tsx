@@ -13,6 +13,10 @@ import { filterCompanies as applyCompanyQueryFilters, type CompanyQueryFilters }
 import { matchRows, searchSummary, type SearchField } from "@/lib/ui/live-search";
 import { Highlight, NoSearchMatches } from "@/components/ui/SearchStatus";
 import { PLAN_LABELS, PLAN_PRICES } from "@/lib/subscriptions/plans";
+import { OdooSearchBar, EMPTY_SEARCH, type SearchState, type QuickFilter, type GroupOption } from "@/components/admin/OdooSearchBar";
+import { CompaniesGear } from "@/components/admin/companies/CompaniesGear";
+import { CompaniesPlanDonut, type PlanSlice, type PlanSliceKey } from "@/components/admin/companies/CompaniesPlanDonut";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 type ViewMode = "kanban" | "grid" | "list" | "journey";
 type UserType = "" | "founders" | "investors";
@@ -120,6 +124,38 @@ function isPaying(c: AdminCompanyCardData) {
   return Boolean(sub && sub.subscription_status === "active" && sub.plan_type !== "admin_internal" && (sub.monthly_price_cents ?? 0) > 0);
 }
 
+/** One slice of the plan circle graph per founder account. */
+function accountCategory(c: AdminCompanyCardData): PlanSliceKey {
+  const sub = c.founder_subscription;
+  if (isPaying(c)) return "paying";
+  if (sub?.subscription_status === "pending_payment") return "pending";
+  if (sub && (sub.plan_type === "founder_free" || sub.plan_type === "founder_trial")) return "free";
+  return "other";
+}
+
+const SLICE_META: Record<PlanSliceKey, { label: string; color: string }> = {
+  paying: { label: "Paying", color: "#1D9E75" },
+  free: { label: "Free (legacy)", color: "#B4B2A9" },
+  pending: { label: "Payment pending", color: "#EF9F27" },
+  other: { label: "Internal, comped or no plan", color: "#CBD5E1" },
+};
+
+const COMPANY_QUICK: QuickFilter[] = [
+  { key: "awaiting", label: "Awaiting my approval" },
+  { key: "review", label: "Pending review" },
+  { key: "published", label: "Published", sep: true },
+  { key: "draft", label: "Draft" },
+  { key: "ready", label: "Readiness 70 or more", sep: true },
+  { key: "outreach_stalled", label: "Outreach stalled" },
+];
+
+const COMPANY_GROUPS: GroupOption[] = [
+  { id: "none", label: "No grouping" },
+  { id: "stage", label: "Stage" },
+  { id: "plan", label: "Plan" },
+  { id: "industry", label: "Industry" },
+];
+
 function reviewStatusLabel(t: T, status: string | null) {
   if (status === "pending" || status === "approved" || status === "rejected") return t(`companies.reviewStatus.${status}`);
   return t("companies.reviewStatus.unknown");
@@ -153,7 +189,10 @@ function AdminCompaniesModuleViewsInner({
   allowances?: Record<string, CompanyAllowance>;
 }>) {
   const t = useTranslations("billingCompaniesAdmin");
-  const [query, setQuery] = useState("");
+  const [searchState, setSearchState] = useState<SearchState>({ ...EMPTY_SEARCH, groupBy: "none" });
+  const query = searchState.q;
+  const setQuery = (q: string) => setSearchState((st) => ({ ...st, q }));
+  const [slice, setSlice] = useState<PlanSliceKey | null>(null);
   const [view, setView] = useState<ViewMode>("list");
   const [userType, setUserType] = useState<UserType>("");
   const { filters } = useAdminQueryFilters("companies");
@@ -168,7 +207,26 @@ function AdminCompaniesModuleViewsInner({
     () => matchRows(drilldownFiltered, COMPANY_SEARCH_FIELDS, query),
     [drilldownFiltered, query],
   );
-  const filtered = search.rows;
+  // Search bar quick filters, industry field and the circle graph slice.
+  const industries = useMemo(
+    () => [...new Set(companies.map((c) => c.industry).filter((v): v is string => Boolean(v)))].sort(),
+    [companies],
+  );
+  const filtered = useMemo(() => {
+    const quick = new Set(searchState.quick);
+    const inds = searchState.fields.industry ?? [];
+    return search.rows.filter((c) => {
+      if (slice && accountCategory(c) !== slice) return false;
+      if (inds.length && !inds.includes(c.industry ?? "")) return false;
+      if (quick.has("awaiting") && c.stage_approval_status !== "pending") return false;
+      if (quick.has("review") && c.review_status !== "pending") return false;
+      if (quick.has("published") && !c.is_published) return false;
+      if (quick.has("draft") && c.is_published) return false;
+      if (quick.has("ready") && !((c.readiness_score ?? 0) >= 70)) return false;
+      if (quick.has("outreach_stalled") && allowances[c.id]?.status !== "stalled") return false;
+      return true;
+    });
+  }, [search.rows, slice, searchState.quick, searchState.fields, allowances]);
 
   // Journey-stage filter + sortable score/stage columns (list view).
   const [stageFilter, setStageFilter] = useState<string>("");
@@ -220,7 +278,15 @@ function AdminCompaniesModuleViewsInner({
       if (sub.plan_type === "founder_free" || sub.plan_type === "founder_trial") free += 1;
       if (sub.subscription_status === "pending_payment") pending += 1;
     }
-    return { paying, mrr: formatMonthly(mrrCents, currency).replace("/mo", ""), free, pending };
+    // One count per founder account (a founder with two companies counts once).
+    const accounts = new Map<string, PlanSliceKey>();
+    for (const c of companies) {
+      const key = c.founder_subscription?.id ?? (c.founder_email ? `e:${c.founder_email.toLowerCase()}` : c.id);
+      if (!accounts.has(key)) accounts.set(key, accountCategory(c));
+    }
+    const count = (k: PlanSliceKey) => [...accounts.values()].filter((v) => v === k).length;
+    const slices: PlanSlice[] = (["paying", "free", "pending", "other"] as const).map((k) => ({ key: k, ...SLICE_META[k], count: count(k) }));
+    return { paying, mrr: formatMonthly(mrrCents, currency).replace("/mo", ""), free, pending, slices };
   }, [companies]);
 
   const pipelineColumns = useMemo(() => {
@@ -244,83 +310,72 @@ function AdminCompaniesModuleViewsInner({
 
   return (
     <>
-      <AdminQueryFilterBar page="companies" className="mb-4" />
-      <div className="mb-4 flex flex-wrap items-center gap-3 justify-between">
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={t("companies.searchPh")}
-          className="flex-1 min-w-[200px] rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+      <CompaniesPlanDonut slices={planTotals.slices} mrr={planTotals.mrr} active={slice} onSelect={setSlice} />
+
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <CompaniesGear
+          sections={[
+            {
+              title: "Users",
+              value: userType,
+              onChange: (v) => setUserType(v as UserType),
+              options: [{ value: "", label: "All users" }, { value: "founders", label: "Founders" }, { value: "investors", label: "Investors" }],
+            },
+            {
+              title: "Stage",
+              value: stageFilter,
+              onChange: setStageFilter,
+              options: [
+                { value: "", label: "All stages" },
+                { value: "initialize", label: "Onboarding" },
+                { value: "qualify", label: "Preparation" },
+                { value: "deploy", label: "Marketing" },
+                { value: "optimize", label: "Closing" },
+                { value: "pending", label: "Awaiting my approval" },
+              ],
+            },
+            {
+              title: "Plan",
+              value: planFilter,
+              onChange: (v) => setPlanFilter(v as PlanFilter),
+              options: [
+                { value: "", label: "All plans" },
+                { value: "professional", label: "Professional" },
+                { value: "basic", label: "Basic" },
+                { value: "managed_ir", label: PLAN_LABELS.founder_managed_ir },
+                { value: "free", label: "Free (legacy)" },
+                { value: "pending", label: "Payment pending" },
+                { value: "none", label: "No plan or internal" },
+              ],
+            },
+            {
+              title: "View",
+              value: view,
+              onChange: (v) => setView(v as ViewMode),
+              options: [
+                { value: "kanban", label: t("companies.kanban") },
+                { value: "grid", label: t("companies.grid") },
+                { value: "list", label: t("companies.list") },
+                { value: "journey", label: "Journey" },
+              ],
+            },
+          ]}
         />
-        <select
-          value={userType}
-          onChange={(e) => setUserType(e.target.value as UserType)}
-          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-          aria-label="Filter by user type"
-        >
-          <option value="">All users</option>
-          <option value="founders">Founders</option>
-          <option value="investors">Investors</option>
-        </select>
-        <select
-          value={stageFilter}
-          onChange={(e) => setStageFilter(e.target.value)}
-          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-          aria-label="Filter by journey stage"
-        >
-          <option value="">All stages</option>
-          <option value="initialize">Onboarding</option>
-          <option value="qualify">Preparation</option>
-          <option value="deploy">Marketing</option>
-          <option value="optimize">Closing</option>
-          <option value="pending">⏳ Awaiting my approval</option>
-        </select>
-        <select
-          value={planFilter}
-          onChange={(e) => setPlanFilter(e.target.value as PlanFilter)}
-          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-          aria-label="Filter by plan"
-        >
-          <option value="">All plans</option>
-          <option value="professional">Professional</option>
-          <option value="basic">Basic</option>
-          <option value="managed_ir">{PLAN_LABELS.founder_managed_ir}</option>
-          <option value="free">Free (legacy)</option>
-          <option value="pending">Payment pending</option>
-          <option value="none">No plan or internal</option>
-        </select>
-        <div className="flex gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
-          {(["kanban", "grid", "list", "journey"] as const).map((v) => (
-            <button
-              key={v}
-              type="button"
-              onClick={() => setView(v)}
-              className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
-                view === v
-                  ? "bg-white text-slate-950 shadow-sm border border-slate-200"
-                  : "text-slate-500 hover:text-slate-700"
-              }`}
-            >
-              {v === "kanban" ? t("companies.kanban") : v === "grid" ? t("companies.grid") : v === "list" ? t("companies.list") : "Journey"}
-            </button>
-          ))}
+        <div className="min-w-0 flex-1">
+          <OdooSearchBar
+            scope="admin_companies"
+            state={searchState}
+            onChange={setSearchState}
+            quick={COMPANY_QUICK}
+            fields={[{ key: "industry", label: "Industry", options: industries }]}
+            groups={COMPANY_GROUPS}
+            noGroupId="none"
+            placeholder={t("companies.searchPh")}
+            width="100%"
+          />
         </div>
       </div>
-
-      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {([
-          ["Paying", String(planTotals.paying)],
-          ["MRR", planTotals.mrr],
-          ["Free (legacy)", String(planTotals.free)],
-          ["Payment pending", String(planTotals.pending)],
-        ] as const).map(([label, value]) => (
-          <div key={label} className="rounded-lg bg-slate-50 px-4 py-3">
-            <div className="text-xs text-slate-500">{label}</div>
-            <div className="text-xl font-semibold text-slate-900">{value}</div>
-          </div>
-        ))}
-      </div>
+      <AdminQueryFilterBar page="companies" className="mb-4" />
 
       <PageSection
         title={t("companies.submissions")}
@@ -396,43 +451,49 @@ function AdminCompaniesModuleViewsInner({
             ))}
           </div>
         ) : (
-          <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+            <table className="w-full text-sm [&_td]:align-middle [&_th]:whitespace-nowrap [&_th]:align-middle">
               <thead>
-                <tr className="border-b border-slate-100 text-left text-xs font-semibold text-slate-500">
-                  <th className="px-4 py-3">{t("companies.colCompany")}</th>
-                  <th className="px-4 py-3">{t("companies.colFounder")}</th>
-                  <th className="px-4 py-3">{t("companies.colIndustry")}</th>
+                <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold text-slate-500">
+                  <th className="px-3 py-2.5">{t("companies.colCompany")}</th>
+                  <th className="px-3 py-2.5">{t("companies.colFounder")}</th>
+                  <th className="px-3 py-2.5">{t("companies.colIndustry")}</th>
                   {([["readiness", "Readiness"], ["investable", "Investable"], ["stage", "Stage"], ["plan", "Plan"], ["signed_on", "Signed on"], ["window", "Current window"], ["reached", "Reached / limit"], ["outreach", "Outreach status"], ["intros", "Intro requests"]] as const).map(([key, label]) => (
-                    <th key={key} className="px-4 py-3">
-                      <button type="button" onClick={() => toggleSort(key)} className="inline-flex items-center gap-1 hover:text-slate-800">
+                    <th key={key} className={`px-3 py-2.5 ${NUMERIC_COLS.has(key) ? "text-right" : ""}`}>
+                      <button type="button" onClick={() => toggleSort(key)} className={`inline-flex items-center gap-1 hover:text-slate-800 ${NUMERIC_COLS.has(key) ? "flex-row-reverse" : ""}`}>
                         {label}
                         <span className="text-[9px]">{sortKey === key ? (sortDir === "asc" ? "▲" : "▼") : "↕"}</span>
                       </button>
                     </th>
                   ))}
-                  <th className="px-4 py-3">{t("companies.colReview")}</th>
-                  <th className="px-4 py-3">{t("companies.colPublished")}</th>
-                  <th className="px-4 py-3">{t("companies.colAction")}</th>
+                  <th className="px-3 py-2.5">{t("companies.colReview")}</th>
+                  <th className="px-3 py-2.5">{t("companies.colPublished")}</th>
+                  <th className="px-3 py-2.5">{t("companies.colAction")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {listRows.map((company) => (
+                {groupRows(listRows, searchState.groupBy).map(({ header, count, company }) => header ? (
+                  <tr key={`g:${header}`} className="bg-slate-50">
+                    <td colSpan={COLUMN_COUNT} className="px-3 py-2 text-xs font-semibold text-slate-700">
+                      {header} <span className="font-normal text-slate-400">({count})</span>
+                    </td>
+                  </tr>
+                ) : company && (
                   <tr
                     key={company.id}
                     className="hover:bg-slate-50 cursor-pointer"
                     onClick={() => { window.location.href = `/admin/companies/${company.id}`; }}
                   >
-                    <td className="px-4 py-3 font-medium text-slate-900"><Highlight text={company.company_name} query={query} /></td>
-                    <td className="px-4 py-3 text-slate-600"><Highlight text={company.founder_name} query={query} /></td>
-                    <td className="px-4 py-3 text-slate-500">{company.industry ? <Highlight text={company.industry} query={query} /> : "—"}</td>
-                    <td className={`px-4 py-3 ${scoreClass(company.readiness_score)}`}>
+                    <td className="px-3 py-2.5 font-medium text-slate-900 whitespace-nowrap"><Highlight text={company.company_name} query={query} /></td>
+                    <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap"><Highlight text={company.founder_name} query={query} /></td>
+                    <td className="px-3 py-2.5 text-slate-500 whitespace-nowrap">{company.industry ? <Highlight text={company.industry} query={query} /> : "—"}</td>
+                    <td className={`px-3 py-2.5 text-right tabular-nums ${scoreClass(company.readiness_score)}`}>
                       {company.readiness_score != null ? company.readiness_score : "—"}
                     </td>
-                    <td className={`px-4 py-3 ${scoreClass(company.investable_score)}`}>
+                    <td className={`px-3 py-2.5 text-right tabular-nums ${scoreClass(company.investable_score)}`}>
                       {company.investable_score != null ? company.investable_score : "—"}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-2.5 whitespace-nowrap">
                       {company.journey_stage ? (
                         <span className="inline-flex items-center gap-1">
                           <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STAGE_STYLE[company.journey_stage] ?? "bg-slate-100 text-slate-600"}`}>
@@ -447,14 +508,14 @@ function AdminCompaniesModuleViewsInner({
                     {(() => {
                       const plan = planView(company);
                       return (
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${plan.cls}`}>{plan.label}</span>
+                        <td className="px-3 py-2.5 whitespace-nowrap">
+                          <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${plan.cls}`}>{plan.label}</span>
                           {plan.amount && <div className="mt-1 text-xs font-semibold text-slate-900">{plan.amount}</div>}
                           {plan.note && <div className="text-[10px] text-slate-400">{plan.note}</div>}
                         </td>
                       );
                     })()}
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="px-3 py-2.5 whitespace-nowrap">
                       {company.founder_signed_on_at ? (
                         <>
                           <div className="text-xs text-slate-700">{formatShortDate(company.founder_signed_on_at)}</div>
@@ -465,7 +526,7 @@ function AdminCompaniesModuleViewsInner({
                       )}
                     </td>
                     <AllowanceCells allowance={allowances[company.id]} />
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-2.5 whitespace-nowrap">
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                         company.review_status === "approved"
                           ? "bg-emerald-50 text-emerald-800"
@@ -476,10 +537,10 @@ function AdminCompaniesModuleViewsInner({
                         {reviewStatusLabel(t, company.review_status)}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-slate-500">
+                    <td className="px-3 py-2.5 text-slate-500 whitespace-nowrap">
                       {company.is_published ? t("companies.published") : t("companies.draft")}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-2.5 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         {company.review_status === "pending" ? (
                           <button
@@ -512,6 +573,31 @@ function AdminCompaniesModuleViewsInner({
   );
 }
 
+/** Number columns are right aligned so values stack by digit. */
+const NUMERIC_COLS = new Set<string>(["readiness", "investable", "reached", "intros"]);
+/** Company, founder, industry, 9 sortable columns, review, published, action. */
+const COLUMN_COUNT = 15;
+
+/** List rows with a header row before each group (Group by in the search bar). */
+function groupRows(rows: AdminCompanyCardData[], groupBy: string): Array<{ header?: string; count?: number; company?: AdminCompanyCardData }> {
+  if (!groupBy || groupBy === "none") return rows.map((company) => ({ company }));
+  const keyOf = (c: AdminCompanyCardData) =>
+    groupBy === "stage" ? (c.journey_stage ? STAGE_LABEL[c.journey_stage] ?? c.journey_stage : "No stage")
+    : groupBy === "plan" ? planView(c).label
+    : c.industry || "No industry";
+  const groups = new Map<string, AdminCompanyCardData[]>();
+  for (const c of rows) {
+    const k = keyOf(c);
+    groups.set(k, [...(groups.get(k) ?? []), c]);
+  }
+  const out: Array<{ header?: string; count?: number; company?: AdminCompanyCardData }> = [];
+  for (const [header, list] of groups) {
+    out.push({ header, count: list.length });
+    for (const company of list) out.push({ company });
+  }
+  return out;
+}
+
 const OUTREACH_ORDER: Record<CompanyAllowance["status"], number> = { stalled: 0, behind: 1, on_pace: 2, full: 3 };
 const OUTREACH_STYLE: Record<CompanyAllowance["status"], { label: string; cls: string; bar: string }> = {
   full: { label: "Full", cls: "bg-emerald-50 text-emerald-700", bar: "bg-emerald-500" },
@@ -519,7 +605,7 @@ const OUTREACH_STYLE: Record<CompanyAllowance["status"], { label: string; cls: s
   behind: { label: "Behind pace", cls: "bg-amber-50 text-amber-800", bar: "bg-amber-500" },
   stalled: { label: "Stalled", cls: "bg-red-50 text-red-700", bar: "bg-red-400" },
 };
-const shortUtc = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+const shortUtc = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: PLATFORM_TZ });
 
 /** Current window, reached / limit, outreach status and intro requests for one company (paid founders only). */
 function AllowanceCells({ allowance: a }: { allowance: CompanyAllowance | undefined }) {
@@ -527,10 +613,10 @@ function AllowanceCells({ allowance: a }: { allowance: CompanyAllowance | undefi
   if (!a) {
     return (
       <>
-        <td className="px-4 py-3">{dash}</td>
-        <td className="px-4 py-3">{dash}</td>
-        <td className="px-4 py-3">{dash}</td>
-        <td className="px-4 py-3">{dash}</td>
+        <td className="px-3 py-2.5 whitespace-nowrap">{dash}</td>
+        <td className="px-3 py-2.5 whitespace-nowrap">{dash}</td>
+        <td className="px-3 py-2.5 whitespace-nowrap">{dash}</td>
+        <td className="px-3 py-2.5 whitespace-nowrap">{dash}</td>
       </>
     );
   }
@@ -538,22 +624,22 @@ function AllowanceCells({ allowance: a }: { allowance: CompanyAllowance | undefi
   const pct = a.cap ? Math.min(100, Math.round((a.reached / a.cap) * 100)) : 100;
   return (
     <>
-      <td className="px-4 py-3 whitespace-nowrap">
+      <td className="px-3 py-2.5 whitespace-nowrap">
         <div className="text-xs text-slate-700">{shortUtc(a.windowStart)} to {shortUtc(a.windowEnd)}</div>
         <div className="text-[10px] text-slate-400">Day {a.day} of 30</div>
       </td>
-      <td className="px-4 py-3 whitespace-nowrap">
-        <div className="text-xs font-semibold text-slate-900">{a.reached} / {a.cap ?? "no limit"}</div>
+      <td className="px-3 py-2.5 whitespace-nowrap text-right">
+        <div className="text-xs font-semibold tabular-nums text-slate-900">{a.reached} / {a.cap ?? "no limit"}</div>
         {a.cap ? (
-          <div className="mt-1 h-1 w-16 rounded bg-slate-100"><div className={`h-1 rounded ${st.bar}`} style={{ width: `${pct}%` }} /></div>
+          <div className="ml-auto mt-1 h-1 w-16 rounded bg-slate-100"><div className={`h-1 rounded ${st.bar}`} style={{ width: `${pct}%` }} /></div>
         ) : null}
       </td>
-      <td className="px-4 py-3">
+      <td className="px-3 py-2.5 whitespace-nowrap">
         <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap ${st.cls}`}>{st.label}</span>
         <div className="mt-1 text-[10px] text-slate-400">{a.note}</div>
       </td>
-      <td className="px-4 py-3 whitespace-nowrap">
-        {a.intros ? <div className="text-xs text-slate-700">{a.intros.used} / {a.intros.cap}</div> : dash}
+      <td className="px-3 py-2.5 whitespace-nowrap text-right">
+        {a.intros ? <div className="text-xs tabular-nums text-slate-700">{a.intros.used} / {a.intros.cap}</div> : dash}
       </td>
     </>
   );
