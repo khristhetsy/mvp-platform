@@ -57,7 +57,7 @@ export async function POST(request: Request) {
       personalWebsiteUrl: row.data.personal_website_url,
       otherSocialUrl: row.data.other_social_url,
       notes: row.data.notes,
-      source: "csv_import",
+      source: parsed.data.source ?? "csv_import",
     });
 
     if (result.error) {

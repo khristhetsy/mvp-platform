@@ -6,6 +6,7 @@ import { emailDispatchAllowedForUser, EMAIL_DISABLED_MESSAGE } from "@/lib/organ
 import { getUserPlan } from "@/lib/subscriptions/get-subscription";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import { capMessage, checkManualOutreachCap } from "@/lib/outreach/investor-cap";
+import { normalizeAttachments } from "@/lib/outreach/manual-attachments";
 import {
   getManualOutreach,
   getManualRecipients,
@@ -44,7 +45,7 @@ function parseSequence(value: unknown): ManualSequenceStep[] {
 
 /**
  * Save or start the founder's manual campaign. Body:
- *   { action: "save" | "start", subject, body, sequence, recipientIds, stopOnReply }
+ *   { action: "save" | "start", subject, body, sequence, recipientIds, stopOnReply, attachments }
  * "start" marks the campaign queued; live dispatch is gated separately.
  */
 export async function POST(request: Request) {
@@ -110,6 +111,7 @@ export async function POST(request: Request) {
     sequence: parseSequence(body.sequence),
     recipientIds,
     stopOnReply: body.stopOnReply !== false,
+    attachments: normalizeAttachments(body.attachments),
   };
 
   const ok = await saveManualOutreach(company.id, auth.profile.id, payload);

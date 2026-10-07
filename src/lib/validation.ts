@@ -293,6 +293,8 @@ export const founderInvestorContactSchema = z.object({
 
 export const founderInvestorContactImportSchema = z.object({
   confirm: z.boolean().optional(),
+  /** Where the rows came from; LinkedIn exports are tagged so they group as imported. */
+  source: z.enum(["csv_import", "linkedin"]).optional(),
   rows: z.array(
     z.object({
       investor_name: z.string().optional(),

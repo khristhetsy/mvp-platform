@@ -5,6 +5,8 @@ import { isOutreachLiveSendEnabled } from "@/lib/outreach/investor-outreach";
 import { buildUnsubscribeUrl, filterUnsubscribed } from "@/lib/outreach/unsubscribe";
 import { renderManualEmail } from "@/lib/outreach/manual-template";
 import { notifyManualOutreachSent, type ManualSend } from "@/lib/outreach/outreach-notify";
+import { normalizeAttachments, withOnePagerLink, type ManualAttachments } from "@/lib/outreach/manual-attachments";
+import { buildManualAttachments, type BuiltAttachment } from "@/lib/outreach/manual-attachments.server";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -48,7 +50,16 @@ export type ManualOutreach = {
   sequence: ManualSequenceStep[];
   recipientIds: string[];
   stopOnReply: boolean;
+  /** What goes with each email (one pager PDF / link, data room files). */
+  attachments: ManualAttachments;
 };
+
+/** True when a query failed only because the attachments column isn't there yet
+ *  (its migration not run). Callers then retry without it. */
+function missingAttachmentsColumn(error: { message?: string; code?: string } | null): boolean {
+  if (!error) return false;
+  return error.code === "42703" || error.code === "PGRST204" || /attachments/i.test(error.message ?? "");
+}
 
 function client(): SupabaseClient {
   return createServiceRoleClient() as unknown as SupabaseClient;
@@ -61,15 +72,21 @@ type Row = {
   sequence: ManualSequenceStep[] | null;
   recipient_ids: string[] | null;
   stop_on_reply: boolean | null;
+  attachments?: unknown;
 };
 
 /** Load the founder's saved manual campaign, or null if none exists yet. */
 export async function getManualOutreach(companyId: string): Promise<ManualOutreach | null> {
-  const { data } = await client()
+  const base = "status, email_subject, email_body, sequence, recipient_ids, stop_on_reply";
+  const first = await client()
     .from("founder_manual_outreach")
-    .select("status, email_subject, email_body, sequence, recipient_ids, stop_on_reply")
+    .select(`${base}, attachments`)
     .eq("company_id", companyId)
     .maybeSingle();
+  let data: unknown = first.data;
+  if (missingAttachmentsColumn(first.error)) {
+    data = (await client().from("founder_manual_outreach").select(base).eq("company_id", companyId).maybeSingle()).data;
+  }
   if (!data) return null;
   const row = data as Row;
   return {
@@ -79,6 +96,7 @@ export async function getManualOutreach(companyId: string): Promise<ManualOutrea
     sequence: Array.isArray(row.sequence) ? row.sequence : [],
     recipientIds: Array.isArray(row.recipient_ids) ? row.recipient_ids : [],
     stopOnReply: row.stop_on_reply ?? true,
+    attachments: normalizeAttachments(row.attachments),
   };
 }
 
@@ -100,20 +118,25 @@ export async function saveManualOutreach(
     .maybeSingle();
   if (!owned) return false;
 
-  const { error } = await db.from("founder_manual_outreach").upsert(
-    {
-      company_id: companyId,
-      status: input.status,
-      email_subject: input.emailSubject,
-      email_body: input.emailBody,
-      sequence: input.sequence,
-      recipient_ids: input.recipientIds,
-      stop_on_reply: input.stopOnReply,
-      created_by: founderId,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "company_id" },
-  );
+  const row = {
+    company_id: companyId,
+    status: input.status,
+    email_subject: input.emailSubject,
+    email_body: input.emailBody,
+    sequence: input.sequence,
+    recipient_ids: input.recipientIds,
+    stop_on_reply: input.stopOnReply,
+    created_by: founderId,
+    updated_at: new Date().toISOString(),
+  };
+  const { error } = await db
+    .from("founder_manual_outreach")
+    .upsert({ ...row, attachments: input.attachments }, { onConflict: "company_id" });
+  if (missingAttachmentsColumn(error)) {
+    // Attachments column not migrated yet: save everything else.
+    const retry = await db.from("founder_manual_outreach").upsert(row, { onConflict: "company_id" });
+    return !retry.error;
+  }
   return !error;
 }
 
@@ -216,6 +239,7 @@ type CampaignRow = {
   email_subject: string | null;
   email_body: string | null;
   sequence: ManualSequenceStep[] | null;
+  attachments?: unknown;
 };
 
 type RecipientRow = {
@@ -239,10 +263,15 @@ export async function processManualOutreach(): Promise<{ sent: number; liveSend:
   const live = isOutreachLiveSendEnabled();
   let sent = 0;
 
-  const { data: campaigns } = await db
+  const campaignBase = "company_id, email_subject, email_body, sequence";
+  const withAtt = await db
     .from("founder_manual_outreach")
-    .select("company_id, email_subject, email_body, sequence")
+    .select(`${campaignBase}, attachments`)
     .eq("status", "queued");
+  let campaigns: unknown[] | null = withAtt.data;
+  if (missingAttachmentsColumn(withAtt.error)) {
+    campaigns = (await db.from("founder_manual_outreach").select(campaignBase).eq("status", "queued")).data;
+  }
 
   for (const campaign of (campaigns ?? []) as CampaignRow[]) {
     const steps = Array.isArray(campaign.sequence) ? campaign.sequence : [];
@@ -270,6 +299,12 @@ export async function processManualOutreach(): Promise<{ sent: number; liveSend:
 
     const batch = (recipients ?? []) as RecipientRow[];
     if (batch.length === 0) continue;
+
+    // Attachments are built once per campaign (only when something is due and
+    // live) and reused for every recipient in this pass.
+    const att = normalizeAttachments(campaign.attachments);
+    const bodyTemplate = withOnePagerLink(campaign.email_body ?? "", att);
+    let built: BuiltAttachment[] | null = null;
 
     // Suppression check (CAN-SPAM): never email an unsubscribed address.
     const suppressed = await filterUnsubscribed(batch.map((r) => r.email));
@@ -315,7 +350,14 @@ export async function processManualOutreach(): Promise<{ sent: number; liveSend:
       }
 
       const firstName = (r.name ?? "").trim().split(/\s+/)[0] || null;
-      const { subject, html, text } = renderManualEmail(campaign.email_subject ?? "", campaign.email_body ?? "", {
+      if (built === null) {
+        try {
+          built = (await buildManualAttachments(db, campaign.company_id, att)).attachments;
+        } catch {
+          built = [];
+        }
+      }
+      const { subject, html, text } = renderManualEmail(campaign.email_subject ?? "", bodyTemplate, {
         firstName,
         company: comp.company_name ?? "our company",
         sector: comp.industry ?? null,
@@ -330,6 +372,7 @@ export async function processManualOutreach(): Promise<{ sent: number; liveSend:
         // Route replies to the tokenized inbound address so the sequence can stop
         // on reply (falls back to no reply-to when inbound isn't configured).
         replyTo: replyAddressFor(r.id) ?? undefined,
+        attachments: built.length > 0 ? built : undefined,
         source: "manual-outreach",
         audience: "investor",
       });
