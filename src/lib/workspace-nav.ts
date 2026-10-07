@@ -48,7 +48,6 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
         // Keep in sync with the marketing hub top-bar (src/app/admin/marketing/layout.tsx).
         children: [
           { href: "/admin/marketing",                     label: "Dashboard"    },
-          { href: "/admin/marketing/console",             label: "Console"      },
           { href: "/admin/marketing/plan",                label: "Plan"         },
           { href: "/admin/marketing/contacts",            label: "Contacts", menuGroup: "Audience"     },
           { href: "/admin/marketing/lists",               label: "Lists", menuGroup: "Audience"        },

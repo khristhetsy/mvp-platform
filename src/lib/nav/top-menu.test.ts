@@ -97,7 +97,7 @@ describe("toApps: admin", () => {
 
   it("groups the Marketing Hub into Audience and Campaigns", () => {
     const m = byLabel(apps, "Marketing Hub");
-    expect(entryLabels(m)).toEqual(["Dashboard", "Console", "Plan", "Audience", "Campaigns", "Testimonials", "Analytics", "AEO", "Settings"]);
+    expect(entryLabels(m)).toEqual(["Dashboard", "Plan", "Audience", "Campaigns", "Testimonials", "Analytics", "AEO", "Settings"]);
     const audience = m.entries.find((e) => e.label === "Audience");
     expect(audience?.kind === "group" && audience.items.map((i) => i.label)).toEqual(["Contacts", "Lists", "Suppressions"]);
   });
