@@ -27,9 +27,10 @@ export type CampaignReport = Campaign & {
 /** Paid plans that count toward attributed revenue (exclude free/trial/internal). */
 const PAID_PLANS = new Set<PlanType>(["founder_basic", "founder_professional", "founder_managed_ir", "investor_pro", "investor_premium"]);
 
-/** Short, URL-safe attribution tag derived from a fresh id. */
-export function makeSourceTag(): string {
-  return `camp_${(crypto.randomUUID?.() ?? String(Date.now())).replace(/-/g, "").slice(0, 8)}`;
+/** Short, URL-safe attribution tag derived from a fresh id. `prefix` marks the channel
+ *  for attribution ("rd" for Reddit campaigns); everything else stays "camp". */
+export function makeSourceTag(prefix = "camp"): string {
+  return `${prefix}_${(crypto.randomUUID?.() ?? String(Date.now())).replace(/-/g, "").slice(0, 8)}`;
 }
 
 export async function listCampaigns(): Promise<Campaign[]> {
@@ -37,9 +38,9 @@ export async function listCampaigns(): Promise<Campaign[]> {
   return ((data ?? []) as Campaign[]).map((c) => ({ ...c, budget_cents: Number(c.budget_cents) || 0 }));
 }
 
-export async function createCampaign(name: string, budgetCents: number, createdBy?: string | null): Promise<Campaign | null> {
+export async function createCampaign(name: string, budgetCents: number, createdBy?: string | null, tagPrefix = "camp"): Promise<Campaign | null> {
   const { data, error } = await db().from("social_campaigns")
-    .insert({ name: name.trim(), budget_cents: Math.max(0, Math.round(budgetCents)), source_tag: makeSourceTag(), created_by: createdBy ?? null })
+    .insert({ name: name.trim(), budget_cents: Math.max(0, Math.round(budgetCents)), source_tag: makeSourceTag(tagPrefix), created_by: createdBy ?? null })
     .select("id, name, budget_cents, source_tag").single();
   if (error) return null;
   return data as Campaign;
