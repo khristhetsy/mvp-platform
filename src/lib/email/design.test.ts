@@ -87,6 +87,7 @@ describe("mapFounderValues", () => {
   });
   it("passes the website as the button link fallback", () => {
     expect(mapFounderValues("Announcement", v, "https://holomd.ai/").cta_url_fallback).toBe("https://holomd.ai/");
+    expect(mapFounderValues("Deal introduction", v, "https://holomd.ai/").cta_url_fallback).toBe("https://holomd.ai/");
   });
   it("keeps the design settings out of the content", () => {
     expect(readDesign(mapFounderValues("Announcement", v), "Announcement").banner).toBe("brand");

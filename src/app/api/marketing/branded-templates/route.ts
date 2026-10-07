@@ -2,15 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { marketingDb } from "@/lib/marketing/db";
 import { brandedDefaults, createBrandedTemplate } from "@/lib/email/branded-templates";
-import { founderPrefill } from "@/lib/email/branded-prefill";
+import { founderPrefill, parseFounderRef } from "@/lib/email/branded-prefill";
 
 // GET — the branded designs (masters) and starting values for the signed-in user.
-// ?projectId= adds the prefill from that Investor Relations project's founder.
+// A founder in the query adds that founder's data (see below).
 export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
     const profile = await requireRole(["admin"]);
-    const projectId = req.nextUrl.searchParams.get("projectId");
-    const prefill = projectId ? await founderPrefill(projectId).catch(() => null) : null;
+    // ?founder=project:<id> | company:<id>, or ?projectId=<id> (email draft on a project).
+    const sp = req.nextUrl.searchParams;
+    const ref = parseFounderRef(sp.get("founder")) ?? (sp.get("projectId") ? parseFounderRef(`project:${sp.get("projectId")}`) : null);
+    const prefill = ref ? await founderPrefill(ref).catch(() => null) : null;
     const { data, error } = await marketingDb()
       .from("email_template_masters")
       .select("id, name, description, compiled_html, placeholder_schema")

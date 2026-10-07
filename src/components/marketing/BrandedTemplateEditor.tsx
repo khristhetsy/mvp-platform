@@ -15,7 +15,16 @@ import { DEPARTMENTS } from "@/lib/marketing/department-grouping";
 import { ACCENT_SWATCHES, DESIGN_KEYS, dominantColor, hasDesign, mapFounderValues, readDesign, suggestLooks, writeDesign, type DesignSettings, type Look } from "@/lib/email/design";
 
 type Master = { id: string; name: string; description: string; compiled_html: string; placeholder_schema: PlaceholderSchema };
-type Prefill = { label: string; values: Record<string, string>; sources: Record<string, string>; website?: string | null };
+type FounderRef = { kind: "project" | "company"; id: string };
+type FounderField = { key: string; label: string; value: string };
+type Prefill = {
+  ref: FounderRef; label: string; source: string; recordUrl: string;
+  values: Record<string, string>; sources: Record<string, string>; website?: string | null; fields: FounderField[];
+};
+type FounderOption = { ref: FounderRef; label: string; sub: string };
+const refKey = (r: FounderRef) => `${r.kind}:${r.id}`;
+/** Stored on the template so Edit reopens on the same founder. */
+const FOUNDER_KEY = "founder_ref";
 
 /** Starting values for a design: saved defaults, then the founder's data mapped onto its fields. */
 function startValues(masterName: string, defaults: Record<string, string>, prefill: Prefill | null): Record<string, string> {
@@ -23,7 +32,20 @@ function startValues(masterName: string, defaults: Record<string, string>, prefi
   const v: Record<string, string> = { ...defaults, ...mapped };
   if (!(v.cta_url ?? "").trim() && mapped.cta_url_fallback) v.cta_url = mapped.cta_url_fallback;
   delete v.cta_url_fallback;
+  if (prefill) v[FOUNDER_KEY] = refKey(prefill.ref);
   return v;
+}
+
+/** Template fields each founder field feeds, per design. */
+const TERMS_FIELDS = ["raise", "funding_stage", "capital_type", "revenue", "use_of_funds"];
+function usedBy(masterName: string): Record<string, string[]> {
+  const terms = (slot: string) => Object.fromEntries(TERMS_FIELDS.map((k) => [k, [slot]]));
+  const common = { website: ["cta_url"] };
+  if (masterName === "Deal introduction") return { ...common, company_name: ["company_name", "headline"], body: ["body"], considerations: ["considerations"], ...terms("terms"), hero_image: ["hero_image"] };
+  if (masterName === "Announcement") return { ...common, company_name: ["headline"], body: ["body"], hero_image: [DESIGN_KEYS.bannerImage], logo_image: [DESIGN_KEYS.logoImage] };
+  if (masterName === "Newsletter") return { ...common, company_name: ["headline"], body: ["intro"], considerations: ["section_one_body"], ...terms("section_two_body"), hero_image: [DESIGN_KEYS.bannerImage], logo_image: [DESIGN_KEYS.logoImage] };
+  if (masterName === "Promo") return { ...common, company_name: ["headline"], body: ["subhead"], hero_image: [DESIGN_KEYS.bannerImage], logo_image: [DESIGN_KEYS.logoImage] };
+  return common;
 }
 
 /** Which founder value fed each field of a design (keys of the founder prefill). */
@@ -65,6 +87,9 @@ export function BrandedTemplateEditor({ templateId, projectId, defaultDepartment
   const [msg, setMsg] = useState<string | null>(null);
   const [uploading, setUploading] = useState<string | null>(null);
   const [prefill, setPrefill] = useState<Prefill | null>(null);
+  const [founderBusy, setFounderBusy] = useState(false);
+  /** Last content field clicked, where "+ Insert" puts founder data. */
+  const [lastField, setLastField] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -87,6 +112,13 @@ export function BrandedTemplateEditor({ templateId, projectId, defaultDepartment
           setSlots(ej.copy.slot_values ?? {});
           setCopyId(ej.copy.id);
           setDepartment(ej.template?.department ?? "");
+          // Reopen on the template's founder: the panel and Refill use it; the saved text stays.
+          const saved = ej.copy.slot_values?.[FOUNDER_KEY];
+          if (saved) {
+            const f = await fetch(`/api/marketing/branded-templates?founder=${encodeURIComponent(saved)}`);
+            const fj = (await f.json().catch(() => null)) as { prefill?: Prefill | null } | null;
+            if (alive && fj?.prefill) setPrefill(fj.prefill);
+          }
         } else {
           const first = list.find((m) => m.name === DEFAULT_MASTER) ?? list[0];
           if (first) setMasterId(first.id);
@@ -120,6 +152,46 @@ export function BrandedTemplateEditor({ templateId, projectId, defaultDepartment
   const previewHtml = buildPreview();
 
   const set = (k: string, v: string) => setSlots((p) => ({ ...p, [k]: v }));
+
+  /** Switch the founder: load their data and refill the content (design settings stay). */
+  async function chooseFounder(ref: FounderRef | null) {
+    const keepDesign = (v: Record<string, string>) =>
+      Object.fromEntries(Object.entries(v).filter(([k]) => k.startsWith("design_") || k === DESIGN_KEYS.logoImage || k === DESIGN_KEYS.bannerImage));
+    if (!ref) {
+      setPrefill(null);
+      setSlots((p) => ({ ...startValues(master?.name ?? "", defaults, null), ...keepDesign(p) }));
+      return;
+    }
+    setFounderBusy(true); setMsg(null);
+    try {
+      const r = await fetch(`/api/marketing/branded-templates?founder=${encodeURIComponent(refKey(ref))}`);
+      const j = (await r.json().catch(() => null)) as { prefill?: Prefill | null; error?: string } | null;
+      if (!r.ok || !j?.prefill) { setMsg(j?.error ?? "Couldn't load that founder."); return; }
+      const pf = j.prefill;
+      setPrefill(pf);
+      setSlots((p) => {
+        const next = { ...keepDesign(p), ...startValues(master?.name ?? "", defaults, pf) };
+        // A new founder brings their own banner and logo when they have them.
+        if (!pf.values.hero_image) delete next[DESIGN_KEYS.bannerImage];
+        if (!pf.values.logo_image) delete next[DESIGN_KEYS.logoImage];
+        return next;
+      });
+    } catch { setMsg("Couldn't load that founder."); } finally { setFounderBusy(false); }
+  }
+
+  /** "+ Insert": add a founder value to the field last clicked (or the main text field). */
+  function insertFounder(value: string) {
+    const target = (lastField && fields.some((f) => f.key === lastField) ? lastField : null)
+      ?? fields.find((f) => f.type === "richtext" || f.type === "textarea")?.key ?? fields[0]?.key;
+    if (!target) return;
+    const slot = fields.find((f) => f.key === target);
+    const multi = slot?.type === "richtext" || slot?.type === "textarea" || slot?.type === "list" || slot?.type === "terms";
+    setSlots((p) => {
+      const cur = (p[target] ?? "").trim();
+      return { ...p, [target]: cur ? `${cur}${multi ? (slot?.type === "richtext" ? "\n\n" : "\n") : " "}${value}` : value };
+    });
+    setMsg(`Inserted into ${slot?.label ?? target}.`);
+  }
 
   /** Where a prefilled field's value came from, for its tag. */
   function sourceFor(key: string): string | undefined {
@@ -245,15 +317,12 @@ export function BrandedTemplateEditor({ templateId, projectId, defaultDepartment
           })}
         </div>
 
-        {prefill && !templateId ? (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", background: "#EAF3DE", color: "#27500A", fontSize: 12.5, borderBottom: "0.5px solid var(--border)" }}>
-            <i className="ti ti-user-check" aria-hidden="true" />
-            <span>Filled from the founder: <b>{prefill.label}</b></span>
-            <button type="button" onClick={() => setSlots((p) => { const v = startValues(master?.name ?? "", {}, prefill); delete v.cta_url; return { ...p, ...v }; })} style={{ ...btn, marginLeft: "auto", background: "#fff", padding: "4px 10px" }}>
-              <i className="ti ti-refresh" aria-hidden="true" /> Refill from founder
-            </button>
-          </div>
-        ) : null}
+        <FounderBar
+          prefill={prefill}
+          busy={founderBusy}
+          onPick={(ref) => void chooseFounder(ref)}
+          onRefill={() => setSlots((p) => { const v = startValues(master?.name ?? "", {}, prefill); delete v.cta_url; return { ...p, ...v }; })}
+        />
 
         {loading ? (
           <div style={{ padding: 24, fontSize: 13, color: "var(--muted-foreground)" }}>Loading…</div>
@@ -261,17 +330,24 @@ export function BrandedTemplateEditor({ templateId, projectId, defaultDepartment
           <div style={{ flex: 1, display: "grid", gridTemplateColumns: "360px minmax(0,1fr)", overflow: "hidden" }}>
             {/* Left: content fields from the design's schema */}
             <div style={{ overflowY: "auto", padding: "4px 16px 16px", borderRight: "0.5px solid var(--border)" }}>
+              {prefill && master ? (
+                <FounderDataPanel prefill={prefill} masterName={master.name} slots={slots} slotLabel={(k) => (fields.find((f) => f.key === k)?.label ?? (k === DESIGN_KEYS.bannerImage ? "Banner" : k === DESIGN_KEYS.logoImage ? "Logo" : k)).replace(/\s*\(.*\)\s*$/, "").replace(/^Hero banner URL$/, "Banner")}
+                  hasDesign={hasDesign(schema)}
+                  onInsert={insertFounder}
+                  onUseLogo={(url) => setSlots((p) => writeDesign({ ...p, [DESIGN_KEYS.logoImage]: url }, { logo: "company" }))} />
+              ) : null}
+
               {fields.map((s) => (
                 <div key={s.key}>
                   <label htmlFor={`bt-${s.key}`} style={label}>
                     {s.label}{s.required ? <span style={{ color: "#A32D2D" }}> *</span> : null}
-                    {prefill && !templateId ? <SourceTag source={sourceFor(s.key)} missing={s.key === "hero_image" && !(slots.hero_image ?? "").trim() ? "not in record: upload" : null} /> : null}
+                    {prefill ? <SourceTag source={sourceFor(s.key)} missing={s.key === "hero_image" && !(slots.hero_image ?? "").trim() ? "not in record: upload" : null} /> : null}
                   </label>
-                  {prefill && !templateId && s.key === "terms" && master?.name === "Deal introduction" ? (
+                  {prefill && s.key === "terms" && master?.name === "Deal introduction" ? (
                     <div style={{ margin: "0 0 4px" }}><SourceTag source={undefined} missing="not in record: add interest, maturity, discount, warrants as lines" /></div>
                   ) : null}
                   {s.type === "textarea" || s.type === "richtext" || s.type === "list" || s.type === "terms" ? (
-                    <textarea id={`bt-${s.key}`} value={slots[s.key] ?? ""} maxLength={s.max_length} onChange={(e) => set(s.key, e.target.value)}
+                    <textarea id={`bt-${s.key}`} value={slots[s.key] ?? ""} maxLength={s.max_length} onChange={(e) => set(s.key, e.target.value)} onFocus={() => setLastField(s.key)}
                       rows={s.type === "richtext" ? 9 : s.type === "textarea" ? 3 : 6} style={{ ...inp, resize: "vertical" }} />
                   ) : s.type === "image" ? (
                     <div style={{ display: "flex", gap: 6 }}>
@@ -283,7 +359,7 @@ export function BrandedTemplateEditor({ templateId, projectId, defaultDepartment
                     </div>
                   ) : (
                     <input id={`bt-${s.key}`} type={s.type === "url" ? "url" : "text"} value={slots[s.key] ?? ""} maxLength={s.max_length}
-                      onChange={(e) => set(s.key, e.target.value)} style={inp} />
+                      onChange={(e) => set(s.key, e.target.value)} onFocus={() => setLastField(s.key)} style={inp} />
                   )}
                 </div>
               ))}
@@ -484,6 +560,137 @@ function DesignPanel({ masterName, company, values, setValues, companyBanner, ba
           <button key={v} type="button" style={chip(d.align === v)} onClick={() => apply({ align: v })}>{t}</button>
         ))}
       </div>
+    </div>
+  );
+}
+
+/** "Working on": the founder this template is for, with search to switch or clear. */
+function FounderBar({ prefill, busy, onPick, onRefill }: Readonly<{
+  prefill: Prefill | null; busy: boolean; onPick: (ref: FounderRef | null) => void; onRefill: () => void;
+}>) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const [options, setOptions] = useState<FounderOption[]>([]);
+  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    let alive = true;
+    const t = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const r = await fetch(`/api/marketing/branded-templates/founders?q=${encodeURIComponent(q)}`);
+        const j = (await r.json().catch(() => null)) as { founders?: FounderOption[] } | null;
+        if (alive) setOptions(j?.founders ?? []);
+      } finally { if (alive) setLoading(false); }
+    }, 200);
+    return () => { alive = false; clearTimeout(t); };
+  }, [open, q]);
+  const groups: Array<[string, FounderOption[]]> = [
+    ["Investor Relations projects", options.filter((o) => o.ref.kind === "project")],
+    ["iCapOS founder accounts", options.filter((o) => o.ref.kind === "company")],
+  ];
+  const current = prefill ? refKey(prefill.ref) : "";
+  return (
+    <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", background: prefill ? "#EAF3DE" : "var(--muted, #f4f5f7)", color: prefill ? "#27500A" : "var(--muted-foreground)", fontSize: 12.5, borderBottom: "0.5px solid var(--border)" }}>
+      <i className={`ti ${prefill ? "ti-user-check" : "ti-user-question"}`} aria-hidden="true" />
+      <span>Working on</span>
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open}
+        style={{ ...inp, width: 380, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", background: "#fff", textAlign: "left" }}>
+        {busy ? <span>Loading…</span> : prefill ? (
+          <><b style={{ color: "var(--foreground)" }}>{prefill.label}</b><span style={{ color: "var(--muted-foreground)", fontSize: 11 }}>{prefill.source}</span></>
+        ) : <span style={{ color: "var(--muted-foreground)" }}>Pick a founder to fill from their record</span>}
+        <i className={`ti ti-chevron-${open ? "up" : "down"}`} aria-hidden="true" style={{ marginLeft: "auto" }} />
+      </button>
+      {prefill ? (
+        <button type="button" onClick={onRefill} style={{ ...btn, marginLeft: "auto", background: "#fff", padding: "4px 10px" }}>
+          <i className="ti ti-refresh" aria-hidden="true" /> Refill from founder
+        </button>
+      ) : null}
+      {open ? (
+        <div style={{ position: "absolute", top: "calc(100% - 2px)", left: 108, zIndex: 5, width: 420, background: "#fff", border: "0.5px solid var(--border)", borderRadius: 9, boxShadow: "0 10px 26px rgba(0,0,0,0.14)", overflow: "hidden", color: "var(--foreground)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 10px", borderBottom: "0.5px solid var(--border)" }}>
+            <i className="ti ti-search" aria-hidden="true" style={{ color: "var(--muted-foreground)" }} />
+            <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search founders or companies" aria-label="Search founders or companies"
+              style={{ flex: 1, border: "none", outline: "none", fontSize: 12.5, background: "transparent", color: "var(--foreground)" }} />
+          </div>
+          <div style={{ maxHeight: 320, overflowY: "auto" }}>
+            {loading && options.length === 0 ? <div style={{ padding: 10, fontSize: 12, color: "var(--muted-foreground)" }}>Searching…</div> : null}
+            {groups.map(([title, list]) => list.length ? (
+              <div key={title}>
+                <div style={{ padding: "7px 10px 3px", fontSize: 10.5, color: "var(--muted-foreground)" }}>{title}</div>
+                {list.map((o) => {
+                  const on = refKey(o.ref) === current;
+                  return (
+                    <button key={refKey(o.ref)} type="button" onClick={() => { setOpen(false); onPick(o.ref); }}
+                      style={{ display: "flex", width: "100%", alignItems: "center", gap: 8, padding: "6px 10px", border: "none", cursor: "pointer", textAlign: "left", fontSize: 12.5, background: on ? "#E6F1FB" : "transparent", color: on ? "#0C447C" : "var(--foreground)" }}>
+                      {on ? <i className="ti ti-check" aria-hidden="true" /> : null}{o.label}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null)}
+            {!loading && options.length === 0 ? <div style={{ padding: 10, fontSize: 12, color: "var(--muted-foreground)" }}>No founders match “{q}”.</div> : null}
+          </div>
+          <button type="button" onClick={() => { setOpen(false); onPick(null); }}
+            style={{ display: "flex", width: "100%", alignItems: "center", gap: 6, padding: "8px 10px", border: "none", borderTop: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", fontSize: 12, color: "var(--muted-foreground)" }}>
+            <i className="ti ti-x" aria-hidden="true" /> No founder (blank template)
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** Everything in the founder's record, with where each piece is used or "+ Insert". */
+function FounderDataPanel({ prefill, masterName, slots, slotLabel, hasDesign: designable, onInsert, onUseLogo }: Readonly<{
+  prefill: Prefill; masterName: string; slots: Record<string, string>; slotLabel: (key: string) => string;
+  hasDesign: boolean; onInsert: (value: string) => void; onUseLogo: (url: string) => void;
+}>) {
+  const [open, setOpen] = useState(true);
+  const map = usedBy(masterName);
+  const tag = (bg: string, fg: string): React.CSSProperties => ({ fontSize: 10.5, padding: "1px 6px", borderRadius: 6, background: bg, color: fg, whiteSpace: "nowrap", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis" });
+  return (
+    <div style={{ margin: "10px 0 4px", border: "0.5px solid var(--border)", borderRadius: 9 }}>
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open}
+        style={{ display: "flex", width: "100%", alignItems: "center", gap: 6, padding: "8px 10px", border: "none", background: "transparent", cursor: "pointer", color: "var(--foreground)" }}>
+        <i className={`ti ti-chevron-${open ? "down" : "right"}`} aria-hidden="true" />
+        <b style={{ fontSize: 12.5 }}>Founder data</b>
+        <span style={{ fontSize: 10.5, color: "var(--muted-foreground)" }}>{prefill.fields.length} fields</span>
+        <a href={prefill.recordUrl} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ marginLeft: "auto", fontSize: 11, color: "#185FA5" }}>
+          Open founder record <i className="ti ti-external-link" aria-hidden="true" />
+        </a>
+      </button>
+      {open ? (
+        <div style={{ padding: "0 10px 6px" }}>
+          {prefill.fields.map((f) => {
+            const targets = (map[f.key] ?? []).filter((k) => {
+              const v = (slots[k] ?? "").trim();
+              if (!v) return false;
+              if (k === "cta_url") return v === f.value.trim();
+              if (k === DESIGN_KEYS.logoImage) return slots[DESIGN_KEYS.logo] === "company" && v === f.value.trim();
+              return true;
+            });
+            const isLogo = f.key === "logo_image";
+            return (
+              <div key={f.key} style={{ display: "grid", gridTemplateColumns: "92px minmax(0,1fr) auto", gap: 6, alignItems: "start", padding: "5px 0", borderTop: "0.5px solid var(--border)", fontSize: 11.5 }}>
+                <span style={{ color: "var(--muted-foreground)" }}>{f.label}</span>
+                <span style={{ overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", wordBreak: "break-word" }} title={f.value}>{isLogo ? f.value.split("/").pop() : f.value}</span>
+                {targets.length ? <span style={tag("#EAF3DE", "#3B6D11")} title={[...new Set(targets.map(slotLabel))].join(", ")}>{[...new Set(targets.map(slotLabel))].join(", ")}</span>
+                  : isLogo ? (designable ? <button type="button" onClick={() => onUseLogo(f.value)} style={{ ...tag("transparent", "#185FA5"), border: "0.5px solid #B5D4F4", cursor: "pointer" }}>Use as logo</button> : <span style={tag("transparent", "var(--muted-foreground)")}>not in this design</span>)
+                  : f.key === "hero_image" ? <span style={tag("transparent", "var(--muted-foreground)")}>{designable ? "pick Image in Design" : "not in this design"}</span>
+                  : <button type="button" onClick={() => onInsert(f.value)} style={{ ...tag("transparent", "#185FA5"), border: "0.5px solid #B5D4F4", cursor: "pointer" }}>+ Insert</button>}
+              </div>
+            );
+          })}
+          {!prefill.fields.some((f) => f.key === "logo_image") ? (
+            <div style={{ display: "grid", gridTemplateColumns: "92px minmax(0,1fr) auto", gap: 6, padding: "5px 0", borderTop: "0.5px solid var(--border)", fontSize: 11.5 }}>
+              <span style={{ color: "var(--muted-foreground)" }}>Logo</span>
+              <span style={{ color: "var(--muted-foreground)" }}>not in record</span>
+              <span style={tag("transparent", "var(--muted-foreground)")}>{designable ? "upload in Design" : ""}</span>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
