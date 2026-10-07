@@ -13,11 +13,12 @@ import { AdapterNotConfiguredError, type Account, type SocialAdapter, type Varia
 import { linkedInAdapter } from "@/lib/social/linkedin-adapter";
 import { facebookAdapter } from "@/lib/social/facebook-adapter";
 import { instagramAdapter } from "@/lib/social/instagram-adapter";
+import { redditAdapter } from "@/lib/social/reddit-adapter";
 import { backoffMsFor } from "@/lib/social/rules";
 import { openToken } from "@/lib/social/token-cipher";
 import { reportDbError } from "@/lib/supabase/report";
 
-const ADAPTERS: Record<string, SocialAdapter> = { linkedin: linkedInAdapter, facebook: facebookAdapter, instagram: instagramAdapter };
+const ADAPTERS: Record<string, SocialAdapter> = { linkedin: linkedInAdapter, facebook: facebookAdapter, instagram: instagramAdapter, reddit: redditAdapter };
 
 /**
  * Hard ceiling on a single platform call, comfortably inside the function's 60s limit.
