@@ -21,6 +21,7 @@ import { runScheduledDigestPass } from "@/lib/notifications/scheduled/digest-sch
 import { runMatchNotificationPass } from "@/lib/notifications/match-notifications";
 import { processApprovedOutreach } from "@/lib/outreach/investor-outreach";
 import { processManualOutreach } from "@/lib/outreach/manual-outreach";
+import { notifyUpcomingOutreachBatches } from "@/lib/outreach/outreach-next-batch";
 import type { Database } from "@/lib/supabase/types";
 
 export type CronOrchestrationResponse = {
@@ -121,6 +122,14 @@ export async function runCronOrchestrationPass(options?: {
   } catch (error) {
     failuresCount += 1;
     errors.push({ step: "manual_outreach_send", message: safeErrorMessage(error) });
+  }
+
+  // Day-before reminder for the next automated outreach batch (founder email + in-app).
+  try {
+    await phase.run("investor_outreach_heads_up", () => notifyUpcomingOutreachBatches());
+  } catch (error) {
+    failuresCount += 1;
+    errors.push({ step: "investor_outreach_heads_up", message: safeErrorMessage(error) });
   }
 
   let escalationsDetected = 0;

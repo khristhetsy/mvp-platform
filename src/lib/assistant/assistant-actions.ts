@@ -23,8 +23,8 @@ export function buildSuggestedActions(ctx: SanitizedAssistantContext): Assistant
     }
     if (Number(s.documentsMissingCount ?? 0) > 0 || !s.pitchDeckUploaded) {
       pushAction(actions, {
-        label: "Upload pitch deck",
-        href: "/founder/documents",
+        label: s.pitchDeckUploaded ? "Finish data room" : "Upload pitch deck",
+        href: "/founder/readiness/data-room",
         type: "workflow",
         priority: "high",
       });
@@ -210,6 +210,8 @@ export function suggestedPromptChips(ctx: SanitizedAssistantContext): string[] {
       return ["What documents do I need?", "Due diligence checklist", "How do I organize my data room?", "What do investors look for?"];
     case "capital_raise":
       return ["Where do I start fundraising?", "How do I set a valuation?", "What materials do investors need?", "How long does a raise take?"];
+    case "founder_marketing":
+      return ["How many investors can I still contact?", "Which matches should I start with?", "How does automated outreach work?", "How do I request an introduction?"];
     case "cmo_marketing":
       return ["Draft a campaign email", "Best subject line tips", "Plan a drip sequence", "Analyze my open rates"];
     case "ceo_hub":

@@ -12,6 +12,7 @@ export const ASSISTANT_MODES = [
   "billing",
   "deal_room",
   "capital_raise",
+  "founder_marketing",
   "cmo_marketing",
   "ceo_hub",
   "meeting",
@@ -55,6 +56,8 @@ export type SanitizedAssistantContext = {
   } | null;
   summary: Record<string, string | number | boolean | null>;
   highlights: string[];
+  /** Live menu, price list and plan facts (load-assistant-knowledge.ts). Added just before the AI call. */
+  knowledge?: string | null;
 };
 
 export type AssistantChatRequest = {

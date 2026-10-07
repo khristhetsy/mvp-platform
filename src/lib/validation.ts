@@ -1,3 +1,4 @@
+import { ASSISTANT_MODES } from "@/lib/assistant/types";
 import { z } from "zod";
 import { MONEY_BAND_OPTIONS } from "@/lib/profile/options";
 
@@ -587,26 +588,8 @@ export const adminExportQuerySchema = z.object({
 export const assistantChatSchema = z.object({
   message: z.string().trim().max(2000).optional(),
   intent: z.enum(["chat", "opened"]).optional().default("chat"),
-  mode: z
-    .enum([
-      "founder_workflow",
-      "investor_workflow",
-      "admin_operations",
-      "learning",
-      "spv_guidance",
-      "compliance_guidance",
-      "reports_guidance",
-      "crm",
-      "tasks",
-      "billing",
-      "deal_room",
-      "capital_raise",
-      "cmo_marketing",
-      "investor_pipeline",
-      "investor_portfolio",
-      "investor_matching",
-    ])
-    .optional(),
+  // Read from the one mode list, so a new assistant mode is accepted automatically.
+  mode: z.enum(ASSISTANT_MODES).optional(),
   currentPath: z.string().max(500).optional(),
   entityType: z.string().max(64).optional(),
   entityId: z.string().max(64).optional(),
