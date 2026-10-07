@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 
 type UploadType = "video" | "slides";
 type UploadState = "idle" | "uploading" | "done" | "error";
@@ -51,7 +51,7 @@ export function AdminLessonMediaUpload({
   });
   const pollInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const pollParams = new URLSearchParams({ courseId, moduleSlug, lessonKey });
+  const pollParams = useMemo(() => new URLSearchParams({ courseId, moduleSlug, lessonKey }), [courseId, moduleSlug, lessonKey]);
 
   const stopPolling = useCallback(() => {
     if (pollInterval.current) {

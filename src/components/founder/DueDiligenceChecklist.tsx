@@ -279,6 +279,7 @@ export function DueDiligenceChecklist() {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setCheckedIds(new Set(savedData.checkedIds ?? []));
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- restore the saved copy once when it loads; savedData also changes on every save
   }, [loaded]);
 
   useEffect(() => {

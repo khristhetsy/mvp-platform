@@ -82,7 +82,6 @@ export function ProjectsClient({ meId }: { meId: string }) {
     if (!r.ok) { setError(j.error ?? "Couldn't load projects."); return; }
     setData(j); setError(null);
   }
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch, then set
   useEffect(() => { void load(); }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function star(p: IrProject) {

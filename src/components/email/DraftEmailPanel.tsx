@@ -52,7 +52,7 @@ export function DraftEmailPanel({
   googleConnected?: boolean;
 }>) {
   const t = useTranslations("sharedCmp");
-  const options = TEMPLATES_BY_ROLE[role] ?? [];
+  const options = useMemo(() => TEMPLATES_BY_ROLE[role] ?? [], [role]);
   const [open, setOpen] = useState(false);
   const [templateType, setTemplateType] = useState<EmailTemplateType>(
     defaultTemplate ?? options[0]?.type ?? "meeting_followup",

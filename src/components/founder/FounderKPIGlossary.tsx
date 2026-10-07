@@ -487,6 +487,7 @@ export function FounderKPIGlossary() {
       setSearch(savedData.search ?? "");
       setActiveCategory((savedData.activeCategory as KPICategory | null) ?? null);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- restore the saved copy once when it loads; savedData also changes on every save
   }, [loaded]);
 
   useEffect(() => {
