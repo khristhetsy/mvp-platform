@@ -6,6 +6,7 @@ import { ensureUserOnboarding } from "@/lib/onboarding/ensure-founder-setup";
 import { parseRequestedPlan } from "@/lib/subscriptions/plans";
 import { sanitizePublicSignupRole } from "@/lib/auth/signup-role";
 import { track } from "@/lib/analytics/posthog";
+import { alertStaffNewCustomer } from "@/lib/notifications/new-customer-alerts";
 
 export async function POST(request: Request) {
   const supabase = await createServerSupabaseClient();
@@ -54,6 +55,19 @@ export async function POST(request: Request) {
 
     if (isNewSignup) {
       track("signup", { userId: user.id, role });
+      if (role === "founder") {
+        // Never throws, so a failed alert can't fail the signup.
+        await alertStaffNewCustomer({
+          event: "signup",
+          founderId: user.id,
+          founderEmail: user.email ?? null,
+          founderName: (body.fullName as string | undefined) ?? (user.user_metadata?.full_name as string | undefined) ?? null,
+          companyId: (company as { id?: string } | null)?.id ?? null,
+          companyName: (company as { company_name?: string | null } | null)?.company_name ?? null,
+          plan: requestedPlan,
+          paymentPending: Boolean(requestedPlan && requestedPlan !== "founder_free" && requestedPlan !== "founder_trial"),
+        });
+      }
     }
 
     return NextResponse.json({ profile, company }, { status: 201 });
