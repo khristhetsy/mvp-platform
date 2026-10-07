@@ -12,6 +12,10 @@
  * with pill investor chips. Tasks with no Odoo stage fall into a column for their week.
  * Group by: Week keeps the weekly board above.
  *
+ * "+ Stage" after the last column adds an iCapOS stage (nothing is written to Odoo); those stages
+ * always show as columns, with a "+" to add a task straight into them. The pencil on a card opens
+ * Edit task (name, stage, due date, assignee, investors, notes); the card itself still opens the task.
+ *
  * Active / Archived picks which tasks show. In the List view, tick tasks and use Actions to
  * archive, unarchive or delete them (delete asks first and counts what goes with it).
  */
@@ -24,6 +28,7 @@ import type { IrActivity, IrMatch, IrMilestone, IrProject, IrTask } from "@/lib/
 import { ActivityClock } from "../../../_shared/ActivityClock";
 import { SelectionBar } from "@/components/admin/sales/SelectionBar";
 import { TaskDeleteDialog, runTaskAction, type TaskAction } from "./TaskArchiveDelete";
+import { EditTaskDialog } from "./EditTaskDialog";
 
 type Payload = { project: IrProject; milestones: IrMilestone[]; matches: IrMatch[]; tasks: IrTask[]; openActivities: IrActivity[]; staff: Array<{ id: string; name: string }> };
 const STATUS_DOT: Record<string, string> = { new: "#94A3B8", in_progress: "#F59E0B", done: "#16A34A" };
@@ -32,7 +37,7 @@ const fmtDay = (iso: string) => new Date(iso).toLocaleDateString("en-US", { mont
 // Firm and name are often the same for angels ("Adam Draper, Adam Draper") — show it once.
 const chipLabel = (m: IrMatch) => [...new Set([m.investor_firm, m.investor_name].filter(Boolean))].join(", ") || "Investor";
 const CHIP_LIMIT = 12;
-type StageInfo = { stages: Array<{ id: number; name: string }>; byTask: Record<string, number> };
+type StageInfo = { stages: Array<{ id: number; name: string }>; byTask: Record<string, number>; local: Array<{ id: string; name: string }> };
 
 export function TasksClient({ projectId, meId, initialMonth }: { projectId: string; meId: string; initialMonth: string | null }) {
   const router = useRouter();
@@ -49,6 +54,9 @@ export function TasksClient({ projectId, meId, initialMonth }: { projectId: stri
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [del, setDel] = useState<{ ids: string[]; label: string } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [editing, setEditing] = useState<IrTask | null>(null);
+  const [stageForm, setStageForm] = useState<string | null>(null);
+  const [stageError, setStageError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const r = await fetch(`/api/admin/ir/projects/${projectId}`);
@@ -58,12 +66,12 @@ export function TasksClient({ projectId, meId, initialMonth }: { projectId: stri
   }, [projectId]);
   // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch, then set
   useEffect(() => { void load(); }, [load]);
-  useEffect(() => {
-    let off = false;
-    fetch(`/api/admin/ir/projects/${projectId}/task-stages`).then((r) => (r.ok ? r.json() : null)).catch(() => null)
-      .then((j: Partial<StageInfo> | null) => { if (!off) setStageInfo({ stages: j?.stages ?? [], byTask: j?.byTask ?? {} }); });
-    return () => { off = true; };
+  const loadStages = useCallback(async () => {
+    const j: Partial<StageInfo> | null = await fetch(`/api/admin/ir/projects/${projectId}/task-stages`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    setStageInfo({ stages: j?.stages ?? [], byTask: j?.byTask ?? {}, local: j?.local ?? [] });
   }, [projectId]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch, then set
+  useEffect(() => { void loadStages(); }, [loadStages]);
 
   const today = new Date().toISOString().slice(0, 10);
   const months = useMemo(() => (data?.milestones ?? []).filter((m) => m.kind === "month"), [data]);
@@ -79,12 +87,13 @@ export function TasksClient({ projectId, meId, initialMonth }: { projectId: stri
   const needle = q.trim().toLowerCase();
   const hit = (m: IrMatch) => needle !== "" && [m.investor_name, m.investor_firm].some((s) => (s ?? "").toLowerCase().includes(needle));
 
-  async function newTask(milestoneId: string) {
+  async function newTask(milestoneId: string, stageId?: string) {
     setBusy(true);
     try {
       const r = await fetch("/api/admin/ir/tasks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId, milestoneId, assigneeId: meId }) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) { setError(j.error ?? "Couldn't create the task."); return; }
+      if (stageId) await fetch(`/api/admin/ir/tasks/${j.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ stageId }) });
       router.push(`/admin/ir/projects/${projectId}/tasks/${j.id}`);
     } finally { setBusy(false); }
   }
@@ -103,6 +112,18 @@ export function TasksClient({ projectId, meId, initialMonth }: { projectId: stri
       afterAction(action, ids.length, r.message);
     } finally { setBusy(false); }
   }
+  async function addStage() {
+    const name = (stageForm ?? "").trim();
+    if (!name) { setStageError("Name the stage."); return; }
+    setBusy(true); setStageError(null);
+    try {
+      const r = await fetch(`/api/admin/ir/projects/${projectId}/task-stages`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) { setStageError(j.error ?? "Couldn't add the stage."); return; }
+      setStageForm(null); setGroupBy("stage");
+      await loadStages();
+    } finally { setBusy(false); }
+  }
   async function star(t: IrTask) {
     await fetch(`/api/admin/ir/tasks/${t.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ starred: !t.starred }) });
     void load();
@@ -114,7 +135,7 @@ export function TasksClient({ projectId, meId, initialMonth }: { projectId: stri
   // Active view hides archived tasks; Archived view shows only them.
   const vis = data.tasks.filter((t) => (archivedView ? !!t.archived_at : !t.archived_at));
   const currentWeek = weeks.find((w) => w.starts_on <= today && today < w.ends_on) ?? null;
-  const hasStages = (stageInfo?.stages.length ?? 0) > 0;
+  const hasStages = (stageInfo?.stages.length ?? 0) > 0 || (stageInfo?.local.length ?? 0) > 0;
   const mode: "stage" | "week" = groupBy ?? (hasStages ? "stage" : "week");
   const stagesPending = groupBy === null && stageInfo === null;
 
@@ -131,7 +152,10 @@ export function TasksClient({ projectId, meId, initialMonth }: { projectId: stri
         onClick={(e) => { if (!(e.target as HTMLElement).closest("a,button")) router.push(href); }}
         onKeyDown={(e) => { if (e.key === "Enter" && e.target === e.currentTarget) router.push(href); }}
         className={`cursor-pointer rounded-lg border bg-white p-2.5 shadow-sm transition hover:border-indigo-300 hover:shadow focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-500 ${anyHit ? "border-indigo-300" : "border-slate-200"}`}>
-        <Link href={href} className={`block font-semibold text-slate-900 hover:text-indigo-700 ${odoo ? "text-[14px]" : "text-[13px]"}`}>{t.title}</Link>
+        <div className="flex items-start gap-1.5">
+          <Link href={href} className={`min-w-0 flex-1 font-semibold text-slate-900 hover:text-indigo-700 ${odoo ? "text-[14px]" : "text-[13px]"}`}>{t.title}</Link>
+          <button type="button" onClick={() => setEditing(t)} aria-label={`Edit ${t.title}`} title="Edit task" className="rounded px-1 text-[15px] text-slate-400 hover:bg-indigo-50 hover:text-indigo-700"><i className="ti ti-pencil" aria-hidden="true" /></button>
+        </div>
         <div className={`flex flex-wrap ${odoo ? "mt-2 gap-1.5" : "mt-1.5 gap-1"}`}>
           {shown.map((m) => <span key={m.id} className={`${odoo ? "max-w-full truncate rounded-full px-2 py-0.5 text-[11px]" : "rounded px-1.5 py-0.5 text-[10.5px]"} ${hit(m) ? "bg-amber-100 text-amber-900" : "bg-slate-100 text-slate-700"}`}>{chipLabel(m)}</span>)}
           {shown.length < ms.length ? <button type="button" onClick={() => setExpanded((s) => new Set(s).add(t.id))} className="rounded-full px-2 py-0.5 text-[11px] font-medium text-indigo-700 hover:bg-indigo-50">+ {ms.length - shown.length} more</button> : null}
@@ -153,10 +177,31 @@ export function TasksClient({ projectId, meId, initialMonth }: { projectId: stri
   // sit in, in Odoo's order, then a week column for any task without an Odoo stage.
   const monthWeekIds = new Set(monthWeeks.map((w) => w.id));
   const monthTasks = vis.filter((t) => monthWeekIds.has(t.milestone_id));
+  // iCapOS stages (+ Stage) always show, after the Odoo ones; a task in one leaves its week column.
+  const localIds = new Set((stageInfo?.local ?? []).map((s) => s.id));
+  const inLocal = (t: IrTask) => !!t.stage_id && localIds.has(t.stage_id);
+  const newTaskWeek = (currentWeek && monthWeekIds.has(currentWeek.id) ? currentWeek : monthWeeks[0])?.id ?? null;
   const stageColumns = mode !== "stage" || !stageInfo ? [] : [
-    ...stageInfo.stages.map((s) => ({ key: `s${s.id}`, title: s.name, weekId: null as string | null, tasks: monthTasks.filter((t) => stageInfo.byTask[t.id] === s.id) })).filter((c) => c.tasks.length > 0),
-    ...monthWeeks.map((w) => ({ key: `w${w.id}`, title: w.label, weekId: w.id as string | null, tasks: vis.filter((t) => t.milestone_id === w.id && stageInfo.byTask[t.id] === undefined) })).filter((c) => c.tasks.length > 0),
+    ...stageInfo.stages.map((s) => ({ key: `s${s.id}`, title: s.name, weekId: null as string | null, stageId: null as string | null, tasks: monthTasks.filter((t) => stageInfo.byTask[t.id] === s.id) })).filter((c) => c.tasks.length > 0),
+    ...stageInfo.local.map((s) => ({ key: `l${s.id}`, title: s.name, weekId: newTaskWeek, stageId: s.id as string | null, tasks: monthTasks.filter((t) => stageInfo.byTask[t.id] === undefined && t.stage_id === s.id) })),
+    ...monthWeeks.map((w) => ({ key: `w${w.id}`, title: w.label, weekId: w.id as string | null, stageId: null as string | null, tasks: vis.filter((t) => t.milestone_id === w.id && stageInfo.byTask[t.id] === undefined && !inLocal(t)) })).filter((c) => c.tasks.length > 0),
   ];
+  const addStageColumn = (
+    <div style={{ flex: "0 0 250px", minWidth: 250 }} className="px-1">
+      {stageForm === null ? (
+        <button type="button" onClick={() => { setStageForm(""); setStageError(null); }} className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-slate-100 px-3 py-2 text-[13px] font-semibold text-slate-800 hover:bg-slate-200"><i className="ti ti-plus" aria-hidden="true" /> Stage</button>
+      ) : (
+        <form onSubmit={(e) => { e.preventDefault(); void addStage(); }} className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm">
+          <input autoFocus value={stageForm} onChange={(e) => { setStageForm(e.target.value); setStageError(null); }} onKeyDown={(e) => { if (e.key === "Escape") setStageForm(null); }} maxLength={80} placeholder="Stage name" aria-label="Stage name" className="rounded-lg border border-slate-200 px-3 py-1.5 text-[13px] focus:border-indigo-400 focus:outline-none" />
+          {stageError ? <span role="alert" className="text-[12px] text-rose-600">{stageError}</span> : null}
+          <div className="flex gap-2">
+            <button type="submit" disabled={busy} className="rounded-lg bg-indigo-600 px-3 py-1.5 text-[12.5px] font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">Add</button>
+            <button type="button" onClick={() => setStageForm(null)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-[12.5px] text-slate-700 hover:bg-slate-50">Cancel</button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
 
   const listRows = monthWeeks.flatMap((w) => vis.filter((t) => t.milestone_id === w.id).map((t) => ({ t, w }))).filter(({ t }) => { const ms = matchesByTask.get(t.id) ?? []; return !needle || ms.some(hit) || t.title.toLowerCase().includes(needle); });
   const listIds = listRows.map(({ t }) => t.id);
@@ -191,6 +236,13 @@ export function TasksClient({ projectId, meId, initialMonth }: { projectId: stri
         {error ? <span className="text-[12px] text-rose-600">{error}</span> : null}
       </div>
       {notice ? <div className="mb-2 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[12.5px] text-emerald-800"><i className="ti ti-circle-check" aria-hidden="true" />{notice}<button type="button" onClick={() => setNotice(null)} aria-label="Dismiss" className="ml-auto text-emerald-700 hover:text-emerald-900"><i className="ti ti-x" aria-hidden="true" /></button></div> : null}
+      {editing ? (
+        <EditTaskDialog projectId={projectId} task={editing} matches={matchesByTask.get(editing.id) ?? []} staff={data.staff}
+          localStages={stageInfo?.local ?? []}
+          odooStageName={stageInfo && stageInfo.byTask[editing.id] !== undefined ? stageInfo.stages.find((s) => s.id === stageInfo.byTask[editing.id])?.name ?? "Odoo stage" : null}
+          onClose={() => setEditing(null)}
+          onSaved={(message) => { setEditing(null); setNotice(`Task saved.${message ? ` ${message}` : ""}`); void load(); }} />
+      ) : null}
       {del ? <TaskDeleteDialog ids={del.ids} label={del.label} onClose={() => setDel(null)} onDone={(action, message) => afterAction(action, del.ids.length, message)} /> : null}
 
       {view === "list" ? (
@@ -229,7 +281,7 @@ export function TasksClient({ projectId, meId, initialMonth }: { projectId: stri
             <div key={c.key} style={{ flex: "0 0 250px", minWidth: 250 }} className="px-1">
               <div className="mb-1.5 flex items-center justify-between gap-2">
                 <span className="truncate text-[15px] font-semibold text-slate-900" title={c.title}>{c.title}</span>
-                {c.weekId ? <button type="button" disabled={busy} onClick={() => newTask(c.weekId as string)} aria-label={`New task in ${c.title}`} className="rounded px-1 text-slate-500 hover:bg-slate-100 hover:text-indigo-700"><i className="ti ti-plus" aria-hidden="true" /></button> : null}
+                {c.weekId ? <button type="button" disabled={busy} onClick={() => newTask(c.weekId as string, c.stageId ?? undefined)} aria-label={`New task in ${c.title}`} className="rounded px-1 text-slate-500 hover:bg-slate-100 hover:text-indigo-700"><i className="ti ti-plus" aria-hidden="true" /></button> : null}
               </div>
               <div className="mb-2.5 flex items-center gap-2">
                 <div className="h-2 flex-1 rounded bg-slate-200"><div className="h-2 rounded bg-emerald-500" style={{ width: `${pct}%` }} /></div>
@@ -240,6 +292,7 @@ export function TasksClient({ projectId, meId, initialMonth }: { projectId: stri
           );
         })}
         {stageColumns.length === 0 ? <p className="px-1 text-[13px] text-slate-400">No tasks in this month yet.</p> : null}
+        {addStageColumn}
       </HScrollBoard>
       ) : (
       <HScrollBoard>
@@ -265,6 +318,7 @@ export function TasksClient({ projectId, meId, initialMonth }: { projectId: stri
             </div>
           );
         })}
+        {addStageColumn}
       </HScrollBoard>
       )}
     </div>
