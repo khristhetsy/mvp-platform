@@ -47,6 +47,8 @@ export type IrTask = {
   assignee_id: string | null; assignee_name?: string | null; starred: boolean; notes: string | null; deadline: string | null; blockers: IrBlocker[]; created_at: string;
   /** Set while the task is archived (hidden from the boards). */
   archived_at?: string | null; odoo_task_id?: number | null;
+  /** iCapOS stage from the Tasks board's + Stage (migration 20261007230000); null when none. */
+  stage_id?: string | null;
 };
 
 export type IrMatch = {

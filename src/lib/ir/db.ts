@@ -167,7 +167,7 @@ export async function getTask(id: string): Promise<IrTask | null> {
 export async function createTask(input: { projectId: string; milestoneId: string; title: string; assigneeId: string | null; deadline?: string | null }): Promise<{ id: string }> {
   return must(await db().from("ir_tasks").insert({ project_id: input.projectId, milestone_id: input.milestoneId, title: input.title, assignee_id: input.assigneeId, deadline: input.deadline ?? null }).select("id").single(), "createTask") as { id: string };
 }
-export async function updateTask(id: string, patch: Partial<{ title: string; status: string; assignee_id: string | null; starred: boolean; notes: string | null; deadline: string | null; milestone_id: string; blockers: IrBlocker[] }>): Promise<void> {
+export async function updateTask(id: string, patch: Partial<{ title: string; status: string; assignee_id: string | null; starred: boolean; notes: string | null; deadline: string | null; milestone_id: string; blockers: IrBlocker[]; stage_id: string | null }>): Promise<void> {
   const { error } = await db().from("ir_tasks").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", id);
   if (error) throw new Error(`updateTask: ${error.message}`);
 }

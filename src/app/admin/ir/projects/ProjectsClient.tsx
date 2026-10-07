@@ -116,7 +116,7 @@ export function ProjectsClient({ meId }: { meId: string }) {
         </div>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
         {rows.map((p) => {
           const c = data?.counts[p.id];
           const mine = p.owner_id === meId;
@@ -164,7 +164,7 @@ export function ProjectsClient({ meId }: { meId: string }) {
               <div className="flex items-start gap-2 pr-9">
                 <button type="button" onClick={() => star(p)} aria-label={p.starred ? "Unstar" : "Star"} className={`mt-0.5 ${p.starred ? "text-amber-500" : "text-slate-300 hover:text-amber-400"}`}><i className={`ti ${p.starred ? "ti-star-filled" : "ti-star"}`} aria-hidden="true" /></button>
                 <Link href={`/admin/ir/projects/${p.id}`} className="min-w-0 flex-1">
-                  <p className="truncate text-[14px] font-semibold text-slate-900 hover:text-indigo-700">{p.title}</p>
+                  <p className="truncate text-[14px] font-semibold text-slate-900 hover:text-indigo-700" title={p.title}>{p.title}</p>
                   {p.founder_name ? <p className="truncate text-[12px] text-slate-500">{p.founder_name}</p> : null}
                   <p className="mt-1 text-[11.5px] text-slate-500"><i className="ti ti-clock" aria-hidden="true" /> {formatRange(p.start_date, p.end_date)} · {p.term_months} mo</p>
                   <div className="mt-2 flex flex-wrap gap-1">
