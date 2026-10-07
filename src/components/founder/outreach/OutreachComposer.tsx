@@ -29,6 +29,20 @@ function kb(bytes: number | null | undefined): string {
   return bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
+/** The next manual outreach send pass (07:00 and 19:00 UTC, set in vercel.json), shown in PT. */
+function nextSendWindow(now: Date = new Date()): string {
+  const next = new Date(now);
+  next.setUTCMinutes(0, 0, 0);
+  const h = now.getUTCHours();
+  if (h < 7) next.setUTCHours(7);
+  else if (h < 19) next.setUTCHours(19);
+  else {
+    next.setUTCDate(next.getUTCDate() + 1);
+    next.setUTCHours(7);
+  }
+  return next.toLocaleString("en-US", { timeZone: "America/Los_Angeles", weekday: "short", hour: "numeric", minute: "2-digit", timeZoneName: "short" });
+}
+
 function firstNameOf(name: string | null | undefined): string {
   return (name ?? "").trim().split(/\s+/)[0] || "there";
 }
@@ -323,7 +337,7 @@ export function OutreachComposer({
 
             <p className="text-[11.5px] leading-relaxed text-slate-500">
               <i className="ti ti-info-circle" aria-hidden="true" /> Each email carries the compliance disclaimer and an unsubscribe link, and skips anyone on
-              the suppression list. Emails go out at the next send window (07:00 and 19:00 UTC). Investors already in this sequence keep their
+              the suppression list. Emails go out at the next send window, {nextSendWindow()}. Investors already in this sequence keep their
               place; only new ones get the first email.
             </p>
             {droppedActive > 0 ? (
