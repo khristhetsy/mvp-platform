@@ -7,27 +7,35 @@
     <mj-preview>{{headline}}</mj-preview>
   </mj-head>
   <mj-body background-color="#F6F8FC">
-    <!-- Centered gradient banner (locked brand layer). -->
-    <mj-section background-color="#0A1A40" background-url="{{banner_image}}" background-size="cover" background-position="center" padding="48px 24px" text-align="center">
+    <!-- Banner (design settings): optional full-width banner image on top, then a
+         band in the banner color with the chosen logo and the headline, left or center. -->
+    <mj-section background-color="#FFFFFF" padding="0">
       <mj-column>
-        <mj-image src="{{logo}}" width="140px" align="center" padding="0 0 18px 0" />
-        <mj-text align="center" color="#FFFFFF" font-size="28px" font-weight="bold" line-height="1.2">{{headline}}</mj-text>
-        <mj-text align="center" color="#C9D8F5" font-size="16px" line-height="1.5" padding-top="8px">{{subhead}}</mj-text>
+        <mj-text padding="0" font-size="0px" line-height="0px"><!--if:banner_image--><img src="{{banner_image}}" alt="" width="600" style="display:block;width:100%;max-width:600px;height:auto;border:0;" /><!--endif:banner_image--></mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section background-color="{{banner_bg}}" border-bottom="{{banner_border}}" padding="48px 24px">
+      <mj-column>
+        <mj-image src="{{logo_url}}" width="140px" align="{{banner_align}}" padding="0 0 16px 0" />
+        <mj-text align="{{banner_align}}" color="{{banner_text}}" font-size="28px" font-weight="bold" line-height="1.2" padding="0">{{headline}}</mj-text>
+        <mj-text align="{{banner_align}}" color="{{banner_text}}" font-size="16px" line-height="1.5" padding="8px 0 0 0">{{subhead}}</mj-text>
       </mj-column>
     </mj-section>
 
-    <mj-section background-color="#FFFFFF" padding="32px 24px" text-align="center">
+    <mj-section background-color="#FFFFFF" padding="32px 24px">
       <mj-column>
-        <mj-button href="{{cta_url}}" background-color="#1A6CE4" color="#FFFFFF" font-weight="bold" font-size="17px" border-radius="10px" inner-padding="16px 32px" align="center">{{cta_text}}</mj-button>
+        <mj-button href="{{cta_url}}" background-color="{{accent_color}}" color="#FFFFFF" font-weight="bold" font-size="17px" border-radius="8px" inner-padding="16px 32px" align="{{banner_align}}" padding="0 25px">{{cta_text}}</mj-button>
       </mj-column>
     </mj-section>
 
+    <!-- Mandatory footer and disclaimer (locked). -->
     <mj-section background-color="#F6F8FC" padding="8px 24px 24px">
       <mj-column>
-        <mj-text align="center" color="#5A6B8C" font-size="12px" line-height="1.6">
-          iCFO Capital Global, Inc. · La Jolla, CA 92037<br />
-          <a href="{{unsubscribe_url}}" style="color:#5A6B8C;">Unsubscribe</a> ·
-          <a href="{{view_in_browser_url}}" style="color:#5A6B8C;">View in browser</a><br />
+        <mj-text align="center" color="#5A6B8C" font-size="11px" line-height="1.6">
+          iCFO Capital Global, Inc. · 4225 Executive Sq Ste 600, La Jolla, CA 92037<br />
+          iCFO Capital Global, Inc. does not solicit securities and is not an investment adviser, broker-dealer, or funding portal. This content is for educational purposes only. It is not an offer to sell or a solicitation of an offer to buy any security, and no assurance of funding is offered or implied.<br />
+          <!--if:unsubscribe_url--><a href="{{unsubscribe_url}}" style="color:#5A6B8C;">Unsubscribe</a> ·
+          <a href="{{view_in_browser_url}}" style="color:#5A6B8C;">View in browser</a><br /><!--endif:unsubscribe_url-->
           You're receiving this because you opted in with iCFO Capital Global, Inc.
         </mj-text>
       </mj-column>

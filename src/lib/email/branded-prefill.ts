@@ -13,6 +13,8 @@ export type FounderPrefill = {
   values: Record<string, string>;
   /** Field key → where the value came from. */
   sources: Record<string, string>;
+  /** Founder's website, used when no booking link is saved. */
+  website: string | null;
 };
 
 const squash = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -85,5 +87,5 @@ export async function founderPrefill(projectId: string): Promise<FounderPrefill 
   }
 
   const founder = (ep.founder ?? project.founder_name ?? "").trim();
-  return { label: [founder, name].filter(Boolean).join(" · "), values, sources };
+  return { label: [founder, name].filter(Boolean).join(" · "), values, sources, website: ep.website ?? null };
 }

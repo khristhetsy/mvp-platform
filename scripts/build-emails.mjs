@@ -82,9 +82,13 @@ async function main() {
     }
 
     // MJML v5's mjml2html is async — awaiting is required or `html` is undefined.
-    const { html, errors } = await mjml2html(branded, { validationLevel: "strict" });
-    if (errors && errors.length) {
-      problems.push(`• ${master.name}: MJML errors — ${errors.map((e) => e.message).join("; ")}`);
+    // Design tokens ({{accent_color}}, {{banner_align}}, …) sit in attributes whose
+    // MJML type is a color or an alignment, so they fail strict validation by design.
+    // Compile in soft mode and fail on every other error.
+    const { html, errors } = await mjml2html(branded, { validationLevel: "soft" });
+    const real = (errors ?? []).filter((e) => !/\{\{\s*[a-z0-9_]+\s*\}\}/i.test(`${e.message ?? ""} ${e.formattedMessage ?? ""}`));
+    if (real.length) {
+      problems.push(`• ${master.name}: MJML errors — ${real.map((e) => e.message).join("; ")}`);
       continue;
     }
 

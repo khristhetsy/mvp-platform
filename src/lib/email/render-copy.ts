@@ -7,6 +7,7 @@
 
 import { mergeSlots } from "./template-merge";
 import { condenseSlots, overviewUrl } from "./condense";
+import { designTokens, hasDesign } from "./design";
 import { SEND_TIME_TOKENS } from "./template-schema";
 import type { CopyWithMaster } from "./masters-queries";
 
@@ -18,6 +19,9 @@ function effectiveSlots(copy: CopyWithMaster): Record<string, string> {
   const { values, condensed } = condenseSlots(schema, copy.slot_values ?? {});
   const slots = { ...values };
   if (schema.locked.includes("overview_url")) slots.overview_url = condensed ? overviewUrl(copy.id) : "";
+  // Designs with design settings (banner, logo, accent, alignment) read them
+  // from the copy's values.
+  if (hasDesign(schema)) return { ...slots, ...designTokens(slots, copy.master.name) };
   // Gradient mode → no background image (the compiled master already carries the
   // gradient). Image mode → the chosen banner, over which the master applies its
   // navy overlay for contrast.
