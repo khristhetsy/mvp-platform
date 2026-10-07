@@ -155,6 +155,9 @@ async function rankOutreachAudience(
       // the admin requires a rated score.
       return rated ? (ps!.score as number) >= config.minInvestorScore : !config.requireRated;
     })
+    // Best matches first. The loader returns contacts unsorted when score:false,
+    // so without this the audience was the first N in load order, not the top N.
+    .sort((a, b) => (matchOf.get(b.id) ?? 0) - (matchOf.get(a.id) ?? 0))
     .slice(0, limit);
   return { ranked, matchOf };
 }
