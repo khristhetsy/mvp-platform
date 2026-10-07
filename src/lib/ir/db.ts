@@ -8,7 +8,7 @@ import { generateMilestones } from "@/lib/ir/milestones";
 import { PLAN_LABELS, type PlanType } from "@/lib/subscriptions/plans";
 import type { GoalMetric, PeriodKind } from "@/lib/ir/metrics";
 import { INTRO_DUE_DAYS, INTRO_SUBJECT, type IrActivity, type IrBlocker, type IrMatch, type IrMilestone, type IrNote, type IrProject, type IrStage, type IrTask, type StaffOption } from "@/lib/ir/types";
-import { founderOdooProfile, type FounderOdooProfile } from "@/lib/ir/founder-profile";
+import { founderOdooProfile, questionnaireAnswers, type FounderOdooProfile } from "@/lib/ir/founder-profile";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function db(): any { return createServiceRoleClient(); }
@@ -94,7 +94,7 @@ export async function createProject(input: CreateProjectInput): Promise<{ id: st
   return { id: project.id };
 }
 
-export async function updateProject(id: string, patch: Partial<{ company_id: string | null; status: string; owner_id: string; founder_report_visible: boolean; starred: boolean; is_spv: boolean; title: string; founder_name: string | null; weekly_summary: boolean; monthly_summary: boolean; description: string | null; color: string | null }>): Promise<void> {
+export async function updateProject(id: string, patch: Partial<{ company_id: string | null; founder_contact_id: string | null; status: string; owner_id: string; founder_report_visible: boolean; starred: boolean; is_spv: boolean; title: string; founder_name: string | null; weekly_summary: boolean; monthly_summary: boolean; description: string | null; color: string | null }>): Promise<void> {
   const { error } = await db().from("ir_projects").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", id);
   if (error) throw new Error(`updateProject: ${error.message}`);
 }
@@ -423,7 +423,10 @@ export async function founderEmail(project: { founder_contact_id: string | null;
 
 // ── Entrepreneur profile (Share Project + Task form tab) ────────────────────
 /** `odoo` is the founder's Odoo entrepreneur questionnaire (null when there is no founder contact). */
-export type EntrepreneurProfile = { company: string; founder: string | null; membershipType: string | null; portalPlan: string | null; raise: string | null; stage: string | null; industry: string | null; companyId: string | null; founderContactId: string | null; website?: string | null; odoo?: FounderOdooProfile | null; syncedAt?: string | null };
+export type EntrepreneurProfile = { company: string; founder: string | null; membershipType: string | null; portalPlan: string | null; raise: string | null; stage: string | null; industry: string | null; companyId: string | null; founderContactId: string | null; website?: string | null; odoo?: FounderOdooProfile | null; syncedAt?: string | null;
+  /** The founder contact itself, and others at the same email domain who answered the questionnaire. */
+  founderContact?: FounderContactRef | null; relatedContacts?: FounderContactRef[] };
+export type FounderContactRef = { id: string; name: string; company: string | null; email: string | null; answers: number };
 export async function entrepreneurProfile(project: IrProject): Promise<EntrepreneurProfile> {
   const out: EntrepreneurProfile = { company: project.title, founder: project.founder_name, membershipType: null, portalPlan: null, raise: null, stage: null, industry: null, companyId: project.company_id, founderContactId: project.founder_contact_id, website: null, odoo: null, syncedAt: null };
   if (project.company_id) {
@@ -440,8 +443,13 @@ export async function entrepreneurProfile(project: IrProject): Promise<Entrepren
     }
   }
   if (project.founder_contact_id) {
-    const { data } = await db().from("crm_contacts").select("profile, company, raw, overrides, website, synced_at").eq("id", project.founder_contact_id).maybeSingle();
-    const c = data as { profile: Record<string, unknown> | null; company: string | null; raw: Record<string, unknown> | null; overrides: Record<string, unknown> | null; website: string | null; synced_at: string | null } | null;
+    const { data } = await db().from("crm_contacts").select("name, email, profile, company, raw, overrides, website, synced_at").eq("id", project.founder_contact_id).maybeSingle();
+    const c = data as { name: string | null; email: string | null; profile: Record<string, unknown> | null; company: string | null; raw: Record<string, unknown> | null; overrides: Record<string, unknown> | null; website: string | null; synced_at: string | null } | null;
+    if (c) {
+      const extraOf = (raw: unknown) => ((raw as { __profile?: { extra?: unknown } } | null)?.__profile?.extra);
+      out.founderContact = { id: project.founder_contact_id, name: c.name ?? c.email ?? "Contact", company: c.company && c.company !== c.email ? c.company : null, email: c.email, answers: questionnaireAnswers(extraOf(c.raw)) };
+      out.relatedContacts = await relatedFounderContacts(project.founder_contact_id, c.email);
+    }
     const odoo = founderOdooProfile(c?.raw, c?.overrides);
     out.odoo = odoo; out.syncedAt = c?.synced_at ?? null; out.website = c?.website ?? odoo?.website ?? null;
     if (!project.company_id && (odoo?.companyName || c?.company)) out.company = odoo?.companyName ?? c?.company ?? out.company;
@@ -458,4 +466,17 @@ export async function entrepreneurProfile(project: IrProject): Promise<Entrepren
     if (!out.industry && odoo?.industries.length) out.industry = odoo.industries.join(", ");
   }
   return out;
+}
+
+const PUBLIC_MAIL = new Set(["gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "icloud.com", "aol.com", "live.com", "msn.com", "me.com", "proton.me", "protonmail.com"]);
+/** Other contacts at the founder's email domain who answered the Odoo questionnaire (none for public mail domains). */
+async function relatedFounderContacts(selfId: string, email: string | null): Promise<FounderContactRef[]> {
+  const domain = (email ?? "").split("@")[1]?.trim().toLowerCase();
+  if (!domain || PUBLIC_MAIL.has(domain) || /[%_,()]/.test(domain)) return [];
+  const { data } = await db().from("crm_contacts").select("id, name, company, email, extra:raw->__profile->extra").ilike("email", `%@${domain}`).neq("id", selfId).limit(20);
+  return ((data ?? []) as Array<{ id: string; name: string | null; company: string | null; email: string | null; extra: unknown }>)
+    .map((r) => ({ id: r.id, name: r.name ?? r.email ?? "Contact", company: r.company && r.company !== r.email ? r.company : null, email: r.email, answers: questionnaireAnswers(r.extra) }))
+    .filter((r) => r.answers > 0)
+    .sort((a, b) => b.answers - a.answers)
+    .slice(0, 3);
 }

@@ -159,3 +159,9 @@ export function fitDefaultsFromProfile(p: FounderOdooProfile | null, offerable?:
   if (types.size) out.investorType = [...types];
   return out;
 }
+
+/** How many questions a founder answered in the Odoo questionnaire (`raw.__profile.extra`); blanks don't count. */
+export function questionnaireAnswers(extra: unknown): number {
+  if (!extra || typeof extra !== "object" || Array.isArray(extra)) return 0;
+  return Object.values(extra as Record<string, unknown>).filter((v) => typeof v === "number" || asList(v).length > 0).length;
+}

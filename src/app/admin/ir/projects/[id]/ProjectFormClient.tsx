@@ -49,6 +49,15 @@ export function ProjectFormClient({ projectId, initialTab }: { projectId: string
   // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch, then set
   useEffect(() => { void load(); }, [load]);
 
+  async function createCompany() {
+    setBusy(true);
+    const r = await fetch(`/api/admin/ir/projects/${projectId}/create-company`, { method: "POST" });
+    const j = await r.json().catch(() => ({}));
+    setBusy(false);
+    if (!r.ok) { setError(j.error ?? "Couldn't create the company."); return; }
+    await load();
+  }
+
   async function patch(body: Record<string, unknown>) {
     setBusy(true);
     const r = await fetch(`/api/admin/ir/projects/${projectId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -120,7 +129,8 @@ export function ProjectFormClient({ projectId, initialTab }: { projectId: string
             <Field label="Project manager"><select value={p.owner_id} disabled={busy} onChange={(e) => patch({ ownerId: e.target.value })} className={inp}>{data.staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></Field>
             <Field label="Tags"><span className="flex flex-wrap gap-1">{p.owner_name ? <Chip cls="bg-blue-50 text-blue-800">{p.owner_name}</Chip> : null}{p.is_spv ? <Chip cls="bg-rose-50 text-rose-700">SPV</Chip> : null}{entrepreneur?.portalPlan ? <Chip cls="bg-emerald-50 text-emerald-700">{entrepreneur.portalPlan}</Chip> : null}<Chip cls="bg-slate-100 text-slate-600">{STATUS_LABEL[p.status]}</Chip></span></Field>
             <Field label="Planned date"><span>{fmtDay(p.start_date)} → {fmtDay(p.end_date)} · {p.term_months} months</span></Field>
-            <Field label="Company"><span>{entrepreneur?.companyId ? <Link href={`/admin/companies/${entrepreneur.companyId}`} className="text-indigo-700 hover:underline">{entrepreneur.company}</Link> : entrepreneur?.founderContactId ? <Link href={`/admin/sales/contacts/${entrepreneur.founderContactId}`} className="text-indigo-700 hover:underline">{entrepreneur.company}</Link> : entrepreneur?.company ?? "—"}{entrepreneur?.founder ? <span className="text-slate-500"> · {entrepreneur.founder}</span> : null}<CompanyLinker linked={!!p.company_id} busy={busy} onLink={(companyId) => patch({ companyId })} /></span></Field>
+            <Field label="Company"><span>{entrepreneur?.companyId ? <Link href={`/admin/companies/${entrepreneur.companyId}`} className="text-indigo-700 hover:underline">{entrepreneur.company}</Link> : entrepreneur?.founderContactId ? <Link href={`/admin/sales/contacts/${entrepreneur.founderContactId}`} className="text-indigo-700 hover:underline">{entrepreneur.company}</Link> : entrepreneur?.company ?? "—"}{entrepreneur?.founder ? <span className="text-slate-500"> · {entrepreneur.founder}</span> : null}<CompanyLinker linked={!!p.company_id || !!entrepreneur?.founderContact?.answers} busy={busy} onLink={(body) => patch(body)} onCreate={!p.company_id && p.founder_contact_id ? createCompany : null} /></span></Field>
+            <Field label="Founder record"><FounderRecord ep={entrepreneur} busy={busy} onUse={(founderContactId) => patch({ founderContactId })} /></Field>
             <Field label="Founder portal"><span>{p.founder_report_visible ? "On · founder sees stage counts and firms, never investor names" : "Off"}</span></Field>
           </div>
 
@@ -227,31 +237,68 @@ function Chatter({ projectId, followers, feed, onPosted }: { projectId: string; 
   );
 }
 
+/** Founder record row: the contact the founder data comes from, its questionnaire size, and others at the same company. */
+function FounderRecord({ ep, busy, onUse }: { ep: EntrepreneurProfile | null; busy: boolean; onUse: (contactId: string) => Promise<void> }) {
+  const fc = ep?.founderContact;
+  if (!fc) return <span className="text-slate-400">None linked · pick the company above</span>;
+  const badge = (n: number) => <span className={`ml-1.5 rounded px-1.5 text-[10.5px] ${n >= 10 ? "bg-emerald-50 text-emerald-700" : n > 0 ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-500"}`}>{n ? `Odoo questionnaire · ${n} answer${n === 1 ? "" : "s"}` : "No questionnaire answers"}</span>;
+  return (
+    <span>
+      <Link href={`/admin/sales/contacts/${fc.id}`} className="text-indigo-700 hover:underline">{fc.name}</Link>{fc.email ? <span className="text-slate-500"> · {fc.email}</span> : null}{badge(fc.answers)}
+      {(ep?.relatedContacts ?? []).map((r) => (
+        <span key={r.id} className="mt-0.5 block text-[11.5px] text-slate-500">
+          Also at this company: {r.name} ({r.company ? `${r.company}, ` : ""}{r.answers} answer{r.answers === 1 ? "" : "s"})
+          <button type="button" disabled={busy} onClick={() => onUse(r.id)} className="ml-1.5 text-indigo-700 hover:underline disabled:opacity-60">Use as main record</button>
+        </span>
+      ))}
+    </span>
+  );
+}
+
+type ContactHit = { id: string; name: string; company: string | null; email: string | null; answers: number };
+
 /**
- * "Link company" beside the Company field: search iCapOS companies by name and link the
- * project to one, so the email dialog finds the founder's one-pager and data room.
+ * "Link company" beside the Company field: search iCapOS founder accounts and founders imported
+ * from Odoo. An account links the company; an Odoo founder becomes the project's founder record,
+ * which the email templates, the Entrepreneur profile and matching read.
  */
-function CompanyLinker({ linked, busy, onLink }: { linked: boolean; busy: boolean; onLink: (companyId: string) => Promise<void> }) {
+function CompanyLinker({ linked, busy, onLink, onCreate }: { linked: boolean; busy: boolean; onLink: (body: { companyId: string } | { founderContactId: string }) => Promise<void>; onCreate: (() => Promise<void>) | null }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<Array<{ id: string; name: string; published: boolean }>>([]);
+  const [contacts, setContacts] = useState<ContactHit[]>([]);
   useEffect(() => {
     if (!open || q.trim().length < 2) return;
     const t = setTimeout(() => {
-      void fetch(`/api/admin/ir/companies?q=${encodeURIComponent(q.trim())}`).then((r) => (r.ok ? r.json() : { companies: [] })).then((d) => setHits(d.companies ?? [])).catch(() => setHits([]));
+      void fetch(`/api/admin/ir/companies?q=${encodeURIComponent(q.trim())}`).then((r) => (r.ok ? r.json() : {})).then((d: { companies?: Array<{ id: string; name: string; published: boolean }>; contacts?: ContactHit[] }) => { setHits(d.companies ?? []); setContacts(d.contacts ?? []); }).catch(() => { setHits([]); setContacts([]); });
     }, 250);
     return () => clearTimeout(t);
   }, [open, q]);
-  if (!open) return <button type="button" onClick={() => setOpen(true)} className="ml-2 text-[11.5px] text-indigo-700 hover:underline">{linked ? "Change" : "Link company"}</button>;
+  const close = () => { setOpen(false); setQ(""); setHits([]); setContacts([]); };
+  if (!open) return (
+    <>
+      <button type="button" onClick={() => setOpen(true)} className="ml-2 text-[11.5px] text-indigo-700 hover:underline">{linked ? "Change" : "Link company"}</button>
+      {onCreate ? <button type="button" disabled={busy} onClick={() => void onCreate()} className="ml-2 text-[11.5px] text-slate-500 hover:text-indigo-700 hover:underline disabled:opacity-60">Create iCapOS account</button> : null}
+    </>
+  );
+  const group = "block px-3 pb-0.5 pt-2 text-[10.5px] font-medium uppercase tracking-wide text-slate-400";
   return (
     <span className="relative ml-2 inline-block align-middle">
-      <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); }} placeholder="Search companies" aria-label="Search companies" className={`${inp} w-52`} />
-      <button type="button" onClick={() => { setOpen(false); setQ(""); setHits([]); }} className="ml-1 text-[11.5px] text-slate-500 hover:text-slate-800">Cancel</button>
+      <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === "Escape") close(); }} placeholder="Search companies or founders" aria-label="Search companies or founders" className={`${inp} w-60`} />
+      <button type="button" onClick={close} className="ml-1 text-[11.5px] text-slate-500 hover:text-slate-800">Cancel</button>
       {q.trim().length >= 2 ? (
-        <span className="absolute left-0 top-full z-20 mt-1 block w-64 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
-          {hits.length === 0 ? <span className="block px-3 py-2 text-[12px] text-slate-400">No companies match.</span> : hits.map((c) => (
-            <button key={c.id} type="button" disabled={busy} onClick={async () => { await onLink(c.id); setOpen(false); setQ(""); setHits([]); }} className="flex w-full items-center justify-between px-3 py-2 text-left text-[12.5px] hover:bg-indigo-50 disabled:opacity-60">
+        <span className="absolute left-0 top-full z-20 mt-1 block w-[26rem] overflow-hidden rounded-lg border border-slate-200 bg-white pb-1 shadow-lg">
+          <span className={group}>iCapOS founder accounts</span>
+          {hits.length === 0 ? <span className="block px-3 py-1.5 text-[12px] text-slate-400">No accounts match.</span> : hits.map((c) => (
+            <button key={c.id} type="button" disabled={busy} onClick={async () => { await onLink({ companyId: c.id }); close(); }} className="flex w-full items-center justify-between px-3 py-1.5 text-left text-[12.5px] hover:bg-indigo-50 disabled:opacity-60">
               <span className="truncate">{c.name}</span>{c.published ? <span className="ml-2 shrink-0 rounded bg-emerald-50 px-1.5 text-[10.5px] text-emerald-700">One-pager</span> : null}
+            </button>
+          ))}
+          <span className={group}>Founders from Odoo</span>
+          {contacts.length === 0 ? <span className="block px-3 py-1.5 text-[12px] text-slate-400">No founders match.</span> : contacts.map((c) => (
+            <button key={c.id} type="button" disabled={busy} onClick={async () => { await onLink({ founderContactId: c.id }); close(); }} className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[12.5px] hover:bg-indigo-50 disabled:opacity-60">
+              <span className="min-w-0 truncate"><span className="font-medium">{c.company ?? c.name}</span>{c.company ? <span className="text-[11px] text-slate-500"> · {c.name}</span> : null}{c.email ? <span className="text-[11px] text-slate-500"> · {c.email}</span> : null}</span>
+              <span className={`ml-auto shrink-0 rounded px-1.5 text-[10.5px] ${c.answers >= 10 ? "bg-emerald-50 text-emerald-700" : c.answers > 0 ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-500"}`}>{c.answers} answer{c.answers === 1 ? "" : "s"}</span>
             </button>
           ))}
         </span>

@@ -1,7 +1,7 @@
 /**
  * One IR project — the pipeline payload.
  *   GET   → { project, milestones, matches, tasks, openActivities, staff, stageEvents }
- *   PATCH { companyId?, status?, ownerId?, founderReportVisible?, starred?, isSpv?, title?, weeklySummary?, monthlySummary?, description?, color? } → { ok }
+ *   PATCH { companyId?, founderContactId?, status?, ownerId?, founderReportVisible?, starred?, isSpv?, title?, weeklySummary?, monthlySummary?, description?, color? } → { ok }
  */
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -26,6 +26,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
 
 const schema = z.object({
   companyId: z.string().uuid().nullable().optional(),
+  founderContactId: z.string().uuid().optional(),
   status: z.enum(["active", "paused", "completed", "cancelled"]).optional(),
   ownerId: z.string().uuid().optional(),
   founderReportVisible: z.boolean().optional(),
@@ -60,7 +61,11 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
       const { data: co } = await db().from("companies").select("id").eq("id", d.companyId).maybeSingle();
       if (!co) return NextResponse.json({ error: "Company not found." }, { status: 404 });
     }
-    await updateProject(id, { company_id: d.companyId, status: d.status, owner_id: d.ownerId, founder_report_visible: d.founderReportVisible, starred: d.starred, is_spv: d.isSpv, title: d.title, founder_name: d.founderName === undefined ? undefined : d.founderName || null, weekly_summary: d.weeklySummary, monthly_summary: d.monthlySummary, description: d.description, color: d.color });
+    if (d.founderContactId) {
+      const { data: fc } = await db().from("crm_contacts").select("id").eq("id", d.founderContactId).maybeSingle();
+      if (!fc) return NextResponse.json({ error: "Contact not found." }, { status: 404 });
+    }
+    await updateProject(id, { company_id: d.companyId, founder_contact_id: d.founderContactId, status: d.status, owner_id: d.ownerId, founder_report_visible: d.founderReportVisible, starred: d.starred, is_spv: d.isSpv, title: d.title, founder_name: d.founderName === undefined ? undefined : d.founderName || null, weekly_summary: d.weeklySummary, monthly_summary: d.monthlySummary, description: d.description, color: d.color });
     return NextResponse.json({ ok: true });
   } catch (e) { return failed(e, "Couldn't update the project."); }
 }
