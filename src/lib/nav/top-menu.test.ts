@@ -198,12 +198,19 @@ describe("currentApp and activeHref", () => {
   });
 
   it("breaks ties with the app the user last opened", () => {
+    // Contacts moved to its own page (/admin/contacts), so no two apps share a path
+    // out of the box. Give two hubs the same link to make a tie.
     const withTabs = toApps(getAdminWorkspaceNavSections(), {
-      menuOverrides: { "/admin/sales": [{ label: "Contacts", href: "/admin/sales/contacts" }] },
+      menuOverrides: {
+        "/admin/sales": [{ label: "Contacts", href: "/admin/sales/contacts" }],
+        "/admin/marketing": [{ label: "Sales contacts", href: "/admin/sales/contacts" }],
+      },
     });
-    const sales = byLabel(withTabs, "Sales Hub");
-    expect(currentApp(withTabs, "/admin/sales/contacts")?.label).toBe("Contacts");
-    expect(currentApp(withTabs, "/admin/sales/contacts", sales.id)?.label).toBe("Sales Hub");
+    const marketing = byLabel(withTabs, "Marketing Hub");
+    expect(currentApp(withTabs, "/admin/sales/contacts")?.label).toBe("Sales Hub");
+    expect(currentApp(withTabs, "/admin/sales/contacts", marketing.id)?.label).toBe("Marketing Hub");
+    // Without overrides, the Sales contacts page belongs to Sales Hub.
+    expect(currentApp(apps, "/admin/sales/contacts")?.label).toBe("Sales Hub");
   });
 
   it("returns null when no app owns the path", () => {
