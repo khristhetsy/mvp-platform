@@ -25,6 +25,15 @@ function formatRaise(amount: number | null | undefined): string | null {
 
 // Match/qualification thresholds are admin-controlled (getInvestorMatchConfig).
 const DEFAULT_WEEKLY_CAP = 10;
+
+/**
+ * Investors per run for a new campaign. Runs go out every 6 days, so about 4 fit
+ * in a 30 day window: a quarter of the plan limit (rounded up) lets the plan be
+ * reached. Professional 50 gives 13; Basic and uncapped plans keep 10.
+ */
+export function defaultRunCap(planCap: number | null): number {
+  return planCap === null ? DEFAULT_WEEKLY_CAP : Math.max(DEFAULT_WEEKLY_CAP, Math.ceil(planCap / 4));
+}
 const MAX_AUDIENCE = 50;
 
 /** Live investor email dispatch is OFF until this is explicitly enabled AND the
@@ -256,7 +265,7 @@ export async function createDraftFromMatch(companyId: string): Promise<{ created
 
   const { data: campaign } = await db
     .from("investor_outreach_campaigns")
-    .insert({ company_id: companyId, status: "pending_approval", weekly_cap: DEFAULT_WEEKLY_CAP })
+    .insert({ company_id: companyId, status: "pending_approval", weekly_cap: defaultRunCap(planCap) })
     .select("id")
     .single();
   if (!campaign) return { created: false };
