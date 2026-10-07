@@ -6,6 +6,8 @@
  */
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { syncPostEvent } from "@/lib/social/gcal-sync";
+import { zoneOffsetMinutes } from "@/lib/cron/zoned-schedule";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 export type Freq = "daily" | "weekly" | "monthly";
 export type EndType = "never" | "on_date" | "after";
@@ -270,14 +272,15 @@ export async function deleteSeriesPosts(recurrenceId: string, scope: "this" | "f
 export async function recurrenceSummary(id: string): Promise<{ id: string; status: string; label: string; madeCount: number; accountIds: string[] } | null> {
   const { data: row } = await db().from("social_recurrences").select("*").eq("id", id).maybeSingle();
   if (!row) return null;
-  const rule = ruleFromRow(row);
+  // Rules run in UTC on the server; show them in Pacific time (same moments).
+  const rule = shiftRuleTime(ruleFromRow(row), zoneOffsetMinutes(new Date(), PLATFORM_TZ));
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const every = rule.interval > 1 ? `every ${rule.interval} ` : "";
   const base = rule.freq === "weekly"
     ? `Repeats ${every}week${rule.interval > 1 ? "s" : ""}${rule.weekdays.length ? " · " + rule.weekdays.map((d) => days[d]).join(" & ") : ""}`
     : rule.freq === "daily" ? `Repeats ${every}day${rule.interval > 1 ? "s" : ""}` : `Repeats ${every}month${rule.interval > 1 ? "s" : ""}`;
   const end = rule.endType === "on_date" && rule.endDate ? ` until ${rule.endDate}` : rule.endType === "after" ? ` · ${rule.endCount} posts` : "";
-  return { id: row.id, status: row.status, label: `${base} at ${rule.timeLocal}${end}`, madeCount: row.made_count ?? 0, accountIds: ((row.account_ids as string[] | null) ?? []) };
+  return { id: row.id, status: row.status, label: `${base} at ${rule.timeLocal} PT${end}`, madeCount: row.made_count ?? 0, accountIds: ((row.account_ids as string[] | null) ?? []) };
 }
 
 /** Variant states that are already live or in flight, so a series edit leaves them alone. */

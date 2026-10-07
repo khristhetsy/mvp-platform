@@ -2,11 +2,12 @@
 // non-super-admin member: every number is scoped to the signed-in user's own records.
 import Link from "next/link";
 import type { PersonalDashboard as PersonalData } from "@/lib/dashboard/personal";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 const NAVY = "#0A1A40", ACCENT = "#4338CA", MUTED = "var(--muted-foreground)";
 
 function greeting(): string {
-  const h = new Date().getHours();
+  const h = Number(new Intl.DateTimeFormat("en-US", { hour: "numeric", hourCycle: "h23", timeZone: PLATFORM_TZ }).format(new Date())) % 24;
   return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
 }
 function money(cents: number): string {
