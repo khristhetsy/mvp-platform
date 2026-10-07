@@ -17,6 +17,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { AI_FEATURE_META, CATEGORY_LABELS, type AiBudgetCategory } from "@/lib/ai-budget/config";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 type Tool = { feature: string; label: string; calls: number; costUsd: number };
 type Category = { category: AiBudgetCategory; budgetUsd: number; spentUsd: number; calls: number; tools: Tool[] };
@@ -37,7 +38,7 @@ const pct = (spent: number, budget: number) => (budget > 0 ? (spent / budget) * 
 function nextResetLabel(): string {
   const d = new Date();
   const next = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1));
-  return next.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+  return next.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: PLATFORM_TZ });
 }
 
 /** Internal hub tools roll up into their hub group; other categories list tools as is. */

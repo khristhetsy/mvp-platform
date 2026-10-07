@@ -10,6 +10,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { sendBookingCancellation } from "./notify";
 import { logActivity } from "@/lib/sales/activity";
 import { verifyBookingToken, type BookingAction } from "./tokens";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 export async function cancelBookingById(bookingId: string, opts: { notify?: boolean } = {}): Promise<Booking | null> {
   const before = await getBooking(bookingId);
@@ -29,7 +30,7 @@ export async function cancelBookingById(bookingId: string, opts: { notify?: bool
       await sendBookingCancellation({
         hostEmail: before.host_email ?? null, hostName: before.host_name ?? null,
         bookerEmail: before.booker_email, bookerName: before.booker_name,
-        title: before.event_type ?? "Meeting", startTime: before.start_time, timezone: before.timezone ?? "UTC",
+        title: before.event_type ?? "Meeting", startTime: before.start_time, timezone: before.timezone ?? PLATFORM_TZ,
       });
     } catch { /* best-effort */ }
   }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 type ViewMode = "kanban" | "grid" | "list";
 
@@ -55,7 +56,7 @@ function formatDate(value: string | undefined) {
     month: "short",
     day: "numeric",
     year: "numeric",
-    timeZone: "UTC",
+    timeZone: PLATFORM_TZ,
   });
 }
 

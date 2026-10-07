@@ -8,6 +8,7 @@ import {
   getInvestorPanelHref,
 } from "@/lib/ui/drilldown-links";
 import type { AdminInvestorActivityData } from "@/components/admin/dashboard/types";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 type ActivityPanelKind = "interests" | "intros" | "saved";
 
@@ -34,7 +35,7 @@ function formatActivityRow(raw: Record<string, unknown>, panel: ActivityPanelKin
         day: "numeric",
         hour: "numeric",
         minute: "2-digit",
-        timeZone: "UTC",
+        timeZone: PLATFORM_TZ,
       })
     : "—";
   const pledgeAmount = typeof raw.pledge_amount === "number" ? raw.pledge_amount : null;

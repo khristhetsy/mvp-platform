@@ -4,6 +4,7 @@ import { requirePermissionApi } from "@/lib/api/permissions";
 import { getValidGoogleAccessToken } from "@/lib/integrations/google-access-token";
 import { createCalendarEventWithMeet } from "@/lib/integrations/google-calendar";
 import { getPresenterById, updatePresenter } from "@/lib/icfo-events/applications";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -40,7 +41,7 @@ export async function POST(
         title: `${presenter.displayName}${presenter.headline ? ` — ${presenter.headline}` : ""}`,
         startTime: start.toISOString(),
         endTime: end.toISOString(),
-        timezone: presenter.timezone || "UTC",
+        timezone: presenter.timezone || PLATFORM_TZ,
       },
       tok.accessToken,
     );

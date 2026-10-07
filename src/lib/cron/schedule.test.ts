@@ -28,26 +28,33 @@ describe("nextRun", () => {
 
 describe("describeSchedule", () => {
   it("says each common shape in Paris time", () => {
-    expect(describeSchedule(["0 7 * * *", "0 19 * * *"], NOW)).toBe("Daily 09:00 and 21:00");
-    expect(describeSchedule(["*/5 * * * *"], NOW)).toBe("Every 5 min");
-    expect(describeSchedule(["7 * * * *"], NOW)).toBe("Hourly at :07");
-    expect(describeSchedule(["0 */4 * * *"], NOW)).toBe("Every 4 h");
-    expect(describeSchedule(["0 6,15 * * *"], NOW)).toBe("Daily 08:00 and 17:00");
-    expect(describeSchedule(["0 13 * * 1"], NOW)).toBe("Mon 15:00");
+    expect(describeSchedule(["0 7 * * *", "0 19 * * *"], NOW, "Europe/Paris")).toBe("Daily 09:00 and 21:00");
+    expect(describeSchedule(["*/5 * * * *"], NOW, "Europe/Paris")).toBe("Every 5 min");
+    expect(describeSchedule(["7 * * * *"], NOW, "Europe/Paris")).toBe("Hourly at :07");
+    expect(describeSchedule(["0 */4 * * *"], NOW, "Europe/Paris")).toBe("Every 4 h");
+    expect(describeSchedule(["0 6,15 * * *"], NOW, "Europe/Paris")).toBe("Daily 08:00 and 17:00");
+    expect(describeSchedule(["0 13 * * 1"], NOW, "Europe/Paris")).toBe("Mon 15:00");
   });
   it("follows daylight saving: 19:00 UTC is 20:00 in Paris in winter", () => {
-    expect(describeSchedule(["0 19 * * *"], new Date("2026-12-01T12:00:00Z"))).toBe("Daily 20:00");
+    expect(describeSchedule(["0 19 * * *"], new Date("2026-12-01T12:00:00Z"), "Europe/Paris")).toBe("Daily 20:00");
   });
   it("shows anything unusual as written", () => {
-    expect(describeSchedule(["0 0 1 * *"], NOW)).toBe("0 0 1 * *");
+    expect(describeSchedule(["0 0 1 * *"], NOW, "Europe/Paris")).toBe("0 0 1 * *");
   });
 });
 
 describe("formatWhen", () => {
   it("names today, tomorrow and later days in Paris time", () => {
-    expect(formatWhen(new Date("2026-09-26T19:00:00Z"), NOW)).toBe("today 21:00");
-    expect(formatWhen(new Date("2026-09-27T09:00:00Z"), NOW)).toBe("tomorrow 11:00");
-    expect(formatWhen(new Date("2026-09-28T13:00:00Z"), NOW)).toBe("Mon 15:00");
-    expect(formatWhen(new Date("2026-09-25T20:00:00Z"), NOW)).toBe("yesterday 22:00");
+    expect(formatWhen(new Date("2026-09-26T19:00:00Z"), NOW, "Europe/Paris")).toBe("today 21:00");
+    expect(formatWhen(new Date("2026-09-27T09:00:00Z"), NOW, "Europe/Paris")).toBe("tomorrow 11:00");
+    expect(formatWhen(new Date("2026-09-28T13:00:00Z"), NOW, "Europe/Paris")).toBe("Mon 15:00");
+    expect(formatWhen(new Date("2026-09-25T20:00:00Z"), NOW, "Europe/Paris")).toBe("yesterday 22:00");
+  });
+});
+
+describe("platform zone (PT) is the default display", () => {
+  it("shows vercel.json schedules in Pacific time", () => {
+    // 07:00 and 19:00 UTC are midnight and noon PDT.
+    expect(describeSchedule(["0 7 * * *", "0 19 * * *"], new Date("2026-09-26T12:00:00Z"))).toBe("Daily 00:00 and 12:00");
   });
 });

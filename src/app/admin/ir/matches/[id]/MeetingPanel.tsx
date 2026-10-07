@@ -9,6 +9,8 @@
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { IrActivity } from "@/lib/ir/types";
+import { fromPlatformInput } from "@/lib/time/platform-input";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 type Slots = { hostId: string; slots: Array<{ start: string; end: string }>; timezone: string; durations: number[]; hasHours: boolean; current: { activity: IrActivity; meetUrl: string | null; hostName: string | null; timezone: string | null } | null };
 const inp = "rounded-lg border border-slate-200 px-2.5 py-1.5 text-[12.5px] focus:border-indigo-400 focus:outline-none";
@@ -54,9 +56,9 @@ export function MeetingPanel({ matchId, meId, assigneeId, staff, onChanged }: { 
   }
   async function book() {
     let start: string, end: string, isCustom = false;
-    if (mode === "custom") { if (!custom) { setError("Pick a date and time."); return; } start = new Date(custom).toISOString(); end = new Date(new Date(custom).getTime() + customLen * 60_000).toISOString(); isCustom = true; }
+    if (mode === "custom") { if (!custom) { setError("Pick a date and time."); return; } start = (fromPlatformInput(custom) ?? new Date(custom)).toISOString(); end = new Date((fromPlatformInput(custom) ?? new Date(custom)).getTime() + customLen * 60_000).toISOString(); isCustom = true; }
     else { if (!picked) { setError("Pick an open slot."); return; } start = picked.start; end = picked.end; }
-    const j = await post({ action: reschedule ? "reschedule" : "book", hostId: host, startTime: start, endTime: end, timezone: tz ?? Intl.DateTimeFormat().resolvedOptions().timeZone, note: note || null, notify, custom: isCustom });
+    const j = await post({ action: reschedule ? "reschedule" : "book", hostId: host, startTime: start, endTime: end, timezone: tz ?? PLATFORM_TZ, note: note || null, notify, custom: isCustom });
     if (!j) return;
     setNotice(`${reschedule ? "Rescheduled" : "Booked"} for ${fmtDT(j.startTime, tz)}${j.meetUrl ? " with a Google Meet link" : ""}.${j.warning ? ` ${j.warning}` : ""}`);
     setReschedule(false); setPicked(null); setCustom("");

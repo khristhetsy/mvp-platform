@@ -15,6 +15,7 @@ import {
   type StatCounts,
   type StatSettings,
 } from "@/lib/icfo-events/invitations/types";
+import { platformInputToIso, toPlatformInput } from "@/lib/time/platform-input";
 
 type Campaign = {
   id: string; name: string; eventIds: string[]; audiences: Audience[]; status: string;
@@ -55,12 +56,6 @@ function emptyDraft(events: EventRow[]): Draft {
   };
 }
 
-function toLocalInput(iso: string | null): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
 
 export function InvitationsClient() {
   const [data, setData] = useState<Data | null>(null);
@@ -87,7 +82,7 @@ export function InvitationsClient() {
   function open(c: Campaign) {
     setMsg(null); setPreview(null);
     const audiences = INVITE_ROLES.map((role) => c.audiences.find((a) => a.role === role) ?? { role, listId: null, offers: OFFERS[role].map((o) => o.key), subject: null, intro: null });
-    setDraft({ id: c.id, name: c.name, eventIds: c.eventIds, audiences, when: "later", scheduleAt: toLocalInput(c.scheduleAt), stats: c.stats, fromName: c.fromName, fromEmail: c.fromEmail, status: c.status });
+    setDraft({ id: c.id, name: c.name, eventIds: c.eventIds, audiences, when: "later", scheduleAt: toPlatformInput(c.scheduleAt), stats: c.stats, fromName: c.fromName, fromEmail: c.fromEmail, status: c.status });
   }
 
   function patchAudience(role: InviteRole, p: Partial<Audience>) {
@@ -98,7 +93,7 @@ export function InvitationsClient() {
     if (!draft) return null;
     const body = {
       name: draft.name, eventIds: draft.eventIds, audiences: draft.audiences,
-      scheduleAt: draft.when === "now" ? new Date().toISOString() : draft.scheduleAt ? new Date(draft.scheduleAt).toISOString() : null,
+      scheduleAt: draft.when === "now" ? new Date().toISOString() : draft.scheduleAt ? platformInputToIso(draft.scheduleAt) : null,
       stats: draft.stats, fromName: draft.fromName, fromEmail: draft.fromEmail,
     };
     const r = await fetch(draft.id ? `/api/admin/events/invitations/${draft.id}` : "/api/admin/events/invitations", {

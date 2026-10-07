@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { FounderEmailMode } from "@/lib/notifications/founder-email-budget/config";
 import type { FounderEmailPrefs } from "@/lib/notifications/founder-email-budget/prefs";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 const OPTIONS: Array<{ id: FounderEmailMode; name: string; desc: string; recommended?: boolean }> = [
   { id: "instant", name: "Instant alerts only", desc: "Only the alerts listed below. No digests, no reminders." },
@@ -32,7 +33,7 @@ export function FounderEmailSettings({ initial, defaultSendHour }: Readonly<{ in
     setSaving(true);
     setMessage(null);
     try {
-      const detectedTz = Intl.DateTimeFormat().resolvedOptions().timeZone || null;
+      const detectedTz = PLATFORM_TZ;
       const res = await fetch("/api/founder/email-preferences", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },

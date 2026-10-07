@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { formatPledgeTotal } from "@/lib/data/investor-pledges";
 import type { InvestorInterestRecord, InvestorIntroRecord, InvestorSavedDealRecord } from "@/lib/data/investor-interests";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 type ViewMode = "kanban" | "grid" | "list";
 
@@ -33,7 +34,7 @@ function formatDate(value: string) {
     month: "short",
     day: "numeric",
     year: "numeric",
-    timeZone: "UTC",
+    timeZone: PLATFORM_TZ,
   });
 }
 

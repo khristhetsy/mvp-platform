@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useState, useCallback } from "react";
 import { Trash2, Loader2 } from "lucide-react";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 type IntroStatus = "requested" | "reviewing" | "facilitated" | "declined";
 
@@ -34,7 +35,7 @@ function resolveCompany(companies: IntroRow["companies"]): string {
 
 function formatDate(value: string | undefined) {
   if (!value) return "—";
-  return new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+  return new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: PLATFORM_TZ });
 }
 
 const STATUS_STYLES: Record<string, { bg: string; text: string; label: string }> = {

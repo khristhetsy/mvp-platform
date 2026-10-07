@@ -4,11 +4,12 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ROLE_LABEL, emailResult, sourceLabel } from "@/lib/email/email-log-labels";
 import type { EmailLogDetail, EmailLogItem, EmailRole } from "@/lib/email/email-log";
+import { PLATFORM_TZ, PLATFORM_TZ_LABEL } from "@/lib/time/platform-tz";
 
 type Filter = "all" | "failed" | "bounced" | "opened" | "unopened";
 type Counts = Record<EmailRole | "all", number>;
 
-const WHEN = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Paris", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const WHEN = new Intl.DateTimeFormat("en-GB", { timeZone: PLATFORM_TZ, day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
 const TONE: Record<string, string> = {
   bad: "bg-rose-50 text-rose-700",
@@ -262,7 +263,7 @@ export function SentEmailsClient({
                     {viewing.toEmail} · {ROLE_LABEL[viewing.recipientRole]}
                   </dd>
                   <dt className="text-slate-500">Sent</dt>
-                  <dd className="text-slate-900">{WHEN.format(new Date(viewing.createdAt))} Paris</dd>
+                  <dd className="text-slate-900">{WHEN.format(new Date(viewing.createdAt))} {PLATFORM_TZ_LABEL}</dd>
                   <dt className="text-slate-500">Triggered by</dt>
                   <dd className="text-slate-900">
                     {trigger(viewing)} · {sourceLabel(viewing.source)}
@@ -285,7 +286,7 @@ export function SentEmailsClient({
                     .map(([label, at]) => (
                       <div key={label} className="contents">
                         <dt className="text-slate-500">{label}</dt>
-                        <dd className="text-slate-900">{WHEN.format(new Date(at as string))} Paris</dd>
+                        <dd className="text-slate-900">{WHEN.format(new Date(at as string))} {PLATFORM_TZ_LABEL}</dd>
                       </div>
                     ))}
                 </dl>

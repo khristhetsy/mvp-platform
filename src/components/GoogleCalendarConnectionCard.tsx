@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import type { GoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 export function GoogleCalendarConnectionCard({
   status,
@@ -122,7 +123,7 @@ export function GoogleCalendarConnectionCard({
 
       {status.connected && status.connectedAt && (
         <p style={{ fontSize: 11, color: "#94a3b8", margin: "0 0 14px" }}>
-          Connected {new Date(status.connectedAt).toLocaleString("en-US", { timeZone: "UTC" })}
+          Connected {new Date(status.connectedAt).toLocaleString("en-US", { timeZone: PLATFORM_TZ })}
         </p>
       )}
 

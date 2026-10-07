@@ -10,6 +10,8 @@ import { ToastProvider } from "@/components/ui/ToastProvider";
 import { ConfirmProvider } from "@/components/ui/ConfirmDialog";
 import { GoogleAnalyticsScript } from "@/components/GoogleAnalytics";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
+import { PlatformTimeZoneInit } from "@/components/PlatformTimeZoneInit";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -63,9 +65,10 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
+        <PlatformTimeZoneInit />
         <ServiceWorkerRegister />
         <GoogleAnalyticsScript />
-        <NextIntlClientProvider messages={messages}>
+        <NextIntlClientProvider messages={messages} timeZone={PLATFORM_TZ}>
           <PostHogProvider>
             <AuthHandler />
             <ToastProvider><ConfirmProvider>{children}</ConfirmProvider></ToastProvider>

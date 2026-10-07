@@ -4,6 +4,7 @@ import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { preparationDocStatus, type DocStatus, type UploadedDoc } from "@/lib/notifications/preparation-doc-nudge";
 import { notSentReason, nudgeSummary, nudgedWithin } from "@/lib/admin/stuck-founder-nudge";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 export const dynamic = "force-dynamic";
 
@@ -133,7 +134,7 @@ export default async function AdminStuckFoundersPage() {
   const notFundable = rows.filter((r) => !r.fundable).length;
   const nudged7 = rows.filter((r) => r.lastNudge && nudgedWithin(r.lastNudge.createdAt, 7)).length;
   const shortDoc: Record<string, string> = { PITCH_DECK: "Deck", FINANCIAL_STATEMENTS: "Financials", CAP_TABLE: "Cap table" };
-  const nudgeDay = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+  const nudgeDay = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: PLATFORM_TZ });
 
   const metric = (label: string, value: number | string, tone = "text-slate-950") => (
     <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">

@@ -12,6 +12,7 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import type { PlanType } from "@/lib/subscriptions/plans";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 export const CAP_PERIOD_DAYS = 30;
 const DAY_MS = 86_400_000;
@@ -41,7 +42,7 @@ export function decideCap(cap: number | null, used: number, adding: number, rese
 }
 
 export function capMessage(d: Extract<CapDecision, { ok: false }>): string {
-  const reset = d.resetsAt.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+  const reset = d.resetsAt.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: PLATFORM_TZ });
   const room = d.remaining > 0 ? `you can add ${d.remaining} more` : "you can't add more";
   return `Your plan reaches up to ${d.cap} investors every 30 days. You've reached ${d.used}, so ${room} until ${reset}.`;
 }

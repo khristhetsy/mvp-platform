@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { arrivalLabel, type UsZone } from "@/lib/founder-outreach/us-time-zone";
+import { PLATFORM_TZ, PLATFORM_TZ_LABEL } from "@/lib/time/platform-tz";
 
 export type ReachOutEmail = {
   id: string;
@@ -23,7 +24,7 @@ export type ReachOutEmail = {
   createdAt: string;
 };
 
-const PARIS = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Paris", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const PARIS = new Intl.DateTimeFormat("en-GB", { timeZone: PLATFORM_TZ, weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
 export function parisTime(iso: string): string {
   return PARIS.format(new Date(iso));
@@ -99,7 +100,7 @@ export function ReachOutEmailViewer({
               </dd>
               <dt className="text-slate-500">{email.status === "sent" ? "Sent" : "Sends"}</dt>
               <dd className="text-slate-900">
-                {parisTime(email.sentAt ?? email.sendAt)} Paris{ft ? ` · ${ft}` : ""}
+                {parisTime(email.sentAt ?? email.sendAt)} {PLATFORM_TZ_LABEL}{ft ? ` · ${ft}` : ""}
               </dd>
               <dt className="text-slate-500">Company</dt>
               <dd className="text-slate-900">{email.companyName}</dd>

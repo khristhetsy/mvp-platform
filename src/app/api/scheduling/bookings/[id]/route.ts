@@ -13,6 +13,7 @@ import { normalizeSourceTag } from "@/lib/attribution/source";
 import { cancelEvent } from "@/lib/calendar/events";
 import { sendBookingCancellation } from "@/lib/scheduling/notify";
 import { logActivity } from "@/lib/sales/activity";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 export const dynamic = "force-dynamic";
 
@@ -73,7 +74,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       await sendBookingCancellation({
         hostEmail: before.host_email ?? null, hostName: before.host_name ?? null,
         bookerEmail: before.booker_email, bookerName: before.booker_name,
-        title: before.event_type ?? "Meeting", startTime: before.start_time, timezone: before.timezone ?? "UTC",
+        title: before.event_type ?? "Meeting", startTime: before.start_time, timezone: before.timezone ?? PLATFORM_TZ,
       });
     } catch { /* best-effort */ }
   }

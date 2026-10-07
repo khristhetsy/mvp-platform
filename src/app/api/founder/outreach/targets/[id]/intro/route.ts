@@ -8,6 +8,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getUserPlan } from "@/lib/subscriptions/get-subscription";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import { capReached, loadIntroQuota } from "@/lib/matching/intro-quota";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -58,7 +59,7 @@ export async function POST(request: Request, context: RouteContext) {
   const over = capReached(quota);
   if (over) {
     const limit = over === "week" ? quota.week?.cap : quota.month.cap;
-    const resetDay = new Date(quota.month.resetsAt).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+    const resetDay = new Date(quota.month.resetsAt).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: PLATFORM_TZ });
     const error =
       over === "week"
         ? `You've used all ${limit} introduction requests for this week.`

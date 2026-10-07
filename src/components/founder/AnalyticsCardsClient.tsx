@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import type { FounderAnalyticsSnapshot } from "@/lib/analytics/founder-analytics";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -224,7 +225,7 @@ function DrawerContent({
             a.readinessSnapshots.slice(0, 5).map((snap, i) => (
               <BRow
                 key={snap.createdAt}
-                name={new Date(snap.createdAt).toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" })}
+                name={new Date(snap.createdAt).toLocaleDateString("en-US", { timeZone: PLATFORM_TZ, month: "short", day: "numeric", year: "numeric" })}
                 badge={snap.score != null ? `${snap.score}%` : "—"}
                 variant={snap.score != null && snap.score >= 80 ? "success" : snap.score != null && snap.score >= 50 ? "medium" : i === 0 ? "high" : "neutral"}
               />

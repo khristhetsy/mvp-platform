@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { X, Loader2, CalendarPlus, Check } from "lucide-react";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 const BLUE = "#2E78F5";
 
@@ -46,7 +47,7 @@ export function ScheduleModal({
           description: notes || null,
           startTime,
           endTime,
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+          timezone: PLATFORM_TZ,
           attendees: contactEmail ? [{ email: contactEmail, name: contactName }] : [],
           addMeet,
         }),

@@ -13,6 +13,7 @@ import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import { emailDispatchAllowedForUser, EMAIL_DISABLED_MESSAGE } from "@/lib/organizations/organizations";
 import { recordFunnelEvent } from "@/lib/analytics/funnel";
 import { logIntroRequested } from "@/lib/matching/intro-request-log";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 export const dynamic = "force-dynamic";
 
@@ -86,7 +87,7 @@ export async function POST(request: Request) {
   const weeklyCap = cfg.weeklyByPlan ? (isPro ? cfg.weeklyByPlan.professional : cfg.weeklyByPlan.basic) : null;
   const period = await founderCapPeriod(admin, founderId);
   const monthStart = period.start.toISOString();
-  const resetDay = period.end.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+  const resetDay = period.end.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: PLATFORM_TZ });
   // Weeks start Monday (UTC).
   const weekStart = (() => { const d = new Date(); d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7)); d.setUTCHours(0, 0, 0, 0); return d.toISOString(); })();
   // Declined requests are given back, so they don't count toward the limit.

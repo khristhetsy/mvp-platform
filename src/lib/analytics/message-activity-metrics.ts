@@ -1,3 +1,4 @@
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 // Founder and investor message activity: the shared, pure part.
 //
 // What iCapOS sent to founders (emails and in-app notifications) and what it
@@ -8,7 +9,7 @@
 //
 // Dates are Pacific time calendar days ("YYYY-MM-DD"), the US business clock.
 
-export const MESSAGE_TZ = "America/Los_Angeles";
+export const MESSAGE_TZ = PLATFORM_TZ;
 /** Shown next to times on screen. */
 export const MESSAGE_TZ_LABEL = "Pacific time";
 

@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation";
 import { ChevronLeft, ChevronRight, Plus, Video, X, Trash2, MapPin, ExternalLink } from "lucide-react";
 import type { CalendarEventRecord } from "@/lib/scheduling/types";
 import type { GoogleEventLite } from "@/lib/integrations/google-calendar";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
+import { fromPlatformInput, toPlatformInput } from "@/lib/time/platform-input";
 
 /** Unified item for rendering: local events are editable, Google overlay is read-only. */
 type DisplayEvent = {
@@ -19,7 +21,7 @@ type DisplayEvent = {
 };
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const LOCAL_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+const LOCAL_TZ = PLATFORM_TZ;
 
 type FormState = {
   id: string | null;
@@ -39,6 +41,14 @@ function ymd(d: Date): string {
 }
 function hm(d: Date): string {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+/** Pacific date "YYYY-MM-DD" of an instant (calendar shows PT). */
+function ptYmd(d: Date): string {
+  return toPlatformInput(d).slice(0, 10);
+}
+/** Pacific "HH:MM" of an instant. */
+function ptHm(d: Date): string {
+  return toPlatformInput(d).slice(11, 16);
 }
 function startOfMonth(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), 1);
@@ -79,9 +89,9 @@ function formFromEvent(e: CalendarEventRecord): FormState {
     id: e.id,
     googleId: null,
     title: e.title,
-    date: ymd(s),
-    startTime: hm(s),
-    endTime: hm(en),
+    date: ptYmd(s),
+    startTime: ptHm(s),
+    endTime: ptHm(en),
     location: e.location ?? "",
     description: e.description ?? "",
     attendees: (e.attendees ?? []).map((a) => a.email).join(", "),
@@ -97,9 +107,9 @@ function formFromDisplay(e: DisplayEvent): FormState {
     id: null,
     googleId: e.id.startsWith("g:") ? e.id.slice(2) : e.id,
     title: e.title,
-    date: ymd(s),
-    startTime: hm(s),
-    endTime: hm(en),
+    date: ptYmd(s),
+    startTime: ptHm(s),
+    endTime: ptHm(en),
     location: "",
     description: "",
     attendees: "",
@@ -173,7 +183,7 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
   const eventsByDay = useMemo(() => {
     const map = new Map<string, DisplayEvent[]>();
     for (const e of display) {
-      const key = ymd(new Date(e.start_time));
+      const key = ptYmd(new Date(e.start_time));
       const list = map.get(key) ?? [];
       list.push(e);
       map.set(key, list);
@@ -191,8 +201,8 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
     setSaving(true);
     setError(null);
     try {
-      const startTime = new Date(`${form.date}T${form.startTime}`).toISOString();
-      const endTime = new Date(`${form.date}T${form.endTime}`).toISOString();
+      const startTime = (fromPlatformInput(`${form.date}T${form.startTime}`) ?? new Date(`${form.date}T${form.startTime}`)).toISOString();
+      const endTime = (fromPlatformInput(`${form.date}T${form.endTime}`) ?? new Date(`${form.date}T${form.endTime}`)).toISOString();
       if (new Date(endTime) <= new Date(startTime)) throw new Error("End time must be after start time.");
       const attendees = form.attendees
         .split(",")
@@ -287,7 +297,7 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
   }
 
   const monthLabel = anchor.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-  const todayKey = ymd(new Date());
+  const todayKey = ptYmd(new Date());
   const currentMonth = anchor.getMonth();
 
   const nowMs = new Date().getTime();

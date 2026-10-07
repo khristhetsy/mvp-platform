@@ -12,6 +12,7 @@ import { formatRange, milestoneOn } from "@/lib/ir/milestones";
 import { countMetrics, inPeriod, isOutreach, periodLabel, pipelineAsOf, previousPeriod, stagesAsOf, toTs, type ActivityLite, type Period, type PeriodKind } from "@/lib/ir/metrics";
 import { INTRO_SUBJECT, IR_STAGE_LABEL, type IrMilestone, type IrProject, type IrStage } from "@/lib/ir/types";
 import { lastSummarySends } from "@/lib/ir/summaries";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 export type ReportKind = PeriodKind | "custom";
 export type ReportPeriod = Period & { kind: ReportKind; label: string };
@@ -36,8 +37,8 @@ export type ReportData = {
 };
 
 const NAMED_STAGES = new Set<IrStage>(["meeting_scheduled", "meeting_held", "follow_up", "committed"]);
-const fmtDay = (ts: string) => new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
-const fmtDayYear = (ts: string) => new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+const fmtDay = (ts: string) => new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: PLATFORM_TZ });
+const fmtDayYear = (ts: string) => new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: PLATFORM_TZ });
 const plural = (n: number, s: string, p = `${s}s`) => `${n} ${n === 1 ? s : p}`;
 
 /** Resolve the requested period against the project's milestones; custom ranges are bounded by the term. */

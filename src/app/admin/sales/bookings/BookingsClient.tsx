@@ -8,6 +8,7 @@ import Link from "next/link";
 import type { Booking } from "@/lib/scheduling/bookings";
 import { SOURCE_CONFIDENCE_LABEL, isHighConfidence } from "@/lib/attribution/source";
 import type { CampaignOption } from "@/lib/attribution/resolve";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 const STATUS: Record<string, { label: string; bg: string; color: string }> = {
   confirmed: { label: "Confirmed", bg: "#E8F5F1", color: "#0F6E56" },
@@ -154,7 +155,7 @@ function BookingDetail({ b, campaigns, onUpdated }: { b: Booking; campaigns: Cam
   const lbl = { fontSize: 10, textTransform: "uppercase" as const, letterSpacing: ".04em", color: "var(--muted-foreground)", margin: "0 0 3px" };
   const isConfirmed = b.status === "confirmed";
   // Calendly shows both sides' clocks: the booking timezone + the viewer's own.
-  const localTz = typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : null;
+  const localTz = PLATFORM_TZ;
   const showLocal = !!(b.timezone && localTz && b.timezone !== localTz);
   const localTime = showLocal ? fmtRange(b.start_time, b.end_time, localTz).time : null;
 

@@ -1,5 +1,6 @@
 import type { MessageThreadListItem } from "@/lib/messaging/types";
 import { useTranslations } from "next-intl";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 function formatDate(value: string) {
   return new Date(value).toLocaleString("en-US", {
@@ -7,7 +8,7 @@ function formatDate(value: string) {
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
-    timeZone: "UTC",
+    timeZone: PLATFORM_TZ,
   });
 }
 

@@ -9,6 +9,7 @@ import { resolveSource, SOURCE_COOKIE } from "@/lib/attribution/source";
 import { fitSessionTag, heardAboutAnswer, listCampaignOptions, matchCampaignAnswer } from "@/lib/attribution/resolve";
 import { verifyFounderToken } from "@/lib/marketing/match-campaign/token";
 import { recordFounderBooking } from "@/lib/marketing/match-campaign/store";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 // Public endpoint: anyone with the link can book (guest booking). Booker
 // identity comes from the form, not a session.
@@ -16,7 +17,7 @@ const schema = z.object({
   hostId: z.string().uuid(),
   startTime: z.string().datetime({ offset: true }),
   endTime: z.string().datetime({ offset: true }),
-  timezone: z.string().min(1).max(64).default("UTC"),
+  timezone: z.string().min(1).max(64).default(PLATFORM_TZ),
   name: z.string().min(1).max(200),
   email: z.string().email(),
   phone: z.string().max(40).optional(),

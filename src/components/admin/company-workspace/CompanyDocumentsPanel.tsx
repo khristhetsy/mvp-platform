@@ -4,6 +4,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { buildCompanyReportHref, type AdminCompanyWorkspaceData } from "@/lib/admin/company-workspace-types";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 export function CompanyDocumentsPanel({
   documents,
@@ -35,7 +36,7 @@ export function CompanyDocumentsPanel({
           <p className="font-medium text-slate-900">{t("latest_diligence_report")}</p>
           <p className="mt-1 text-slate-600">
             Readiness score: {documents.latestDiligenceReport.readiness_score ?? "—"} ·{" "}
-            {new Date(documents.latestDiligenceReport.created_at).toLocaleDateString("en-US", { timeZone: "UTC" })}
+            {new Date(documents.latestDiligenceReport.created_at).toLocaleDateString("en-US", { timeZone: PLATFORM_TZ })}
           </p>
         </div>
       ) : (

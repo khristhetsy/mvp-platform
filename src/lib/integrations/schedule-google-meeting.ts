@@ -3,6 +3,7 @@ import { getValidGoogleAccessToken } from "@/lib/integrations/google-access-toke
 import { createCalendarEventWithMeet } from "@/lib/integrations/google-calendar";
 import { isGoogleOAuthConfigured } from "@/lib/integrations/google-env";
 import type { MessageThreadRecord, ThreadMeetingRecord } from "@/lib/messaging/types";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 const DEFAULT_MEETING_MINUTES = 30;
 
@@ -60,7 +61,7 @@ export async function scheduleAcceptedMeetingOnGoogle(input: {
     return { scheduled: false, reason: "missing_times" };
   }
 
-  const timezone = input.meeting.timezone?.trim() || "UTC";
+  const timezone = input.meeting.timezone?.trim() || PLATFORM_TZ;
   const endTime = resolveEndTime(startTime, input.meeting.proposed_end_time);
   const attendees = await participantEmails(input.thread.founder_id, input.thread.investor_id);
 

@@ -5,6 +5,7 @@ import { StatusBadge, severityToStatus } from "@/components/ui/StatusBadge";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { DraftEmailPanel } from "@/components/email/DraftEmailPanel";
 import { buildCompanyFilteredHref, type AdminCompanyWorkspaceData } from "@/lib/admin/company-workspace-types";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 export function CompanyCompliancePanel({
   compliance,
@@ -56,7 +57,7 @@ export function CompanyCompliancePanel({
                 <StatusBadge label={event.status} status="neutral" />
               </div>
               <p className="mt-1 text-xs text-slate-500">
-                {event.event_type} · {new Date(event.created_at).toLocaleString("en-US", { timeZone: "UTC" })}
+                {event.event_type} · {new Date(event.created_at).toLocaleString("en-US", { timeZone: PLATFORM_TZ })}
               </p>
             </li>
           ))}

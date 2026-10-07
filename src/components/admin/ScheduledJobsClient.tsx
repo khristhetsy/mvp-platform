@@ -11,6 +11,7 @@ import { CRON_GROUP_ORDER } from "@/lib/cron/jobs";
 import { ScheduledReachOutEmails } from "@/components/admin/ScheduledReachOutEmails";
 import { JobActivity } from "@/components/admin/JobActivity";
 import { JobScheduleEditor, type EditableJob } from "@/components/admin/JobScheduleEditor";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 export type JobRow = {
   path: string;
@@ -24,7 +25,7 @@ export type JobRow = {
   /** The vercel.json schedule, in words and as expressions (UTC). */
   defaultSchedule: string;
   defaultCron: string[];
-  /** Set on Scheduled jobs (Edit): custom schedule in Paris time and/or one-off next run. */
+  /** Set on Scheduled jobs (Edit): custom schedule in Pacific time and/or one-off next run. */
   custom: EditableJob["custom"];
   editable: boolean;
 };
@@ -383,7 +384,7 @@ const OUTCOME: Record<HistoryRun["outcome"], { text: string; color: string }> = 
   running: { text: "Running", color: "#5F5E5A" },
 };
 
-const WHEN = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Paris", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const WHEN = new Intl.DateTimeFormat("en-GB", { timeZone: PLATFORM_TZ, day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
 function duration(ms: number | null): string {
   if (ms === null) return "·";

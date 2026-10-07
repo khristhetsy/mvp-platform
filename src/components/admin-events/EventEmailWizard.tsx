@@ -6,6 +6,7 @@ import { buildEventEmailBlocks, finalizeEventEmailHtml, eventEmailTheme } from "
 import type { EventMergeData } from "@/lib/event-email/merge";
 import type { TemplateBlock } from "@/lib/marketing/template-blocks";
 import type { TemplateTheme } from "@/lib/marketing/template-theme";
+import { platformInputToIso } from "@/lib/time/platform-input";
 
 type PickerEvent = { id: string; title: string; slug: string; status: string; startsAt: string | null; coverUrl: string | null };
 type MergeData = {
@@ -108,7 +109,7 @@ export function EventEmailWizard({
           bodyHtml: editedHtml ?? undefined,
           audienceKind, listId, registrantStatuses: regStatuses, subject: subject.trim(),
           sendNow: scheduleMode === "send",
-          scheduleAt: scheduleMode === "later" && scheduleAt ? new Date(scheduleAt).toISOString() : null,
+          scheduleAt: scheduleMode === "later" && scheduleAt ? platformInputToIso(scheduleAt) : null,
         }),
       });
       const json = await res.json();

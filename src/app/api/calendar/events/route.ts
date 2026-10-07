@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireApiProfile } from "@/lib/api/auth";
 import { listEvents, createEvent } from "@/lib/calendar/events";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 export async function GET(req: NextRequest): Promise<Response> {
   const auth = await requireApiProfile();
@@ -25,7 +26,7 @@ const createSchema = z
     description: z.string().max(5000).nullish(),
     startTime: z.string().datetime({ offset: true }),
     endTime: z.string().datetime({ offset: true }),
-    timezone: z.string().default("UTC"),
+    timezone: z.string().default(PLATFORM_TZ),
     allDay: z.boolean().optional(),
     location: z.string().max(500).nullish(),
     attendees: z.array(attendeeSchema).max(50).optional(),

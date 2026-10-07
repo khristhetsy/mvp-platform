@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 type WatchlistRow = {
   id: string;
@@ -21,7 +22,7 @@ type CompareSlot = 0 | 1 | 2;
 function formatDate(value: string | null) {
   if (!value) return "—";
   return new Date(value).toLocaleDateString("en-US", {
-    month: "short", day: "numeric", year: "numeric", timeZone: "UTC",
+    month: "short", day: "numeric", year: "numeric", timeZone: PLATFORM_TZ,
   });
 }
 

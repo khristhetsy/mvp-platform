@@ -1,3 +1,4 @@
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 /**
  * Support business hours: Monday to Friday, 9:00 to 18:00 Pacific time.
  * Promised reply times and staff reminders are counted only inside this window,
@@ -5,7 +6,7 @@
  * is pinged at 3am. Pure functions, safe on client and server.
  */
 
-export const SUPPORT_TZ = "America/Los_Angeles";
+export const SUPPORT_TZ = PLATFORM_TZ;
 export const SUPPORT_OPEN_HOUR = 9;
 export const SUPPORT_CLOSE_HOUR = 18;
 /** One business day of reply time, in business hours. */

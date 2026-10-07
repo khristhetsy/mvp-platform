@@ -7,6 +7,7 @@
 import { QUALIFY_REQUIRED_DOCUMENTS, isQualifyDocSatisfied } from "@/lib/founder-journey/documents";
 import { absoluteUrl, button, escapeHtml, shell } from "@/lib/activity/email-templates";
 import { NOT_A_BROKER_DEALER } from "@/lib/email/layout";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 export type UploadedDoc = { document_type: string | null; created_at: string | null };
 
@@ -34,7 +35,7 @@ export function preparationDocStatus(uploads: UploadedDoc[]): DocStatus[] {
 }
 
 function day(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: PLATFORM_TZ });
 }
 
 function joinLabels(labels: string[]): string {

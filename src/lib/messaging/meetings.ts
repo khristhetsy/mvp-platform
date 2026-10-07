@@ -17,6 +17,7 @@ import {
 } from "@/lib/notifications/messaging-events";
 import type { MessageThreadRecord, ThreadMeetingRecord, ThreadMeetingStatus } from "@/lib/messaging/types";
 import type { Database } from "@/lib/supabase/types";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 export type CreateMeetingInput = {
   thread: MessageThreadRecord;
@@ -48,7 +49,7 @@ export async function createThreadMeeting(
       status: "proposed",
       proposed_start_time: input.proposedStartTime ?? null,
       proposed_end_time: input.proposedEndTime ?? null,
-      timezone: input.timezone ?? "UTC",
+      timezone: input.timezone ?? PLATFORM_TZ,
       meeting_title: title,
       meeting_notes: input.meetingNotes ?? null,
       updated_at: now,
@@ -396,7 +397,7 @@ function formatMeetingTime(meeting: {
     year: "numeric",
     hour: "numeric",
     minute: "2-digit",
-    timeZone: meeting.timezone ?? "UTC",
+    timeZone: PLATFORM_TZ,
   });
 
   if (!meeting.proposed_end_time) {
@@ -406,7 +407,7 @@ function formatMeetingTime(meeting: {
   const end = new Date(meeting.proposed_end_time).toLocaleString("en-US", {
     hour: "numeric",
     minute: "2-digit",
-    timeZone: meeting.timezone ?? "UTC",
+    timeZone: PLATFORM_TZ,
   });
 
   return `${start} – ${end}`;

@@ -1,5 +1,6 @@
 import { getRequestConfig } from "next-intl/server";
 import { cookies, headers } from "next/headers";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 const SUPPORTED_LOCALES = ["en", "es"] as const;
 type Locale = (typeof SUPPORTED_LOCALES)[number];
@@ -26,6 +27,8 @@ export default getRequestConfig(async () => {
 
   return {
     locale,
+    // One display time zone for the platform (PT).
+    timeZone: PLATFORM_TZ,
     messages: (await import(`../../messages/${locale}.json`)).default,
   };
 });

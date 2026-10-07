@@ -1,6 +1,7 @@
 import { verifyBookingToken } from "@/lib/scheduling/tokens";
 import { getBooking } from "@/lib/scheduling/bookings";
 import { CancelConfirm } from "./CancelConfirm";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Cancel booking" };
@@ -24,7 +25,7 @@ export default async function CancelBookingPage({ params }: Props) {
 
   const when = (() => {
     try {
-      return new Intl.DateTimeFormat("en-US", { timeZone: booking.timezone ?? "UTC", weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" }).format(new Date(booking.start_time));
+      return new Intl.DateTimeFormat("en-US", { timeZone: PLATFORM_TZ, weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" }).format(new Date(booking.start_time));
     } catch { return new Date(booking.start_time).toUTCString(); }
   })();
 

@@ -1,3 +1,4 @@
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 /**
  * When the next automated outreach batch goes out.
  *
@@ -50,7 +51,7 @@ export function nextOutreachRun(
  * there is one time zone across emails, notices and pages. The cron itself
  * still runs on UTC hours above; only the display is converted.
  */
-export const OUTREACH_DISPLAY_TZ = "America/Los_Angeles";
+export const OUTREACH_DISPLAY_TZ = PLATFORM_TZ;
 
 /** "12:00 PM PT" */
 export function formatRunClock(at: Date): string {
