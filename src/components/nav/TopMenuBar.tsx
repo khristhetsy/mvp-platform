@@ -60,7 +60,7 @@ export function tileIcon(app: TopMenuApp): LucideIcon {
 
 export const TILE_COLORS: Array<[string, string]> = [
   ["#E6F1FB", "#0C447C"], ["#E8F0FD", "#1A6CE4"], ["#FAEEDA", "#633806"], ["#EAF3DE", "#27500A"],
-  ["#FBEAF0", "#72243E"], ["#EEEDFE", "#3C3489"], ["#FAECE7", "#712B13"], ["#F1EFE8", "#444441"],
+  ["#FBEAF0", "#72243E"], ["#EEEDFE", "#3730A3"], ["#FAECE7", "#712B13"], ["#F1EFE8", "#444441"],
 ];
 
 const MORE_WIDTH = 76;
