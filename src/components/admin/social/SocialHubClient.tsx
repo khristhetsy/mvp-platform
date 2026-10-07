@@ -14,6 +14,7 @@ import { AlertRules } from "./AlertRules";
 import { AttributionPeriods } from "./AttributionPeriods";
 import { AiCmo } from "./AiCmo";
 import { Accounts } from "./Accounts";
+import { RedditReply } from "./RedditReply";
 
 const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -70,6 +71,7 @@ export function SocialHubClient({ accounts, queue, settings: settings0, slots: s
   /** Deep links (?tab=library&campaign=…&since=…) — how Campaigns & Goals opens a stage or campaign in a new tab. */
   initialTab?: string; libraryCampaign?: string | null; librarySince?: string | null;
 }) {
+  const [composeMode, setComposeMode] = useState<"post" | "reddit">("post");
   const [tab, setTab] = useState<Tab>(() => (TAB_ORDER as string[]).includes(initialTab ?? "") ? (initialTab as Tab) : "overview");
   const [goalsFocus, setGoalsFocus] = useState<{ campaignId?: string; stage?: string } | null>(null);
   const failed24 = queue.filter((q) => q.status === "failed").length;
@@ -89,7 +91,18 @@ export function SocialHubClient({ accounts, queue, settings: settings0, slots: s
       <div className="mt-5">
         {tab === "overview" ? <Overview failedCount={failed24} topPostBody={topPostBody} onNavigate={navigate} /> : null}
         {tab === "goals" ? <CampaignsGoals focus={goalsFocus} /> : null}
-        {tab === "composer" ? <Composer accounts={accounts} googleReady={googleReady} /> : null}
+        {tab === "composer" ? (
+          <div>
+            <div className="mb-4 inline-flex rounded-lg border border-slate-200 p-0.5">
+              {([["post", "Post", "ti-send"], ["reddit", "Reddit reply", "ti-brand-reddit"]] as const).map(([k, label, icon]) => (
+                <button type="button" key={k} onClick={() => setComposeMode(k)} className={`rounded-md px-3 py-1.5 text-[12.5px] font-medium ${composeMode === k ? "bg-indigo-50 text-indigo-700" : "text-slate-500 hover:text-slate-700"}`}>
+                  <i className={`ti ${icon}`} aria-hidden="true" /> {label}
+                </button>
+              ))}
+            </div>
+            {composeMode === "reddit" ? <RedditReply /> : <Composer accounts={accounts} googleReady={googleReady} />}
+          </div>
+        ) : null}
         {tab === "schedule" ? <Schedule queue={queue} accounts={accounts} slots={slots0} googleReady={googleReady} onAddPost={() => setTab("composer")} /> : null}
         {tab === "library" ? <Library campaignId={libraryCampaign} publishedSince={librarySince} /> : null}
         {tab === "attribution" ? (
@@ -1078,8 +1091,8 @@ function Rules({ settings0, slots0 }: { settings0: SocialSettings; slots0: Socia
 
 
 function Attribution({ data }: { data: WeekBar[] }) {
-  const max = Math.max(1, ...data.map((d) => d.linkedin + d.email + d.website + d.other));
-  const legend: [string, string][] = [["LinkedIn", "#4338CA"], ["Email", "#185FA5"], ["Website", "#F59E0B"], ["Other", "#CBD5E1"]];
+  const max = Math.max(1, ...data.map((d) => d.linkedin + d.email + d.website + (d.reddit ?? 0) + d.other));
+  const legend: [string, string][] = [["LinkedIn", "#4338CA"], ["Email", "#185FA5"], ["Website", "#F59E0B"], ["Reddit", "#E2583E"], ["Other", "#CBD5E1"]];
   return (
     <div className="max-w-2xl">
       <p className="text-[13px] font-medium text-slate-700">Leads captured by source · 8 weeks</p>
@@ -1090,6 +1103,7 @@ function Attribution({ data }: { data: WeekBar[] }) {
               <div style={{ height: `${(d.linkedin / max) * 150}px`, background: "#4338CA" }} />
               <div style={{ height: `${(d.email / max) * 150}px`, background: "#185FA5" }} />
               <div style={{ height: `${(d.website / max) * 150}px`, background: "#F59E0B" }} />
+              <div style={{ height: `${((d.reddit ?? 0) / max) * 150}px`, background: "#E2583E" }} />
               <div style={{ height: `${(d.other / max) * 150}px`, background: "#CBD5E1" }} />
             </div>
             <span className="text-[10px] text-slate-400">{d.week}</span>
@@ -1099,7 +1113,7 @@ function Attribution({ data }: { data: WeekBar[] }) {
       <div className="mt-3 flex gap-4">
         {legend.map(([label, color]) => <span key={label} className="flex items-center gap-1.5 text-[11px] text-slate-500"><span className="h-2.5 w-2.5 rounded-sm" style={{ background: color }} />{label}</span>)}
       </div>
-      <p className="mt-2 text-[11.5px] text-slate-400">Sourced from funnel leads by attribution tag (li-/em-/web-). Posts rank by in-range founders, never impressions.</p>
+      <p className="mt-2 text-[11.5px] text-slate-400">Sourced from funnel leads by attribution tag (li-/em-/web-/rd_). Posts rank by in-range founders, never impressions.</p>
     </div>
   );
 }
