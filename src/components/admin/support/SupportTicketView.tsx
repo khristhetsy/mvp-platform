@@ -707,10 +707,10 @@ function MessageBubble({ m, who }: { m: Message; who: string }) {
   }
   const staff = m.author_role === "staff";
   return (
-    <div className={`max-w-[85%] rounded-xl px-3 py-2 ${staff ? "ml-auto bg-indigo-600 text-white" : "bg-slate-100 text-slate-800"}`}>
+    <div className={`max-w-[85%] rounded-xl px-3 py-2 ${staff ? "ml-auto border border-indigo-100 bg-indigo-50 text-slate-800" : "bg-slate-100 text-slate-800"}`}>
       <p className="whitespace-pre-wrap text-[13px] leading-snug">{m.body}</p>
-      <SupportAttachments messageId={m.id} files={files} onDark={staff} />
-      <p className={`mt-1 text-[10px] ${staff ? "text-indigo-200" : "text-slate-400"}`}>
+      <SupportAttachments messageId={m.id} files={files} />
+      <p className={`mt-1 text-[10px] ${staff ? "text-indigo-400" : "text-slate-400"}`}>
         {who} · {short(m.created_at)}
       </p>
     </div>
