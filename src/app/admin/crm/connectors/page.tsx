@@ -32,7 +32,7 @@ export default async function CrmConnectorsPage() {
               <ConnectorsPanel />
               <div className="mt-4 rounded-2xl border border-slate-200/80 bg-white p-4 text-sm shadow-[var(--shadow-panel)]">
                 <a href="/admin/marketing/prospects" className="font-semibold text-[#1A6CE4] hover:underline">Prospects pipeline →</a>
-                <span className="ml-2 text-slate-600">Import, verify, score, build the list &amp; export — now in the Marketing Hub.</span>
+                <span className="ml-2 text-slate-600">Import, verify, score, build the list &amp; export — now in Marketing.</span>
               </div>
               {profile.role === "admin" && <div className="mt-4"><SyncCrmToMarketing /></div>}
             </>

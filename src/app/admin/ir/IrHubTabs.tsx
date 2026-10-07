@@ -42,7 +42,7 @@ export function IrBackButton() {
 }
 
 /** back={false} leaves out "← Back" for a page that draws its own (the matching queue puts its week pager beside it). */
-export function IrHubHeader({ title = "Investor Relations Hub", back = true }: { title?: string; back?: boolean }) {
+export function IrHubHeader({ title = "Investor Relations", back = true }: { title?: string; back?: boolean }) {
   const chrome = useAdminChrome();
   const pathname = usePathname() ?? "";
   if (chrome === "compact") return back ? <IrBackButton /> : null;

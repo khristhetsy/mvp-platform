@@ -106,7 +106,7 @@ export function MergeContactsDialog({ ids, onClose, onMerged }: { ids: string[];
               <div style={{ marginTop: 14, background: "#F8FAFD", border: "0.5px solid #e2e6ed", borderRadius: 8, padding: "9px 12px", fontSize: 12, color: "var(--muted-foreground)", display: "flex", gap: 8 }}>
                 <i className="ti ti-arrows-exchange" style={{ fontSize: 15, marginTop: 1 }} aria-hidden="true" />
                 <span>
-                  Moves to the kept contact: {plural(moves.irMatches, "IR match", "IR matches")}, {plural(moves.lists, "marketing contact")}, {plural(moves.projects, "IR project")}. Lead assignees are combined.
+                  Moves to the kept contact: {plural(moves.irMatches, "Investor Relations match", "Investor Relations matches")}, {plural(moves.lists, "marketing contact")}, {plural(moves.projects, "Investor Relations project")}. Lead assignees are combined.
                   {" "}{others.length === 1 ? "The other record is removed." : `The other ${others.length} records are removed.`} You can undo this right after.
                 </span>
               </div>

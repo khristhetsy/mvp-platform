@@ -35,7 +35,7 @@ function F({ label, children }: { label: string; children: React.ReactNode }) {
 const dash = (v: string | null | undefined) => (v ? v : <span className="text-slate-400">—</span>);
 
 function IrList({ matches, matchId }: { matches: Detail["matches"]; matchId?: string | null }) {
-  if (matches.length === 0) return <p className="text-slate-500">Not on any IR project yet.</p>;
+  if (matches.length === 0) return <p className="text-slate-500">Not on any Investor Relations project yet.</p>;
   return (
     <ul className="divide-y divide-slate-100">
       {matches.map((m) => (
@@ -89,7 +89,7 @@ export function InvestorContactDialog({ contactId, onClose, matchId }: { contact
         </div>
         <div className="overflow-y-auto px-5 py-4">
           {editing && d ? (
-            <InlineContactEditor contactId={contactId} irLabel={`IR projects · ${d.matches.length}`} irTab={<IrList matches={d.matches} matchId={matchId} />} />
+            <InlineContactEditor contactId={contactId} irLabel={`Investor Relations projects · ${d.matches.length}`} irTab={<IrList matches={d.matches} matchId={matchId} />} />
           ) : err ? <p className="text-rose-600">{err}</p> : !d || !c ? <p className="text-slate-400">Loading…</p> : (
             <>
               <div className="flex items-start gap-4">
@@ -116,7 +116,7 @@ export function InvestorContactDialog({ contactId, onClose, matchId }: { contact
                 </div>
               </div>
               <div className="mt-4 flex flex-wrap border-b border-slate-200" role="tablist">
-                {([["address", "Contact & address"], ["profile", "Investor profile"], ["ir", `IR projects · ${d.matches.length}`]] as const).map(([k, l]) => (
+                {([["address", "Contact & address"], ["profile", "Investor profile"], ["ir", `Investor Relations projects · ${d.matches.length}`]] as const).map(([k, l]) => (
                   <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={`-mb-px rounded-t-lg border px-3 py-2 ${tab === k ? "border-slate-200 border-b-white bg-white font-semibold text-slate-900" : "border-transparent text-slate-500 hover:text-slate-800"}`}>{l}</button>
                 ))}
               </div>
@@ -137,8 +137,8 @@ export function InvestorContactDialog({ contactId, onClose, matchId }: { contact
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 px-5 py-3">
-          {matchId ? <Link href={`/admin/ir/matches/${matchId}`} className="rounded-lg bg-indigo-600 px-3.5 py-1.5 text-[12.5px] font-semibold text-white hover:bg-indigo-700">Open IR record</Link> : null}
-          <Link href={`/admin/sales/contacts/${contactId}`} className="rounded-lg border border-slate-200 px-3 py-1.5 text-[12.5px] text-slate-700 hover:bg-slate-50">Edit in Sales Hub</Link>
+          {matchId ? <Link href={`/admin/ir/matches/${matchId}`} className="rounded-lg bg-indigo-600 px-3.5 py-1.5 text-[12.5px] font-semibold text-white hover:bg-indigo-700">Open Investor Relations record</Link> : null}
+          <Link href={`/admin/sales/contacts/${contactId}`} className="rounded-lg border border-slate-200 px-3 py-1.5 text-[12.5px] text-slate-700 hover:bg-slate-50">Edit in Sales</Link>
           <button type="button" onClick={onClose} className="ml-auto rounded-lg border border-slate-200 px-3 py-1.5 text-[12.5px] text-slate-600 hover:bg-slate-50">Close</button>
         </div>
       </div>

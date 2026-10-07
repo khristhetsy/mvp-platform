@@ -115,14 +115,14 @@ export function EntrepreneurTab({ e, onSaved }: { e: EntrepreneurProfile | null;
           ))}
           <p className="mt-3 text-[11.5px] text-slate-400">
             {contactId ? "Click any field to edit it. Changes save to the founder's " : o.hasQuestionnaire ? "From the founder's Odoo contact" : "The founder hasn't filled in the Odoo entrepreneur questionnaire"}
-            {contactId ? <Link href={`/admin/sales/contacts/${contactId}`} className="text-indigo-700 hover:underline">Sales Hub contact</Link> : null}
+            {contactId ? <Link href={`/admin/sales/contacts/${contactId}`} className="text-indigo-700 hover:underline">Sales contact</Link> : null}
             {e.syncedAt ? `${contactId ? "; Odoo" : ","} synced ${new Date(e.syncedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}` : ""}.
           </p>
         </>
       ) : null}
       <div className="mt-2 flex gap-4">
         {e.companyId ? <Link href={`/admin/companies/${e.companyId}`} className="text-indigo-700 hover:underline">Open company →</Link> : null}
-        {e.founderContactId && !o ? <Link href={`/admin/sales/contacts/${e.founderContactId}`} className="text-indigo-700 hover:underline">Founder in Sales Hub →</Link> : null}
+        {e.founderContactId && !o ? <Link href={`/admin/sales/contacts/${e.founderContactId}`} className="text-indigo-700 hover:underline">Founder in Sales →</Link> : null}
       </div>
     </div>
   );

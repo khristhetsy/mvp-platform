@@ -416,15 +416,15 @@ export function EventEmailWizard({
               {result.status === "sent" ? (
                 <>
                   <p className="font-semibold">Email sent{typeof result.sent === "number" ? ` — ${result.sent} delivered${result.failed ? `, ${result.failed} failed` : ""}` : ""}.</p>
-                  <p className="mt-1">The send ran through the Marketing Hub pipeline. Open it to see per-recipient delivery.</p>
+                  <p className="mt-1">The send ran through Marketing pipeline. Open it to see per-recipient delivery.</p>
                 </>
               ) : (
                 <>
                   <p className="font-semibold">Campaign created ({result.status}).</p>
-                  <p className="mt-1">It&apos;s in Marketing Hub with the rendered email, audience, and event linkage — ready to review and send.</p>
+                  <p className="mt-1">It&apos;s in Marketing with the rendered email, audience, and event linkage — ready to review and send.</p>
                 </>
               )}
-              <a href="/admin/marketing/campaigns" className="mt-3 inline-block font-semibold underline">Open in Marketing Hub →</a>
+              <a href="/admin/marketing/campaigns" className="mt-3 inline-block font-semibold underline">Open in Marketing →</a>
             </div>
           ) : (
             <div className="mt-4 space-y-4">
@@ -476,7 +476,7 @@ export function EventEmailWizard({
               <button type="button" onClick={createCampaign} disabled={creating || !subject.trim() || (audienceKind === "list" && !listId) || (audienceKind === "registrants" && regStatuses.length === 0) || (scheduleMode === "later" && !scheduleAt)} className="cap-btn-primary rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50">
                 {creating ? (scheduleMode === "send" ? "Sending…" : "Creating…") : scheduleMode === "send" ? "Send now" : scheduleMode === "later" ? "Schedule campaign" : "Create draft campaign"}
               </button>
-              <p className="text-[11px] text-[var(--text-muted)]">The compliance footer is locked into the email. Sending happens through the Marketing Hub pipeline; you can also save a draft and send it there.</p>
+              <p className="text-[11px] text-[var(--text-muted)]">The compliance footer is locked into the email. Sending happens through Marketing pipeline; you can also save a draft and send it there.</p>
             </div>
           )}
         </div>

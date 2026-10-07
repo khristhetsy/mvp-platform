@@ -28,7 +28,7 @@ const STATUS_MAP: Record<TaskStatus, { bg: string; color: string; label: string 
 
 const DEPT_MAP: Record<TaskCategory, { bg: string; color: string; dot: string; label: string }> = {
   marketing: { bg: "#EEEDFE", color: "#1A6CE4", dot: "#2E78F5", label: "Marketing"  },
-  ir_dept:   { bg: "#E6F1FB", color: "#0C447C", dot: "#185FA5", label: "IR Dept"    },
+  ir_dept:   { bg: "#E6F1FB", color: "#0C447C", dot: "#185FA5", label: "Investor Relations Dept"    },
   admin_dept:{ bg: "#F1EFE8", color: "#444441", dot: "#5F5E5A", label: "Admin Dept" },
   sales_dept:{ bg: "#E1F5EE", color: "#085041", dot: "#0F6E56", label: "Sales Dept" },
 };

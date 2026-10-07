@@ -118,7 +118,7 @@ describe("labels", () => {
     expect(emailResult({ status: "sent" }).text).toBe("Sent");
   });
   it("names sources in plain words", () => {
-    expect(sourceLabel("ir-report-copy")).toBe("IR report copy (Email me)");
+    expect(sourceLabel("ir-report-copy")).toBe("Investor Relations report copy (Email me)");
     expect(sourceLabel("job:/api/cron/stage-gate-reminders")).toBe("Scheduled · Stage gate reminders");
     expect(sourceLabel("api/admin/ir/projects/[id]/report")).toBe("Projects · Report");
     expect(sourceLabel("matching_intro_outcome")).toBe("Matching intro outcome");

@@ -4,14 +4,14 @@ import { IrHubHeader } from "../../../IrHubTabs";
 import { TasksClient } from "./TasksClient";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "IR Tasks" };
+export const metadata = { title: "Investor Relations Tasks" };
 
 export default async function IrTasksPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ month?: string }> }) {
   const profile = await requireRole(["admin", "analyst"]);
   const { id } = await params;
   const sp = await searchParams;
   return (
-    <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle="Investor Relations Hub">
+    <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle="Investor Relations">
       <IrHubHeader />
       <TasksClient projectId={id} meId={profile.id} initialMonth={sp.month ?? null} />
     </AppShell>

@@ -10,7 +10,7 @@ export default async function IrMatchPage({ params }: { params: Promise<{ id: st
   const profile = await requireRole(["admin", "analyst"]);
   const { id } = await params;
   return (
-    <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle="Investor Relations Hub">
+    <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle="Investor Relations">
       <IrHubHeader />
       <MatchClient matchId={id} meId={profile.id} />
     </AppShell>

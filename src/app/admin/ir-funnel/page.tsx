@@ -15,7 +15,7 @@ export default async function IrFunnelPage() {
 
   return (
     <div style={{ padding: "20px 24px", maxWidth: 820 }}>
-      <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase", color: "#0F6E56" }}>Operate · IR funnel</p>
+      <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase", color: "#0F6E56" }}>Operate · Investor Relations funnel</p>
       <h1 style={{ fontSize: 22, fontWeight: 600, color: "#0A1A40", margin: "6px 0 2px" }}>Input metrics — last {report.days} days</h1>
       <p style={{ fontSize: 12.5, color: "#5F5E5A", margin: "0 0 18px" }}>
         Counts per funnel step and step-to-step conversion. These are the metrics to review weekly — signups and revenue lag them.

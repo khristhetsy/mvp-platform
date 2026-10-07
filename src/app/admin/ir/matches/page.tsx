@@ -10,7 +10,7 @@ export default async function IrMatchesPage({ searchParams }: { searchParams: Pr
   const profile = await requireRole(["admin", "analyst"]);
   const { project } = await searchParams;
   return (
-    <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle="Investor Relations Hub">
+    <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle="Investor Relations">
       <IrHubHeader />
       <MatchesListClient initialProject={project ?? ""} />
     </AppShell>

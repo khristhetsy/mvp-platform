@@ -34,7 +34,7 @@ export function IrLifecycleCard({
       title={mode === "investor" ? "Investor journey" : "Founder journey"}
       stages={stages}
       accent={ACCENT}
-      askLabel="IR AI"
+      askLabel="Investor Relations AI"
       headerRight={toggle}
     />
   );

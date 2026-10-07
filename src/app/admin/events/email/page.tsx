@@ -25,7 +25,7 @@ export default async function EventEmailPage({
         <h1 className="text-xl font-semibold text-[var(--navy)]">Event Template — Email</h1>
         <p className="mt-1 text-sm text-[var(--text-muted)]">
           Turn a published event into a branded email: pick the event, review the auto-pulled data, and preview. Uses the
-          existing Marketing Hub send pipeline.
+          existing Marketing send pipeline.
         </p>
         <div className="mt-6">
           <EventEmailWizard initialEventId={eventId} initialType={emailType} bookletEditionId={bookletEditionId} />

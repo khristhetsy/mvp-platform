@@ -11,7 +11,7 @@ import { isClaudeConfigured } from "@/lib/claude";
 import { MarketingHub } from "@/components/admin-events/MarketingHub";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Marketing Hub" };
+export const metadata = { title: "Marketing" };
 
 export default async function AdminEventMarketingPage({ params }: { params: Promise<{ id: string }> }) {
   const t = await getTranslations("adminPages");

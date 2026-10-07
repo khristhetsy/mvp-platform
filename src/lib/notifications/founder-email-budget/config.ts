@@ -99,7 +99,7 @@ export const JOB_DELIVERY: Array<{ path: string; name: string; tier: JobTier; no
   { path: "/api/cron/intro-follow-ups", name: "Intro follow ups", tier: "digest", note: "Founder side held; investor side unchanged" },
   { path: "/api/cron/activity-escalations", name: "Activity escalations", tier: "digest", note: "Founder emails held for the digest" },
   { path: "/api/cron/founder-match-digest", name: "Weekly match email", tier: "weekly", note: "Unchanged, except founders on instant alerts only" },
-  { path: "/api/cron/ir-sequences", name: "IR auto sequences", tier: "none", note: "Investors only, no change" },
+  { path: "/api/cron/ir-sequences", name: "Investor Relations auto sequences", tier: "none", note: "Investors only, no change" },
 ];
 
 const DIGEST_PATHS = new Set(JOB_DELIVERY.filter((j) => j.tier === "digest").map((j) => j.path));

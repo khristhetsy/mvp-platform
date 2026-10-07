@@ -275,7 +275,7 @@ export function InlineContactEditor({ contactId, irTab, irLabel }: { contactId: 
       </div>
 
       <div className="mt-3 flex flex-wrap border-b border-slate-200" role="tablist">
-        {([["address", "Contact and address"], ["profile", isFounder ? "Founder profile" : "Investor profile"], ["about", "About and social"], ...(irTab ? [["ir", irLabel ?? "IR projects"]] : [])] as Array<[typeof tab, string]>).map(([k, l]) => (
+        {([["address", "Contact and address"], ["profile", isFounder ? "Founder profile" : "Investor profile"], ["about", "About and social"], ...(irTab ? [["ir", irLabel ?? "Investor Relations projects"]] : [])] as Array<[typeof tab, string]>).map(([k, l]) => (
           <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={`-mb-px rounded-t-lg border px-3 py-2 text-[13px] ${tab === k ? "border-slate-200 border-b-white bg-white font-semibold text-slate-900" : "border-transparent text-slate-500 hover:text-slate-800"}`}>{l}</button>
         ))}
       </div>

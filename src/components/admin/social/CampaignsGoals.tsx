@@ -101,7 +101,7 @@ export function CampaignsGoals({ focus }: { focus?: { campaignId?: string; stage
     finally { setRowBusy(false); }
   }
   async function archiveCampaign(id: string, name: string) {
-    if (!confirm(`Archive "${name}"? It's hidden from the Hub but keeps its posts, goals and history. You can unarchive later.`)) return;
+    if (!confirm(`Archive "${name}"? It's hidden from Social Media but keeps its posts, goals and history. You can unarchive later.`)) return;
     setRowBusy(true);
     try { await fetch("/api/admin/social/campaigns", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, archived: true }) }); await load(); }
     finally { setRowBusy(false); }

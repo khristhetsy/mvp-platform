@@ -23,7 +23,7 @@ export default async function MarketingConsolePage() {
         <p style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".16em", color: "#2E78F5", margin: 0 }}>{t("mktConsole")}</p>
         <h1 style={{ fontSize: 24, fontWeight: 600, color: "#0f2147", margin: "6px 0 4px", letterSpacing: "-0.01em" }}>{t("marketingConsoleTitle")}</h1>
         <p style={{ fontSize: 13, color: "#5f5e5a", margin: 0, maxWidth: 680 }}>
-          The eleven-module marketing loop in operating order — Open, then Core, then Close — each card linking to the hub surface where the work happens. Compliance gates are marked; steps and cadence are editable inline by admins.
+          The eleven-module marketing loop in operating order — Open, then Core, then Close — each card linking to the page where the work happens. Compliance gates are marked; steps and cadence are editable inline by admins.
         </p>
       </div>
       <PlaybookConsole initial={assembled} isAdmin={isAdmin} endpoints={MARKETING_ENDPOINTS} />

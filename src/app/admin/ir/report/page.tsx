@@ -9,7 +9,7 @@ export const metadata = { title: "Founder report" };
 export default async function IrReportsPage() {
   const profile = await requireRole(["admin", "analyst"]);
   return (
-    <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle="Investor Relations Hub">
+    <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle="Investor Relations">
       <IrHubHeader />
       <ReportsLandingClient />
     </AppShell>

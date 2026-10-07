@@ -46,7 +46,7 @@ export default async function RegistrationPage({
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle="Registration">
       <WorkspacePageContainer>
         <PageHeader
-          eyebrow="Event Hub"
+          eyebrow="Events"
           title="Registration"
           description="Everyone who has registered, and the questions they were asked."
         />

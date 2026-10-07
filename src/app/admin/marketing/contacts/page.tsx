@@ -17,7 +17,7 @@ export default async function MarketingContactsPage() {
         <div>
           <h1 style={{ fontSize: 18, fontWeight: 500, margin: "0 0 4px" }}>Contacts</h1>
           <p style={{ fontSize: 12, color: "#5f5e5a", margin: 0, display: "inline-flex", alignItems: "center", gap: 6 }}>
-            <i className="ti ti-link" aria-hidden="true" /> One universal list shared across Sales, IR &amp; Marketing — you see only your Lead-assigned contacts (admins see all).
+            <i className="ti ti-link" aria-hidden="true" /> One universal list shared across Sales, Investor Relations &amp; Marketing — you see only your Lead-assigned contacts (admins see all).
           </p>
         </div>
         {isSuperAdmin(profile) ? <BackfillInvestorTypeButton /> : null}

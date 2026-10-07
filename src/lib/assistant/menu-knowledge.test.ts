@@ -97,7 +97,7 @@ describe("page → assistant mode", () => {
     expect(inferAssistantMode({ role, currentPath: path })).toBe(mode);
   });
 
-  it("does not treat /admin/ir-funnel as the IR Hub", () => {
+  it("does not treat /admin/ir-funnel as Investor Relations", () => {
     expect(inferAssistantMode({ role: "admin", currentPath: "/admin/ir-funnel" })).toBe("admin_operations");
   });
 });

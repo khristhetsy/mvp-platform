@@ -10,7 +10,7 @@ import { isGoogleCalendarConfigured } from "@/lib/integrations/google-calendar";
 import { SocialHubClient } from "@/components/admin/social/SocialHubClient";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Social Media Hub" };
+export const metadata = { title: "Social Media" };
 
 type Notice = { tone: "ok" | "warn"; text: string };
 
@@ -50,9 +50,9 @@ export default async function AdminSocialPage({ searchParams }: { searchParams: 
   ]);
 
   return (
-    <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle="Social Media Hub">
+    <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle="Social Media">
       <div className="mx-auto max-w-4xl px-4 py-6">
-        <h1 className="text-xl font-semibold text-[var(--text-primary)]">Social Media Hub</h1>
+        <h1 className="text-xl font-semibold text-[var(--text-primary)]">Social Media</h1>
         <p className="mt-1 text-sm text-[var(--text-muted)]">Compose, schedule on a calendar, and publish. The queue runs every 5 minutes; scheduled posts go out at their time and the tagged link posts as the first comment.</p>
 
         {notice ? (

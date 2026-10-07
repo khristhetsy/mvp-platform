@@ -115,7 +115,7 @@ export default async function OperationsHubPage() {
     >
       <div style={{ marginBottom: 14 }}>
         <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.14em", textTransform: "uppercase", color: "#4338CA" }}>Admin Workspace</p>
-        <h1 style={{ marginTop: 6, fontSize: 26, fontWeight: 600, letterSpacing: "-0.01em", color: "var(--foreground)" }}>Operations hub</h1>
+        <h1 style={{ marginTop: 6, fontSize: 26, fontWeight: 600, letterSpacing: "-0.01em", color: "var(--foreground)" }}>Operations</h1>
       </div>
       <OpsHubTabs />
       <p style={{ margin: "0 0 20px", maxWidth: 640, fontSize: 13, lineHeight: 1.6, color: "var(--muted-foreground)" }}>
@@ -124,7 +124,7 @@ export default async function OperationsHubPage() {
 
       {investorStages.length > 0 && (
         <div style={{ marginBottom: 16 }}>
-          <LifecycleStepper title="Investor pipeline" stages={investorStages} accent="#4338CA" askLabel="IR AI" />
+          <LifecycleStepper title="Investor pipeline" stages={investorStages} accent="#4338CA" askLabel="Investor Relations AI" />
         </div>
       )}
 

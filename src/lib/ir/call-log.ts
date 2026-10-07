@@ -62,7 +62,7 @@ export async function logIrCall(input: {
 
     const kind = callActivityFor(input.outcome);
     const label = kind.label.charAt(0).toUpperCase() + kind.label.slice(1);
-    const outcome = [label, input.duration?.trim() || null, input.notes?.trim() ? `"${input.notes.trim()}"` : null, input.source === "voice" ? "Voice Hub" : null].filter(Boolean).join(" · ");
+    const outcome = [label, input.duration?.trim() || null, input.notes?.trim() ? `"${input.notes.trim()}"` : null, input.source === "voice" ? "Voice" : null].filter(Boolean).join(" · ");
     await createActivity({
       projectId: match.project_id, matchId: match.id, taskId: match.task_id,
       type: kind.type, subject: kind.type === "voicemail" ? "Left voicemail" : "Call", outcome: outcome.slice(0, 2000),

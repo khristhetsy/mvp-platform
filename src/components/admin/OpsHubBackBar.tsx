@@ -49,7 +49,7 @@ export function OpsHubBackBar() {
         href="/admin/playbook"
         style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 8, padding: "6px 12px", textDecoration: "none" }}
       >
-        ← Back to Investor Relations Hub
+        ← Back to Investor Relations
       </Link>
     </div>
   );

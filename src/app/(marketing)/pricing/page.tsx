@@ -42,7 +42,7 @@ export default async function PricingPage() {
           {/* Price anchor — the alternative cost of outreach (brief Step 5). Figures from data/price-anchor.json; omitted until populated; no competitor names. */}
           {anchor ? (
             <p className="mx-auto mt-6 max-w-2xl text-[13px] leading-6 text-white/55">
-              For comparison, a dedicated IR retainer runs {anchor.ir_retainer}, a purchased investor list {anchor.list_purchase}, and a placement agent typically takes {anchor.placement_pct} of the round.
+              For comparison, a dedicated Investor Relations retainer runs {anchor.ir_retainer}, a purchased investor list {anchor.list_purchase}, and a placement agent typically takes {anchor.placement_pct} of the round.
             </p>
           ) : null}
         </div>

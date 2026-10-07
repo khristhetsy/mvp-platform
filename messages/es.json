@@ -291,7 +291,7 @@
   },
   "eventsAdmin": {
     "marketing": {
-      "title": "Centro de marketing",
+      "title": "Marketing",
       "descPre": "Redacta, edita y guarda el kit de marketing de ",
       "descPost": ". El SEO se aplica automáticamente a la página pública del evento.",
       "unsaved": "Cambios sin guardar",
@@ -352,7 +352,7 @@
     "manage": {
       "allEvents": "Todos los eventos",
       "liveControlCenter": "Centro de control en vivo",
-      "marketingHub": "Centro de marketing",
+      "marketingHub": "Marketing",
       "leads": "Prospectos",
       "viewPublic": "Ver página pública",
       "noSectorTracks": "sin tracks de sector",
@@ -1166,7 +1166,7 @@
     "latestEvents": "Últimos eventos",
     "liveControlCenter": "Centro de control en vivo",
     "manageEvent": "Gestionar evento",
-    "marketingHub": "Centro de marketing",
+    "marketingHub": "Marketing",
     "marketplaceConversionFunnel": "Embudo de conversión del marketplace",
     "mediumRisks": "Riesgos medios",
     "meet": "Meet",
@@ -1489,7 +1489,7 @@
     "open_tool": "Abrir herramienta",
     "opportunity_pipeline_watchlist_expressed_inter": "Pipeline de oportunidades, lista de seguimiento, interés expresado y actividad de relaciones.",
     "outreach_crm": "Contacto y CRM",
-    "outreach_hub": "Centro de contacto",
+    "outreach_hub": "Contacto",
     "outreach_tools": "Herramientas de contacto",
     "overall_progress": "Progreso general",
     "overview": "Resumen",

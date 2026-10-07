@@ -125,7 +125,7 @@ export default async function BrowseCoursesPage({ searchParams }: PageProps) {
 
           <div className="mb-6">
             <Link href="/founder/learning" className="text-sm text-indigo-600 hover:underline">
-              ← Learning hub
+              ← Learning
             </Link>
           </div>
 

@@ -66,7 +66,7 @@ export async function bookMeeting(i: BookInput): Promise<BookResult> {
   if (openMeeting(acts)) throw new Error("A meeting is already booked on this record — reschedule or cancel it first.");
   const title = `${project.title} × ${label(inv)} — intro`;
   const m = await createMeeting(i, title, inv, i.note);
-  let warning: string | null = inv.email ? null : "The investor has no email in Sales Hub, so no calendar invite or confirmation was sent. Add the email on the contact and reschedule to invite them.";
+  let warning: string | null = inv.email ? null : "The investor has no email in Sales, so no calendar invite or confirmation was sent. Add the email on the contact and reschedule to invite them.";
   if (i.notify && inv.email) {
     await sendBookingEmails({ bookingId: m.bookingId, hostEmail: m.hostEmail, hostName: m.hostName, bookerEmail: inv.email, bookerName: inv.name, title, startTime: m.startTime, endTime: m.endTime, timezone: i.timezone, meetUrl: m.meetUrl }).catch(() => { warning = "Booked, but the confirmation email could not be sent."; });
   }
@@ -90,7 +90,7 @@ export async function rescheduleMeeting(i: BookInput): Promise<BookResult> {
   const m = await createMeeting(i, title, inv, i.note ?? null);
   if (match.meeting_booking_id) await cancelBookingById(match.meeting_booking_id, { notify: false }).catch(() => {});
   else if (current.calendar_event_id) await cancelEvent(admin(), current.assignee_id ?? i.hostId, current.calendar_event_id).catch(() => {});
-  let warning: string | null = inv.email ? null : "Rescheduled, but the investor has no email in Sales Hub, so no invite was sent.";
+  let warning: string | null = inv.email ? null : "Rescheduled, but the investor has no email in Sales, so no invite was sent.";
   if (i.notify && inv.email) await sendBookingEmails({ bookingId: m.bookingId, hostEmail: m.hostEmail, hostName: m.hostName, bookerEmail: inv.email, bookerName: inv.name, title, startTime: m.startTime, endTime: m.endTime, timezone: i.timezone, meetUrl: m.meetUrl }).catch(() => { warning = "Rescheduled, but the confirmation email could not be sent."; });
   await updateActivity(current.id, { due_at: m.startTime, description: m.meetUrl ? `Google Meet: ${m.meetUrl}` : null, assignee_id: i.hostId });
   await db().from("ir_activities").update({ calendar_event_id: m.eventId }).eq("id", current.id);

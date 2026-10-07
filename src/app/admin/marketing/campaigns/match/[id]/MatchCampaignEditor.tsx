@@ -135,7 +135,7 @@ export function MatchCampaignEditor({
   return (
     <div className="mx-auto max-w-5xl">
       <div className="mb-1 text-[12px] text-[#8A94A8]">
-        <Link href="/admin/marketing/campaigns" className="hover:underline">Marketing Hub › Campaigns</Link> › {campaign ? campaign.name : "New Match campaign"}
+        <Link href="/admin/marketing/campaigns" className="hover:underline">Marketing › Campaigns</Link> › {campaign ? campaign.name : "New Match campaign"}
       </div>
       <h1 className="mb-4 text-[18px] font-medium text-[#0A1A40]">
         {campaign ? campaign.name : "New campaign"}{" "}
@@ -1236,7 +1236,7 @@ function StepSequence({ campaign, onCampaign, onNext, onError }: {
       </div>
       <div className="mt-4 grid grid-cols-1 gap-2 rounded-lg bg-[#F7F9FC] p-4 text-[12.5px] sm:grid-cols-2">
         <div>Founders who open their match page move to Branch B, timed from the view.</div>
-        <div>Call tasks go to the founder&apos;s Sales Hub opportunity owner, else the campaign creator.</div>
+        <div>Call tasks go to the founder&apos;s Sales opportunity owner, else the campaign creator.</div>
         <div>Follow up emails share the campaign&apos;s daily send cap and test mode.</div>
         <div>Holdout founders ({campaign.match_config.holdout_pct}%) get the Day 0 email only.</div>
       </div>

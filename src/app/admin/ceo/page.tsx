@@ -4,7 +4,7 @@ import { loadCeoPayload } from "@/lib/ceo/hub-data";
 import { CeoHub } from "@/components/ceo/CeoHub";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "CEO Hub" };
+export const metadata = { title: "CEO" };
 
 const TABS = ["dash", "sales", "marketing", "operations", "planning", "log", "settings"];
 
@@ -19,7 +19,7 @@ export default async function CeoHubPage({ searchParams }: { searchParams: Promi
       role="ADMIN"
       workspace="admin"
       profileName={profile.full_name ?? profile.email ?? "Admin"}
-      profileSubtitle="CEO Hub"
+      profileSubtitle="CEO"
       profileEmail={profile.email ?? undefined}
     >
       <CeoHub initial={payload} initialTab={initialTab} />

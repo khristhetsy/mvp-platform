@@ -29,15 +29,15 @@ export async function getMeetingAnalytics(departmentId: string): Promise<Meeting
 
   if (key === "sales" || hub === "sales") {
     const m = await loadSalesAnalytics();
-    return { available: true, source: "Sales Hub", hubHref: "/admin/sales/analytics", metrics: m.slice(0, 6).map((x) => ({ label: x.label, value: x.value, delta: x.delta })) };
+    return { available: true, source: "Sales", hubHref: "/admin/sales/analytics", metrics: m.slice(0, 6).map((x) => ({ label: x.label, value: x.value, delta: x.delta })) };
   }
   if (key === "investor_relations" || hub === "operations" || hub === "playbook" || hub === "investor_relations") {
     const m = await loadIrAnalytics();
-    return { available: true, source: "Investor Relations Hub", hubHref: "/admin/playbook?tab=analytics", metrics: m.slice(0, 6).map((x) => ({ label: x.label, value: x.value, delta: x.delta })) };
+    return { available: true, source: "Investor Relations", hubHref: "/admin/playbook?tab=analytics", metrics: m.slice(0, 6).map((x) => ({ label: x.label, value: x.value, delta: x.delta })) };
   }
   if (key === "marketing" || hub === "marketing") {
     const stages = await marketingLifecycle();
-    return { available: true, source: "Marketing Hub", hubHref: "/admin/marketing", metrics: stages.map((s) => ({ label: s.label, value: String(s.count) })) };
+    return { available: true, source: "Marketing", hubHref: "/admin/marketing", metrics: stages.map((s) => ({ label: s.label, value: String(s.count) })) };
   }
   return { ...NONE, source: dept.name ? `${dept.name} (no linked Hub)` : "" };
 }

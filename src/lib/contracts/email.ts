@@ -103,11 +103,11 @@ export async function notifySender(input: { to: string; subject: string; lines: 
     audience: "shared",
     subject: input.subject,
     preheader: input.lines[0] ?? input.subject,
-    context: "iCapOS Sales Hub",
+    context: "iCapOS Sales",
     intro: input.lines[0] ?? "",
     blocks: input.lines.slice(1).map((text) => ({ type: "paragraph" as const, text })),
-    primary: { label: "Open in Sales Hub", url: input.url },
-    footer: { reason: "You sent this document from the iCapOS Sales Hub." },
+    primary: { label: "Open in Sales", url: input.url },
+    footer: { reason: "You sent this document from the iCapOS Sales." },
   });
   return send({ to: input.to, fromName: "iCapOS Contracts", mail });
 }

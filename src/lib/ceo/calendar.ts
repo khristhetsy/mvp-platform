@@ -41,7 +41,7 @@ function rruleFor(cadence: string): string {
 
 function description(meeting: CeoMeeting): string {
   const agenda = meeting.agenda.map((a) => `• ${a.title}${a.minutes ? ` (${a.minutes}m)` : ""}`).join("\n");
-  return `${meeting.name}\n\nAgenda:\n${agenda}\n\nOpen the log note in the CEO Hub: https://icapos.com/admin/ceo?tab=${meeting.dept}`;
+  return `${meeting.name}\n\nAgenda:\n${agenda}\n\nOpen the log note in CEO: https://icapos.com/admin/ceo?tab=${meeting.dept}`;
 }
 
 export interface CalendarSyncResult { eventId: string; meetUrl: string | null }

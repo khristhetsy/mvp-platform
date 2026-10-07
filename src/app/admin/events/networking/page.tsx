@@ -85,7 +85,7 @@ export default async function NetworkingMatchingPage({
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle="Networking Matching">
       <WorkspacePageContainer>
         <PageHeader
-          eyebrow="Event Hub"
+          eyebrow="Events"
           title="Networking Matching"
           description="Who was matched with whom at an event, and what happened to the request."
         />

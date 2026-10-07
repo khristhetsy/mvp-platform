@@ -87,7 +87,7 @@ async function executeStep(contactId: string, campaignId: string, step: CadenceS
   if (step.channel === "email") {
     // Email steps are owned by the Marketing Hub; log a touch and move on.
     const supabase = raw(createServiceRoleClient());
-    await supabase.from("outreach_touches").insert({ contact_id: contactId, channel: "email", direction: "outbound", campaign_id: campaignId, summary: "Cadence email step (Marketing Hub)" }).then(() => undefined, () => undefined);
+    await supabase.from("outreach_touches").insert({ contact_id: contactId, channel: "email", direction: "outbound", campaign_id: campaignId, summary: "Cadence email step (Marketing)" }).then(() => undefined, () => undefined);
     return "skip";
   }
 

@@ -130,12 +130,12 @@ export async function evaluateAlertRules(now = new Date()): Promise<AlertEvalRes
           audience: "admin",
           subject: title,
           preheader: message,
-          context: "Social Media Hub",
+          context: "Social Media",
           eyebrow: rule.direction === "up" ? "Social alert" : "Social alert · Needs attention",
           headline: title,
           intro: message,
-          primary: { label: "Open the Social Media Hub", url: "/admin/social" },
-          footer: { reason: "Internal. You're receiving this because a Social Hub alert rule matched." },
+          primary: { label: "Open Social Media", url: "/admin/social" },
+          footer: { reason: "Internal. You're receiving this because a Social alert rule matched." },
         });
         await sendEmail({ to: emails, subject: mail.subject, html: mail.html, text: mail.text, fromName: "iCapOS Ops" }).catch(() => false);
       }

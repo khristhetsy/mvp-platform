@@ -4,12 +4,12 @@ import { IrHubHeader } from "./IrHubTabs";
 import { DashboardClient } from "./DashboardClient";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "IR Dashboard" };
+export const metadata = { title: "Investor Relations Dashboard" };
 
 export default async function IrHubPage() {
   const profile = await requireRole(["admin", "analyst"]);
   return (
-    <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle="Investor Relations Hub">
+    <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle="Investor Relations">
       <IrHubHeader />
       <DashboardClient />
     </AppShell>

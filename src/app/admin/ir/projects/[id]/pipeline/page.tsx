@@ -4,14 +4,14 @@ import { IrHubHeader } from "../../../IrHubTabs";
 import { PipelineClient } from "./PipelineClient";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "IR Pipeline" };
+export const metadata = { title: "Investor Relations Pipeline" };
 
 export default async function IrPipelinePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ add?: string }> }) {
   const profile = await requireRole(["admin", "analyst"]);
   const { id } = await params;
   const sp = await searchParams;
   return (
-    <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle="Investor Relations Hub">
+    <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle="Investor Relations">
       <IrHubHeader />
       <PipelineClient projectId={id} meId={profile.id} openAdd={sp.add === "1"} />
     </AppShell>
