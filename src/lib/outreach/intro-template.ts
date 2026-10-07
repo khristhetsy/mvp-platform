@@ -47,11 +47,14 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
-// Fixed disclaimer, approved by legal 2026-09-28. Do not template this per-recipient.
+// Fixed disclaimer, approved by legal 2026-09-28; iCFO Capital sentence added 2026-10-07
+// at Khris's direction (required on all founder and investor facing materials).
+// Do not template this per-recipient.
 const LOCKED_DISCLAIMER =
   "This message is an introduction generated from platform fit scoring. It is not investment advice, " +
   "an offer, a solicitation, or a recommendation to buy or sell any security. iCapOS is not a broker-dealer " +
-  "or investment adviser. Recipients should conduct their own diligence.";
+  "or investment adviser. Recipients should conduct their own diligence. iCFO Capital Global, Inc. does not " +
+  "solicit securities and is not an investment adviser. This content is for educational purposes only.";
 
 export function renderIntroEmail(f: IntroTemplateFields): { subject: string; html: string; text: string } {
   const companyRaw = f.company.trim() || "a company";
