@@ -19,6 +19,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
 import { computeReadinessScore } from "@/lib/data/founder-readiness";
 import { crrScoresFor } from "@/lib/crr/crr-for";
+import { getCompanyAllowances, type CompanyAllowance } from "@/lib/outreach/company-allowances";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +49,7 @@ export default async function AdminCompaniesPage() {
   let loadError: string | null = null;
   let companyCards = mapAdminCompaniesToCardData([]);
   let pendingFounders: PendingFounder[] = [];
+  let allowances: Record<string, CompanyAllowance> = {};
 
   try {
     const supabase = createServiceRoleClient();
@@ -156,6 +158,14 @@ export default async function AdminCompaniesPage() {
       journeyByFounderId,
       signedOnByFounderId,
     );
+    // Outreach and intro allowance per paid founder (window, reached / limit, status).
+    allowances = await getCompanyAllowances(
+      companies.map((c) => ({
+        companyId: c.id,
+        founderId: c.founder_id ?? null,
+        plan: subscriptionsByProfileId.get(c.founder_id)?.plan_type ?? null,
+      })),
+    ).catch(() => ({}));
   } catch (error) {
     loadError = formatError(error);
   }
@@ -200,6 +210,7 @@ export default async function AdminCompaniesPage() {
             companies={companyCards}
             loadError={loadError}
             pendingCount={pendingCount}
+            allowances={allowances}
           />
         </WorkspacePageContainer>
       </AdminActionHealthProvider>

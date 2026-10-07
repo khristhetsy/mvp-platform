@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useMemo, useState } from "react";
+import type { CompanyAllowance } from "@/lib/outreach/company-allowances";
 import { useTranslations } from "next-intl";
 import { AdminCompanyCard } from "@/components/AdminCompanyCard";
 import type { AdminCompanyCardData } from "@/components/AdminCompanyCard";
@@ -144,10 +145,12 @@ function AdminCompaniesModuleViewsInner({
   companies,
   loadError,
   pendingCount,
+  allowances = {},
 }: Readonly<{
   companies: AdminCompanyCardData[];
   loadError: string | null;
   pendingCount: number;
+  allowances?: Record<string, CompanyAllowance>;
 }>) {
   const t = useTranslations("billingCompaniesAdmin");
   const [query, setQuery] = useState("");
@@ -170,9 +173,9 @@ function AdminCompaniesModuleViewsInner({
   // Journey-stage filter + sortable score/stage columns (list view).
   const [stageFilter, setStageFilter] = useState<string>("");
   const [planFilter, setPlanFilter] = useState<PlanFilter>("");
-  const [sortKey, setSortKey] = useState<"readiness" | "investable" | "stage" | "plan" | "signed_on" | "">("");
+  const [sortKey, setSortKey] = useState<"readiness" | "investable" | "stage" | "plan" | "signed_on" | "window" | "reached" | "outreach" | "intros" | "">("");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-  function toggleSort(key: "readiness" | "investable" | "stage" | "plan" | "signed_on") {
+  function toggleSort(key: "readiness" | "investable" | "stage" | "plan" | "signed_on" | "window" | "reached" | "outreach" | "intros") {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     else { setSortKey(key); setSortDir("desc"); }
   }
@@ -189,11 +192,19 @@ function AdminCompaniesModuleViewsInner({
           ? planView(c).cents
           : sortKey === "signed_on"
           ? (c.founder_signed_on_at ? new Date(c.founder_signed_on_at).getTime() : -1)
+          : sortKey === "window"
+          ? (allowances[c.id] ? new Date(allowances[c.id].windowEnd).getTime() : -1)
+          : sortKey === "reached"
+          ? (allowances[c.id] ? (allowances[c.id].cap ? allowances[c.id].reached / (allowances[c.id].cap as number) : 1) : -1)
+          : sortKey === "outreach"
+          ? (allowances[c.id] ? OUTREACH_ORDER[allowances[c.id].status] : -1)
+          : sortKey === "intros"
+          ? (allowances[c.id]?.intros ? allowances[c.id].intros!.used : -1)
           : (sortKey === "readiness" ? c.readiness_score : c.investable_score) ?? -1;
       rows = [...rows].sort((a, b) => (sortDir === "asc" ? val(a) - val(b) : val(b) - val(a)));
     }
     return rows;
-  }, [filtered, stageFilter, planFilter, sortKey, sortDir]);
+  }, [filtered, stageFilter, planFilter, sortKey, sortDir, allowances]);
 
   // Plan summary tiles. Counted per founder subscription so a founder with two
   // companies is not counted (or billed) twice.
@@ -392,7 +403,7 @@ function AdminCompaniesModuleViewsInner({
                   <th className="px-4 py-3">{t("companies.colCompany")}</th>
                   <th className="px-4 py-3">{t("companies.colFounder")}</th>
                   <th className="px-4 py-3">{t("companies.colIndustry")}</th>
-                  {([["readiness", "Readiness"], ["investable", "Investable"], ["stage", "Stage"], ["plan", "Plan"], ["signed_on", "Signed on"]] as const).map(([key, label]) => (
+                  {([["readiness", "Readiness"], ["investable", "Investable"], ["stage", "Stage"], ["plan", "Plan"], ["signed_on", "Signed on"], ["window", "Current window"], ["reached", "Reached / limit"], ["outreach", "Outreach status"], ["intros", "Intro requests"]] as const).map(([key, label]) => (
                     <th key={key} className="px-4 py-3">
                       <button type="button" onClick={() => toggleSort(key)} className="inline-flex items-center gap-1 hover:text-slate-800">
                         {label}
@@ -453,6 +464,7 @@ function AdminCompaniesModuleViewsInner({
                         <span className="text-slate-400">—</span>
                       )}
                     </td>
+                    <AllowanceCells allowance={allowances[company.id]} />
                     <td className="px-4 py-3">
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                         company.review_status === "approved"
@@ -500,11 +512,59 @@ function AdminCompaniesModuleViewsInner({
   );
 }
 
+const OUTREACH_ORDER: Record<CompanyAllowance["status"], number> = { stalled: 0, behind: 1, on_pace: 2, full: 3 };
+const OUTREACH_STYLE: Record<CompanyAllowance["status"], { label: string; cls: string; bar: string }> = {
+  full: { label: "Full", cls: "bg-emerald-50 text-emerald-700", bar: "bg-emerald-500" },
+  on_pace: { label: "On pace", cls: "bg-blue-50 text-blue-700", bar: "bg-blue-500" },
+  behind: { label: "Behind pace", cls: "bg-amber-50 text-amber-800", bar: "bg-amber-500" },
+  stalled: { label: "Stalled", cls: "bg-red-50 text-red-700", bar: "bg-red-400" },
+};
+const shortUtc = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+
+/** Current window, reached / limit, outreach status and intro requests for one company (paid founders only). */
+function AllowanceCells({ allowance: a }: { allowance: CompanyAllowance | undefined }) {
+  const dash = <span className="text-slate-400">—</span>;
+  if (!a) {
+    return (
+      <>
+        <td className="px-4 py-3">{dash}</td>
+        <td className="px-4 py-3">{dash}</td>
+        <td className="px-4 py-3">{dash}</td>
+        <td className="px-4 py-3">{dash}</td>
+      </>
+    );
+  }
+  const st = OUTREACH_STYLE[a.status];
+  const pct = a.cap ? Math.min(100, Math.round((a.reached / a.cap) * 100)) : 100;
+  return (
+    <>
+      <td className="px-4 py-3 whitespace-nowrap">
+        <div className="text-xs text-slate-700">{shortUtc(a.windowStart)} to {shortUtc(a.windowEnd)}</div>
+        <div className="text-[10px] text-slate-400">Day {a.day} of 30</div>
+      </td>
+      <td className="px-4 py-3 whitespace-nowrap">
+        <div className="text-xs font-semibold text-slate-900">{a.reached} / {a.cap ?? "no limit"}</div>
+        {a.cap ? (
+          <div className="mt-1 h-1 w-16 rounded bg-slate-100"><div className={`h-1 rounded ${st.bar}`} style={{ width: `${pct}%` }} /></div>
+        ) : null}
+      </td>
+      <td className="px-4 py-3">
+        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap ${st.cls}`}>{st.label}</span>
+        <div className="mt-1 text-[10px] text-slate-400">{a.note}</div>
+      </td>
+      <td className="px-4 py-3 whitespace-nowrap">
+        {a.intros ? <div className="text-xs text-slate-700">{a.intros.used} / {a.intros.cap}</div> : dash}
+      </td>
+    </>
+  );
+}
+
 export function AdminCompaniesModuleViews(
   props: Readonly<{
     companies: AdminCompanyCardData[];
     loadError: string | null;
     pendingCount: number;
+    allowances?: Record<string, CompanyAllowance>;
   }>,
 ) {
   return (
