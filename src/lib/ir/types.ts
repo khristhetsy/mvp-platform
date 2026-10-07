@@ -45,6 +45,8 @@ export const BLOCKER_PRESETS = ["Data room ready", "One pager approved by founde
 export type IrTask = {
   id: string; project_id: string; milestone_id: string; title: string; status: "new" | "in_progress" | "done";
   assignee_id: string | null; assignee_name?: string | null; starred: boolean; notes: string | null; deadline: string | null; blockers: IrBlocker[]; created_at: string;
+  /** Set while the task is archived (hidden from the boards). */
+  archived_at?: string | null; odoo_task_id?: number | null;
 };
 
 export type IrMatch = {

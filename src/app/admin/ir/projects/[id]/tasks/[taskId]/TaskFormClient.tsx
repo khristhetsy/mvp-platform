@@ -19,6 +19,7 @@ import type { OdooOpenActivity } from "@/lib/ir/odoo-open-activities";
 import { InvestorContactDialog } from "../../../../_shared/InvestorContactDialog";
 import { MatchBulkActions } from "./MatchBulkActions";
 import { ActivityPopover } from "./ActivityPopover";
+import { TaskDeleteDialog, runTaskAction, type TaskAction } from "../TaskArchiveDelete";
 import { platformInputToIso, toPlatformInput } from "@/lib/time/platform-input";
 
 type Contact = { email: string | null; phone: string | null; country: string | null; membership: string | null };
@@ -132,6 +133,17 @@ export function TaskFormClient({ taskId, meId, initialTab, added, sequenced = nu
   const taskBase = data ? `/admin/ir/projects/${data.project.id}/tasks` : "";
   const router = useRouter();
   const [moreOpen, setMoreOpen] = useState(false);
+  const [gearOpen, setGearOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  async function archive(action: Exclude<TaskAction, "delete">) {
+    setGearOpen(false); setBusy(true);
+    try {
+      const r = await runTaskAction([taskId], action);
+      if (!r.ok) { setError(r.message); return; }
+      setNotice(`Task ${action === "archive" ? "archived" : "unarchived"}.${r.message ? ` ${r.message}` : ""}`);
+      await load();
+    } finally { setBusy(false); }
+  }
   // Odoo keyboard shortcuts: Alt+P previous record, Alt+N next record.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -168,6 +180,19 @@ export function TaskFormClient({ taskId, meId, initialTab, added, sequenced = nu
         <Link href="/admin/ir/projects" className="hover:text-indigo-700">Projects</Link><span>/</span>
         <Link href={`/admin/ir/projects/${p.id}`} className="hover:text-indigo-700">{p.title}</Link><span>/</span>
         <Link href={base} className="hover:text-indigo-700">Tasks</Link><span>/</span><span className="text-slate-800">{t.title}</span>
+        <span className="relative">
+          <button type="button" onClick={() => setGearOpen((v) => !v)} aria-label="Task actions" aria-expanded={gearOpen} disabled={busy} className="rounded p-0.5 text-[14px] text-slate-500 hover:bg-slate-100 hover:text-slate-800"><i className="ti ti-settings" aria-hidden="true" /></button>
+          {gearOpen ? <>
+            <div className="fixed inset-0 z-20" onClick={() => setGearOpen(false)} />
+            <div className="absolute left-0 z-30 mt-1 w-44 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 text-[12.5px] shadow-lg">
+              {t.archived_at
+                ? <button type="button" onClick={() => void archive("unarchive")} className="flex w-full items-center gap-2 px-3 py-2 text-left text-slate-700 hover:bg-slate-50"><i className="ti ti-archive-off text-slate-400" aria-hidden="true" />Unarchive</button>
+                : <button type="button" onClick={() => void archive("archive")} className="flex w-full items-center gap-2 px-3 py-2 text-left text-slate-700 hover:bg-slate-50"><i className="ti ti-archive text-slate-400" aria-hidden="true" />Archive</button>}
+              <div className="my-1 border-t border-slate-100" />
+              <button type="button" onClick={() => { setGearOpen(false); setDeleting(true); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-rose-700 hover:bg-rose-50"><i className="ti ti-trash" aria-hidden="true" />Delete</button>
+            </div>
+          </> : null}
+        </span>
         <span className="ml-auto flex items-center gap-1">
           <OdooPager label={`${idx + 1} / ${n}`}
             prev={{ href: prev ? `${base}/${prev.id}` : undefined, title: prev ? `${prev.title} (Alt+P)` : undefined }}
@@ -217,6 +242,8 @@ export function TaskFormClient({ taskId, meId, initialTab, added, sequenced = nu
           </nav>
         ) : null}
       </div>
+      {t.archived_at ? <div className="mb-2 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12.5px] text-amber-800"><i className="ti ti-archive" aria-hidden="true" />This task is archived. It&apos;s hidden from the task boards.<button type="button" disabled={busy} onClick={() => void archive("unarchive")} className="ml-1 font-medium underline hover:text-amber-950">Unarchive</button></div> : null}
+      {deleting ? <TaskDeleteDialog ids={[t.id]} label={t.title} onClose={() => setDeleting(false)} onDone={(action, message) => { setDeleting(false); if (action === "delete") router.push(base); else { setNotice(`Task archived.${message ? ` ${message}` : ""}`); void load(); } }} /> : null}
       {notice ? <div className="mb-2 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[12.5px] text-emerald-800"><i className="ti ti-circle-check" aria-hidden="true" /><span className="flex-1">{notice}</span><button type="button" onClick={() => setNotice(null)} className="text-emerald-800"><i className="ti ti-x" aria-hidden="true" /></button></div> : null}
       {error ? <p className="mb-2 text-[12px] text-rose-600">{error}</p> : null}
 
