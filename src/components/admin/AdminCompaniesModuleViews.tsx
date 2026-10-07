@@ -194,6 +194,27 @@ function AdminCompaniesModuleViewsInner({
   const setQuery = (q: string) => setSearchState((st) => ({ ...st, q }));
   const [slice, setSlice] = useState<PlanSliceKey | null>(null);
   const [view, setView] = useState<ViewMode>("list");
+  // Show columns picker (same pattern as Contacts): choice remembered on this browser.
+  const [visibleCols, setVisibleCols] = useState<string[]>(() => {
+    try {
+      const saved = window.localStorage.getItem(COLS_STORAGE_KEY);
+      return saved ? (JSON.parse(saved) as string[]) : DEFAULT_COLS;
+    } catch { return DEFAULT_COLS; }
+  });
+  const [colsOpen, setColsOpen] = useState(false);
+  const show = (key: ColKey) => ALWAYS_COLS.has(key) || visibleCols.includes(key);
+  function saveCols(next: string[]) {
+    setVisibleCols(next);
+    try { window.localStorage.setItem(COLS_STORAGE_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+  }
+  function toggleCol(key: ColKey) {
+    saveCols(visibleCols.includes(key) ? visibleCols.filter((k) => k !== key) : [...visibleCols, key]);
+  }
+  const colLabel = (key: ColKey): string => ({
+    company: t("companies.colCompany"), founder: t("companies.colFounder"), industry: t("companies.colIndustry"),
+    review: t("companies.colReview"), published: t("companies.colPublished"), action: t("companies.colAction"),
+  } as Partial<Record<ColKey, string>>)[key] ?? SORT_LABEL[key as SortCol] ?? key;
+  const visibleCount = ALL_COLS.filter(show).length;
   const [userType, setUserType] = useState<UserType>("");
   const { filters } = useAdminQueryFilters("companies");
   const companyFilters = filters as CompanyQueryFilters;
@@ -374,6 +395,28 @@ function AdminCompaniesModuleViewsInner({
             width="100%"
           />
         </div>
+        {view === "list" ? (
+          <div className="relative shrink-0">
+            <button type="button" onClick={() => setColsOpen((v) => !v)} aria-expanded={colsOpen} style={{ fontSize: 12, color: "var(--foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, padding: "8px 12px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <i className="ti ti-columns-3" style={{ fontSize: 15 }} aria-hidden="true" /> Columns
+            </button>
+            {colsOpen ? (
+              <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 30, width: 200, background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", padding: 8 }}>
+                <div style={{ fontSize: 10.5, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".04em", padding: "2px 4px 6px" }}>Show columns</div>
+                {ALL_COLS.map((key) => {
+                  const always = ALWAYS_COLS.has(key);
+                  return (
+                    <label key={key} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 4px", fontSize: 12, cursor: always ? "default" : "pointer", opacity: always ? 0.55 : 1 }}>
+                      <input type="checkbox" checked={show(key)} disabled={always} onChange={() => toggleCol(key)} style={{ width: 14, height: 14 }} />
+                      {colLabel(key)}
+                    </label>
+                  );
+                })}
+                <button type="button" onClick={() => saveCols(DEFAULT_COLS)} style={{ width: "100%", textAlign: "left", marginTop: 4, padding: "6px 4px 2px", borderTop: "0.5px solid #eef1f5", fontSize: 11.5, color: "#2E78F5", background: "none", cursor: "pointer" }}>Reset to default</button>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
       <AdminQueryFilterBar page="companies" className="mb-4" />
 
@@ -456,9 +499,9 @@ function AdminCompaniesModuleViewsInner({
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold text-slate-500">
                   <th className="px-3 py-2.5">{t("companies.colCompany")}</th>
-                  <th className="px-3 py-2.5">{t("companies.colFounder")}</th>
-                  <th className="px-3 py-2.5">{t("companies.colIndustry")}</th>
-                  {([["readiness", "Readiness"], ["investable", "Investable"], ["stage", "Stage"], ["plan", "Plan"], ["signed_on", "Signed on"], ["window", "Current window"], ["reached", "Reached / limit"], ["outreach", "Outreach status"], ["intros", "Intro requests"]] as const).map(([key, label]) => (
+                  {show("founder") && <th className="px-3 py-2.5">{t("companies.colFounder")}</th>}
+                  {show("industry") && <th className="px-3 py-2.5">{t("companies.colIndustry")}</th>}
+                  {SORT_COLS.filter(show).map((key) => [key, SORT_LABEL[key]] as const).map(([key, label]) => (
                     <th key={key} className={`px-3 py-2.5 ${NUMERIC_COLS.has(key) ? "text-right" : ""}`}>
                       <button type="button" onClick={() => toggleSort(key)} className={`inline-flex items-center gap-1 hover:text-slate-800 ${NUMERIC_COLS.has(key) ? "flex-row-reverse" : ""}`}>
                         {label}
@@ -466,15 +509,15 @@ function AdminCompaniesModuleViewsInner({
                       </button>
                     </th>
                   ))}
-                  <th className="px-3 py-2.5">{t("companies.colReview")}</th>
-                  <th className="px-3 py-2.5">{t("companies.colPublished")}</th>
+                  {show("review") && <th className="px-3 py-2.5">{t("companies.colReview")}</th>}
+                  {show("published") && <th className="px-3 py-2.5">{t("companies.colPublished")}</th>}
                   <th className="px-3 py-2.5">{t("companies.colAction")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {groupRows(listRows, searchState.groupBy).map(({ header, count, company }) => header ? (
                   <tr key={`g:${header}`} className="bg-slate-50">
-                    <td colSpan={COLUMN_COUNT} className="px-3 py-2 text-xs font-semibold text-slate-700">
+                    <td colSpan={visibleCount} className="px-3 py-2 text-xs font-semibold text-slate-700">
                       {header} <span className="font-normal text-slate-400">({count})</span>
                     </td>
                   </tr>
@@ -485,15 +528,15 @@ function AdminCompaniesModuleViewsInner({
                     onClick={() => { window.location.href = `/admin/companies/${company.id}`; }}
                   >
                     <td className="px-3 py-2.5 font-medium text-slate-900 whitespace-nowrap"><Highlight text={company.company_name} query={query} /></td>
-                    <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap"><Highlight text={company.founder_name} query={query} /></td>
-                    <td className="px-3 py-2.5 text-slate-500 whitespace-nowrap">{company.industry ? <Highlight text={company.industry} query={query} /> : "—"}</td>
-                    <td className={`px-3 py-2.5 text-right tabular-nums ${scoreClass(company.readiness_score)}`}>
+                    {show("founder") && <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap"><Highlight text={company.founder_name} query={query} /></td>}
+                    {show("industry") && <td className="px-3 py-2.5 text-slate-500 whitespace-nowrap">{company.industry ? <Highlight text={company.industry} query={query} /> : "—"}</td>}
+                    {show("readiness") && <td className={`px-3 py-2.5 text-right tabular-nums ${scoreClass(company.readiness_score)}`}>
                       {company.readiness_score != null ? company.readiness_score : "—"}
-                    </td>
-                    <td className={`px-3 py-2.5 text-right tabular-nums ${scoreClass(company.investable_score)}`}>
+                    </td>}
+                    {show("investable") && <td className={`px-3 py-2.5 text-right tabular-nums ${scoreClass(company.investable_score)}`}>
                       {company.investable_score != null ? company.investable_score : "—"}
-                    </td>
-                    <td className="px-3 py-2.5 whitespace-nowrap">
+                    </td>}
+                    {show("stage") && <td className="px-3 py-2.5 whitespace-nowrap">
                       {company.journey_stage ? (
                         <span className="inline-flex items-center gap-1">
                           <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STAGE_STYLE[company.journey_stage] ?? "bg-slate-100 text-slate-600"}`}>
@@ -504,8 +547,8 @@ function AdminCompaniesModuleViewsInner({
                       ) : (
                         <span className="text-slate-400">—</span>
                       )}
-                    </td>
-                    {(() => {
+                    </td>}
+                    {show("plan") && (() => {
                       const plan = planView(company);
                       return (
                         <td className="px-3 py-2.5 whitespace-nowrap">
@@ -515,7 +558,7 @@ function AdminCompaniesModuleViewsInner({
                         </td>
                       );
                     })()}
-                    <td className="px-3 py-2.5 whitespace-nowrap">
+                    {show("signed_on") && <td className="px-3 py-2.5 whitespace-nowrap">
                       {company.founder_signed_on_at ? (
                         <>
                           <div className="text-xs text-slate-700">{formatShortDate(company.founder_signed_on_at)}</div>
@@ -524,9 +567,9 @@ function AdminCompaniesModuleViewsInner({
                       ) : (
                         <span className="text-slate-400">—</span>
                       )}
-                    </td>
-                    <AllowanceCells allowance={allowances[company.id]} />
-                    <td className="px-3 py-2.5 whitespace-nowrap">
+                    </td>}
+                    <AllowanceCells allowance={allowances[company.id]} show={show} />
+                    {show("review") && <td className="px-3 py-2.5 whitespace-nowrap">
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                         company.review_status === "approved"
                           ? "bg-emerald-50 text-emerald-800"
@@ -536,10 +579,10 @@ function AdminCompaniesModuleViewsInner({
                       }`}>
                         {reviewStatusLabel(t, company.review_status)}
                       </span>
-                    </td>
-                    <td className="px-3 py-2.5 text-slate-500 whitespace-nowrap">
+                    </td>}
+                    {show("published") && <td className="px-3 py-2.5 text-slate-500 whitespace-nowrap">
                       {company.is_published ? t("companies.published") : t("companies.draft")}
-                    </td>
+                    </td>}
                     <td className="px-3 py-2.5 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         {company.review_status === "pending" ? (
@@ -575,8 +618,19 @@ function AdminCompaniesModuleViewsInner({
 
 /** Number columns are right aligned so values stack by digit. */
 const NUMERIC_COLS = new Set<string>(["readiness", "investable", "reached", "intros"]);
-/** Company, founder, industry, 9 sortable columns, review, published, action. */
-const COLUMN_COUNT = 15;
+/** List columns in display order: company, founder, industry, 9 sortable, review, published, action. */
+type SortCol = "readiness" | "investable" | "stage" | "plan" | "signed_on" | "window" | "reached" | "outreach" | "intros";
+type ColKey = "company" | "founder" | "industry" | SortCol | "review" | "published" | "action";
+const SORT_COLS: SortCol[] = ["readiness", "investable", "stage", "plan", "signed_on", "window", "reached", "outreach", "intros"];
+const SORT_LABEL: Record<SortCol, string> = {
+  readiness: "Readiness", investable: "Investable", stage: "Stage", plan: "Plan", signed_on: "Signed on",
+  window: "Current window", reached: "Reached / limit", outreach: "Outreach status", intros: "Intro requests",
+};
+const ALL_COLS: ColKey[] = ["company", "founder", "industry", ...SORT_COLS, "review", "published", "action"];
+/** Company identifies the row and Action holds Approve / Review, so neither can be hidden. */
+const ALWAYS_COLS = new Set<ColKey>(["company", "action"]);
+const DEFAULT_COLS: string[] = [...ALL_COLS];
+const COLS_STORAGE_KEY = "adminCompanies.cols.v1";
 
 /** List rows with a header row before each group (Group by in the search bar). */
 function groupRows(rows: AdminCompanyCardData[], groupBy: string): Array<{ header?: string; count?: number; company?: AdminCompanyCardData }> {
@@ -608,15 +662,15 @@ const OUTREACH_STYLE: Record<CompanyAllowance["status"], { label: string; cls: s
 const shortUtc = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: PLATFORM_TZ });
 
 /** Current window, reached / limit, outreach status and intro requests for one company (paid founders only). */
-function AllowanceCells({ allowance: a }: { allowance: CompanyAllowance | undefined }) {
+function AllowanceCells({ allowance: a, show }: { allowance: CompanyAllowance | undefined; show: (key: ColKey) => boolean }) {
   const dash = <span className="text-slate-400">—</span>;
   if (!a) {
     return (
       <>
-        <td className="px-3 py-2.5 whitespace-nowrap">{dash}</td>
-        <td className="px-3 py-2.5 whitespace-nowrap">{dash}</td>
-        <td className="px-3 py-2.5 whitespace-nowrap">{dash}</td>
-        <td className="px-3 py-2.5 whitespace-nowrap">{dash}</td>
+        {show("window") && <td className="px-3 py-2.5 whitespace-nowrap">{dash}</td>}
+        {show("reached") && <td className="px-3 py-2.5 whitespace-nowrap">{dash}</td>}
+        {show("outreach") && <td className="px-3 py-2.5 whitespace-nowrap">{dash}</td>}
+        {show("intros") && <td className="px-3 py-2.5 whitespace-nowrap">{dash}</td>}
       </>
     );
   }
@@ -624,23 +678,23 @@ function AllowanceCells({ allowance: a }: { allowance: CompanyAllowance | undefi
   const pct = a.cap ? Math.min(100, Math.round((a.reached / a.cap) * 100)) : 100;
   return (
     <>
-      <td className="px-3 py-2.5 whitespace-nowrap">
+      {show("window") && <td className="px-3 py-2.5 whitespace-nowrap">
         <div className="text-xs text-slate-700">{shortUtc(a.windowStart)} to {shortUtc(a.windowEnd)}</div>
         <div className="text-[10px] text-slate-400">Day {a.day} of 30</div>
-      </td>
-      <td className="px-3 py-2.5 whitespace-nowrap text-right">
+      </td>}
+      {show("reached") && <td className="px-3 py-2.5 whitespace-nowrap text-right">
         <div className="text-xs font-semibold tabular-nums text-slate-900">{a.reached} / {a.cap ?? "no limit"}</div>
         {a.cap ? (
           <div className="ml-auto mt-1 h-1 w-16 rounded bg-slate-100"><div className={`h-1 rounded ${st.bar}`} style={{ width: `${pct}%` }} /></div>
         ) : null}
-      </td>
-      <td className="px-3 py-2.5 whitespace-nowrap">
+      </td>}
+      {show("outreach") && <td className="px-3 py-2.5 whitespace-nowrap">
         <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap ${st.cls}`}>{st.label}</span>
         <div className="mt-1 text-[10px] text-slate-400">{a.note}</div>
-      </td>
-      <td className="px-3 py-2.5 whitespace-nowrap text-right">
+      </td>}
+      {show("intros") && <td className="px-3 py-2.5 whitespace-nowrap text-right">
         {a.intros ? <div className="text-xs tabular-nums text-slate-700">{a.intros.used} / {a.intros.cap}</div> : dash}
-      </td>
+      </td>}
     </>
   );
 }
