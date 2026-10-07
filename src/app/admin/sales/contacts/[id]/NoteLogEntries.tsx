@@ -27,7 +27,6 @@ export function NoteLogEntries({ contactId, notes, onChange }: { contactId: stri
 
   useEffect(() => {
     if (!activeUndo) return;
-    setLeft(UNDO_SECONDS);
     const t = setInterval(() => setLeft((s) => {
       if (s <= 1) { clearInterval(t); setUndo(null); return 0; }
       return s - 1;
@@ -60,13 +59,13 @@ export function NoteLogEntries({ contactId, notes, onChange }: { contactId: stri
     if (!draft.trim()) { setDraftErr("Note can't be empty."); return; }
     if (draft.trim() === entries[i]?.text.trim()) { setEditing(null); return; }
     const next = editNoteEntry(blob, i, draft);
-    if (await write(next, "edit")) { setEditing(null); setUndo({ kind: "edit", prev: blob, current: next, index: i }); }
+    if (await write(next, "edit")) { setEditing(null); setLeft(UNDO_SECONDS); setUndo({ kind: "edit", prev: blob, current: next, index: i }); }
   }
 
   async function remove(i: number) {
     if (editing !== null) setEditing(null);
     const next = deleteNoteEntry(blob, i);
-    if (await write(next, "delete")) setUndo({ kind: "delete", prev: blob, current: next, index: i });
+    if (await write(next, "delete")) { setLeft(UNDO_SECONDS); setUndo({ kind: "delete", prev: blob, current: next, index: i }); }
   }
 
   async function doUndo() {
