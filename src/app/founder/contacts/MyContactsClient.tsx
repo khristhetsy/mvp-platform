@@ -7,6 +7,7 @@ import { FounderToolbar, applySearch, groupRows } from "@/components/founder/Fou
 import { EMPTY_SEARCH, type SearchState } from "@/components/admin/OdooSearchBar";
 import type { MyContactRow } from "@/lib/founder-crm/my-contacts";
 import { contactSourceLabel, contactStatusLabel } from "@/lib/founder-crm/contact-labels";
+import { ContactImportDialog } from "@/components/founder/outreach/ContactImportDialog";
 
 /**
  * Stage 3 → My contacts. Same list pattern as the admin pages: primary action,
@@ -47,9 +48,9 @@ export function MyContactsClient({ initialRows }: Readonly<{ initialRows: MyCont
   const [search, setSearch] = useState<SearchState>({ ...EMPTY_SEARCH, groupBy: "source" });
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
-  const [panel, setPanel] = useState<"none" | "add" | "import">("none");
+  const [panel, setPanel] = useState<"none" | "add">("none");
+  const [importOpen, setImportOpen] = useState(false);
   const [form, setForm] = useState({ name: "", firm: "", email: "", type: "" });
-  const [csvText, setCsvText] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
 
@@ -151,33 +152,6 @@ export function MyContactsClient({ initialRows }: Readonly<{ initialRows: MyCont
     }
   }
 
-  async function importCsv() {
-    if (!csvText.trim()) {
-      setMessage({ tone: "error", text: "Paste at least one CSV row first." });
-      return;
-    }
-    setBusy(true);
-    setMessage(null);
-    try {
-      const res = await fetch("/api/founder/investor-contacts/import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rows: csvText, confirm: true }),
-      });
-      const data = (await res.json().catch(() => null)) as { error?: string } | null;
-      if (!res.ok) {
-        setMessage({ tone: "error", text: data?.error ?? "Import failed. Check the CSV columns and try again." });
-        return;
-      }
-      setCsvText("");
-      setPanel("none");
-      setMessage({ tone: "ok", text: "Import complete." });
-      await reload();
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function archivePicked() {
     const ids = pickedRows.filter((r) => r.kind === "contact").map((r) => r.id);
     if (ids.length === 0) {
@@ -240,8 +214,8 @@ export function MyContactsClient({ initialRows }: Readonly<{ initialRows: MyCont
           ]}
           right={
             <div className="flex items-center gap-2">
-              <button type="button" onClick={() => setPanel(panel === "import" ? "none" : "import")} className={btn}>
-                <i className="ti ti-upload" aria-hidden="true" /> Import CSV
+              <button type="button" onClick={() => setImportOpen(true)} className={btn}>
+                <i className="ti ti-upload" aria-hidden="true" /> Import
               </button>
               <button type="button" onClick={() => downloadCsv(filtered)} disabled={filtered.length === 0} className={`${btn} disabled:opacity-50`}>
                 <i className="ti ti-download" aria-hidden="true" /> Export
@@ -270,24 +244,6 @@ export function MyContactsClient({ initialRows }: Readonly<{ initialRows: MyCont
             ))}
             <button type="button" onClick={() => void addContact()} disabled={busy} className="cap-btn-primary rounded-lg px-4 py-2 text-[12.5px] font-semibold disabled:opacity-50">
               {busy ? "Saving…" : "Add contact"}
-            </button>
-          </div>
-        ) : null}
-
-        {panel === "import" ? (
-          <div className="border-b border-slate-100 bg-slate-50 px-4 py-3">
-            <p className="text-[12px] text-slate-600">
-              Paste rows with the columns <span className="font-mono">investor_name, firm_name, email</span>. Duplicates by email are skipped.
-            </p>
-            <textarea
-              value={csvText}
-              onChange={(e) => setCsvText(e.target.value)}
-              rows={4}
-              placeholder="investor_name,firm_name,email&#10;Ada Lovelace,Analytical Ventures,ada@av.com"
-              className="mt-2 w-full rounded-md border border-slate-200 bg-white px-3 py-2 font-mono text-xs"
-            />
-            <button type="button" onClick={() => void importCsv()} disabled={busy} className="mt-2 cap-btn-primary rounded-lg px-4 py-2 text-[12.5px] font-semibold disabled:opacity-50">
-              {busy ? "Importing…" : "Import"}
             </button>
           </div>
         ) : null}
@@ -403,6 +359,18 @@ export function MyContactsClient({ initialRows }: Readonly<{ initialRows: MyCont
           </table>
         )}
       </div>
+
+      {importOpen ? (
+        <ContactImportDialog
+          existingEmails={rows.map((r) => r.email ?? "").filter(Boolean)}
+          onClose={() => setImportOpen(false)}
+          onImported={async (count) => {
+            setImportOpen(false);
+            setMessage({ tone: "ok", text: `${count.toLocaleString()} contact${count === 1 ? "" : "s"} imported.` });
+            await reload();
+          }}
+        />
+      ) : null}
 
       <p className="text-[11.5px] leading-relaxed text-slate-400">
         Only your own investors appear here. Investors in the iCapOS network stay private until iCFO introduces you. Contacts
