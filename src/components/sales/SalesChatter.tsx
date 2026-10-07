@@ -349,15 +349,15 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
           </>
         )}
         {tab === "note" && (
-          <div style={{ background: "#FEF9C3", borderRadius: 8, padding: 10, display: "flex", flexDirection: "column", gap: 8 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, fontSize: 11.5, color: "#854D0E" }}>
+          <div style={{ background: "#F4F5F7", border: "0.5px solid #E2E4E9", borderRadius: 8, padding: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, fontSize: 11.5, color: "#5F5E5A" }}>
               <span><i className="ti ti-lock" aria-hidden="true" /> Internal note. Staff only, never sent to the contact.</span>
-              {!note.trim() && <button type="button" onClick={() => setNote(callTemplate(contactName))} style={{ fontSize: 11.5, color: "#854D0E", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>Use call template</button>}
+              {!note.trim() && <button type="button" onClick={() => setNote(callTemplate(contactName))} style={{ fontSize: 11.5, color: "#5F5E5A", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>Use call template</button>}
             </div>
             <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Log an internal note…" rows={note.includes("\n") ? 8 : 3} style={{ ...field, background: "#fff" }} />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               {odooTarget ? (
-                <label style={{ fontSize: 11.5, color: "#854D0E", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <label style={{ fontSize: 11.5, color: "#5F5E5A", display: "inline-flex", alignItems: "center", gap: 6 }}>
                   <input type="checkbox" checked={syncOdoo} onChange={(e) => setSyncOdoo(e.target.checked)} /> Also log in {odooTarget.label}
                 </label>
               ) : <span />}
