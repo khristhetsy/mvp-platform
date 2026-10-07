@@ -13,6 +13,7 @@ import type { TopMenuApp } from "@/lib/nav/top-menu";
 import { DEFAULT_ADMIN_HOME } from "@/lib/settings/admin-home-shape";
 import { useAdminHomeSettings } from "@/lib/ui/admin-home-settings";
 import { rememberApp, tileColor, tileIcon, useTopMenuApps } from "@/components/nav/TopMenuBar";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 const NAVY = "#0A1A40";
 const BLUE = "#1A6CE4";
@@ -53,10 +54,10 @@ function AppIcon({ app, className }: Readonly<{ app: TopMenuApp; className: stri
   return createElement(app.locked ? Lock : tileIcon(app), { className, strokeWidth: 1.75, "aria-hidden": true });
 }
 
-// Greeting from the browser clock; the server render says "Welcome".
+// Greeting from the Pacific time clock; the server render says "Welcome".
 const noSubscribe = () => () => {};
 function greetingNow(): string {
-  const h = new Date().getHours();
+  const h = Number(new Intl.DateTimeFormat("en-US", { hour: "numeric", hourCycle: "h23", timeZone: PLATFORM_TZ }).format(new Date())) % 24;
   return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
 }
 function useGreeting(): string {

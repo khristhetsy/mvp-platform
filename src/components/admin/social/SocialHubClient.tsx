@@ -15,6 +15,7 @@ import { AttributionPeriods } from "./AttributionPeriods";
 import { AiCmo } from "./AiCmo";
 import { Accounts } from "./Accounts";
 import { RedditReply } from "./RedditReply";
+import { fromPlatformInput, toPlatformInput } from "@/lib/time/platform-input";
 
 const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -189,7 +190,7 @@ function Composer({ accounts, googleReady }: { accounts: SocialAccount[]; google
     setMsg(null);
   }
 
-  const scheduledISO = () => (schedOn && schedDate ? new Date(`${schedDate}T${schedTime || "08:15"}`).toISOString() : null);
+  const scheduledISO = () => (schedOn && schedDate ? (fromPlatformInput(`${schedDate}T${schedTime || "08:15"}`) ?? new Date(`${schedDate}T${schedTime || "08:15"}`)).toISOString() : null);
 
   async function save(mode: "draft" | "park" | "schedule") {
     if (variants.length === 0) return;
@@ -402,6 +403,9 @@ function PreviewModal({ onClose, name, platform, body, comment, link }: { onClos
 const titleOf = (q: QueueItem) => (q.body.split("\n").find((l) => l.trim()) ?? "Post").slice(0, 60);
 const itemISO = (q: QueueItem) => q.scheduled_at ?? q.published_at ?? null;
 const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+/** Pacific date and time of an instant (the Social Hub shows PT). */
+const ptYmd = (d: Date) => toPlatformInput(d).slice(0, 10);
+const ptHm = (d: Date) => toPlatformInput(d).slice(11, 16);
 const hhmm = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
 function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: { queue: QueueItem[]; accounts: SocialAccount[]; slots: SocialSlot[]; googleReady: boolean; onAddPost: () => void }) {
@@ -465,7 +469,7 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
 
   const byDay = useMemo(() => {
     const m = new Map<string, QueueItem[]>();
-    for (const q of dated) { const iso = itemISO(q)!; const k = ymd(new Date(iso)); (m.get(k) ?? m.set(k, []).get(k)!).push(q); }
+    for (const q of dated) { const iso = itemISO(q)!; const k = ptYmd(new Date(iso)); (m.get(k) ?? m.set(k, []).get(k)!).push(q); }
     for (const list of m.values()) list.sort((a, b) => (itemISO(a)! < itemISO(b)! ? -1 : 1));
     return m;
   }, [dated]);
@@ -528,11 +532,12 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
   // Build a recurrence rule for the "Make recurring" panel, seeded from the selected post's time.
   function mrRule(q: QueueItem) {
     const iso = itemISO(q);
-    const timeLocal = iso ? `${String(new Date(iso).getHours()).padStart(2, "0")}:${String(new Date(iso).getMinutes()).padStart(2, "0")}` : "08:15";
-    const today = new Date(); const startDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    // Recurrences are generated on the server in UTC, so seed the rule with the UTC parts of the post time.
+    const timeLocal = iso ? new Date(iso).toISOString().slice(11, 16) : "08:15";
+    const today = iso ? new Date(iso) : new Date(); const startDate = today.toISOString().slice(0, 10);
     return {
       freq: mrFreq, interval: Math.max(1, parseInt(mrInterval, 10) || 1),
-      weekdays: mrFreq === "weekly" ? (mrWeekdays.length ? mrWeekdays : [today.getDay()]) : [],
+      weekdays: mrFreq === "weekly" ? (mrWeekdays.length ? mrWeekdays : [today.getUTCDay()]) : [],
       timeLocal, startDate,
       endType: mrEndType, endDate: mrEndType === "on_date" ? (mrEndDate || null) : null,
       endCount: mrEndType === "after" ? (Math.max(1, parseInt(mrEndCount, 10) || 1)) : null,
@@ -559,7 +564,7 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
       setRecDelete(null); setSelected(null); await reload();
     } finally { setBusy(false); }
   }
-  const localHHMM = (iso: string | null) => { if (!iso) return ""; const d = new Date(iso); return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
+  const localHHMM = (iso: string | null) => { if (!iso) return ""; return ptHm(new Date(iso)); };
   const toMin = (t: string) => { const [h, m] = t.split(":").map((n) => parseInt(n, 10)); return (h || 0) * 60 + (m || 0); };
   // What the series editor would change: new copy and/or a same-day time shift in minutes.
   function recEditChanges(q: QueueItem) {
@@ -596,12 +601,12 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
   }
   function openSchedule(q: QueueItem) {
     const base = q.scheduled_at ? new Date(q.scheduled_at) : null;
-    setSDate(base ? ymd(base) : ""); setSTime(base ? `${String(base.getHours()).padStart(2, "0")}:${String(base.getMinutes()).padStart(2, "0")}` : defaultTime);
+    setSDate(base ? ptYmd(base) : ""); setSTime(base ? ptHm(base) : defaultTime);
     setScheduling(q);
   }
   function confirmSchedule() {
     if (!scheduling || !sDate) return;
-    act(scheduling.id, "schedule", { scheduledAt: new Date(`${sDate}T${sTime || defaultTime}`).toISOString() });
+    act(scheduling.id, "schedule", { scheduledAt: (fromPlatformInput(`${sDate}T${sTime || defaultTime}`) ?? new Date(`${sDate}T${sTime || defaultTime}`)).toISOString() });
   }
   // Drop a dragged post onto a day: keep its existing time if it had one, else the default slot time.
   function dropOnDay(dateKey: string) {
@@ -610,8 +615,8 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
     const q = queue.find((x) => x.id === id);
     if (!q || q.status === "published") return;
     const base = q.scheduled_at ? new Date(q.scheduled_at) : null;
-    const time = base ? `${String(base.getHours()).padStart(2, "0")}:${String(base.getMinutes()).padStart(2, "0")}` : defaultTime;
-    act(id, "schedule", { scheduledAt: new Date(`${dateKey}T${time}`).toISOString() });
+    const time = base ? ptHm(base) : defaultTime;
+    act(id, "schedule", { scheduledAt: (fromPlatformInput(`${dateKey}T${time}`) ?? new Date(`${dateKey}T${time}`)).toISOString() });
   }
   const dragProps = (q: QueueItem) => q.status === "published" ? {} : {
     draggable: true,
@@ -629,7 +634,7 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
   const offset = (first.getDay() + 6) % 7;
   const daysInMonth = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0).getDate();
   const totalCells = Math.ceil((offset + daysInMonth) / 7) * 7;
-  const todayKey = ymd(new Date());
+  const todayKey = ptYmd(new Date());
 
   // week (Monday-first, containing anchor)
   const weekStart = (() => { const d = new Date(anchor); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); d.setHours(0, 0, 0, 0); return d; })();
