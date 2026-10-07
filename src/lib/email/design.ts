@@ -151,8 +151,9 @@ export function mapFounderValues(masterName: string, v: Record<string, string>, 
     const cut = s.slice(0, max - 1);
     return `${cut.slice(0, cut.lastIndexOf(" ")).trim()}…`;
   };
-  if (masterName === "Deal introduction") return { ...v };
+  if (masterName === "Deal introduction") return website ? { ...v, cta_url_fallback: website } : { ...v };
   if (v.hero_image) set(DESIGN_KEYS.bannerImage, v.hero_image);
+  if (v.logo_image) set(DESIGN_KEYS.logoImage, v.logo_image);
   const headline = v.headline ?? "";
   if (masterName === "Announcement") {
     set("headline", headline.slice(0, 90));
