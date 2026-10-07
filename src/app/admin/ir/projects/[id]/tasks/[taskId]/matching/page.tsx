@@ -13,7 +13,7 @@ export default async function IrMatchingPage({ params, searchParams }: { params:
   // Tab, group by and open groups carried over by the week pager.
   const view = readQueueView(await searchParams);
   return (
-    <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle="Investor Relations Hub">
+    <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle="Investor Relations">
       <IrHubHeader back={false} />
       {/* key: a new week is a fresh queue (no selections or filters carried over). */}
       <MatchingQueueClient key={taskId} projectId={id} taskId={taskId} initialView={view} />

@@ -4,7 +4,7 @@ import { loadHubPayload } from "@/lib/playbook/hub";
 import { OpsHub } from "@/components/admin/playbook/OpsHub";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Investor Relations Hub" };
+export const metadata = { title: "Investor Relations" };
 
 const TABS = ["dash", "analytics", "open", "core", "close", "settings"];
 
@@ -19,7 +19,7 @@ export default async function AdminPlaybookPage({ searchParams }: { searchParams
       role="ADMIN"
       workspace="admin"
       profileName={profile.full_name ?? profile.email ?? "Admin"}
-      profileSubtitle="Investor Relations Hub"
+      profileSubtitle="Investor Relations"
       profileEmail={profile.email ?? undefined}
     >
       {/* Investor/Founder journey funnel now renders in the dashboard body (OpsHub). */}

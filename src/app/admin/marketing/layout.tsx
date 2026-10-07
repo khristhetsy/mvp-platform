@@ -67,7 +67,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
           <div>
             <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".14em", color: "var(--muted-foreground)" }}>Admin workspace</div>
-            <h1 style={{ fontSize: 22, fontWeight: 600, margin: "3px 0 0", letterSpacing: "-0.01em", color: "var(--foreground)" }}>Marketing Hub</h1>
+            <h1 style={{ fontSize: 22, fontWeight: 600, margin: "3px 0 0", letterSpacing: "-0.01em", color: "var(--foreground)" }}>Marketing</h1>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12, paddingTop: 4 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--muted)", borderRadius: 999, padding: "4px 11px" }}>

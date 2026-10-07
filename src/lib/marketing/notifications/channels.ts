@@ -39,12 +39,12 @@ function emailHtml(p: DeliveryPayload): string {
     audience: "admin",
     subject: p.title,
     preheader: p.body,
-    context: "Marketing hub",
-    eyebrow: "Marketing hub",
+    context: "Marketing",
+    eyebrow: "Marketing",
     headline: p.title,
     intro: p.body,
-    primary: { label: "Open in the hub", url },
-    footer: { reason: "Internal. You can change what triggers these emails in Marketing hub, Settings, Notifications." },
+    primary: { label: "Open in iCapOS", url },
+    footer: { reason: "Internal. You can change what triggers these emails in Marketing, Settings, Notifications." },
   }).html;
 }
 

@@ -28,10 +28,10 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
       // Universal Contacts — one shared list for every department; each member sees the
       // contacts Lead-assigned to them (admins see all). No permission gate on purpose.
       { href: "/admin/contacts", label: "Contacts" },
-      { href: "/admin/ceo", label: "CEO Hub", requiredPermission: "view_admin_dashboard" },
+      { href: "/admin/ceo", label: "CEO", requiredPermission: "view_admin_dashboard" },
       {
         href: "/admin/sales",
-        label: "Sales Hub",
+        label: "Sales",
         requiredPermission: "manage_crm",
         children: [
           { href: "/admin/sales",               label: "Dashboard"     },
@@ -43,7 +43,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
       },
       {
         href: "/admin/marketing",
-        label: "Marketing Hub",
+        label: "Marketing",
         requiredPermission: "view_admin_dashboard",
         // Keep in sync with the marketing hub top-bar (src/app/admin/marketing/layout.tsx).
         children: [
@@ -62,7 +62,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
         ],
       },
       {
-        href: "/admin/ir", label: "Investor Relations Hub", requiredPermission: "view_admin_dashboard",
+        href: "/admin/ir", label: "Investor Relations", requiredPermission: "view_admin_dashboard",
         children: [
           { href: "/admin/ir",          label: "Dashboard"   },
           { href: "/admin/ir/projects", label: "Projects"    },
@@ -70,10 +70,10 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/ir/import",   label: "Odoo import" },
         ],
       },
-      { href: "/admin/social", label: "Social Media Hub", requiredPermission: "view_admin_dashboard" },
+      { href: "/admin/social", label: "Social Media", requiredPermission: "view_admin_dashboard" },
       {
         href: "/admin/events",
-        label: "Event Hub",
+        label: "Events",
         requiredPermission: "view_events",
         children: [
           { href: "/admin/events",              label: "All events"   },
@@ -90,7 +90,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
       },
       {
         href: "/admin/voice",
-        label: "Voice Hub",
+        label: "Voice",
         requiredPermission: "view_admin_dashboard",
         children: [
           { href: "/admin/voice",                label: "Command Center" },
@@ -131,12 +131,12 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
               { href: "/admin/activity/assignments", label: "Assignment" },
             ],
           },
-          { href: "/admin/ir-funnel",        label: "IR Funnel", menuGroup: "Funnels",       requiredPermission: "view_admin_dashboard" },
+          { href: "/admin/ir-funnel",        label: "Investor Relations Funnel", menuGroup: "Funnels",       requiredPermission: "view_admin_dashboard" },
           { href: "/admin/fit",              label: "Fit funnel", menuGroup: "Funnels",      requiredPermission: "view_admin_dashboard" },
-          { href: "/admin/investors/enrich", label: "Enrich data", menuGroup: "IR CRM",     requiredPermission: "manage_investors"     },
+          { href: "/admin/investors/enrich", label: "Enrich data", menuGroup: "Investor Relations CRM",     requiredPermission: "manage_investors"     },
           {
             href: "/admin/crm",
-            label: "IR CRM",
+            label: "Investor Relations CRM",
             requiredPermission: "manage_crm",
             children: [
               { href: "/admin/crm",           label: "Activity"  },
@@ -145,7 +145,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
               { href: "/admin/crm/outreach",  label: "Outreach"  },
             ],
           },
-          { href: "/admin/crm/unclassified",       label: "Unclassified", menuGroup: "IR CRM",           requiredPermission: "manage_crm"       },
+          { href: "/admin/crm/unclassified",       label: "Unclassified", menuGroup: "Investor Relations CRM",           requiredPermission: "manage_crm"       },
           { href: "/admin/spvs",                   label: "SPVs", menuGroup: "Deals",                   requiredPermission: "manage_spvs"      },
           { href: "/admin/matching",               label: "Matching", menuGroup: "Matching",               requiredPermission: "manage_matching"  },
           { href: "/admin/matching/prospects",     label: "Prospect Investors", menuGroup: "Matching",     requiredPermission: "manage_matching"  },

@@ -43,7 +43,7 @@ export function SettingsTasksClient({ staff }: { staff: Staff[] }) {
   return (
     <div style={{ flex: 1, background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, padding: 16, maxWidth: 460 }}>
       <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 4 }}>Task &amp; activity types</div>
-      <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 12 }}>Used when creating tasks across the Sales Hub.</div>
+      <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 12 }}>Used when creating tasks across Sales.</div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
         {taskTypes.map((t) => (
           <span key={t} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11.5, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 14, padding: "3px 9px" }}>

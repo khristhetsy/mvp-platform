@@ -101,7 +101,7 @@ export default async function VoiceCommandCenterPage() {
           <div className="flex items-center gap-3 px-5 py-4 text-white" style={{ background: "linear-gradient(112deg,#00183C,#0A1A40 45%,#0C60D8)" }}>
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15"><i className="ti ti-phone-outgoing" aria-hidden="true" /></span>
             <div>
-              <div className="text-base font-semibold">Voice Hub · Command Center</div>
+              <div className="text-base font-semibold">Voice · Command Center</div>
               <div className="text-[11px] text-white/70">AI outbound calling · consent-gated</div>
             </div>
             <span className={`ml-auto flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${dialingOn ? "border-emerald-300/40 bg-emerald-400/15 text-emerald-100" : "border-amber-300/40 bg-amber-400/15 text-amber-100"}`}>

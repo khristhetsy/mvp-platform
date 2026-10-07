@@ -93,7 +93,7 @@ export function LessonPageClient({
           <p className="text-2xl"><i className="ti ti-book" aria-hidden="true" /></p>
           <p className="mt-2 text-sm text-slate-500">Lesson not found.</p>
           <Link href="/founder/learning" className="mt-4 inline-block text-sm text-indigo-600 hover:underline">
-            ← Back to Learning Hub
+            ← Back to Learning
           </Link>
         </div>
       </div>

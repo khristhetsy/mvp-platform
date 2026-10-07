@@ -279,7 +279,7 @@ export function MatchingQueueClient({ projectId, taskId, initialView }: { projec
         <span className="ml-auto text-[12px] text-slate-600">{loading ? "Scoring…" : `${rows.length} proposed${data.total > data.rows.length ? ` of ${data.total}` : ""}`}</span>
       </div>
 
-      {data.thin ? <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12.5px] text-amber-800">The investor match index isn&rsquo;t built yet, so the engine has nothing to score. Rebuild it from Sales Hub › Settings, then reload.</p> : null}
+      {data.thin ? <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12.5px] text-amber-800">The investor match index isn&rsquo;t built yet, so the engine has nothing to score. Rebuild it from Sales › Settings, then reload.</p> : null}
       {mode === "match" && noSector ? <p className="mb-3 text-[12.5px] text-slate-500">Add at least one Sector under Filters to see proposals{data.project.company_id ? "" : ". This project has no iCapOS company and the founder's Odoo questionnaire names no industry, so there was nothing to start from"}. Or use Search all investors.</p> : null}
       {contacted ? <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12.5px] text-amber-900"><b>{contacted} of these investors were already worked for {data.project.founder_name ?? data.project.title}</b> on another of the founder&rsquo;s projects. They are flagged in the Outreach column; click a status to open that match.</p> : null}
 
@@ -402,7 +402,7 @@ function InvestorPanel({ row, onClose, picked, onPick }: { row: Row; onClose: ()
           </section>
           <section>
             <h4 className="mb-2 text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">On other projects</h4>
-            {err ? <p className="text-rose-600">{err}</p> : !hist ? <p className="text-slate-400">Loading…</p> : hist.matches.length === 0 ? <p className="text-slate-500">Not matched on any IR project yet.</p> : (
+            {err ? <p className="text-rose-600">{err}</p> : !hist ? <p className="text-slate-400">Loading…</p> : hist.matches.length === 0 ? <p className="text-slate-500">Not matched on any Investor Relations project yet.</p> : (
               <ul className="space-y-1.5">
                 {hist.matches.map((m) => (
                   <li key={m.matchId} className="flex items-center gap-2">

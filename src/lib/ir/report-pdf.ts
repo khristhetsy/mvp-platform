@@ -109,7 +109,7 @@ export function renderReportPdf(r: FrozenReport, ex: ExecSummary): Promise<Buffe
     doc.moveDown(0.3);
     table(["Date", "Channel", "Firm", "What happened", "Next step"], r.comms.map((c) => [c.date, c.channel, c.firm, c.what, c.next]), [W * 0.1, W * 0.17, W * 0.2, W * 0.33, W * 0.2]);
 
-    h2("Notes from your IR team");
+    h2("Notes from your Investor Relations team");
     if (!r.notes.length) p("No notes for this period.", { color: MUTED });
     for (const n of r.notes) { need(24); doc.font("Helvetica-Bold").fontSize(10).fillColor(INK).text(`${n.date}. `, { continued: true }).font("Helvetica").text(n.body, { lineGap: 2 }); doc.moveDown(0.3); }
 
@@ -123,7 +123,7 @@ export function renderReportPdf(r: FrozenReport, ex: ExecSummary): Promise<Buffe
     doc.font("Helvetica-Bold").fontSize(10).fillColor(INK).text(r.project.owner_name ?? "Investor Relations");
     doc.font("Helvetica").fontSize(9).fillColor(MUTED).text(`Investor Relations, ${FIRM}`);
     doc.moveDown(0.8);
-    p(`Confidential. Prepared for ${r.founder.name} and ${r.project.title} only. Investor names and contact details are held by ${FIRM} and are not included in this report. Firms are named once a meeting is booked. Figures cover the reporting period stated above and are drawn from the iCapOS Investor Relations Hub. This report is not an offer to sell securities.`, { size: 8, color: MUTED });
+    p(`Confidential. Prepared for ${r.founder.name} and ${r.project.title} only. Investor names and contact details are held by ${FIRM} and are not included in this report. Firms are named once a meeting is booked. Figures cover the reporting period stated above and are drawn from the iCapOS Investor Relations. This report is not an offer to sell securities.`, { size: 8, color: MUTED });
 
     // Running header (pages 2+) and footer with page numbers, from the shared kit
     kit.finish({

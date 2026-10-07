@@ -209,7 +209,7 @@ function AudiencePicker({ campaign, canWrite, busy, onSave }: {
 
           {source === "list" && (
             <select value={listId} onChange={(e) => setListId(e.target.value)} className="mb-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none">
-              <option value="">Select a Marketing Hub list…</option>
+              <option value="">Select a Marketing list…</option>
               {lists.map((l) => <option key={l.id} value={l.id}>{l.name} · {l.count.toLocaleString()} contacts</option>)}
             </select>
           )}
@@ -262,7 +262,7 @@ function AudiencePicker({ campaign, canWrite, busy, onSave }: {
 }
 
 type Step = { channel: "voice" | "sms" | "whatsapp" | "email"; delayHours: number; body?: string | null };
-const CH_LABEL: Record<Step["channel"], string> = { voice: "Voice call", sms: "SMS", whatsapp: "WhatsApp", email: "Email (Marketing Hub)" };
+const CH_LABEL: Record<Step["channel"], string> = { voice: "Voice call", sms: "SMS", whatsapp: "WhatsApp", email: "Email (Marketing)" };
 // Channels the cadence engine actually sends. Email is intentionally excluded:
 // it's handled by the Marketing Hub, so a cadence "email" step sends nothing here.
 const CADENCE_CHANNELS: Step["channel"][] = ["voice", "sms", "whatsapp"];

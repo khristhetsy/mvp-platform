@@ -33,7 +33,7 @@ export function IrAnalyticsTab() {
 
   return (
     <div>
-      <p style={{ fontSize: 13, color: MUTED, marginBottom: 16 }}>Click any card for its trend and an AI IR analyst read. Read-only — internal operating metrics.</p>
+      <p style={{ fontSize: 13, color: MUTED, marginBottom: 16 }}>Click any card for its trend and an AI Investor Relations analyst read. Read-only — internal operating metrics.</p>
       <Group label="Funnel &amp; activation" metrics={funnel} onOpen={setActive} />
       <Group label="Investor relations" metrics={ir} onOpen={setActive} />
       {active && <InsightDrawer metricKey={active} label={metrics.find((m) => m.key === active)?.label ?? ""} onClose={() => setActive(null)} />}
@@ -85,7 +85,7 @@ function InsightDrawer({ metricKey, label, onClose }: { metricKey: string; label
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 200, display: "flex", justifyContent: "flex-end" }}>
       <div onClick={(e) => e.stopPropagation()} role="dialog" aria-label={`AI insight — ${label}`} style={{ width: "min(440px, 96vw)", height: "100%", background: "#fff", overflowY: "auto", padding: 22 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}><i className="ti ti-sparkles" aria-hidden="true" /> AI IR Analyst — {label}</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}><i className="ti ti-sparkles" aria-hidden="true" /> AI Investor Relations Analyst — {label}</div>
           <button type="button" onClick={onClose} aria-label="Close" style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: MUTED }}>×</button>
         </div>
         {loading ? <p style={{ fontSize: 12.5, color: MUTED }}>Analyzing…</p> : insight ? (
@@ -111,7 +111,7 @@ function InsightDrawer({ metricKey, label, onClose }: { metricKey: string; label
             </div>
           </div>
         ) : <p style={{ fontSize: 12.5, color: MUTED }}>No insight available.</p>}
-        <p style={{ fontSize: 10.5, color: MUTED, marginTop: 20, lineHeight: 1.5 }}>Read-only commentary on internal IR activity. Never a funding-outcome prediction. Suggestions are links — every action needs a human click.</p>
+        <p style={{ fontSize: 10.5, color: MUTED, marginTop: 20, lineHeight: 1.5 }}>Read-only commentary on internal Investor Relations activity. Never a funding-outcome prediction. Suggestions are links — every action needs a human click.</p>
       </div>
     </div>
   );

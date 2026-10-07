@@ -54,13 +54,13 @@ describe("toApps: admin", () => {
     expect(apps.map((a) => a.label)).toEqual([
       "Dashboard",
       "Contacts",
-      "CEO Hub",
-      "Sales Hub",
-      "Marketing Hub",
-      "Investor Relations Hub",
-      "Social Media Hub",
-      "Event Hub",
-      "Voice Hub",
+      "CEO",
+      "Sales",
+      "Marketing",
+      "Investor Relations",
+      "Social Media",
+      "Events",
+      "Voice",
       "Communication",
       "Operational Tools",
       "Customer Support",
@@ -86,7 +86,7 @@ describe("toApps: admin", () => {
       "Action Center",
       "Account Activity",
       "Funnels",
-      "IR CRM",
+      "Investor Relations CRM",
       "Deals",
       "Matching",
       "Diligence",
@@ -95,22 +95,22 @@ describe("toApps: admin", () => {
     ]);
   });
 
-  it("groups the Marketing Hub into Audience and Campaigns", () => {
-    const m = byLabel(apps, "Marketing Hub");
+  it("groups Marketing into Audience and Campaigns", () => {
+    const m = byLabel(apps, "Marketing");
     expect(entryLabels(m)).toEqual(["Dashboard", "Plan", "Audience", "Campaigns", "Testimonials", "Analytics", "AEO", "Settings"]);
     const audience = m.entries.find((e) => e.label === "Audience");
     expect(audience?.kind === "group" && audience.items.map((i) => i.label)).toEqual(["Contacts", "Lists", "Suppressions"]);
   });
 
-  it("groups the Event Hub", () => {
-    expect(entryLabels(byLabel(apps, "Event Hub"))).toEqual(["All events", "Sales", "Content", "Networking Matching", "Reporting"]);
+  it("groups Events", () => {
+    expect(entryLabels(byLabel(apps, "Events"))).toEqual(["All events", "Sales", "Content", "Networking Matching", "Reporting"]);
   });
 
   it("uses a hub's own tabs when an override is given", () => {
     const withTabs = toApps(getAdminWorkspaceNavSections(), {
       menuOverrides: { "/admin/sales": [{ label: "Dashboard", href: "/admin/sales" }, { label: "Forecast", href: "/admin/sales/forecast" }] },
     });
-    expect(entryLabels(byLabel(withTabs, "Sales Hub"))).toEqual(["Dashboard", "Forecast"]);
+    expect(entryLabels(byLabel(withTabs, "Sales"))).toEqual(["Dashboard", "Forecast"]);
   });
 });
 
@@ -192,7 +192,7 @@ describe("currentApp and activeHref", () => {
   const apps = toApps(getAdminWorkspaceNavSections());
 
   it("picks the app owning the longest matching href", () => {
-    expect(currentApp(apps, "/admin/marketing/lists/42")?.label).toBe("Marketing Hub");
+    expect(currentApp(apps, "/admin/marketing/lists/42")?.label).toBe("Marketing");
     expect(currentApp(apps, "/admin")?.label).toBe("Dashboard");
     expect(currentApp(apps, "/admin/unknown-page")?.label).toBe("Dashboard");
   });
@@ -206,11 +206,11 @@ describe("currentApp and activeHref", () => {
         "/admin/marketing": [{ label: "Sales contacts", href: "/admin/sales/contacts" }],
       },
     });
-    const marketing = byLabel(withTabs, "Marketing Hub");
-    expect(currentApp(withTabs, "/admin/sales/contacts")?.label).toBe("Sales Hub");
-    expect(currentApp(withTabs, "/admin/sales/contacts", marketing.id)?.label).toBe("Marketing Hub");
+    const marketing = byLabel(withTabs, "Marketing");
+    expect(currentApp(withTabs, "/admin/sales/contacts")?.label).toBe("Sales");
+    expect(currentApp(withTabs, "/admin/sales/contacts", marketing.id)?.label).toBe("Marketing");
     // Without overrides, the Sales contacts page belongs to Sales Hub.
-    expect(currentApp(apps, "/admin/sales/contacts")?.label).toBe("Sales Hub");
+    expect(currentApp(apps, "/admin/sales/contacts")?.label).toBe("Sales");
   });
 
   it("returns null when no app owns the path", () => {
@@ -218,7 +218,7 @@ describe("currentApp and activeHref", () => {
   });
 
   it("highlights only the longest matching link", () => {
-    const m = byLabel(apps, "Marketing Hub");
+    const m = byLabel(apps, "Marketing");
     expect(activeHref(m, "/admin/marketing")).toBe("/admin/marketing");
     expect(activeHref(m, "/admin/marketing/campaigns/7")).toBe("/admin/marketing/campaigns");
   });

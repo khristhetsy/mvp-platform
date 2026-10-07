@@ -188,7 +188,7 @@ export function MatchClient({ matchId, meId }: { matchId: string; meId: string }
               <Field label="Name" value={investor?.name ?? "—"} /><Field label="Firm" value={investor?.firm ?? "—"} />
               <Field label="Country" value={investor?.country ?? "—"} /><Field label="Data source" value={investor?.dataSource === "verified" ? `Verified ${fmtDay(investor.verifiedAt)}` : investor?.dataSource === "self_reported" ? "Self-reported" : "Unverified"} />
               <Field label="Investor profile" value={investor?.investorTypes.join(", ") || "—"} /><Field label="Industry" value={investor?.industries.join(", ") || "—"} />
-              <div className="sm:col-span-2"><Link href={`/admin/sales/contacts/${m.investor_contact_id}`} className="text-[12.5px] text-indigo-700 hover:underline">Open in Sales Hub (phone / email there, permission-gated) →</Link></div>
+              <div className="sm:col-span-2"><Link href={`/admin/sales/contacts/${m.investor_contact_id}`} className="text-[12.5px] text-indigo-700 hover:underline">Open in Sales (phone / email there, permission-gated) →</Link></div>
             </div>
           ) : null}
           {tab === "history" ? (
@@ -359,7 +359,7 @@ function EmailComposer({ matchId, investorName, founder, stage, hasEmail, onePag
         <button type="button" onClick={onClose} aria-label="Close" className="ml-auto text-slate-400 hover:text-slate-700"><i className="ti ti-x" aria-hidden="true" /></button>
       </div>
       {!hasEmail ? (
-        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">This investor has no email on file. <Link href={`/admin/sales/contacts/${investorContactId}`} className="font-medium underline">Add one on their Sales Hub contact</Link>, then send from here.</p>
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">This investor has no email on file. <Link href={`/admin/sales/contacts/${investorContactId}`} className="font-medium underline">Add one on their Sales contact</Link>, then send from here.</p>
       ) : (
         <>
           <label className="mb-1 block text-[11.5px] text-slate-500" htmlFor="ir-mail-subject">Subject</label>

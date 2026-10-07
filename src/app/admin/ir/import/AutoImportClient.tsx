@@ -93,10 +93,10 @@ export function AutoImportClient() {
       {result ? (
         <div className="rounded-xl border border-emerald-200 bg-white p-5">
           <h3 className="text-[15px] font-semibold text-emerald-800">{result.company} imported</h3>
-          <p className="mt-1 text-[13px] text-slate-700">{result.tasksCreated} task{result.tasksCreated === 1 ? "" : "s"}{result.tasksSkipped ? ` (${result.tasksSkipped} already there)` : ""} · {result.matchesCreated} investor{result.matchesCreated === 1 ? "" : "s"}{result.matchesReused ? ` (${result.matchesReused} already there)` : ""} · {result.activitiesCreated} activit{result.activitiesCreated === 1 ? "y" : "ies"}{result.founderCreated ? " · founder contact created in Sales Hub" : ""}</p>
+          <p className="mt-1 text-[13px] text-slate-700">{result.tasksCreated} task{result.tasksCreated === 1 ? "" : "s"}{result.tasksSkipped ? ` (${result.tasksSkipped} already there)` : ""} · {result.matchesCreated} investor{result.matchesCreated === 1 ? "" : "s"}{result.matchesReused ? ` (${result.matchesReused} already there)` : ""} · {result.activitiesCreated} activit{result.activitiesCreated === 1 ? "y" : "ies"}{result.founderCreated ? " · founder contact created in Sales" : ""}</p>
           {result.missing.length ? (
             <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12.5px] text-amber-900">
-              <span>{result.missing.length} investor{result.missing.length === 1 ? " is" : "s are"} not in Sales Hub yet, so {result.missing.length === 1 ? "it was" : "they were"} left out.</span>
+              <span>{result.missing.length} investor{result.missing.length === 1 ? " is" : "s are"} not in Sales yet, so {result.missing.length === 1 ? "it was" : "they were"} left out.</span>
               <button type="button" disabled={busy !== null || !resultKey} onClick={() => resultKey && run(resultKey, true)} className="rounded-lg bg-amber-600 px-3 py-1 text-[12px] font-semibold text-white hover:bg-amber-700 disabled:opacity-60">{busy ? "Working…" : `Create ${result.missing.length === 1 ? "it" : "them"} and finish`}</button>
             </div>
           ) : null}

@@ -91,10 +91,10 @@ export async function POST(req: NextRequest): Promise<Response> {
       audience: "shared",
       subject: `Connect your ${platformName} to iCapOS`,
       preheader: `${who} asked you to connect ${label ?? `your ${platformName} account`}. The link expires in ${INVITE_TTL_DAYS} days.`,
-      context: "Social Media Hub",
-      eyebrow: "Social Media Hub",
+      context: "Social Media",
+      eyebrow: "Social Media",
       headline: `Connect your ${platformName} account`,
-      intro: `${who} asked you to connect your ${platformName} account${label ? ` (${label})` : ""} to the iCapOS Social Hub so posts can be published from it.`,
+      intro: `${who} asked you to connect your ${platformName} account${label ? ` (${label})` : ""} to the iCapOS Social so posts can be published from it.`,
       blocks: [
         ...(platform === "instagram" ? [{ type: "paragraph" as const, text: "Instagram connects through the Facebook Page it's linked to, so Facebook will ask you to sign in and approve." }] : []),
         { type: "note", text: `You'll sign in to iCapOS, then ${viaName} will ask you to approve. Your password stays with ${platformName}. iCapOS only stores the access token it hands back. This link works once and expires in ${INVITE_TTL_DAYS} days.` },

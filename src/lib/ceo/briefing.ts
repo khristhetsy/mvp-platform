@@ -126,11 +126,11 @@ export async function runBriefing(mode: "weekly" | "daily" = "daily"): Promise<B
             audience: "admin",
             subject: `CEO brief, ${today()}${off.length ? `: ${off.length} KPI${off.length === 1 ? " needs" : "s need"} attention` : ""}`,
             preheader: briefHeadline,
-            context: `CEO Hub · ${today()}`,
+            context: `CEO · ${today()}`,
             eyebrow: `CEO brief · ${cadence}`,
             headline: briefHeadline,
             intro: off.length
-              ? `${off.length} KPI${off.length === 1 ? " is" : "s are"} yellow or red. Each has a diagnosis and suggested next steps in the CEO Hub.`
+              ? `${off.length} KPI${off.length === 1 ? " is" : "s are"} yellow or red. Each has a diagnosis and suggested next steps in CEO.`
               : "Every tracked KPI is green.",
             blocks: off.length
               ? [{
@@ -143,7 +143,7 @@ export async function runBriefing(mode: "weekly" | "daily" = "daily"): Promise<B
                   })),
                 }]
               : [],
-            primary: { label: "Open the CEO Hub", url: "/admin/ceo" },
+            primary: { label: "Open CEO", url: "/admin/ceo" },
             footer: { reason: `Internal. Sent to leaders who opted in to the ${cadence.toLowerCase()} CEO brief.` },
           });
           const ok = await sendEmail({ to: emails, subject: mail.subject, html: mail.html, text: mail.text, fromName: "iCapOS Ops" });

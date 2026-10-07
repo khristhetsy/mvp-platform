@@ -81,7 +81,7 @@ export function OpsHub({ initial, initialTab, isAdmin }: { initial: HubPayload; 
   const subtitle = new Date(payload.today + "T00:00:00").toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
 
   return (
-    <HubShell flat title="Investor Relations Hub" subtitle={subtitle} tabs={tabs} activeTab={tab} onTabChange={changeTab}>
+    <HubShell flat title="Investor Relations" subtitle={subtitle} tabs={tabs} activeTab={tab} onTabChange={changeTab}>
       {tab === "dash" && <DashboardTab payload={payload} onJump={changeTab} onToggle={toggleCheck} onAdvisory={runAdvisoryAction} busy={busy} />}
       {tab === "analytics" && <IrAnalyticsTab />}
       {(tab === "open" || tab === "core" || tab === "close") && (
@@ -272,7 +272,7 @@ function SurfaceCard({ surface: s, isAdmin, onToggle, onRefresh }: { surface: Hu
             <Link href={s.href} style={{ fontSize: 11.5, fontWeight: 600, color: "#185FA5", textDecoration: "none" }}>Open →</Link>
             {isAdmin && (
               <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
-                <button type="button" onClick={async () => { if (await api("/api/admin/playbook/drift/ignore", "POST", { navIds: [s.navId], ignored: true })) onRefresh(); }} style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border)", borderRadius: 7, padding: "4px 10px", cursor: "pointer" }} title="Hide this surface from the hub (reversible)">Remove</button>
+                <button type="button" onClick={async () => { if (await api("/api/admin/playbook/drift/ignore", "POST", { navIds: [s.navId], ignored: true })) onRefresh(); }} style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border)", borderRadius: 7, padding: "4px 10px", cursor: "pointer" }} title="Hide this surface from Operations (reversible)">Remove</button>
                 <button type="button" onClick={() => setEditing(true)} style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border)", borderRadius: 7, padding: "4px 10px", cursor: "pointer" }}>Edit</button>
               </div>
             )}
@@ -339,7 +339,7 @@ function SettingsTab({ settings, isAdmin, onRefresh }: { settings: HubSettings; 
 
       {s.driftIgnored.length > 0 && (
         <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, overflow: "hidden", marginTop: 16 }}>
-          <div style={{ padding: "12px 16px", borderBottom: "0.5px solid #f1f5f9", fontSize: 13, fontWeight: 500 }}>Hidden surfaces <span style={{ fontWeight: 400, fontSize: 11.5, color: "var(--muted-foreground)" }}>· removed from the hub</span></div>
+          <div style={{ padding: "12px 16px", borderBottom: "0.5px solid #f1f5f9", fontSize: 13, fontWeight: 500 }}>Hidden surfaces <span style={{ fontWeight: 400, fontSize: 11.5, color: "var(--muted-foreground)" }}>· removed from Operations</span></div>
           {s.driftIgnored.map((navId) => (
             <div key={navId} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", borderTop: "0.5px solid #f1f5f9" }}>
               <code style={{ fontSize: 11.5, color: "var(--muted-foreground)" }}>{navId}</code>

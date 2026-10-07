@@ -481,7 +481,7 @@ export const ADMIN_SOPS: SopEntry[] = [
     permission: "manage_crm",
     keywords: ["marketing", "template", "sequence", "email sequence", "enroll", "campaign", "drip"],
     steps: [
-      "Admin → Marketing hub → Templates to create or edit a template.",
+      "Admin → Marketing → Templates to create or edit a template.",
       "Open Sequences, add steps, and set delays/conditions.",
       "Bulk-enroll a contact list into the sequence.",
     ],
@@ -491,7 +491,7 @@ export const ADMIN_SOPS: SopEntry[] = [
   {
     id: 31,
     part: "G",
-    title: "Import or export Sales Hub Contacts (CSV)",
+    title: "Import or export Sales Contacts (CSV)",
     summary: "Bring contacts in or take data out via CSV.",
     permission: "manage_imports",
     keywords: ["csv", "import", "export", "contacts", "upload contacts", "data export", "crm export"],
@@ -993,11 +993,11 @@ export const ADMIN_SOPS: SopEntry[] = [
     id: 65,
     part: "G",
     title: "Run the marketing daily operating loop",
-    summary: "The Open → Core → Close marketing loop across the hub's real surfaces.",
+    summary: "The Open → Core → Close marketing loop across the platform's real surfaces.",
     permission: "view_admin_dashboard",
     keywords: ["marketing", "marketing console", "daily loop", "marketing operations", "campaigns", "daily marketing", "marketing routine", "open core close", "marketing daily", "operator loop"],
     steps: [
-      "Open — Dashboard: review the engagement funnel and integration health at Marketing hub → Dashboard (/admin/marketing).",
+      "Open — Dashboard: review the engagement funnel and integration health at Marketing → Dashboard (/admin/marketing).",
       "Open — Action review: clear staged and scheduled campaigns and any bounce or webhook alerts (/admin/marketing/campaigns; platform queue at /admin/actions).",
       "Open — Replies: work unhandled replies in the inbox (/admin/inbox) and CRM messages (/admin/crm/messages). Route interested → follow-up, unsubscribe → suppression, and anything mentioning guarantees or placement → securities counsel (do not answer directly).",
       "Core — Lead pipeline: leads live in Odoo (the external system of record). Review the mirrored contacts and list hygiene before any send (/admin/marketing/contacts, /admin/marketing/lists). Do not schedule a segment until its import is clean.",
@@ -1005,12 +1005,12 @@ export const ADMIN_SOPS: SopEntry[] = [
       "Core — Phone follow-up: call only non-suppressed leads; cap at two attempts per lead, then close. Log via CRM outreach (/admin/crm/outreach).",
       "Core — Content and assets: keep templates and pillar content fresh — review anything older than ~30 days (/admin/marketing/templates and the AEO pages at /admin/marketing/aeo).",
       "Core — Brand consistency: keep to the approved navy and royal-blue palette. The legacy teal and indigo brand colors are flagged by the pre-deploy check — fix any flagged files before shipping.",
-      "Core — AI CMO advisory: read the AI CMO's recommendations (Marketing hub → Plan, /admin/marketing/plan, and the AI CMO copilot) and act on them manually. The advisory is read-only.",
+      "Core — AI CMO advisory: read the AI CMO's recommendations (Marketing → Plan, /admin/marketing/plan, and the AI CMO copilot) and act on them manually. The advisory is read-only.",
       "Core — SEO / AEO: check answer-engine visibility and publish or refresh citable pages at /admin/marketing/aeo; turn gaps into content tasks.",
       "Close — End of day: review today's engagement rollup (/admin/marketing/analytics), stage tomorrow's batches, note open blockers, and write a one-line log.",
     ],
     behindScenes:
-      "Odoo is the external system of record for leads; Supabase carries a read mirror plus the console's own action state. Engagement metrics come from marketing_events (send / open / click / reply / signup) — there is deliberately no funding or outcome data to report. The AI CMO reads analytics only and never writes operational tables. The playbook (/admin/playbook) documents the steps; the Marketing hub surfaces are where they are performed.",
+      "Odoo is the external system of record for leads; Supabase carries a read mirror plus the console's own action state. Engagement metrics come from marketing_events (send / open / click / reply / signup) — there is deliberately no funding or outcome data to report. The AI CMO reads analytics only and never writes operational tables. The playbook (/admin/playbook) documents the steps; Marketing surfaces are where they are performed.",
     reversibility: "Most steps are review or queue actions; a scheduled campaign can be paused or cancelled before it sends.",
     warnings: [
       "Never schedule a send on a segment whose import is not clean.",

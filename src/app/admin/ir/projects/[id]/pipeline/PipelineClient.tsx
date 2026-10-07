@@ -213,7 +213,7 @@ function AddMatches({ projectId, onClose, onAdded }: { projectId: string; onClos
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" onClick={onClose}>
       <div role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-xl">
         <div className="mb-2 flex items-center"><p className="text-[15px] font-semibold text-slate-900">Add matches</p><button type="button" aria-label="Close" onClick={onClose} className="ml-auto text-slate-400 hover:text-slate-600"><i className="ti ti-x" aria-hidden="true" /></button></div>
-        <p className="mb-3 text-[12px] text-slate-500">Search investor contacts in Sales Hub. Each confirmed investor lands in Matched with a &ldquo;Send intro email&rdquo; to-do due in 7 days. The engine-ranked matching queue arrives with the weekly Task screen.</p>
+        <p className="mb-3 text-[12px] text-slate-500">Search investor contacts in Sales. Each confirmed investor lands in Matched with a &ldquo;Send intro email&rdquo; to-do due in 7 days. The engine-ranked matching queue arrives with the weekly Task screen.</p>
         <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Investor name or firm…" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-indigo-400 focus:outline-none" />
         <div className="mt-2 max-h-72 divide-y divide-slate-100 overflow-y-auto rounded-lg border border-slate-200">
           {rows.length === 0 ? <p className="p-3 text-[12px] text-slate-400">{q.trim().length < 2 ? "Type at least two characters." : "No investors match."}</p> : rows.map((r) => (

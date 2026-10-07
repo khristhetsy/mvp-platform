@@ -18,7 +18,7 @@ async function handle(request: Request) {
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {
     Sentry.captureException(err);
-    return NextResponse.json({ ok: false, error: err instanceof Error ? err.message.slice(0, 200) : "IR summaries failed." }, { status: 500 });
+    return NextResponse.json({ ok: false, error: err instanceof Error ? err.message.slice(0, 200) : "Investor Relations summaries failed." }, { status: 500 });
   }
 }
 async function scheduledGET(request: Request) { return handle(request); }

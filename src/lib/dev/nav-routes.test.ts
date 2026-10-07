@@ -63,7 +63,7 @@ describe("matching an href against the map", () => {
 });
 
 describe("reading the nav config", () => {
-  it("finds the Event Hub items", () => {
+  it("finds Events items", () => {
     const labels = navHrefs.map((h) => h.label);
     expect(labels).toContain("Registration");
     expect(labels).toContain("Networking Matching");

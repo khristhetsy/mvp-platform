@@ -93,7 +93,7 @@ export function OutreachReportClient({ projects }: { projects: FounderProject[] 
 
       {data.sentReport ? (
         <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
-          <div className="mb-1 flex flex-wrap items-center justify-between gap-2"><h2 className="text-[15px] font-semibold text-indigo-900">Executive summary from your IR team</h2><a href={`/api/founder/ir/report/pdf?report=${data.sentReport.id}`} className="rounded-lg border border-indigo-300 bg-white px-3 py-1.5 text-[12.5px] font-medium text-indigo-800 hover:bg-indigo-100">Download the report (PDF)</a></div>
+          <div className="mb-1 flex flex-wrap items-center justify-between gap-2"><h2 className="text-[15px] font-semibold text-indigo-900">Executive summary from your Investor Relations team</h2><a href={`/api/founder/ir/report/pdf?report=${data.sentReport.id}`} className="rounded-lg border border-indigo-300 bg-white px-3 py-1.5 text-[12.5px] font-medium text-indigo-800 hover:bg-indigo-100">Download the report (PDF)</a></div>
           <p className="text-[13.5px] text-indigo-950"><strong className="font-semibold">Bottom line.</strong> {data.sentReport.summary.bottom}</p>
           <p className="mt-2 text-[13px] leading-relaxed text-indigo-950">{data.sentReport.summary.lead}</p>
           {data.sentReport.summary.asks.length ? <><p className="mt-2 text-[11px] font-semibold uppercase tracking-wider text-indigo-700">Asks of {data.project.title}</p><ul className="list-disc pl-5 text-[13px] text-indigo-950">{data.sentReport.summary.asks.map((a, i) => <li key={i}>{a}</li>)}</ul></> : null}
@@ -111,7 +111,7 @@ export function OutreachReportClient({ projects }: { projects: FounderProject[] 
               <tbody className="divide-y divide-slate-100">{data.comms.map((c, i) => <tr key={i}><td className="py-1.5 pr-2 text-slate-600">{c.date}</td><td className="py-1.5 pr-2 text-slate-800">{c.channel}</td><td className="py-1.5 pr-2 text-slate-800">{c.firm}</td><td className="py-1.5 pr-2 text-slate-700">{c.what}</td><td className="py-1.5 text-slate-500">{c.next}</td></tr>)}
                 {data.comms.length === 0 ? <tr><td colSpan={5} className="py-3 text-slate-400">No investor contact logged in this period.</td></tr> : null}</tbody>
             </table>
-            <h2 className="mb-2 mt-5 text-[15px] font-semibold text-slate-900">Notes from your IR team</h2>
+            <h2 className="mb-2 mt-5 text-[15px] font-semibold text-slate-900">Notes from your Investor Relations team</h2>
             {data.notes.length === 0 ? <p className="text-[12.5px] text-slate-400">No notes this period.</p> : <ul className="flex flex-col gap-2 text-[13px]">{data.notes.map((n, i) => <li key={i} className="flex gap-3"><span className="w-14 shrink-0 text-slate-500">{n.date}</span><span className="text-slate-800">{n.body}</span></li>)}</ul>}
           </div>
         </div>
@@ -125,8 +125,8 @@ export function OutreachReportClient({ projects }: { projects: FounderProject[] 
             {data.upcoming.length === 0 ? <p className="text-[12.5px] text-slate-400">None booked right now.</p> : <ul className="text-[12.5px]">{data.upcoming.map((u, i) => <li key={i} className="flex justify-between py-1"><span className="text-slate-800">{u.firm}</span><span className="text-slate-500">{u.when}</span></li>)}</ul>}
           </div>
           <div className="rounded-xl border border-slate-200 bg-white p-4">
-            <h2 className="mb-1 text-[15px] font-semibold text-slate-900">Reports from your IR team</h2>
-            {data.sentReports.length === 0 ? <p className="text-[12.5px] text-slate-400">No written reports yet. Your IR contact sends one at the end of each reporting period.</p> : <ul className="divide-y divide-slate-100 text-[12.5px]">{data.sentReports.map((r) => <li key={r.id} className="flex items-start justify-between gap-2 py-2"><span><span className="block text-slate-800">{r.kind === "week" ? "Weekly" : r.kind === "month" ? "Monthly" : "Custom"} · {r.period}</span>{r.bottom ? <span className="block text-slate-500">{r.bottom}</span> : null}</span><a href={`/api/founder/ir/report/pdf?report=${r.id}`} className="shrink-0 text-indigo-700 hover:underline">PDF</a></li>)}</ul>}
+            <h2 className="mb-1 text-[15px] font-semibold text-slate-900">Reports from your Investor Relations team</h2>
+            {data.sentReports.length === 0 ? <p className="text-[12.5px] text-slate-400">No written reports yet. Your Investor Relations contact sends one at the end of each reporting period.</p> : <ul className="divide-y divide-slate-100 text-[12.5px]">{data.sentReports.map((r) => <li key={r.id} className="flex items-start justify-between gap-2 py-2"><span><span className="block text-slate-800">{r.kind === "week" ? "Weekly" : r.kind === "month" ? "Monthly" : "Custom"} · {r.period}</span>{r.bottom ? <span className="block text-slate-500">{r.bottom}</span> : null}</span><a href={`/api/founder/ir/report/pdf?report=${r.id}`} className="shrink-0 text-indigo-700 hover:underline">PDF</a></li>)}</ul>}
           </div>
           <p className="text-[11.5px] text-slate-400">Investor names and contact details are held by iCFO Capital Global, Inc. and are not shown here. Firms appear once a meeting is booked. Ask your iCFO contact before approaching any investor directly, so outreach is not duplicated. This summary is not an offer to sell securities.</p>
         </div>

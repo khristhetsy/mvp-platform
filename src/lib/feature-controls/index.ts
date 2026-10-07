@@ -77,7 +77,7 @@ export const FEATURES: FeatureDef[] = [
   // ── Admin: relationships ───────────────────────────────────────────────
   { key: "companies", label: "Companies", group: "Admin · relationships", hrefs: { admin: ["/admin/companies"] } },
   { key: "investors", label: "Investors", group: "Admin · relationships", hrefs: { admin: ["/admin/investors"] } },
-  { key: "crm", label: "IR CRM", group: "Admin · relationships", hrefs: { admin: ["/admin/crm", "/admin/crm/pipeline", "/admin/crm/messages", "/admin/crm/outreach"] } },
+  { key: "crm", label: "Investor Relations CRM", group: "Admin · relationships", hrefs: { admin: ["/admin/crm", "/admin/crm/pipeline", "/admin/crm/messages", "/admin/crm/outreach"] } },
   { key: "intro_requests", label: "Intro requests", group: "Admin · relationships", hrefs: { admin: ["/admin/intro-requests"] } },
   { key: "deal_rooms", label: "Deal rooms", group: "Admin · relationships", hrefs: { admin: ["/admin/deal-rooms"] } },
   { key: "spvs", label: "SPVs", group: "Admin · relationships", hrefs: { admin: ["/admin/spvs"] } },
@@ -86,7 +86,7 @@ export const FEATURES: FeatureDef[] = [
   { key: "readiness_scores", label: "Readiness scores", group: "Admin · relationships", hrefs: { admin: ["/admin/readiness"] } },
 
   // ── Admin: operations ──────────────────────────────────────────────────
-  { key: "marketing", label: "Marketing Hub", group: "Admin · operations", hrefs: { admin: ["/admin/marketing", "/admin/marketing/contacts", "/admin/marketing/campaigns", "/admin/marketing/sequences", "/admin/marketing/templates", "/admin/marketing/lists", "/admin/marketing/suppressions", "/admin/marketing/analytics", "/admin/marketing/plan"] } },
+  { key: "marketing", label: "Marketing", group: "Admin · operations", hrefs: { admin: ["/admin/marketing", "/admin/marketing/contacts", "/admin/marketing/campaigns", "/admin/marketing/sequences", "/admin/marketing/templates", "/admin/marketing/lists", "/admin/marketing/suppressions", "/admin/marketing/analytics", "/admin/marketing/plan"] } },
   { key: "compliance", label: "Compliance & audit", group: "Admin · operations", hrefs: { admin: ["/admin/compliance", "/admin/audit"] } },
   { key: "signatures", label: "E-Signatures", group: "Admin · operations", hrefs: { admin: ["/admin/signatures"] } },
   { key: "diligence", label: "Diligence", group: "Admin · operations", hrefs: { admin: ["/admin/diligence"] } },

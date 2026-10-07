@@ -53,7 +53,7 @@ export default async function ConnectSocialPage({ params }: Props) {
       <ol className="mt-5 space-y-2 text-[13px] text-slate-700">
         <li><b className="font-medium">1.</b> {user ? "You're signed in to iCapOS." : "Sign in to iCapOS with your staff login."}</li>
         <li><b className="font-medium">2.</b> {oauthName} opens and asks you to sign in and approve{invite.platform === "instagram" ? " (Instagram connects through the Facebook Page it's linked to)" : ""}. Your password stays with {oauthName}.</li>
-        <li><b className="font-medium">3.</b> You land back in the Social Hub with the account connected.</li>
+        <li><b className="font-medium">3.</b> You land back in Social with the account connected.</li>
       </ol>
       <div className="mt-6">
         {!user ? (

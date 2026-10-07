@@ -291,7 +291,7 @@
   },
   "eventsAdmin": {
     "marketing": {
-      "title": "Marketing Hub",
+      "title": "Marketing",
       "descPre": "Draft, edit, and store the marketing kit for ",
       "descPost": ". SEO is applied to the public event page automatically.",
       "unsaved": "Unsaved changes",
@@ -352,7 +352,7 @@
     "manage": {
       "allEvents": "All events",
       "liveControlCenter": "Live control center",
-      "marketingHub": "Marketing Hub",
+      "marketingHub": "Marketing",
       "leads": "Leads",
       "viewPublic": "View public page",
       "noSectorTracks": "no sector tracks",
@@ -1166,7 +1166,7 @@
     "latestEvents": "Latest events",
     "liveControlCenter": "Live control center",
     "manageEvent": "Manage event",
-    "marketingHub": "Marketing Hub",
+    "marketingHub": "Marketing",
     "marketplaceConversionFunnel": "Marketplace Conversion Funnel",
     "mediumRisks": "Medium risks",
     "meet": "Meet",
@@ -1489,7 +1489,7 @@
     "open_tool": "Open tool",
     "opportunity_pipeline_watchlist_expressed_inter": "Opportunity pipeline, watchlist, expressed interest, and relationship activity.",
     "outreach_crm": "Outreach & CRM",
-    "outreach_hub": "Outreach hub",
+    "outreach_hub": "Outreach",
     "outreach_tools": "Outreach tools",
     "overall_progress": "Overall progress",
     "overview": "Overview",

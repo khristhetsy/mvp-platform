@@ -41,7 +41,7 @@ export function NewProjectClient({ meId }: { meId: string }) {
        
       setSources(j.sources ?? []); setCompanies(j.companies ?? []); setStaff(j.staff ?? []);
       if (!(j.sources ?? []).length) setMode("company");
-    }).catch(() => setError("Couldn't load Sales Hub deals."));
+    }).catch(() => setError("Couldn't load Sales deals."));
   }, []);
 
   const source = sources.find((s) => s.id === sourceId) ?? null;
@@ -85,7 +85,7 @@ export function NewProjectClient({ meId }: { meId: string }) {
       <div className="rounded-xl border border-slate-200 bg-white p-5">
         <p className="text-[11px] font-semibold uppercase tracking-wider text-indigo-700">Step 1 of 2 · Project, then matching</p>
         <h2 className="mt-1 text-[20px] font-semibold text-slate-900">Create project</h2>
-        <p className="mt-1 text-[12.5px] text-slate-500">Starts from a closed deal in Sales Hub. Milestones are generated from the start date and term.</p>
+        <p className="mt-1 text-[12.5px] text-slate-500">Starts from a closed deal in Sales. Milestones are generated from the start date and term.</p>
 
         <div className="mt-4 flex gap-1 rounded-lg bg-slate-100 p-0.5 text-[12px]">
           {(["deal", "company"] as const).map((m) => (
@@ -95,7 +95,7 @@ export function NewProjectClient({ meId }: { meId: string }) {
 
         {mode === "deal" ? (
           <div className="mt-3">
-            <label className={lbl}>Closed deal from Sales Hub</label>
+            <label className={lbl}>Closed deal from Sales</label>
             <select value={sourceId} onChange={(e) => pickSource(e.target.value)} className={inp}>
               <option value="">Select a closed-won deal…</option>
               {sources.map((s) => <option key={s.id} value={s.id}>{s.title}{s.contact_name ? ` · ${s.contact_name}` : ""} · Closed won {new Date(s.won_at).toLocaleDateString()}</option>)}

@@ -47,7 +47,7 @@ export async function sendInvestorEmail(input: {
   tags?: Array<{ name: string; value: string }>;
 }): Promise<{ ok: true; onePager: boolean } | { ok: false; error: string; status: number }> {
   const to = await investorEmail(input.investorContactId);
-  if (!to) return { ok: false, status: 400, error: "This investor has no email on file. Add one on their Sales Hub contact, then send." };
+  if (!to) return { ok: false, status: 400, error: "This investor has no email on file. Add one on their Sales contact, then send." };
   const onePager = input.includeOnePager ? await onePagerFor(input.companyId) : null;
   if (input.includeOnePager && !onePager) return { ok: false, status: 400, error: "The founder's one-pager isn't published yet, so there's no link to send." };
   const text = onePager ? `${input.body.trim()}\n\nOne-pager: ${onePager.url}` : input.body.trim();

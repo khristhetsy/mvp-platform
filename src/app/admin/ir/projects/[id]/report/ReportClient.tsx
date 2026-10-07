@@ -156,7 +156,7 @@ export function ReportClient({ projectId, meName }: { projectId: string; meName:
               <div className="rounded-xl border border-slate-200 bg-white p-4">
                 <h3 className="mb-2 text-[15px] font-semibold text-slate-900">Communications log</h3>
                 <CommsTable rows={data.comms} />
-                <h3 className="mb-2 mt-5 text-[15px] font-semibold text-slate-900">Notes from your IR team</h3>
+                <h3 className="mb-2 mt-5 text-[15px] font-semibold text-slate-900">Notes from your Investor Relations team</h3>
                 {data.notes.length === 0 ? <p className="text-[12.5px] text-slate-400">No founder-visible notes in this period. Mark a note founder-visible on a Share Project record to include it.</p> : <ul className="flex flex-col gap-2 text-[13px]">{data.notes.map((n, i) => <li key={i} className="flex gap-3"><span className="w-14 shrink-0 text-slate-500">{n.date}</span><span className="text-slate-800">{n.body}</span></li>)}</ul>}
               </div>
             </div>
@@ -169,7 +169,7 @@ export function ReportClient({ projectId, meName }: { projectId: string; meName:
                 <h3 className="mb-1 text-[15px] font-semibold text-slate-900">Scheduled summaries</h3>
                 <label className="flex items-center justify-between py-1.5 text-[13px] text-slate-800">Weekly summary every Monday<input type="checkbox" checked={data.schedule.weekly} disabled={busy !== null} onChange={(e) => void toggleSchedule("weeklySummary", e.target.checked)} /></label>
                 <label className="flex items-center justify-between py-1.5 text-[13px] text-slate-800">Monthly summary at each milestone end<input type="checkbox" checked={data.schedule.monthly} disabled={busy !== null} onChange={(e) => void toggleSchedule("monthlySummary", e.target.checked)} /></label>
-                <p className="mt-1 text-[11.5px] text-slate-400">Sends the figures, pipeline, communications log and IR notes for the period just ended — no executive summary, so nothing needs approval. {data.founder.email ? `Goes to ${data.founder.email}.` : "No founder email on file — nothing will send until one is added to the founder contact in Sales Hub."}</p>
+                <p className="mt-1 text-[11.5px] text-slate-400">Sends the figures, pipeline, communications log and Investor Relations notes for the period just ended — no executive summary, so nothing needs approval. {data.founder.email ? `Goes to ${data.founder.email}.` : "No founder email on file — nothing will send until one is added to the founder contact in Sales."}</p>
                 {data.schedule.sends.length ? <ul className="mt-2 text-[11.5px] text-slate-500">{data.schedule.sends.slice(0, 3).map((s, i) => <li key={i}>{s.kind === "week" ? "Weekly" : "Monthly"} · period from {s.period_start} · sent {new Date(s.sent_at).toLocaleDateString()}</li>)}</ul> : null}
               </div>
               <div className="rounded-xl border border-slate-200 bg-white p-4">
@@ -282,14 +282,14 @@ function Document({ d, ex, preparedBy }: { d: ReportData; ex: ExecSummary; prepa
       <H2>Communications log</H2>
       <p className="mb-1 text-[11px] text-slate-500">Every investor contact made on your behalf in this period, with the outcome and the next step. Firms are named once a meeting is booked.</p>
       <CommsTable rows={d.comms} compact />
-      <H2>Notes from your IR team</H2>
+      <H2>Notes from your Investor Relations team</H2>
       {d.notes.length === 0 ? <p className="text-[12px] text-slate-400">No notes for this period.</p> : d.notes.map((n, i) => <p key={i} className="mb-1 text-[12px] text-slate-800"><strong className="font-semibold">{n.date}.</strong> {n.body}</p>)}
       <H2>Upcoming meetings</H2>
       {d.upcoming.length === 0 ? <p className="text-[12px] text-slate-400">None booked.</p> : <table className="w-full text-[11.5px]"><thead><tr className="bg-slate-50 text-left text-[10.5px] text-slate-500"><th className="px-2 py-1 font-medium">Firm</th><th className="px-2 py-1 font-medium">When</th></tr></thead><tbody className="divide-y divide-slate-100">{d.upcoming.map((u, i) => <tr key={i}><td className="px-2 py-1">{u.firm}</td><td className="px-2 py-1">{u.when}</td></tr>)}</tbody></table>}
       <H2>Next period</H2>
       <p className="text-[12px] leading-relaxed text-slate-800">Your team continues outreach against the matched list, with follow ups scheduled for investors who have met with you and data room access for those in diligence. Ask your iCFO contact before approaching any investor directly, so outreach is not duplicated.</p>
       <div className="mt-8 flex items-end justify-between border-t border-slate-200 pt-3"><div><p className="text-[12px] font-semibold text-slate-900">{preparedBy}</p><p className="text-[11px] text-slate-500">Investor Relations, iCFO Capital Global, Inc.</p></div></div>
-      <p className="mt-4 text-[10px] leading-relaxed text-slate-500">Confidential. Prepared for {d.founder.name} and {d.project.title} only. Investor names and contact details are held by iCFO Capital Global, Inc. and are not included in this report. Firms are named once a meeting is booked. Figures cover the reporting period stated above and are drawn from the iCapOS Investor Relations Hub. This report is not an offer to sell securities.</p>
+      <p className="mt-4 text-[10px] leading-relaxed text-slate-500">Confidential. Prepared for {d.founder.name} and {d.project.title} only. Investor names and contact details are held by iCFO Capital Global, Inc. and are not included in this report. Firms are named once a meeting is booked. Figures cover the reporting period stated above and are drawn from the iCapOS Investor Relations. This report is not an offer to sell securities.</p>
     </div>
   );
 }

@@ -11,7 +11,7 @@ describe("pickSameEmail", () => {
     const full = row("full", { contact_type: "investor", created_on: "2023-03-02", profile: { industries: ["Healthcare"], investorTypes: ["Venture Capital"] } });
     expect(pickSameEmail([blankOdoo, irDupe, full])?.id).toBe("full");
   });
-  it("with no profiles, prefers an investor record not created by the IR import", () => {
+  it("with no profiles, prefers an investor record not created by the Investor Relations import", () => {
     expect(pickSameEmail([row("ir", { source: "odoo-ir", contact_type: "investor" }), row("inv", { contact_type: "investor" }), row("other")])?.id).toBe("inv");
   });
   it("returns null for no rows", () => { expect(pickSameEmail([])).toBeNull(); });

@@ -141,7 +141,7 @@ function HubAnalyticsPanel({ departmentId }: { departmentId: string }) {
     <div style={{ background: "#fff", border: "0.5px solid var(--border)", borderRadius: 12, padding: "12px 14px", marginBottom: 12 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
         <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: MUTED }}><i className="ti ti-broadcast" aria-hidden="true" /> {data.source}</span>
-        {data.hubHref && <Link href={data.hubHref} style={{ marginLeft: "auto", fontSize: 11, color: BLUE, textDecoration: "none" }}>Open Hub →</Link>}
+        {data.hubHref && <Link href={data.hubHref} style={{ marginLeft: "auto", fontSize: 11, color: BLUE, textDecoration: "none" }}>Open →</Link>}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 10 }}>
         {data.metrics.map((m, i) => (

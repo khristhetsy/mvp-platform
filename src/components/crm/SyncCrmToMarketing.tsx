@@ -46,8 +46,8 @@ export function SyncCrmToMarketing() {
         <div className="flex items-center gap-2">
           <Megaphone className="h-5 w-5 text-slate-400" />
           <div>
-            <p className="text-sm font-semibold text-slate-800">Sync Sales Hub Contacts into Marketing Hub</p>
-            <p className="text-xs text-slate-500">Pushes your imported contacts into the Marketing Hub contact list (matched by email). Safe to re-run.</p>
+            <p className="text-sm font-semibold text-slate-800">Sync Sales Contacts into Marketing</p>
+            <p className="text-xs text-slate-500">Pushes your imported contacts into Marketing contact list (matched by email). Safe to re-run.</p>
           </div>
         </div>
         <button type="button" onClick={run} disabled={running} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-white disabled:opacity-50" style={{ background: BLUE }}>
@@ -66,7 +66,7 @@ export function SyncCrmToMarketing() {
             </div>
             <span className="tabular-nums text-xs font-medium text-slate-600">{synced.toLocaleString()}{total ? ` / ${total.toLocaleString()}` : ""}</span>
           </div>
-          {done && <p className="mt-1 text-xs text-emerald-600">Done — {synced.toLocaleString()} contacts synced into the Marketing Hub.</p>}
+          {done && <p className="mt-1 text-xs text-emerald-600">Done — {synced.toLocaleString()} contacts synced into Marketing.</p>}
         </div>
       )}
     </div>

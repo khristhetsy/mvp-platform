@@ -9,7 +9,7 @@ type Props = {
 
 // Friendly display for the stored `source` value (the raw tag stays in the DB, unchanged).
 const SOURCE_LABELS: Record<string, string> = {
-  investor_crm: "Sales Hub Contacts",
+  investor_crm: "Sales Contacts",
   "SEC Form D": "SEC Form D",
   manual: "Manual",
 };
@@ -166,10 +166,10 @@ export function ProspectInvestorsManager({ initialProspects }: Props) {
             disabled={importing}
             className="rounded-lg bg-slate-900 px-3.5 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-60"
           >
-            {importing ? "Importing…" : "Import from investor Sales Hub Contacts"}
+            {importing ? "Importing…" : "Import from investor Sales Contacts"}
           </button>
           <span className="text-xs text-slate-500">
-            Pulls investor Sales Hub Contacts in as prospects (best-effort sector/geography). Safe to re-run — duplicates are skipped.
+            Pulls investor Sales Contacts in as prospects (best-effort sector/geography). Safe to re-run — duplicates are skipped.
           </span>
         </div>
 

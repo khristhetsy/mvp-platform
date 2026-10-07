@@ -10,11 +10,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * except the user's own profile-view log, which only records what they viewed.
  */
 export const REQUIRED_OWNERSHIP = [
-  { key: "ir_projects_owner", table: "ir_projects", column: "owner_id", label: "IR projects owned" },
-  { key: "ir_projects_created", table: "ir_projects", column: "created_by", label: "IR projects created" },
-  { key: "ir_activities", table: "ir_activities", column: "created_by", label: "IR activities" },
-  { key: "ir_notes", table: "ir_notes", column: "created_by", label: "IR notes" },
-  { key: "ir_reports", table: "ir_reports", column: "created_by", label: "IR reports" },
+  { key: "ir_projects_owner", table: "ir_projects", column: "owner_id", label: "Investor Relations projects owned" },
+  { key: "ir_projects_created", table: "ir_projects", column: "created_by", label: "Investor Relations projects created" },
+  { key: "ir_activities", table: "ir_activities", column: "created_by", label: "Investor Relations activities" },
+  { key: "ir_notes", table: "ir_notes", column: "created_by", label: "Investor Relations notes" },
+  { key: "ir_reports", table: "ir_reports", column: "created_by", label: "Investor Relations reports" },
   { key: "valuations", table: "valuations", column: "created_by", label: "Valuations" },
 ] as const;
 

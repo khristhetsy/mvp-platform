@@ -50,10 +50,10 @@ export function summaryHtml(d: ReportData): { subject: string; html: string; tex
   <h2 style="font-size:15px;margin:0 0 6px">Communications log</h2>
   <p style="font-size:12px;color:#5B6B86;margin:0 0 6px">Every investor contact made on your behalf this period. Firms are named once a meeting is booked.</p>
   ${d.comms.length ? `<table style="border-collapse:collapse;width:100%;margin-bottom:18px"><thead><tr><th style="${head}">Date</th><th style="${head}">Channel</th><th style="${head}">Firm</th><th style="${head}">What happened</th><th style="${head}">Next step</th></tr></thead><tbody>${d.comms.map((c) => `<tr><td style="${cell}">${esc(c.date)}</td><td style="${cell}">${esc(c.channel)}</td><td style="${cell}">${esc(c.firm)}</td><td style="${cell}">${esc(c.what)}</td><td style="${cell};color:#5B6B86">${esc(c.next)}</td></tr>`).join("")}</tbody></table>` : `<p style="font-size:13px;color:#5B6B86;margin:0 0 18px">No investor contact logged in this period.</p>`}
-  <h2 style="font-size:15px;margin:0 0 6px">Notes from your IR team</h2>
+  <h2 style="font-size:15px;margin:0 0 6px">Notes from your Investor Relations team</h2>
   ${d.notes.length ? d.notes.map((n) => `<p style="font-size:13px;line-height:1.55;margin:0 0 8px"><strong>${esc(n.date)}.</strong> ${esc(n.body)}</p>`).join("") : `<p style="font-size:13px;color:#5B6B86;margin:0 0 18px">No notes this period.</p>`}
   ${d.upcoming.length ? `<h2 style="font-size:15px;margin:18px 0 6px">Upcoming meetings</h2><ul style="font-size:13px;margin:0 0 18px;padding-left:18px">${d.upcoming.map((u) => `<li>${esc(u.firm)} · ${esc(u.when)}</li>`).join("")}</ul>` : ""}
-  <p style="font-size:13px;line-height:1.55;margin:18px 0">Ask your iCFO contact before approaching any investor directly, so outreach is not duplicated. Your full written report with the executive summary is prepared and sent by ${esc(d.project.owner_name ?? "your IR contact")}.</p>
+  <p style="font-size:13px;line-height:1.55;margin:18px 0">Ask your iCFO contact before approaching any investor directly, so outreach is not duplicated. Your full written report with the executive summary is prepared and sent by ${esc(d.project.owner_name ?? "your Investor Relations contact")}.</p>
 </div>`;
   const subject = `${d.project.title} investor outreach summary · ${d.period.label.split(" · ")[0]}`;
   const html = renderEmail({
@@ -65,7 +65,7 @@ export function summaryHtml(d: ReportData): { subject: string; html: string; tex
     footer: {
       reason: `You get this because iCFO runs investor outreach for ${d.project.title}.`,
       lines: [
-        `Confidential. Prepared for ${d.founder.name} and ${d.project.title} only. Investor names and contact details are held by iCFO Capital Global, Inc. and are not included. Figures cover the period stated above and are drawn from the iCapOS Investor Relations Hub. This summary is not an offer to sell securities.`,
+        `Confidential. Prepared for ${d.founder.name} and ${d.project.title} only. Investor names and contact details are held by iCFO Capital Global, Inc. and are not included. Figures cover the period stated above and are drawn from the iCapOS Investor Relations. This summary is not an offer to sell securities.`,
       ],
     },
   }).html;

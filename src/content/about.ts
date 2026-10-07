@@ -35,7 +35,7 @@ export const about = {
   pillar1: {
     eyebrow: "Pillar one",
     title: "What sixteen years of investor relations actually involved.",
-    intro: "Not press releases and shareholder letters. IR at the private-company stage means getting a company to the point where an investor conversation is worth having.",
+    intro: "Not press releases and shareholder letters. Investor Relations at the private-company stage means getting a company to the point where an investor conversation is worth having.",
     items: [
       { tag: "A", h: "Positioning", p: "Turning a founder's explanation of the business into something an investor can evaluate in four minutes — problem, wedge, market, why now." },
       { tag: "B", h: "Materials", p: "Deck, one-pager, and investor update built to the format investors expect, rather than the format the founder happened to build first." },

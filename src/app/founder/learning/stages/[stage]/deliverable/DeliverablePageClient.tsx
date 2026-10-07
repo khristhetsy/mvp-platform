@@ -29,7 +29,7 @@ export function DeliverablePageClient({
         <div className="text-center">
           <p className="text-sm text-slate-500">Stage not found.</p>
           <Link href="/founder/learning" className="mt-4 inline-block text-sm text-indigo-600 hover:underline">
-            ← Back to Learning Hub
+            ← Back to Learning
           </Link>
         </div>
       </div>

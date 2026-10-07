@@ -74,7 +74,7 @@ export function AddContactsCard() {
         <h2 className="text-base font-semibold text-slate-950">Add contacts</h2>
       </div>
       <p className="mb-4 text-sm text-slate-600">
-        Import a file or type one in. New contacts land in the same deduped store as Odoo — matched on email — and appear in the Marketing Hub.
+        Import a file or type one in. New contacts land in the same deduped store as Odoo — matched on email — and appear in Marketing.
       </p>
 
       <div className="mb-4 inline-flex rounded-lg border border-slate-200 bg-white p-0.5">

@@ -219,7 +219,7 @@ export function suggestedPromptChips(ctx: SanitizedAssistantContext): string[] {
     case "meeting":
       return ["Which sections aren't ready?", "What's carrying over from last week?", "Draft the meeting summary", "What are the open action items?"];
     case "ir_hub":
-      return ["What needs attention in IR?", "Summarize SPV blockers", "Which intros are stalled?", "What's pending investor approval?"];
+      return ["What needs attention in Investor Relations?", "Summarize SPV blockers", "Which intros are stalled?", "What's pending investor approval?"];
     case "investor_pipeline":
       return ["Summarize my pipeline", "Which deals to prioritize?", "What's in my watchlist?", "How do I track deal stages?"];
     case "investor_portfolio":

@@ -172,8 +172,8 @@ export const workspaceNavIconByHref: Record<string, LucideIcon> = {
   "/admin/support": Headset,
   "/admin/founders-stuck": AlertTriangle,
   "/admin/prospect-intros": ArrowLeftRight,
-  "/admin/playbook": HeartHandshake, // Investor Relations Hub
-  "/admin/crm": MessageSquare, // IR CRM
+  "/admin/playbook": HeartHandshake, // Investor Relations
+  "/admin/crm": MessageSquare, // Investor Relations CRM
   "/admin/crm/pipeline": TrendingUp,
   "/admin/crm/messages": MessageSquare,
   "/admin/crm/outreach": Rocket,
@@ -187,11 +187,11 @@ export const workspaceNavIconByHref: Record<string, LucideIcon> = {
   "/admin/matching/prospects": UserSearch,
   "/admin/outreach-qualification": Filter,
   "/admin/partner-scores": Award,
-  "/admin/marketing": Megaphone, // Marketing Hub
-  "/admin/events": PartyPopper, // Event Hub
+  "/admin/marketing": Megaphone, // Marketing
+  "/admin/events": PartyPopper, // Events
   "/admin/events/email": Mail,
   "/admin/events/brochure": FileText,
-  "/admin/voice": Mic, // Voice Hub
+  "/admin/voice": Mic, // Voice
   "/admin/actions": ListTodo,
   "/admin/tasks": CheckSquare,
   "/admin/portfolio": PieChart,

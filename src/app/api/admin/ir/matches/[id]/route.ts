@@ -104,7 +104,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       if (match.stage === "matched") await updateMatch(id, { stage: "intro_sent" }, me.id);
       return NextResponse.json({ ok: true, via: d.via, onePager: sent.onePager });
     }
-    const r = await sendRecordMessage({ projectId: match.project_id, matchId: id, taskId: null, body: parsed.data.body, followers: [project?.owner_id, match.assignee_id], senderId: me.id, recordLabel: `${match.investor_name ?? match.investor_firm ?? "Investor"} · ${project?.title ?? "IR"}`, deepLink: `/admin/ir/matches/${id}` });
+    const r = await sendRecordMessage({ projectId: match.project_id, matchId: id, taskId: null, body: parsed.data.body, followers: [project?.owner_id, match.assignee_id], senderId: me.id, recordLabel: `${match.investor_name ?? match.investor_firm ?? "Investor"} · ${project?.title ?? "Investor Relations"}`, deepLink: `/admin/ir/matches/${id}` });
     return NextResponse.json({ ok: true, ...r });
   } catch (e) { return failed(e, "Couldn't complete that."); }
 }
