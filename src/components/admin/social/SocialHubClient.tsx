@@ -66,8 +66,8 @@ function statusMeta(status: string): { label: string; cls: string; dot: string }
   }
 }
 
-export function SocialHubClient({ accounts, queue, settings: settings0, slots: slots0, linkedInReady, facebookReady, googleReady, attribution, initialTab, libraryCampaign = null, librarySince = null }: {
-  accounts: SocialAccount[]; queue: QueueItem[]; settings: SocialSettings; slots: SocialSlot[]; linkedInReady: boolean; facebookReady: boolean; googleReady: boolean; attribution: WeekBar[];
+export function SocialHubClient({ accounts, queue, settings: settings0, slots: slots0, linkedInReady, facebookReady, redditReady = false, googleReady, attribution, initialTab, libraryCampaign = null, librarySince = null }: {
+  accounts: SocialAccount[]; queue: QueueItem[]; settings: SocialSettings; slots: SocialSlot[]; linkedInReady: boolean; facebookReady: boolean; redditReady?: boolean; googleReady: boolean; attribution: WeekBar[];
   /** Deep links (?tab=library&campaign=…&since=…) — how Campaigns & Goals opens a stage or campaign in a new tab. */
   initialTab?: string; libraryCampaign?: string | null; librarySince?: string | null;
 }) {
@@ -118,7 +118,7 @@ export function SocialHubClient({ accounts, queue, settings: settings0, slots: s
           <div className="space-y-6">
             <AlertRules />
             <Rules settings0={settings0} slots0={slots0} />
-            <Accounts accounts={accounts} linkedInReady={linkedInReady} facebookReady={facebookReady} failed24={failed24} />
+            <Accounts accounts={accounts} linkedInReady={linkedInReady} facebookReady={facebookReady} redditReady={redditReady} failed24={failed24} />
           </div>
         ) : null}
       </div>
@@ -915,7 +915,7 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
             </div>
             {q.post_id && accounts.length > 1 ? (() => {
               const siblings = queue.filter((x) => x.post_id === q.post_id);
-              const net = (p: string) => (p === "linkedin" ? "LinkedIn" : p === "facebook" ? "Facebook" : p === "instagram" ? "Instagram" : p);
+              const net = (p: string) => (p === "linkedin" ? "LinkedIn" : p === "facebook" ? "Facebook" : p === "instagram" ? "Instagram" : p === "reddit" ? "Reddit" : p);
               return (
                 <div className="mt-3 rounded-lg border border-slate-200">
                   <p className="border-b border-slate-100 bg-slate-50 px-3 py-1.5 text-[10.5px] font-semibold uppercase tracking-wide text-slate-500">Posted to</p>

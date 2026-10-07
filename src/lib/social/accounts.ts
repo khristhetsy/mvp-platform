@@ -110,3 +110,27 @@ export async function upsertInstagramAccount(input: InstagramAccountInput): Prom
   if (error) throw new Error(`Failed to save Instagram account: ${error.message}`);
   return { id: (data as { id: string }).id };
 }
+
+export type RedditAccountInput = { username: string; refreshToken: string };
+
+/** Upsert the connected Reddit user (keyed on platform + username). Access tokens are
+ *  short-lived and fetched per publish, so only the refresh token is stored. */
+export async function upsertRedditAccount(input: RedditAccountInput): Promise<{ id: string }> {
+  const row = {
+    platform: "reddit",
+    external_member_id: `u/${input.username}`,
+    display_name: `u/${input.username}`,
+    access_token: null,
+    refresh_token: sealToken(input.refreshToken),
+    token_expires_at: null,
+    status: "connected",
+    updated_at: new Date().toISOString(),
+  };
+  const { data, error } = await db()
+    .from("social_accounts")
+    .upsert(row, { onConflict: "platform,external_member_id" })
+    .select("id")
+    .single();
+  if (error) throw new Error(`Failed to save Reddit account: ${error.message}`);
+  return { id: (data as { id: string }).id };
+}

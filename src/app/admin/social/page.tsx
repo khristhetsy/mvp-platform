@@ -4,6 +4,7 @@ import { listSocialAccounts, listQueue, getSocialSettings, getSlots } from "@/li
 import { isLinkedInConfigured } from "@/lib/social/linkedin-adapter";
 import { isLinkedInOAuthConfigured } from "@/lib/social/linkedin-oauth";
 import { isMetaConfigured } from "@/lib/social/meta-oauth";
+import { isRedditConfigured } from "@/lib/social/reddit-oauth";
 import { getAttribution } from "@/lib/social/attribution";
 import { isGoogleCalendarConfigured } from "@/lib/integrations/google-calendar";
 import { SocialHubClient } from "@/components/admin/social/SocialHubClient";
@@ -13,7 +14,12 @@ export const metadata = { title: "Social Media Hub" };
 
 type Notice = { tone: "ok" | "warn"; text: string };
 
-function connectNotice(sp: { linkedin?: string; facebook?: string; message?: string }): Notice | undefined {
+function connectNotice(sp: { linkedin?: string; facebook?: string; reddit?: string; message?: string }): Notice | undefined {
+  if (sp.reddit) {
+    if (sp.reddit === "connected") return { tone: "ok", text: `Reddit account${sp.message ? ` ${sp.message}` : ""} connected. Approved posts to it publish to r/${process.env.REDDIT_SUBREDDIT?.trim().replace(/^\/?r\//i, "") || "FounderCapitalRaising"}.` };
+    if (sp.reddit === "unconfigured") return { tone: "warn", text: "Reddit isn't configured. Set REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET, then try again." };
+    return { tone: "warn", text: `Couldn't connect Reddit${sp.message ? `: ${sp.message}` : "."}` };
+  }
   if (sp.linkedin) {
     if (sp.linkedin === "connected") return { tone: "ok", text: `LinkedIn account${sp.message ? ` "${sp.message}"` : ""} connected. Approved variants will publish through it.` };
     if (sp.linkedin === "error" && sp.message === "invite_expired") return { tone: "warn", text: "That connect link has already been used or has expired. Send a new one from Settings › Accounts." };
@@ -31,7 +37,7 @@ function connectNotice(sp: { linkedin?: string; facebook?: string; message?: str
   return undefined;
 }
 
-export default async function AdminSocialPage({ searchParams }: { searchParams: Promise<{ linkedin?: string; facebook?: string; message?: string; tab?: string; campaign?: string; since?: string }> }) {
+export default async function AdminSocialPage({ searchParams }: { searchParams: Promise<{ linkedin?: string; facebook?: string; reddit?: string; message?: string; tab?: string; campaign?: string; since?: string }> }) {
   const sp = await searchParams;
   const notice = connectNotice(sp);
   const profile = await requireRole(["admin", "analyst"]);
@@ -62,7 +68,7 @@ export default async function AdminSocialPage({ searchParams }: { searchParams: 
         ) : null}
 
         <div className="mt-5">
-          <SocialHubClient accounts={accounts} queue={queue} settings={settings} slots={slots} linkedInReady={isLinkedInOAuthConfigured()} facebookReady={isMetaConfigured()} googleReady={isGoogleCalendarConfigured()} attribution={attribution}
+          <SocialHubClient accounts={accounts} queue={queue} settings={settings} slots={slots} linkedInReady={isLinkedInOAuthConfigured()} facebookReady={isMetaConfigured()} redditReady={isRedditConfigured()} googleReady={isGoogleCalendarConfigured()} attribution={attribution}
             initialTab={sp.tab} libraryCampaign={sp.campaign ?? null} librarySince={sp.since ?? null} />
         </div>
       </div>

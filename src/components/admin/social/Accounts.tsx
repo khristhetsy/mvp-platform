@@ -14,15 +14,16 @@ import { accountName } from "@/lib/social/account-name";
 type Invite = { id: string; platform: string; label: string | null; assigned_to: string | null; email: string; is_default: boolean; expires_at: string };
 type Staff = { id: string; name: string; email: string | null };
 type Activity = { published30: number; queued: number; failed30: number; recent: Array<{ id: string; body: string; status: string; at: string | null; url: string | null }> };
-type Platform = "linkedin" | "facebook" | "instagram";
+type Platform = "linkedin" | "facebook" | "instagram" | "reddit";
 /** Which OAuth flow a platform connects through — Instagram rides the Facebook Page login. */
-const OAUTH_OF: Record<Platform, "linkedin" | "facebook"> = { linkedin: "linkedin", facebook: "facebook", instagram: "facebook" };
+const OAUTH_OF: Record<Platform, "linkedin" | "facebook" | "reddit"> = { linkedin: "linkedin", facebook: "facebook", instagram: "facebook", reddit: "reddit" };
 
 const card = "rounded-xl border border-slate-200 bg-white";
 const PLATFORM: Record<string, { label: string; icon: string; color: string; kind: string }> = {
   linkedin: { label: "LinkedIn", icon: "ti-brand-linkedin", color: "#0A66C2", kind: "personal profile" },
   facebook: { label: "Facebook", icon: "ti-brand-facebook", color: "#1877F2", kind: "Page" },
   instagram: { label: "Instagram", icon: "ti-brand-instagram", color: "#E1306C", kind: "Business account" },
+  reddit: { label: "Reddit", icon: "ti-brand-reddit", color: "#FF4500", kind: "user account" },
 };
 const STATUS: Record<string, { label: string; cls: string }> = {
   connected: { label: "Connected", cls: "bg-emerald-50 text-emerald-700" },
@@ -47,7 +48,7 @@ function startHref(platform: Platform, opts: { label?: string; assign?: string; 
   return `/api/social/${OAUTH_OF[platform]}/start${q ? `?${q}` : ""}`;
 }
 
-export function Accounts({ accounts: initial, linkedInReady, facebookReady, failed24 }: { accounts: SocialAccount[]; linkedInReady: boolean; facebookReady: boolean; failed24: number }) {
+export function Accounts({ accounts: initial, linkedInReady, facebookReady, redditReady = false, failed24 }: { accounts: SocialAccount[]; linkedInReady: boolean; facebookReady: boolean; redditReady?: boolean; failed24: number }) {
   const [accounts, setAccounts] = useState<SocialAccount[]>(initial);
   const [invites, setInvites] = useState<Invite[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
@@ -56,7 +57,7 @@ export function Accounts({ accounts: initial, linkedInReady, facebookReady, fail
   const [adding, setAdding] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
   const [menuId, setMenuId] = useState<string | null>(null);
-  const ready: Record<Platform, boolean> = { linkedin: linkedInReady, facebook: facebookReady, instagram: facebookReady };
+  const ready: Record<Platform, boolean> = { linkedin: linkedInReady, facebook: facebookReady, instagram: facebookReady, reddit: redditReady };
 
   async function reload() {
     const r = await fetch("/api/admin/social/accounts");
@@ -216,8 +217,8 @@ function AddAccountDialog({ staff, ready, onClose, onInvited }: { staff: Staff[]
   return (
     <Modal onClose={onClose} title="Add account">
       <p className="mb-1 text-[11.5px] text-slate-500">Platform</p>
-      <div className="mb-3 grid grid-cols-4 gap-1.5">
-        {(["linkedin", "facebook", "instagram", "x"] as const).map((p) => {
+      <div className="mb-3 grid grid-cols-5 gap-1.5">
+        {(["linkedin", "facebook", "instagram", "reddit", "x"] as const).map((p) => {
           const on = p === platform; const avail = p !== "x";
           return <button key={p} type="button" disabled={!avail} title={avail ? undefined : "X's API is paid — not enabled"} onClick={() => avail && setPlatform(p)} className={`inline-flex items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 text-[12.5px] ${on ? "border-indigo-400 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-600"} disabled:opacity-40`}>
             <i className={`ti ti-brand-${p}`} aria-hidden="true" />{p === "x" ? "X" : p[0].toUpperCase() + p.slice(1)}
@@ -257,7 +258,7 @@ function AddAccountDialog({ staff, ready, onClose, onInvited }: { staff: Staff[]
         </a>
         <div className="flex flex-1 items-center gap-1.5">
           <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="their@email.com" className={`${inputCls} min-w-0 flex-1`} />
-          <button type="button" onClick={invite} disabled={busy || !ready[platform]} className={`${btn} inline-flex shrink-0 items-center gap-1.5`}><i className="ti ti-mail" aria-hidden="true" /> {busy ? "Sending…" : "Email connect link"}</button>
+          <button type="button" onClick={invite} disabled={busy || !ready[platform] || platform === "reddit"} title={platform === "reddit" ? "Reddit connects directly with the button" : undefined} className={`${btn} inline-flex shrink-0 items-center gap-1.5`}><i className="ti ti-mail" aria-hidden="true" /> {busy ? "Sending…" : "Email connect link"}</button>
         </div>
       </div>
       <p className="mt-2 text-[11px] text-slate-400">The connect link lets the staff member authorize from their own computer. It works once and expires in 7 days.</p>
