@@ -4,7 +4,13 @@
 // never hardcoded, so a new master with new slots works with zero UI changes.
 // These validators back the build:emails guardrails.
 
-export type SlotType = "text" | "textarea" | "url" | "image";
+/**
+ * text / textarea / url / image: plain values, HTML-escaped.
+ * richtext: paragraphs (blank line) with **bold** support.
+ * list: one bullet per line, **bold** allowed.
+ * terms: one "Label: value" pair per line, rendered as a grid of tiles.
+ */
+export type SlotType = "text" | "textarea" | "url" | "image" | "richtext" | "list" | "terms";
 
 export type TemplateSlot = {
   key: string;
@@ -14,7 +20,21 @@ export type TemplateSlot = {
   required?: boolean;
   /** Only the banner slot is editable brand-wise; everything else is content. */
   editable?: boolean;
+  /**
+   * Optional "What shows in the email" control. The email can carry a short
+   * form of this slot, with the whole text on the full overview page:
+   * first_paragraph (richtext), first_3 (list) or hide (any slot).
+   */
+  condense?: CondenseMode;
+  /** Label for the control; defaults to the slot label. */
+  condense_label?: string;
+  /** Starting state for new copies. Defaults to "short". */
+  condense_default?: "short" | "full";
+  /** Follow another slot's control instead of having one of its own. */
+  condense_with?: string;
 };
+
+export type CondenseMode = "first_paragraph" | "first_3" | "hide";
 
 export type PlaceholderSchema = {
   slots: TemplateSlot[];

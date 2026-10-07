@@ -71,12 +71,27 @@ export async function createCopyFromMaster(masterId: string, createdBy: string):
   const master = await getMaster(masterId);
   if (!master) throw new Error("Master template not found.");
 
+  // Masters with a sender card start with the creator's name, email and photo.
+  const slotKeys = new Set(master.placeholder_schema.slots.map((s) => s.key));
+  const slotValues: Record<string, string> = {};
+  if (slotKeys.has("sender_name")) {
+    const { data: me } = await db
+      .from("profiles")
+      .select("full_name, email, avatar_url")
+      .eq("id", createdBy)
+      .maybeSingle();
+    const p = (me ?? {}) as { full_name?: string | null; email?: string | null; avatar_url?: string | null };
+    if (p.full_name) slotValues.sender_name = p.full_name;
+    if (p.email && slotKeys.has("sender_email")) slotValues.sender_email = p.email;
+    if (p.avatar_url && /^https?:\/\//.test(p.avatar_url) && slotKeys.has("sender_photo")) slotValues.sender_photo = p.avatar_url;
+  }
+
   const { data, error } = await db
     .from("email_template_copies")
     .insert({
       master_id: masterId,
       name: `${master.name} — Copy`,
-      slot_values: {},
+      slot_values: slotValues,
       banner_mode: "gradient",
       status: "draft",
       created_by: createdBy,

@@ -6,12 +6,18 @@
 // placeholders for the on-screen preview.
 
 import { mergeSlots } from "./template-merge";
+import { condenseSlots, overviewUrl } from "./condense";
 import { SEND_TIME_TOKENS } from "./template-schema";
 import type { CopyWithMaster } from "./masters-queries";
 
 /** Slot values with the banner resolved from the copy's banner_mode. */
 function effectiveSlots(copy: CopyWithMaster): Record<string, string> {
-  const slots = { ...copy.slot_values };
+  // Masters with condensable slots carry the short form in the email and link
+  // to the full overview page whenever something was left out.
+  const schema = copy.master.placeholder_schema;
+  const { values, condensed } = condenseSlots(schema, copy.slot_values ?? {});
+  const slots = { ...values };
+  if (schema.locked.includes("overview_url")) slots.overview_url = condensed ? overviewUrl(copy.id) : "";
   // Gradient mode → no background image (the compiled master already carries the
   // gradient). Image mode → the chosen banner, over which the master applies its
   // navy overlay for contrast.
@@ -19,14 +25,27 @@ function effectiveSlots(copy: CopyWithMaster): Record<string, string> {
   return slots;
 }
 
-export type RenderMode = "preview" | "send";
+export type RenderMode = "preview" | "send" | "campaign";
 
 /**
  * Preview: send tokens are shown as safe placeholders so the editor never
  * displays raw braces. Send: they are preserved untouched for the send layer.
+ * Campaign: for the Marketing templates library (see above).
  */
 export function renderCopyHtml(copy: CopyWithMaster, mode: RenderMode): string {
   const slots = effectiveSlots(copy);
+
+  // Campaign: HTML handed to the Marketing templates library. The campaign
+  // sender appends its own signed unsubscribe footer, so the master's
+  // unsubscribe line is dropped; recipient tokens stay for its merge step.
+  if (mode === "campaign") {
+    return mergeSlots(
+      copy.master.compiled_html,
+      { ...slots, unsubscribe_url: "", view_in_browser_url: "" },
+      copy.master.placeholder_schema,
+      { preserveTokens: ["first_name", "last_name", "company", "email"] },
+    );
+  }
 
   if (mode === "send") {
     return mergeSlots(copy.master.compiled_html, slots, copy.master.placeholder_schema, {
@@ -43,5 +62,8 @@ export function renderCopyHtml(copy: CopyWithMaster, mode: RenderMode): string {
     company: "your company",
     email: "you@example.com",
   };
-  return mergeSlots(copy.master.compiled_html, { ...previewTokens, ...slots }, copy.master.placeholder_schema);
+  const merged = mergeSlots(copy.master.compiled_html, { ...previewTokens, ...slots }, copy.master.placeholder_schema);
+  // A recipient token typed into a slot value (e.g. "Hi {{first_name}},") is
+  // shown with its placeholder too, so the preview never displays raw braces.
+  return merged.replace(/\{\{\s*([a-z0-9_]+)\s*\}\}/gi, (m, k: string) => previewTokens[k.toLowerCase()] ?? m);
 }

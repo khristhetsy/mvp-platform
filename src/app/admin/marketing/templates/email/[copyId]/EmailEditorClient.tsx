@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { renderCopyHtml } from "@/lib/email/render-copy";
+import { condenseControls, isShort, viewKey } from "@/lib/email/condense";
 import type { BannerMode, CopyStatus, CopyWithMaster } from "@/lib/email/masters-queries";
 
 const PREVIEW_WIDTHS = { desktop: 640, mobile: 390 } as const;
@@ -20,6 +21,12 @@ export function EmailEditorClient({ copy }: Readonly<{ copy: CopyWithMaster }>) 
   const [testMsg, setTestMsg] = useState<string | null>(null);
 
   const editableSlots = copy.master.placeholder_schema.slots.filter((s) => s.key !== "banner_image");
+  const viewControls = condenseControls(copy.master.placeholder_schema);
+  const VIEW_LABELS = {
+    first_paragraph: ["Full", "First paragraph"],
+    first_3: ["All", "First 3"],
+    hide: ["Show", "Hide"],
+  } as const;
 
   // Live preview: rebuild the copy shape from local state and render client-side.
   const previewHtml = useMemo(
@@ -60,6 +67,26 @@ export function EmailEditorClient({ copy }: Readonly<{ copy: CopyWithMaster }>) 
     }
   }
 
+  const [campaignMsg, setCampaignMsg] = useState<string | null>(null);
+
+  // Hand the filled-in copy to the Marketing templates library, where campaigns
+  // and mass email pick their templates.
+  async function sendToCampaignTemplates() {
+    setCampaignMsg("Saving to templates…");
+    try {
+      await save();
+      const res = await fetch(`/api/marketing/email-templates/copies/${copy.id}/to-template`, { method: "POST" });
+      const json = (await res.json().catch(() => null)) as { templateId?: string; error?: string } | null;
+      if (!res.ok || !json?.templateId) {
+        setCampaignMsg(json?.error ?? "Couldn't save to templates.");
+        return;
+      }
+      window.location.href = `/admin/marketing/templates?edit=${json.templateId}`;
+    } catch {
+      setCampaignMsg("Couldn't save to templates.");
+    }
+  }
+
   async function sendTest() {
     setTestMsg("Sending…");
     try {
@@ -90,6 +117,7 @@ export function EmailEditorClient({ copy }: Readonly<{ copy: CopyWithMaster }>) 
           <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] capitalize text-slate-500">{status}</span>
         </div>
         <div className="flex items-center gap-2">
+          {campaignMsg ? <span className="text-xs text-slate-500">{campaignMsg}</span> : null}
           {testMsg ? <span className="text-xs text-slate-500">{testMsg}</span> : null}
           {saveMsg ? <span className="text-xs text-slate-500">{saveMsg}</span> : null}
           <button
@@ -98,6 +126,13 @@ export function EmailEditorClient({ copy }: Readonly<{ copy: CopyWithMaster }>) 
             className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
           >
             Send test email
+          </button>
+          <button
+            type="button"
+            onClick={() => void sendToCampaignTemplates()}
+            className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+          >
+            Use in campaign
           </button>
           <button
             type="button"
@@ -149,6 +184,41 @@ export function EmailEditorClient({ copy }: Readonly<{ copy: CopyWithMaster }>) 
             Logo, colours, and layout are locked to brand and can&apos;t be edited here.
           </div>
 
+          {/* What shows in the email — only for masters with condensable slots */}
+          {viewControls.length > 0 ? (
+            <section className="mb-5">
+              <h3 className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">What shows in the email</h3>
+              <div className="grid gap-1.5">
+                {viewControls.map((slot) => {
+                  const short = isShort(copy.master.placeholder_schema, slotValues, slot);
+                  const [fullLabel, shortLabel] = VIEW_LABELS[slot.condense!];
+                  return (
+                    <div key={slot.key} className="flex items-center gap-2 text-xs text-slate-600">
+                      <span className="flex-1 font-semibold">{slot.condense_label ?? slot.label}</span>
+                      {(["full", "short"] as const).map((v) => (
+                        <button
+                          key={v}
+                          type="button"
+                          onClick={() => setSlot(viewKey(slot.key), v)}
+                          className={`rounded-md border px-2 py-1 ${
+                            (v === "short") === short
+                              ? "border-blue-300 bg-blue-50 font-semibold text-blue-700"
+                              : "border-slate-200 text-slate-600"
+                          }`}
+                        >
+                          {v === "full" ? fullLabel : shortLabel}
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-[11px] text-slate-400">
+                When anything is shortened, the email adds a Read the full overview link to a page with the whole text.
+              </p>
+            </section>
+          ) : null}
+
           {/* Content slots — generated from the schema, never hardcoded */}
           <section className="mb-5">
             <h3 className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">Content</h3>
@@ -157,12 +227,12 @@ export function EmailEditorClient({ copy }: Readonly<{ copy: CopyWithMaster }>) 
                 <label key={slot.key} className="block text-xs font-semibold text-slate-600">
                   {slot.label}
                   {slot.required ? <span className="text-red-500"> *</span> : null}
-                  {slot.type === "textarea" ? (
+                  {slot.type === "textarea" || slot.type === "richtext" || slot.type === "list" || slot.type === "terms" ? (
                     <textarea
                       value={slotValues[slot.key] ?? ""}
                       maxLength={slot.max_length}
                       onChange={(e) => setSlot(slot.key, e.target.value)}
-                      rows={4}
+                      rows={slot.type === "richtext" ? 10 : slot.type === "textarea" ? 4 : 6}
                       className="mt-1 w-full rounded-md border border-slate-200 px-2 py-1.5 text-[13px] font-normal"
                     />
                   ) : (

@@ -1,0 +1,80 @@
+<mjml>
+  <mj-head>
+    <mj-attributes>
+      <mj-all font-family="Helvetica, Arial, sans-serif" />
+      <mj-text color="#16223F" font-size="15px" line-height="1.6" />
+    </mj-attributes>
+    <mj-preview>{{preheader}}</mj-preview>
+  </mj-head>
+  <mj-body background-color="#F6F8FC">
+    <!-- Brand bar (locked): iCFO Capital Global logo, navy rule. -->
+    <mj-section background-color="#FFFFFF" border-bottom="4px solid #0A1A40" padding="16px 24px">
+      <mj-column>
+        <mj-image src="https://icapos.com/email/icfo-logo.png" alt="iCFO Capital Global, Inc." width="110px" align="left" padding="0" />
+      </mj-column>
+    </mj-section>
+
+    <!-- Optional hero image (hidden when empty). -->
+    <mj-section background-color="#FFFFFF" padding="0">
+      <mj-column>
+        <mj-text padding="0"><!--if:hero_image--><img src="{{hero_image}}" alt="{{company_name}}" width="600" style="display:block;width:100%;max-width:600px;height:auto;border:0;" /><!--endif:hero_image--></mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#FFFFFF" padding="26px 24px 4px">
+      <mj-column>
+        <mj-text font-size="22px" font-weight="bold" color="#0A1A40" line-height="1.3" padding="0 0 16px 0">{{headline}}</mj-text>
+        <mj-text padding="0">{{greeting}}</mj-text>
+        <mj-text padding="12px 0 0 0">{{body}}</mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#FFFFFF" padding="6px 24px 4px">
+      <mj-column>
+        <mj-text padding="0 0 8px 0"><!--if:considerations--><div style="font-size:16px;font-weight:bold;color:#1A6CE4;margin:0 0 10px 0;">{{considerations_title}}</div>{{considerations}}<!--endif:considerations--></mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#FFFFFF" padding="6px 24px 4px">
+      <mj-column>
+        <mj-text padding="0 0 8px 0"><!--if:terms--><div style="font-size:16px;font-weight:bold;color:#1A6CE4;margin:0 0 10px 0;">{{terms_title}}</div>{{terms}}<!--endif:terms--></mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#FFFFFF" padding="14px 24px 28px">
+      <mj-column>
+        <mj-text padding="0"><!--if:overview_url--><div style="margin:0 0 14px 0;"><a href="{{overview_url}}" style="color:#1A6CE4;font-weight:bold;text-decoration:none;">Read the full overview &rarr;</a></div><!--endif:overview_url--><!--if:cta_intro--><div style="margin:0 0 14px 0;">{{cta_intro}}</div><!--endif:cta_intro--></mj-text>
+        <mj-button href="{{cta_url}}" background-color="#1A6CE4" color="#FFFFFF" font-weight="bold" font-size="15px" border-radius="8px" align="left" padding="0">{{cta_text}}</mj-button>
+      </mj-column>
+    </mj-section>
+
+    <!-- Sender card, compact: name and title, then phone and email. Photo and bio optional. -->
+    <mj-section background-color="#FFFFFF" border-top="1px solid #E6EAF2" padding="20px 24px 24px">
+      <mj-column>
+        <mj-text padding="0">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
+            <!--if:sender_photo--><td width="84" valign="top" style="padding:0 16px 0 0;"><img src="{{sender_photo}}" alt="{{sender_name}}" width="72" height="72" style="display:block;width:72px;height:72px;border-radius:50%;border:0;" /></td><!--endif:sender_photo-->
+            <td valign="top" style="font-size:14px;line-height:1.5;color:#16223F;">
+              <div><span style="font-weight:bold;color:#0A1A40;">{{sender_name}}</span><!--if:sender_title--> &middot; <span style="color:#1A6CE4;">{{sender_title}}</span><!--endif:sender_title--></div>
+              <div style="font-size:13px;"><!--if:sender_phone-->{{sender_phone}}<!--endif:sender_phone--><!--if:sender_phone--><!--if:sender_email--> &middot; <!--endif:sender_email--><!--endif:sender_phone--><!--if:sender_email--><a href="mailto:{{sender_email}}" style="color:#1A6CE4;text-decoration:none;">{{sender_email}}</a><!--endif:sender_email--></div>
+              <!--if:sender_bio--><div style="margin-top:8px;font-size:13px;font-style:italic;color:#5A6B8C;">{{sender_bio}}</div><!--endif:sender_bio-->
+            </td>
+          </tr></table>
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Mandatory footer and disclaimer (locked). -->
+    <mj-section background-color="#F6F8FC" padding="12px 24px 24px">
+      <mj-column>
+        <mj-text align="center" color="#5A6B8C" font-size="11px" line-height="1.6">
+          iCFO Capital Global, Inc. · 4225 Executive Sq Ste 600, La Jolla, CA 92037<br />
+          iCFO Capital Global, Inc. does not solicit securities and is not an investment adviser, broker-dealer, or funding portal. This content is for educational purposes only. It is not an offer to sell or a solicitation of an offer to buy any security, and no assurance of funding is offered or implied.<br />
+          <!--if:unsubscribe_url--><a href="{{unsubscribe_url}}" style="color:#5A6B8C;">Unsubscribe</a> ·
+          <a href="{{view_in_browser_url}}" style="color:#5A6B8C;">View in browser</a><br /><!--endif:unsubscribe_url-->
+          You're receiving this because you opted in with iCFO Capital Global, Inc.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

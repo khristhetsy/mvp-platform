@@ -11,8 +11,8 @@ import { validateMasterAgainstSchema } from "../template-schema";
 const TPL_DIR = join(process.cwd(), "src/lib/email/templates");
 
 describe("seeded MJML masters", () => {
-  it("ships exactly the three masters from the spec", () => {
-    expect(MASTER_DESCRIPTORS.map((m) => m.slug).sort()).toEqual(["announcement", "newsletter", "promo"]);
+  it("ships the three spec masters plus Deal introduction", () => {
+    expect(MASTER_DESCRIPTORS.map((m) => m.slug).sort()).toEqual(["announcement", "deal-introduction", "newsletter", "promo"]);
   });
 
   for (const master of MASTER_DESCRIPTORS) {
