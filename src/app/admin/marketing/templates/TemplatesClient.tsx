@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { confirmDialog } from "@/components/ui/ConfirmDialog";
 import type { MarketingTemplate } from "@/lib/marketing/types";
+import { BrandedTemplateEditor } from "@/components/marketing/BrandedTemplateEditor";
+import { brandedLink } from "@/lib/email/branded-templates-link";
 import { TemplateVisualEditor } from "@/components/marketing/TemplateVisualEditor";
 import {
   defaultBlocks,
@@ -138,6 +140,7 @@ export function TemplatesClient({ templates, initialEditId }: { templates: Marke
   const [editing, setEditing] = useState<Partial<MarketingTemplate> | null>(null);
   const [saving, setSaving] = useState(false);
   const [preview, setPreview] = useState<MarketingTemplate | null>(null);
+  const [brandedEditId, setBrandedEditId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"visual" | "write" | "preview">("visual");
   // Structured blocks for the visual editor (regenerates html_body on save).
   const [blocks, setBlocks] = useState<TemplateBlock[] | null>(null);
@@ -226,6 +229,11 @@ export function TemplatesClient({ templates, initialEditId }: { templates: Marke
 
   /** Open a template in the editor, seeding blocks so the Visual tab works. */
   function openEditor(t: Partial<MarketingTemplate>, tab?: "visual" | "write") {
+    // Branded templates open the branded editor instead.
+    if (t.id && brandedLink((t as { blocks?: unknown }).blocks)) {
+      setBrandedEditId(t.id);
+      return;
+    }
     // `blocks` holds either a bare array (saved before themes existed) or a
     // versioned document; parseDocument normalises both.
     const doc = parseDocument((t as { blocks?: unknown }).blocks);
@@ -278,6 +286,16 @@ export function TemplatesClient({ templates, initialEditId }: { templates: Marke
   async function handleDuplicate(t: MarketingTemplate) {
     setSaving(true);
     try {
+      // A branded template is duplicated with its own content, so editing the
+      // copy never changes the original.
+      if (brandedLink(t.blocks)) {
+        const r = await fetch(`/api/marketing/branded-templates/${t.id}/duplicate`, { method: "POST" });
+        const made = (await r.json().catch(() => null)) as MarketingTemplate | null;
+        setPreview(null);
+        router.refresh();
+        if (r.ok && made?.id) setBrandedEditId(made.id);
+        return;
+      }
       const res = await fetch("/api/marketing/templates", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -373,6 +391,13 @@ export function TemplatesClient({ templates, initialEditId }: { templates: Marke
 
   return (
     <div style={{ padding: 24, maxWidth: 1100 }}>
+      {brandedEditId ? (
+        <BrandedTemplateEditor
+          templateId={brandedEditId}
+          onClose={() => setBrandedEditId(null)}
+          onSaved={() => { setBrandedEditId(null); router.refresh(); }}
+        />
+      ) : null}
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
         <div>

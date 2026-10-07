@@ -3,11 +3,13 @@
 /**
  * Template picker for the mass-email dialog: a search box and one collapsible group per
  * department. One group is open at a time (the selected template's, else
- * `defaultDepartment`); a search opens every group with a hit. "New template" and
- * "Duplicate selected" save a template to Marketing › Templates and select it.
+ * `defaultDepartment`); a search opens every group with a hit. "New template",
+ * "New branded template" and "Duplicate selected" save a template to
+ * Marketing › Templates and select it.
  */
 import { useMemo, useState } from "react";
 import { DEPARTMENTS } from "@/lib/marketing/department-grouping";
+import { BrandedTemplateEditor } from "@/components/marketing/BrandedTemplateEditor";
 
 export type PickerTemplate = { id: string; name: string; subject: string; html_body: string; department: string | null };
 
@@ -26,6 +28,7 @@ export function TemplatePicker({ templates, value, onPick, onCreated, defaultDep
   const [form, setForm] = useState<null | { name: string; department: string; subject: string; html: string }>(null);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [branded, setBranded] = useState(false);
 
   const selected = templates.find((t) => t.id === value) ?? null;
   const needle = q.trim().toLowerCase();
@@ -104,9 +107,19 @@ export function TemplatePicker({ templates, value, onPick, onCreated, defaultDep
           </div>
           <div style={{ display: "flex", gap: 6, padding: "7px 10px", borderTop: "0.5px solid var(--border)" }}>
             <button type="button" onClick={() => startNew(null)} style={{ fontSize: 12, padding: "5px 10px", borderRadius: 7, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--foreground)" }}><i className="ti ti-plus" aria-hidden="true" /> New template</button>
+            <button type="button" onClick={() => { setOpen(false); setForm(null); setBranded(true); }} style={{ fontSize: 12, padding: "5px 10px", borderRadius: 7, border: "0.5px solid #B5D4F4", background: "transparent", cursor: "pointer", color: "#185FA5" }}><i className="ti ti-layout" aria-hidden="true" /> New branded template</button>
             {selected ? <button type="button" onClick={() => startNew(selected)} style={{ fontSize: 12, padding: "5px 10px", borderRadius: 7, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--foreground)" }}><i className="ti ti-copy" aria-hidden="true" /> Duplicate selected</button> : null}
           </div>
         </div>
+      ) : null}
+
+      {branded ? (
+        <BrandedTemplateEditor
+          defaultDepartment={defaultDepartment}
+          primaryLabel="Save and use"
+          onClose={() => setBranded(false)}
+          onSaved={(t) => { setBranded(false); onCreated({ id: t.id, name: t.name, subject: t.subject, html_body: t.html_body, department: t.department ?? null }); }}
+        />
       ) : null}
 
       {form ? (
