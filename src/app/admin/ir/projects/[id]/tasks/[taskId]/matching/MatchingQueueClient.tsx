@@ -12,14 +12,20 @@
  * how far each investor already got with this founder on another of the founder's
  * projects and links to that match; the investor name opens a profile panel.
  *
+ * The proposals are paged on the server (50 a page, Odoo pager above the table) so all of
+ * them are reachable, not only the first 200. Search text, "Hide already contacted" and the
+ * sorts that the match index can answer run over every proposal; Investor, Phone, Email and
+ * Also matched sort the open page. "Select all" on a full page offers every proposal, and
+ * Confirm sends them in batches of 500 (sequences in batches of 200).
+ *
  * The week pager beside Back moves to the previous / next weekly task's queue (same
  * order and wrap-around as the task page pager, Alt+P / Alt+N). The tab, group by and
  * open groups carry over; filters and selections start fresh for that week.
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { OdooSearchBar, EMPTY_SEARCH, textMatch, type FieldFilter, type GroupOption, type SearchState } from "@/components/admin/OdooSearchBar";
+import { OdooSearchBar, EMPTY_SEARCH, type FieldFilter, type GroupOption, type SearchState } from "@/components/admin/OdooSearchBar";
 import { InvestorSearchTab } from "./InvestorSearchTab";
 import { OdooPager } from "@/components/admin/OdooPager";
 import { matchingQueueHref, weekNeighbours, type QueueView, type WeekTask } from "@/lib/ir/week-pager";
@@ -34,10 +40,19 @@ type Payload = {
   project: IrProject; task: IrTask | null; week: IrMilestone | null; onTask: number;
   options: { sectors: string[]; stages: Opt[]; raises: Opt[]; revenues: Opt[]; types: Opt[] };
   filters: Filters; rows: Row[]; total: number; contacted?: number; thin: boolean;
+  /** Proposals after source, tier, search text and "Hide already contacted"; the pager's total. */
+  filtered?: number; offset?: number;
+  /** Every proposal in order: [contactId, fit tier, data source, 1 if already contacted for this founder]. */
+  all?: Array<[string, "high" | "medium" | "low", string | null, 0 | 1]>;
   defaults?: { from?: "company" | "founder_profile" | "both" };
 };
 const SOURCE_OPTS: Opt[] = [{ key: "verified", label: "Verified" }, { key: "self_reported", label: "Self-reported" }];
 const TIER_OPTS: Opt[] = [{ key: "high", label: "High (≥70)" }, { key: "medium", label: "Medium (50–69)" }, { key: "low", label: "Low" }];
+const PAGE = 50;
+/** Sizes the confirm and sequence routes accept per request. */
+const CONFIRM_BATCH = 500, SEQUENCE_BATCH = 200;
+type ListView = { offset: number; q: string; hide: boolean; sort: SortState };
+const chunks = <T,>(xs: T[], n: number) => Array.from({ length: Math.ceil(xs.length / n) }, (_, i) => xs.slice(i * n, i * n + n));
 const GROUPS: GroupOption[] = [{ id: "none", label: "None" }, { id: "firm", label: "Firm" }, { id: "tier", label: "Fit tier" }, { id: "type", label: "Investor type" }, { id: "source", label: "Data source" }];
 
  const COLS_KEY = "ir.matching.columns.v2";
@@ -82,7 +97,11 @@ export function MatchingQueueClient({ projectId, taskId, initialView }: { projec
   const [searchView, setSearchView] = useState<{ groupBy: string | null; open: string[] }>({ groupBy: null, open: [] });
   const carriedMatchGroup = initialView?.mode === "match" && GROUPS.some((g) => g.id === initialView.groupBy && g.id !== "none") ? initialView.groupBy! : "none";
   const [sort, setSort] = useState<SortState>(null);
-  const onSort = useCallback((k: SortKey) => setSort((s) => nextSort(s, k)), []);
+  const [progress, setProgress] = useState<string | null>(null);
+  // The filters behind the rows on screen (the server's defaults on first load), for paging.
+  const lastFilters = useRef<Filters | null>(null);
+  // Only the newest request may replace the rows (typing fires several).
+  const reqSeq = useRef(0);
   // Rows the search tab has shown, so selections made there keep their details here.
   const [found, setFound] = useState<Row[]>([]);
   const onFoundRows = useCallback((rs: Row[]) => setFound((prev) => { const m = new Map(prev.map((r) => [r.contactId, r])); for (const r of rs) m.set(r.contactId, r); return [...m.values()]; }), []);
@@ -117,26 +136,41 @@ export function MatchingQueueClient({ projectId, taskId, initialView }: { projec
     return () => { document.removeEventListener("mousedown", close); document.removeEventListener("keydown", esc); };
   }, [colsOpen]);
 
-  const load = useCallback(async (filters: Filters | null) => {
+  const load = useCallback(async (filters: Filters | null, v: ListView) => {
+    const seqNo = ++reqSeq.current;
     setLoading(true);
-    const q = new URLSearchParams({ project: projectId, task: taskId });
+    const q = new URLSearchParams({ project: projectId, task: taskId, offset: String(v.offset), limit: String(PAGE) });
+    if (v.q.trim()) q.set("q", v.q.trim());
+    if (v.hide) q.set("hide", "1");
+    if (v.sort) { q.set("sort", v.sort.key); q.set("dir", v.sort.dir); }
     if (filters) { q.set("industry", filters.industry.join(",")); q.set("stage", filters.stage.join(",")); q.set("raise", filters.raise.join(",")); q.set("revenue", filters.revenue.join(",")); q.set("type", filters.investorType.join(",")); q.set("source", filters.source); q.set("tier", filters.tier); }
     const r = await fetch(`/api/admin/ir/matching?${q}`);
     const j = await r.json().catch(() => ({}));
+    if (seqNo !== reqSeq.current) return null;
     setLoading(false);
     if (!r.ok) { setError(j.error ?? "Couldn't build the queue."); return null; }
+    lastFilters.current = (j as Payload).filters;
     setData(j); setError(null);
     return j as Payload;
   }, [projectId, taskId]);
   // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch, then seed the search bar from the project's defaults
-  useEffect(() => { void load(null).then((j) => { if (j) setSearch((s) => s ?? { ...toState(j.filters, j.options), groupBy: carriedMatchGroup }); }); }, [load, carriedMatchGroup]);
+  useEffect(() => { void load(null, { offset: 0, q: "", hide: false, sort: null }).then((j) => { if (j) setSearch((s) => s ?? { ...toState(j.filters, j.options), groupBy: carriedMatchGroup }); }); }, [load, carriedMatchGroup]);
 
+  /** Reload the proposals; any change other than the page goes back to page 1. */
+  function reload(p: Partial<ListView> & { filters?: Filters }) {
+    const v: ListView = { offset: 0, q: search?.q ?? "", hide: hideContacted, sort, ...p };
+    void load(p.filters ?? lastFilters.current, v);
+  }
   function onSearch(next: SearchState) {
     if (!data) return;
-    const before = search ? JSON.stringify(search.fields) : "";
+    const fieldsChanged = JSON.stringify(next.fields) !== (search ? JSON.stringify(search.fields) : "");
+    const qChanged = (next.q ?? "") !== (search?.q ?? "");
     setSearch(next);
-    if (JSON.stringify(next.fields) !== before) void load(toFilters(next, data.options));
+    if (fieldsChanged) reload({ filters: toFilters(next, data.options), q: next.q ?? "" });
+    else if (qChanged) reload({ q: next.q ?? "" });
   }
+  function setHide(on: boolean) { setHideContacted(on); reload({ hide: on }); }
+  const onSort = (k: SortKey) => { const s = nextSort(sort, k); setSort(s); reload({ sort: s }); };
 
   const fields: FieldFilter[] = useMemo(() => data ? [
     { key: "sector", label: "Sector", options: data.options.sectors },
@@ -148,7 +182,8 @@ export function MatchingQueueClient({ projectId, taskId, initialView }: { projec
     { key: "tier", label: "Fit tier", options: TIER_OPTS.map((o) => o.label) },
   ] : [], [data]);
 
-  const rows = useMemo(() => sortRows((data?.rows ?? []).filter((r) => textMatch(search?.q ?? "", r.name, r.firm, r.email ?? "", r.summary, r.sectors.join(" "), r.types.join(" "), r.alsoOn.join(" "), r.founderOutreach ? IR_STAGE_LABEL[r.founderOutreach.stage] : "") && !(hideContacted && r.founderOutreach)), sort), [data, search, hideContacted, sort]);
+  // The server already applied the search text, "Hide already contacted" and the whole-list sorts; this sorts the page for the rest.
+  const rows = useMemo(() => sortRows(data?.rows ?? [], sort), [data, sort]);
   const grouped = useMemo(() => {
     const gb = search?.groupBy;
     const g = gb && gb !== "none" ? gb : null;
@@ -159,44 +194,72 @@ export function MatchingQueueClient({ projectId, taskId, initialView }: { projec
     return [...m.entries()].map(([label, rs]) => ({ label, rows: rs }));
   }, [rows, search]);
 
-  const contacted = useMemo(() => (data?.rows ?? []).filter((r) => r.founderOutreach).length, [data]);
-  const pickedContacted = useMemo(() => [...new Map([...(data?.rows ?? []), ...found].map((r) => [r.contactId, r])).values()].filter((r) => picked.has(r.contactId) && r.founderOutreach).length, [data, found, picked]);
+  const contacted = data?.contacted ?? 0;
+  const allEntries = useMemo(() => new Map((data?.all ?? []).map((e) => [e[0], e])), [data]);
+  const pickedContacted = useMemo(() => {
+    const seen = new Map(found.map((r) => [r.contactId, r]));
+    return [...picked].filter((id) => allEntries.get(id)?.[3] === 1 || !!seen.get(id)?.founderOutreach).length;
+  }, [allEntries, found, picked]);
   const visibleIds = rows.filter((r) => !r.onProject).map((r) => r.contactId);
   const pickedVisible = visibleIds.filter((id) => picked.has(id)).length;
   const allVisible = visibleIds.length > 0 && pickedVisible === visibleIds.length;
+  const allIds = useMemo(() => (data?.all ?? []).map((e) => e[0]), [data]);
+  const allPicked = allIds.length > 0 && allIds.every((id) => picked.has(id));
   function toggleAll(on: boolean) {
     setPicked((p) => { const n = new Set(p); for (const id of visibleIds) { if (on) n.add(id); else n.delete(id); } return n; });
+  }
+  function pickEveryProposal(on: boolean) {
+    setPicked((p) => { const n = new Set(p); for (const id of allIds) { if (on) n.add(id); else n.delete(id); } return n; });
   }
 
   async function confirm(withSequence = false) {
     if (!data || !picked.size) { setError("Select at least one investor."); return; }
     if (withSequence && (!seq || seq.setupNeeded || !seq.manager)) { setError("Pick an account manager for the sequence."); return; }
     setBusy(true); setError(null);
-    const meta = Object.fromEntries(data.rows.filter((r) => picked.has(r.contactId)).map((r) => [r.contactId, { fitTier: r.tier, dataSource: r.dataSource }]));
-    const r = await fetch("/api/admin/ir/matches", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId, taskId, investorContactIds: [...picked], meta }) });
-    const j = await r.json().catch(() => ({}));
-    setBusy(false);
-    if (!r.ok) { setError(j.error ?? "Couldn't confirm the matches."); return; }
-    let sequenced = "";
-    if (withSequence && seq && (j.created ?? []).length) {
-      const s = await fetch("/api/admin/ir/sequences", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ matchIds: j.created, template: seq.template, via: seq.via, managerId: seq.manager, notifyEmail: seq.notifyEmail }) });
-      const sj = await s.json().catch(() => ({}));
-      sequenced = `&sequenced=${s.ok ? sj.started ?? 0 : 0}`;
+    const ids = [...picked];
+    const created: string[] = [];
+    for (const batch of chunks(ids, CONFIRM_BATCH)) {
+      if (ids.length > CONFIRM_BATCH) setProgress(`Confirming ${(created.length + batch.length).toLocaleString("en-US")} of ${ids.length.toLocaleString("en-US")}…`);
+      const meta = Object.fromEntries(batch.filter((id) => allEntries.has(id)).map((id) => { const e = allEntries.get(id)!; return [id, { fitTier: e[1], dataSource: e[2] }]; }));
+      const r = await fetch("/api/admin/ir/matches", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId, taskId, investorContactIds: batch, meta }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setBusy(false); setProgress(null);
+        setError(created.length ? `${created.length} confirmed, then: ${j.error ?? "couldn't confirm the rest."}` : j.error ?? "Couldn't confirm the matches.");
+        if (created.length) { setPicked(new Set()); reload({ offset: data.offset ?? 0 }); }
+        return;
+      }
+      created.push(...((j.created ?? []) as string[]));
     }
-    router.push(`/admin/ir/projects/${projectId}/tasks/${taskId}?tab=matching&added=${(j.created ?? []).length}${sequenced}`);
+    let sequenced = "";
+    if (withSequence && seq && created.length) {
+      let started = 0;
+      for (const batch of chunks(created, SEQUENCE_BATCH)) {
+        if (created.length > SEQUENCE_BATCH) setProgress(`Starting sequences ${started.toLocaleString("en-US")} of ${created.length.toLocaleString("en-US")}…`);
+        const s = await fetch("/api/admin/ir/sequences", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ matchIds: batch, template: seq.template, via: seq.via, managerId: seq.manager, notifyEmail: seq.notifyEmail }) });
+        const sj = await s.json().catch(() => ({}));
+        if (s.ok) started += sj.started ?? 0;
+      }
+      sequenced = `&sequenced=${started}`;
+    }
+    setBusy(false); setProgress(null);
+    router.push(`/admin/ir/projects/${projectId}/tasks/${taskId}?tab=matching&added=${created.length}${sequenced}`);
   }
 
   if (error && !data) return <div role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[12.5px] text-rose-700">{error}</div>;
   if (!data || !search) return <p className="text-[13px] text-slate-400">Loading…</p>;
   const back = `/admin/ir/projects/${projectId}/tasks/${taskId}`;
   const noSector = !(search.fields.sector?.length);
+  const filtered = data.filtered ?? data.rows.length;
+  const offset = data.offset ?? 0;
+  const proposedLabel = noSector || data.thin ? "Proposed matches" : `Proposed matches (${filtered.toLocaleString("en-US")})`;
   const tabsEl = (
         <div className="flex overflow-hidden rounded-lg border border-slate-200" role="group" aria-label="How to find investors">
-          {([["match", "Proposed matches"], ["search", "Search all investors"]] as const).map(([k, l]) => <button key={k} type="button" aria-pressed={mode === k} onClick={() => setMode(k)} className={`px-3 py-1.5 text-[12.5px] ${mode === k ? "bg-indigo-50 font-semibold text-indigo-800" : "bg-white text-slate-600 hover:bg-slate-50"}`}>{l}</button>)}
+          {([["match", proposedLabel], ["search", "Search all investors"]] as const).map(([k, l]) => <button key={k} type="button" aria-pressed={mode === k} onClick={() => setMode(k)} className={`px-3 py-1.5 text-[12.5px] ${mode === k ? "bg-indigo-50 font-semibold text-indigo-800" : "bg-white text-slate-600 hover:bg-slate-50"}`}>{l}</button>)}
         </div>
   );
   const toolsEl = (<>
-        <label className="inline-flex items-center gap-1.5 text-[12.5px] text-slate-600"><input type="checkbox" checked={hideContacted} onChange={(e) => setHideContacted(e.target.checked)} /> Hide already contacted</label>
+        <label className="inline-flex items-center gap-1.5 text-[12.5px] text-slate-600"><input type="checkbox" checked={hideContacted} onChange={(e) => setHide(e.target.checked)} /> Hide already contacted</label>
         <div className="relative" data-cols-menu>
           <button type="button" onClick={() => setColsOpen((o) => !o)} aria-expanded={colsOpen} aria-haspopup="true" className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[12.5px] font-medium text-slate-700 hover:bg-slate-50"><i className="ti ti-columns" aria-hidden="true" /> Columns <span className="text-slate-400">{cols.length}/{COLS.length}</span></button>
           {colsOpen ? (
@@ -235,21 +298,22 @@ export function MatchingQueueClient({ projectId, taskId, initialView }: { projec
           <p className="text-[13.5px] font-semibold text-indigo-900">Matching for {data.project.title}{data.week ? ` · ${data.week.label}` : ""}</p>
           <p className="text-[12px] text-indigo-800">{data.week ? `${formatRange(data.week.starts_on, data.week.ends_on)} · ` : ""}{data.onTask} investor{data.onTask === 1 ? "" : "s"} already on this task. Confirmed investors land in Matched with a &ldquo;Send intro email&rdquo; to-do.</p>
         </div>
-        <button type="button" disabled={loading} onClick={() => void load(toFilters(search, data.options))} className="rounded-lg border border-indigo-300 bg-white px-3 py-1.5 text-[12.5px] font-medium text-indigo-800 hover:bg-indigo-100 disabled:opacity-60">{loading ? "Scoring…" : "Run matching again"}</button>
-        {!noSector && !data.thin ? <MatchTotals total={data.total} contacted={data.contacted ?? 0} loading={loading} hideContacted={hideContacted} onNeverContacted={() => setHideContacted((h) => !h)} /> : null}
+        <button type="button" disabled={loading} onClick={() => reload({ filters: toFilters(search, data.options) })} className="rounded-lg border border-indigo-300 bg-white px-3 py-1.5 text-[12.5px] font-medium text-indigo-800 hover:bg-indigo-100 disabled:opacity-60">{loading ? "Scoring…" : "Run matching again"}</button>
+        {!noSector && !data.thin ? <MatchTotals total={data.total} contacted={data.contacted ?? 0} loading={loading} hideContacted={hideContacted} onNeverContacted={() => setHide(!hideContacted)} /> : null}
       </div>
 
       <div className="sticky top-0 z-20 mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-md">
-        <span className="text-[12.5px] text-slate-600">{picked.size} selected</span>
+        <span className="text-[12.5px] text-slate-600">{picked.size.toLocaleString("en-US")} selected</span>
         {picked.size ? <button type="button" onClick={() => setPicked(new Set())} className="text-[12.5px] text-indigo-700 hover:underline">Unselect all</button> : null}
         {pickedContacted ? <span className="rounded-md bg-amber-50 px-2 py-1 text-[12px] text-amber-900">{pickedContacted} already worked for this founder</span> : null}
+        {progress ? <span className="text-[12px] text-indigo-700">{progress}</span> : null}
         {error ? <span className="text-[12px] text-rose-600">{error}</span> : null}
         <Link href={back} className="ml-auto rounded-lg border border-slate-200 px-3 py-1.5 text-[12.5px] text-slate-600 hover:bg-slate-50">Cancel</Link>
         <button type="button" disabled={busy || !picked.size} onClick={() => void openSequence()} aria-expanded={!!seq} className="rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-[12.5px] font-medium text-indigo-800 hover:bg-indigo-50 disabled:opacity-60"><i className="ti ti-bolt" aria-hidden="true" /> Confirm + auto sequence</button>
-        <button type="button" disabled={busy || !picked.size} onClick={() => void confirm()} className="rounded-lg bg-indigo-600 px-4 py-1.5 text-[12.5px] font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">{busy ? "Confirming…" : `Confirm ${picked.size || ""} investor${picked.size === 1 ? "" : "s"}`}</button>
+        <button type="button" disabled={busy || !picked.size} onClick={() => void confirm()} className="rounded-lg bg-indigo-600 px-4 py-1.5 text-[12.5px] font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">{busy ? "Confirming…" : `Confirm ${picked.size ? picked.size.toLocaleString("en-US") : ""} investor${picked.size === 1 ? "" : "s"}`}</button>
         {seq ? (
           <div className="absolute right-0 top-full z-30 mt-2 w-[360px] rounded-xl border border-indigo-200 bg-white p-4 text-[12.5px] shadow-xl" role="dialog" aria-label="Auto sequence for the selected investors">
-            <div className="mb-2 flex items-center"><p className="text-[13.5px] font-semibold text-slate-900"><i className="ti ti-bolt" aria-hidden="true" /> Auto sequence for {picked.size} investor{picked.size === 1 ? "" : "s"}</p><button type="button" onClick={() => setSeq(null)} aria-label="Close" className="ml-auto text-slate-400 hover:text-slate-700"><i className="ti ti-x" aria-hidden="true" /></button></div>
+            <div className="mb-2 flex items-center"><p className="text-[13.5px] font-semibold text-slate-900"><i className="ti ti-bolt" aria-hidden="true" /> Auto sequence for {picked.size.toLocaleString("en-US")} investor{picked.size === 1 ? "" : "s"}</p><button type="button" onClick={() => setSeq(null)} aria-label="Close" className="ml-auto text-slate-400 hover:text-slate-700"><i className="ti ti-x" aria-hidden="true" /></button></div>
             {seq.setupNeeded ? <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">Auto sequences need migration <code>20260928100000_ir_sequences.sql</code> run in the Supabase SQL editor first.</p> : (
               <div className="space-y-2">
                 <label className="block text-[11.5px] text-slate-500">Sequence<select value={seq.template} onChange={(e) => setSeq({ ...seq, template: e.target.value })} className="mt-0.5 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-[12.5px]">{Object.entries(SEQUENCE_TEMPLATES).map(([k, t]) => <option key={k} value={k}>{t.name} · {t.steps.length} steps (days {t.steps.map((s) => s.day).join(", ")})</option>)}</select></label>
@@ -258,7 +322,7 @@ export function MatchingQueueClient({ projectId, taskId, initialView }: { projec
                 {seq.via === "gmail" ? <p className="text-[11.5px] text-amber-700">Opens and clicks can&rsquo;t be tracked on Gmail sends.</p> : null}
                 <label className="inline-flex items-center gap-1.5"><input type="checkbox" checked={seq.notifyEmail} onChange={(e) => setSeq({ ...seq, notifyEmail: e.target.checked })} /> Email the alerts too (always in iCapOS notifications)</label>
                 <p className="text-[11.5px] text-slate-500">Alerts on opens, clicks, replies and meetings; stops on a reply or meeting. Edit any one of them later from its record. The first emails go out within 15 minutes.</p>
-                <button type="button" disabled={busy || !seq.manager} onClick={() => void confirm(true)} className="w-full rounded-lg bg-indigo-600 px-3 py-1.5 font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">{busy ? "Confirming…" : `Confirm ${picked.size} and start sequence`}</button>
+                <button type="button" disabled={busy || !seq.manager} onClick={() => void confirm(true)} className="w-full rounded-lg bg-indigo-600 px-3 py-1.5 font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">{busy ? "Confirming…" : `Confirm ${picked.size.toLocaleString("en-US")} and start sequence`}</button>
               </div>
             )}
           </div>
@@ -276,12 +340,24 @@ export function MatchingQueueClient({ projectId, taskId, initialView }: { projec
         {tabsEl}
         <OdooSearchBar scope="ir-matching" state={search} onChange={onSearch} quick={[]} fields={fields} groups={GROUPS} noGroupId="none" placeholder="Search investor or firm…" width={620} />
         {toolsEl}
-        <span className="ml-auto text-[12px] text-slate-600">{loading ? "Scoring…" : `${rows.length} proposed${data.total > data.rows.length ? ` of ${data.total}` : ""}`}</span>
+        <span className="ml-auto inline-flex items-center gap-2">
+          {loading ? <span className="text-[12px] text-slate-500">Scoring…</span> : null}
+          <OdooPager label={filtered ? `${(offset + 1).toLocaleString("en-US")}–${(offset + rows.length).toLocaleString("en-US")} / ${filtered.toLocaleString("en-US")}` : "0 / 0"}
+            prev={{ onClick: offset > 0 && !loading ? () => reload({ offset: Math.max(0, offset - PAGE) }) : undefined, title: "Previous page" }}
+            next={{ onClick: offset + PAGE < filtered && !loading ? () => reload({ offset: offset + PAGE }) : undefined, title: "Next page" }} />
+        </span>
       </div>
+
+      {allVisible && filtered > visibleIds.length ? (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-[12.5px] text-indigo-900">
+          {allPicked ? <>All {filtered.toLocaleString("en-US")} proposed matches are selected.<button type="button" onClick={() => pickEveryProposal(false)} className="font-medium text-indigo-700 underline">Unselect all</button></>
+            : <>All {pickedVisible} on this page are selected.<button type="button" onClick={() => pickEveryProposal(true)} className="font-medium text-indigo-700 underline">Select all {filtered.toLocaleString("en-US")} proposed matches</button></>}
+        </div>
+      ) : null}
 
       {data.thin ? <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12.5px] text-amber-800">The investor match index isn&rsquo;t built yet, so the engine has nothing to score. Rebuild it from Sales › Settings, then reload.</p> : null}
       {mode === "match" && noSector ? <p className="mb-3 text-[12.5px] text-slate-500">Add at least one Sector under Filters to see proposals{data.project.company_id ? "" : ". This project has no iCapOS company and the founder's Odoo questionnaire names no industry, so there was nothing to start from"}. Or use Search all investors.</p> : null}
-      {contacted ? <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12.5px] text-amber-900"><b>{contacted} of these investors were already worked for {data.project.founder_name ?? data.project.title}</b> on another of the founder&rsquo;s projects. They are flagged in the Outreach column; click a status to open that match.</p> : null}
+      {contacted ? <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12.5px] text-amber-900"><b>{contacted.toLocaleString("en-US")} of these investors were already worked for {data.project.founder_name ?? data.project.title}</b> on another of the founder&rsquo;s projects. They are flagged in the Outreach column; click a status to open that match.</p> : null}
 
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
         <table className="w-full text-[12.5px]">
@@ -426,7 +502,7 @@ function InvestorPanel({ row, onClose, picked, onPick }: { row: Row; onClose: ()
 
 /**
  * Header counts for the founder: every investor fitting the current filters (not only the
- * 200 rows shown), how many were never contacted for this founder, and how many were.
+ * page shown), how many were never contacted for this founder, and how many were.
  * "Contacted" is the same test as the Outreach column and "Hide already contacted": a
  * match on another of the founder's projects. Clicking Never contacted toggles that box.
  */

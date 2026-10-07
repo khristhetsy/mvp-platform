@@ -1,16 +1,18 @@
 /**
  * Matching queue proposals — always in project (and usually task) context.
  *   GET ?project=<id>&task=<id>&industry=a,b&stage=&raise=&revenue=&type=&source=any|verified|self_reported&tier=any|high|medium|low
- *     → { project, task, week, onTask, options, defaults, rows, total, thin }
+ *       &offset=0&limit=50&q=<text>&hide=1&sort=<column>&dir=asc|desc
+ *     → { project, task, week, onTask, options, defaults, rows (one page), total, filtered, offset, all, contacted, thin }
  * Proposes only; confirming goes through POST /api/admin/ir/matches.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { irStaff, forbidden, failed } from "@/lib/ir/auth";
 import { getProject, getTask, listMatches, listMilestones } from "@/lib/ir/db";
-import { projectDefaults, proposeMatches, queueOptions } from "@/lib/ir/matching";
+import { projectDefaults, proposeMatches, queueOptions, QUEUE_PAGE, type QueueSortKey } from "@/lib/ir/matching";
 
 export const dynamic = "force-dynamic";
 
+const SORT_KEYS: QueueSortKey[] = ["name", "outreach", "firm", "phone", "email", "fit", "why", "sectors", "types", "source", "also"];
 const list = (v: string | null) => (v ? v.split(",").map((s) => s.trim()).filter(Boolean) : []);
 
 export async function GET(req: NextRequest): Promise<Response> {
@@ -35,7 +37,13 @@ export async function GET(req: NextRequest): Promise<Response> {
       revenue: sp.has("revenue") ? list(sp.get("revenue")) : defaults.revenue ?? [], investorType: sp.has("type") ? list(sp.get("type")) : defaults.investorType ?? [],
       source: (sp.get("source") as "any" | "verified" | "self_reported") || "any", tier: (sp.get("tier") as "any" | "high" | "medium" | "low") || "any",
     };
-    const result = await proposeMatches(projectId, filters);
+    const sortKey = sp.get("sort") as QueueSortKey | null;
+    const view = {
+      offset: Math.max(0, Number(sp.get("offset")) || 0), limit: Number(sp.get("limit")) || QUEUE_PAGE,
+      q: (sp.get("q") ?? "").slice(0, 100), hideContacted: sp.get("hide") === "1",
+      sort: sortKey && SORT_KEYS.includes(sortKey) ? { key: sortKey, dir: sp.get("dir") === "desc" ? "desc" as const : "asc" as const } : null,
+    };
+    const result = await proposeMatches(projectId, filters, view);
     return NextResponse.json({ project, task, week, onTask, options, defaults, filters, ...result });
   } catch (e) { return failed(e, "Couldn't build the matching queue."); }
 }
