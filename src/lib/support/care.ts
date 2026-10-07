@@ -311,7 +311,7 @@ export async function onFounderReply(requestId: string, body: string): Promise<v
  * Staff replied. Clears the promised time (it's been kept), records the first
  * reply, emails the founder, and notes whether an AI draft was sent as is.
  */
-export async function onStaffReply(requestId: string, staffId: string, body: string, aiDraft: string | null): Promise<void> {
+export async function onStaffReply(requestId: string, staffId: string, body: string, aiDraft: string | null, attachmentNames: string[] = []): Promise<void> {
   const c = await loadRequestCtx(requestId);
   if (!c) return;
   const now = new Date().toISOString();
@@ -348,7 +348,7 @@ export async function onStaffReply(requestId: string, staffId: string, body: str
       type: "support_staff_reply",
       deepLink: founderSupportLink(requestId),
       requestId,
-      email: staffReplyEmail(ctx, body),
+      email: staffReplyEmail(ctx, body, attachmentNames),
     });
     await logSupportEvent({
       requestId,

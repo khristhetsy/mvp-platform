@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import type { SupportAttachment } from "@/lib/support/support";
+import { formatSupportTime } from "@/lib/support/business-hours";
+import { SupportAttachments } from "@/components/support/SupportAttachments";
 
 export type FounderRequestRow = {
   id: string;
@@ -20,7 +23,32 @@ export type FounderRequestRow = {
   closedAt: string | null;
 };
 
-type Message = { id: string; author_role: "founder" | "staff"; body: string; created_at: string };
+type Message = {
+  id: string;
+  author_role: "founder" | "staff";
+  body: string;
+  created_at: string;
+  attachments?: SupportAttachment[] | null;
+};
+
+// "Open your Financial model": the screen the request came from.
+const TOOL_LINKS: Record<string, string> = {
+  "financial model": "/founder/financial-model",
+  "cap table": "/founder/cap-table",
+  "business plan": "/founder/business-plan",
+  "pitch deck": "/founder/pitch-deck",
+  "data room": "/founder/documents",
+  documents: "/founder/documents",
+  billing: "/founder/settings/billing",
+  valuation: "/founder/valuation",
+  "investor pipeline": "/founder/investor-pipeline",
+  "deal room": "/founder/deal-room",
+};
+function toolLink(item: string | null): { href: string; label: string } | null {
+  if (!item) return null;
+  const href = TOOL_LINKS[item.trim().toLowerCase()];
+  return href ? { href, label: item.trim() } : null;
+}
 
 const STATUS_STYLE: Record<string, string> = {
   open: "bg-amber-50 text-amber-700",
@@ -36,8 +64,7 @@ const STATUS_LABEL: Record<string, string> = {
 const initials = (name: string | null) =>
   (name ?? "iCapOS").split(/\s+/).filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 
-const when = (iso: string) =>
-  new Date(iso).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+const when = (iso: string) => formatSupportTime(iso);
 
 function Tracker({ row, hasStaffReply }: Readonly<{ row: FounderRequestRow; hasStaffReply: boolean }>) {
   const steps = [
@@ -68,7 +95,7 @@ function Tracker({ row, hasStaffReply }: Readonly<{ row: FounderRequestRow; hasS
   );
 }
 
-export function FounderSupportClient({ rows }: Readonly<{ rows: FounderRequestRow[] }>) {
+export function FounderSupportClient({ rows, emailReplies = false }: Readonly<{ rows: FounderRequestRow[]; emailReplies?: boolean }>) {
   const router = useRouter();
   const params = useSearchParams();
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -79,6 +106,8 @@ export function FounderSupportClient({ rows }: Readonly<{ rows: FounderRequestRo
   const [comment, setComment] = useState("");
   const [rated, setRated] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [files, setFiles] = useState<SupportAttachment[]>([]);
+  const [uploading, setUploading] = useState(false);
   // Read the selected row off `rows` (server data) so a refresh — e.g. after staff resolve —
   // updates status / CSAT here instead of leaving a stale copy in state.
   const selected = selectedId ? rows.find((r) => r.id === selectedId) ?? null : null;
@@ -87,6 +116,7 @@ export function FounderSupportClient({ rows }: Readonly<{ rows: FounderRequestRo
     setSelectedId(row.id);
     setMessages([]);
     setReply("");
+    setFiles([]);
     setRating(0);
     setComment("");
     setRated(false);
@@ -115,15 +145,37 @@ export function FounderSupportClient({ rows }: Readonly<{ rows: FounderRequestRo
       const res = await fetch(`/api/founder/support/${selected.id}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body: reply.trim() }),
+        body: JSON.stringify({ body: reply.trim(), attachments: files }),
       });
-      if (res.ok) {
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        setError(j.error ?? "Couldn't send. Try again.");
+      } else {
         setReply("");
+        setFiles([]);
         await open(selected);
         router.refresh();
       }
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function attach(file: File) {
+    if (!selected) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch(`/api/founder/support/${selected.id}/attachments`, { method: "POST", body: form });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.attachment) setError(json.error ?? "Couldn't attach that file. PDFs up to 10 MB.");
+      else setFiles((f) => [...f, json.attachment as SupportAttachment]);
+    } catch {
+      setError("Couldn't attach that file.");
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -203,8 +255,13 @@ export function FounderSupportClient({ rows }: Readonly<{ rows: FounderRequestRo
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-slate-900">{selected.subject}</p>
                   <p className="text-xs text-slate-500">
-                    {selected.refNo ? `Request #${selected.refNo} · ` : ""}opened {new Date(selected.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                    {selected.refNo ? `Request #${selected.refNo} · ` : ""}opened {when(selected.createdAt)}
                   </p>
+                  {toolLink(selected.contextItem) ? (
+                    <a href={toolLink(selected.contextItem)!.href} className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:underline">
+                      <i className="ti ti-external-link" aria-hidden="true" /> Open your {toolLink(selected.contextItem)!.label}
+                    </a>
+                  ) : null}
                 </div>
                 <span className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_STYLE[selected.status] ?? "bg-slate-100 text-slate-600"}`}>
                   {STATUS_LABEL[selected.status] ?? selected.status}
@@ -245,8 +302,9 @@ export function FounderSupportClient({ rows }: Readonly<{ rows: FounderRequestRo
                 messages.map((m) => (
                   <div key={m.id} className={`max-w-[85%] rounded-xl px-3 py-2 ${m.author_role === "founder" ? "ml-auto bg-indigo-600 text-white" : "bg-slate-100 text-slate-800"}`}>
                     <p className="whitespace-pre-wrap text-[13px] leading-snug">{m.body}</p>
+                    <SupportAttachments messageId={m.id} files={m.attachments} onDark={m.author_role === "founder"} />
                     <p className={`mt-1 text-[10px] ${m.author_role === "founder" ? "text-indigo-200" : "text-slate-400"}`}>
-                      {m.author_role === "founder" ? "You" : selected.ownerName ?? "iCapOS team"} · {new Date(m.created_at).toLocaleString("en-US")}
+                      {m.author_role === "founder" ? "You" : selected.ownerName ?? "iCapOS team"} · {when(m.created_at)}
                     </p>
                   </div>
                 ))
@@ -332,16 +390,46 @@ export function FounderSupportClient({ rows }: Readonly<{ rows: FounderRequestRo
                   placeholder={selected.status === "pending_founder" ? `Reply to ${selected.ownerName ?? "the team"}…` : "Add a reply or detail…"}
                   className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none"
                 />
-                <div className="mt-2 flex justify-end">
+                {files.length ? (
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {files.map((f) => (
+                      <span key={f.path} className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-700">
+                        <i className="ti ti-file-type-pdf text-red-500" aria-hidden="true" /> {f.name}
+                        <button type="button" aria-label={`Remove ${f.name}`} onClick={() => setFiles((x) => x.filter((y) => y.path !== f.path))} className="text-slate-400 hover:text-slate-700">
+                          <i className="ti ti-x" aria-hidden="true" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                {error ? <p className="mt-1.5 text-xs font-medium text-red-600">{error}</p> : null}
+                <div className="mt-2 flex items-center justify-end gap-2">
+                  <label className={`mr-auto inline-flex cursor-pointer items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50 ${uploading || files.length >= 5 ? "pointer-events-none opacity-60" : ""}`}>
+                    <i className="ti ti-paperclip" aria-hidden="true" /> {uploading ? "Attaching…" : "Attach PDF"}
+                    <input
+                      type="file"
+                      accept="application/pdf,.pdf"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        e.target.value = "";
+                        if (f) void attach(f);
+                      }}
+                    />
+                  </label>
                   <button type="button" disabled={busy || !reply.trim()} onClick={sendReply} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">
                     {busy ? "Sending…" : "Send"}
                   </button>
                 </div>
+                {emailReplies ? <p className="mt-1.5 text-[11px] text-slate-400">You can also reply to any email we send about this request.</p> : null}
               </div>
             )}
           </div>
         )}
       </div>
+      <p className="text-[11px] leading-snug text-slate-400 lg:col-span-2">
+        iCapOS support helps you use the platform. It is not investment, legal or tax advice. iCFO introductions and guidance are informational only and are not a recommendation or a guarantee of funding.
+      </p>
     </div>
   );
 }

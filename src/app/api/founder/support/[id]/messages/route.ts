@@ -7,7 +7,13 @@ import { onFounderReply } from "@/lib/support/care";
 
 export const dynamic = "force-dynamic";
 
-const schema = z.object({ body: z.string().min(1).max(4000) });
+const schema = z.object({
+  body: z.string().min(1).max(4000),
+  attachments: z
+    .array(z.object({ path: z.string().max(300), name: z.string().max(200), size: z.number().int().min(0) }))
+    .max(5)
+    .optional(),
+});
 
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
   const profile = await requireRole(["founder"]).catch(() => null);
@@ -24,6 +30,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     authorUserId: profile.id,
     authorRole: "founder",
     body: parsed.data.body,
+    // Only files uploaded to this request's own folder can be attached.
+    attachments: (parsed.data.attachments ?? []).filter((a) => a.path.startsWith(`${id}/`)),
   });
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 });
 

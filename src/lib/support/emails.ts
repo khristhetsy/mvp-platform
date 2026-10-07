@@ -12,6 +12,7 @@ import { sendTransactionalEmail } from "@/lib/email/transactional-send";
 import { makeToken } from "@/lib/signed-links/tokens";
 import { formatSupportTime } from "./business-hours";
 import { founderSupportLink, staffSupportLink } from "./support";
+import { supportReplyAddress, supportInboundEnabled } from "./inbound";
 
 const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com").replace(/\/$/, "");
 const CONFIRM_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -64,14 +65,20 @@ export function confirmationEmail(c: FounderEmailCtx, firstMessage: string | nul
   });
 }
 
-export function staffReplyEmail(c: FounderEmailCtx, body: string): RenderedEmail {
+export function staffReplyEmail(c: FounderEmailCtx, body: string, attachmentNames: string[] = []): RenderedEmail {
   return renderEmail({
     audience: "founder",
     subject: `${owner(c)} replied: ${c.subject}`,
     preheader: clip(body, 120),
     context: ref(c.refNo),
     headline: `${owner(c)} replied to your request`,
-    blocks: [{ type: "quote", label: owner(c), text: clip(body, 1500) }],
+    blocks: [
+      { type: "quote", label: owner(c), text: clip(body, 1500) },
+      ...(attachmentNames.length
+        ? [{ type: "paragraph" as const, text: `Attached on your request page: ${attachmentNames.join(", ")}.` }]
+        : []),
+      ...(supportInboundEnabled() ? [{ type: "note" as const, text: "You can reply to this email, or reply from your request page." }] : []),
+    ],
     primary: { label: "View and reply", url: `${APP_URL}${founderSupportLink(c.requestId)}` },
     footer: founderFooter,
   });
@@ -185,6 +192,17 @@ export function staffAlertEmail(input: {
 }
 
 /** Send through Resend when configured; returns false (and sends nothing) otherwise. */
+/** Founder emails can be answered by email: replies come back to the request. */
+const FOUNDER_TYPES = new Set([
+  "support_confirmation",
+  "support_staff_reply",
+  "support_resolved",
+  "support_update",
+  "support_waiting_on_you",
+  "support_closed",
+  "support_confirm_reminder",
+]);
+
 export async function deliverSupportEmail(input: {
   to: string | null | undefined;
   userId: string;
@@ -193,6 +211,7 @@ export async function deliverSupportEmail(input: {
   deepLink: string;
   requestId: string;
 }): Promise<boolean> {
+  const replyTo = FOUNDER_TYPES.has(input.type) ? supportReplyAddress(input.requestId) : null;
   if (!process.env.RESEND_API_KEY?.trim() || !input.to || !input.to.includes("@")) return false;
   try {
     await sendTransactionalEmail({
@@ -205,6 +224,7 @@ export async function deliverSupportEmail(input: {
       deepLink: input.deepLink,
       entityType: "support_request",
       entityId: input.requestId,
+      ...(replyTo ? { replyTo } : {}),
     });
     return true;
   } catch {

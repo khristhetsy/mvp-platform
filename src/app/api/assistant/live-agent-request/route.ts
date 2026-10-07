@@ -3,6 +3,9 @@ import { requireApiProfile } from "@/lib/api/auth";
 import { enforceRateLimit } from "@/lib/api/rate-limit";
 import { resolveFrom, TRANSACTIONAL_FROM_ENV } from "@/lib/email/send-email";
 import { logOutboundEmail } from "@/lib/email/email-log";
+import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { submitSupportRequest } from "@/lib/support/submit";
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 
@@ -19,8 +22,34 @@ export async function POST(req: NextRequest): Promise<Response> {
   });
   if (rateLimited) return rateLimited as Response;
 
-  const body = await req.json().catch(() => ({})) as { currentPath?: string };
+  const body = await req.json().catch(() => ({})) as { currentPath?: string; transcript?: string };
   const currentPath = typeof body.currentPath === "string" ? body.currentPath : "Unknown";
+  const transcript = typeof body.transcript === "string" ? body.transcript.slice(0, 3500) : "";
+
+  // "Talk to a person": open a support request on the Chat channel with the
+  // conversation attached, so it lands in the Support queue and the founder
+  // never repeats themselves. The email below is the fallback if that fails.
+  try {
+    const { company } = await getActiveCompanyForUser(auth.profile);
+    if (company) {
+      const firstQuestion = transcript.split("\n").find((l) => l.startsWith("Founder: "))?.slice(9).trim();
+      const result = await submitSupportRequest(await createServerSupabaseClient(), {
+        companyId: company.id,
+        founderId: auth.profile.id,
+        subject: `Assistant handoff: ${(firstQuestion || "Talk to a person").slice(0, 120)}`,
+        body: `Handed off from the iCapOS assistant on ${currentPath}.${transcript ? `\n\n${transcript}` : ""}`,
+        source: "chat",
+        contextStage: null,
+        contextItem: "Assistant",
+        via: "assistant",
+      });
+      if (!("error" in result)) {
+        return NextResponse.json({ received: true, requestId: result.id, ownerName: result.ownerName, dueAt: result.dueAt });
+      }
+    }
+  } catch {
+    /* fall back to the email below */
+  }
 
   const founderName = auth.profile.full_name ?? auth.profile.email ?? "A founder";
   const founderEmail = auth.profile.email ?? "unknown";

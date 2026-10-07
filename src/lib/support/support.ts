@@ -15,7 +15,7 @@ export const staffSupportLink = (requestId: string) => `/admin/support?request=$
 export const founderSupportLink = (requestId: string) => `/founder/support?request=${requestId}`;
 export type SupportStatus = (typeof SUPPORT_STATUSES)[number];
 
-export const SUPPORT_SOURCES = ["request_help", "question", "manual"] as const;
+export const SUPPORT_SOURCES = ["request_help", "question", "manual", "email", "chat"] as const;
 export type SupportSource = (typeof SUPPORT_SOURCES)[number];
 
 export type SupportRequest = {
@@ -59,6 +59,8 @@ export type SupportAiTriage = {
   reason: string;
 };
 
+export type SupportAttachment = { path: string; name: string; size: number };
+
 export type SupportMessage = {
   id: string;
   request_id: string;
@@ -66,7 +68,18 @@ export type SupportMessage = {
   author_role: "founder" | "staff";
   body: string;
   created_at: string;
+  /** Staff-only note. Founders never receive these (RLS and API both filter). */
+  is_internal?: boolean;
+  attachments?: SupportAttachment[];
 };
+
+/** Where a request came in: the in-app form, email, or an assistant chat handoff. */
+export type SupportChannel = "app" | "email" | "chat";
+export function supportChannel(r: { source: string; context_item: string | null }): SupportChannel {
+  if (r.source === "email") return "email";
+  if (r.source === "chat" || r.context_item === "Assistant") return "chat";
+  return "app";
+}
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 function db(c: SupabaseClient<Database>): SupabaseClient<any> {
@@ -158,7 +171,7 @@ export async function getSupportThread(
   if (!request) return null;
   const { data: msgs } = await db(supabase)
     .from("support_messages")
-    .select("id, request_id, author_user_id, author_role, body, created_at")
+    .select("id, request_id, author_user_id, author_role, body, created_at, is_internal, attachments")
     .eq("request_id", requestId)
     .order("created_at", { ascending: true })
     .limit(500);
@@ -167,21 +180,57 @@ export async function getSupportThread(
 
 export async function addSupportMessage(
   supabase: SupabaseClient<Database>,
-  input: { requestId: string; authorUserId: string; authorRole: "founder" | "staff"; body: string },
+  input: {
+    requestId: string;
+    authorUserId: string;
+    authorRole: "founder" | "staff";
+    body: string;
+    /** Staff-only note: saved on the thread, never sent, status unchanged. */
+    internal?: boolean;
+    attachments?: SupportAttachment[];
+  },
 ): Promise<{ ok: true } | { error: string }> {
   const { error } = await db(supabase).from("support_messages").insert({
     request_id: input.requestId,
     author_user_id: input.authorUserId,
     author_role: input.authorRole,
     body: input.body.trim().slice(0, 4000),
+    ...(input.internal ? { is_internal: true } : {}),
+    ...(input.attachments?.length ? { attachments: input.attachments.slice(0, 5) } : {}),
   });
   if (error) return { error: error.message };
+  if (input.internal) return { ok: true };
   // Staff reply moves the ball to the founder; founder reply reopens.
   await db(supabase)
     .from("support_requests")
     .update({ status: input.authorRole === "staff" ? "pending_founder" : "open", updated_at: new Date().toISOString() })
     .eq("id", input.requestId);
   return { ok: true };
+}
+
+/** Staff set the status by hand (e.g. "Waiting on founder") without replying. */
+export async function setSupportStatus(
+  supabase: SupabaseClient<Database>,
+  requestId: string,
+  status: "open" | "pending_founder",
+): Promise<{ ok: true } | { error: string }> {
+  const { error } = await db(supabase)
+    .from("support_requests")
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq("id", requestId);
+  return error ? { error: error.message } : { ok: true };
+}
+
+export async function setSupportPriority(
+  supabase: SupabaseClient<Database>,
+  requestId: string,
+  priority: "low" | "normal" | "high",
+): Promise<{ ok: true } | { error: string }> {
+  const { error } = await db(supabase)
+    .from("support_requests")
+    .update({ priority, updated_at: new Date().toISOString() })
+    .eq("id", requestId);
+  return error ? { error: error.message } : { ok: true };
 }
 
 export async function assignSupportRequest(

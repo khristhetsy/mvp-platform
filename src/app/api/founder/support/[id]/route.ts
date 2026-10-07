@@ -39,7 +39,9 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     const p = data as { id: string; full_name: string | null; email: string | null } | null;
     if (p) owner = { id: p.id, name: p.full_name?.trim() || p.email || "iCapOS team" };
   }
-  return NextResponse.json({ ...thread, owner });
+  // Internal notes are staff only. RLS already hides them; filter again here.
+  const messages = thread.messages.filter((m) => !m.is_internal);
+  return NextResponse.json({ ...thread, messages, owner });
 }
 
 export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<Response> {

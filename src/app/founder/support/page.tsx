@@ -9,6 +9,7 @@ import { getJourneyOverview } from "@/lib/founder/stage-gate-status";
 import { FounderSupportClient, type FounderRequestRow } from "@/components/founder/FounderSupportClient";
 import { FounderSupportAssistant } from "@/components/founder/FounderSupportAssistant";
 import { RequestHelpButton } from "@/components/founder/RequestHelpButton";
+import { supportInboundEnabled } from "@/lib/support/inbound";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 
@@ -94,7 +95,7 @@ export default async function FounderSupportPage() {
       {rows.length > 0 ? (
         <section className="mt-8">
           <h2 className="mb-3 text-sm font-medium text-slate-700">Your requests</h2>
-          <FounderSupportClient rows={rows} />
+          <FounderSupportClient emailReplies={supportInboundEnabled()} rows={rows} />
         </section>
       ) : null}
     </FounderAppShell>

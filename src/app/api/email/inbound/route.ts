@@ -4,6 +4,33 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { recordInboundMessage } from "@/lib/email/inbox";
 import { pickField, extractReplyToken, parseFromHeader, type InboundPayload } from "@/lib/email/inbound-parse";
 import { getResendApiKey } from "@/lib/env";
+import {
+  isSupportInbox,
+  openSupportRequestFromEmail,
+  recordSupportEmailReply,
+  requestIdFromToken,
+} from "@/lib/support/inbound";
+
+/** Support mail: a reply to a support email, or a new email to the support inbox. Null when it's not support mail. */
+async function routeSupportMail(input: {
+  token: string | null;
+  recipients: string[];
+  fromEmail: string;
+  subject: string | null;
+  text: string | null;
+  html: string | null;
+}): Promise<Response | null> {
+  const requestId = input.token ? requestIdFromToken(input.token) : null;
+  if (requestId) {
+    const r = await recordSupportEmailReply({ requestId, fromEmail: input.fromEmail, text: input.text, html: input.html });
+    return NextResponse.json({ matched: r.matched, support: true, ...(r.reason ? { reason: r.reason } : {}) });
+  }
+  if (!input.token && isSupportInbox(input.recipients)) {
+    const r = await openSupportRequestFromEmail({ fromEmail: input.fromEmail, subject: input.subject, text: input.text, html: input.html });
+    return NextResponse.json({ matched: r.matched, support: true, ...(r.reason ? { reason: r.reason } : {}) });
+  }
+  return null;
+}
 
 /**
  * POST /api/email/inbound — inbound email webhook (provider-agnostic).
@@ -105,9 +132,12 @@ export async function POST(req: NextRequest): Promise<Response> {
 
     const recipients = [...(email.to ?? []), ...(email.cc ?? [])];
     const token = tokenFromRecipients(recipients);
-    if (!token) return NextResponse.json({ ignored: true, reason: "no reply token" });
-
     const { email: fromEmail, name } = parseFromHeader(email.headers?.from ?? email.from ?? "");
+    if (fromEmail) {
+      const support = await routeSupportMail({ token, recipients, fromEmail, subject: email.subject ?? null, text: email.text ?? null, html: email.html ?? null });
+      if (support) return support;
+    }
+    if (!token) return NextResponse.json({ ignored: true, reason: "no reply token" });
     if (!fromEmail) return NextResponse.json({ ignored: true, reason: "no sender" });
 
     const result = await recordInboundMessage(createServiceRoleClient(), {
@@ -124,12 +154,22 @@ export async function POST(req: NextRequest): Promise<Response> {
   // ── Generic provider (full email in the POST) ──────────────────────────────
   const to = pickField(payload, "to", "recipient", "To", "envelope_to");
   const token = extractReplyToken(to);
+  const from = pickField(payload, "from", "sender", "From");
+  const { email, name } = parseFromHeader(from);
+  if (email) {
+    const support = await routeSupportMail({
+      token,
+      recipients: [to],
+      fromEmail: email,
+      subject: pickField(payload, "subject", "Subject") || null,
+      text: pickField(payload, "text", "body-plain", "plain", "TextBody", "stripped-text") || null,
+      html: pickField(payload, "html", "body-html", "HtmlBody") || null,
+    });
+    if (support) return support;
+  }
   if (!token) {
     return NextResponse.json({ ignored: true, reason: "no reply token" });
   }
-
-  const from = pickField(payload, "from", "sender", "From");
-  const { email, name } = parseFromHeader(from);
   if (!email) {
     return NextResponse.json({ ignored: true, reason: "no sender" });
   }

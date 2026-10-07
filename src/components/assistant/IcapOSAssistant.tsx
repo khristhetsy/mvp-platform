@@ -115,17 +115,24 @@ export function IcapOSAssistant() {
   const requestLiveAgent = useCallback(async () => {
     setAgentLoading(true);
     try {
-      await fetch("/api/assistant/live-agent-request", {
+      const transcript = messages
+        .slice(-12)
+        .map((m) => `${m.role === "user" ? "Founder" : "Assistant"}: ${m.text}`)
+        .join("\n");
+      const res = await fetch("/api/assistant/live-agent-request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currentPath: pathname }),
+        body: JSON.stringify({ currentPath: pathname, transcript }),
       });
+      const json = (await res.json().catch(() => ({}))) as { requestId?: string; ownerName?: string | null };
       setAgentRequested(true);
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          text: "Your request has been sent. Someone from our team will reach out via Messages shortly. I'm still here if you have questions in the meantime.",
+          text: json.requestId
+            ? `I've passed our conversation to ${json.ownerName ?? "our team"}. You'll see the reply on your Support page and by email, so you don't need to repeat anything. I'm still here in the meantime.`
+            : "Your request has been sent. Someone from our team will reach out via Messages shortly. I'm still here if you have questions in the meantime.",
         },
       ]);
     } catch {
@@ -133,7 +140,7 @@ export function IcapOSAssistant() {
     } finally {
       setAgentLoading(false);
     }
-  }, [pathname]);
+  }, [pathname, messages]);
 
   const sendMessage = useCallback(
     async (text: string) => {
