@@ -14,7 +14,8 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { emailDispatchAllowedForUser } from "@/lib/organizations/organizations";
 import { automatedCeiling, automatedRunLimit, founderCapPeriod, reachedInPeriod } from "@/lib/outreach/investor-cap";
 import { loadOutreachGlobals, resolveFounderOutreachConfig, type OutreachGlobals } from "@/lib/outreach/founder-overrides";
-import { nextOutreachRun } from "@/lib/outreach/outreach-schedule";
+import { nextCronSlot, nextOutreachRun } from "@/lib/outreach/outreach-schedule";
+import { isOutreachLiveSendEnabled } from "@/lib/outreach/investor-outreach";
 import { notifyOutreachUpcoming } from "@/lib/outreach/outreach-notify";
 import { getOutreachAutomationEnabled } from "@/lib/settings/platform-settings";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
@@ -189,4 +190,48 @@ export async function notifyUpcomingOutreachBatches(now: Date = new Date()): Pro
     /* reminders never block the cron */
   }
   return { notified };
+}
+
+// ── DIY (manual) sequences ───────────────────────────────────────────────────
+
+export type NextManualStep = { label: string; stepIndex: number; runAt: Date; recipients: number };
+
+/**
+ * The next DIY sequence step that will send for a company: its label, when the
+ * run picks it up, and how many investors it goes to. Null when nothing is
+ * queued or live sending is off (nothing would reach investors).
+ */
+export async function getNextManualOutreachStep(companyId: string, now: Date = new Date()): Promise<NextManualStep | null> {
+  try {
+    if (!isOutreachLiveSendEnabled()) return null;
+    const client = db();
+    const { data: camp } = await client
+      .from("founder_manual_outreach")
+      .select("sequence, status")
+      .eq("company_id", companyId)
+      .eq("status", "queued")
+      .maybeSingle();
+    const steps = ((camp as { sequence?: Array<{ label: string; dayOffset: number }> } | null)?.sequence ?? []) as Array<{ label: string; dayOffset: number }>;
+    if (!Array.isArray(steps) || steps.length === 0) return null;
+    const { data: recs } = await client
+      .from("founder_manual_outreach_recipients")
+      .select("next_step_index, enrolled_at")
+      .eq("company_id", companyId)
+      .eq("status", "active");
+    const due = new Map<string, NextManualStep>();
+    for (const r of (recs ?? []) as Array<{ next_step_index: number; enrolled_at: string }>) {
+      const step = steps[r.next_step_index];
+      if (!step) continue;
+      const dueAt = new Date(new Date(r.enrolled_at).getTime() + (step.dayOffset ?? 0) * 86_400_000);
+      const runAt = nextCronSlot(dueAt.getTime() > now.getTime() ? dueAt : now);
+      const key = `${runAt.toISOString()}|${r.next_step_index}`;
+      const cur = due.get(key);
+      if (cur) cur.recipients += 1;
+      else due.set(key, { label: step.label, stepIndex: r.next_step_index, runAt, recipients: 1 });
+    }
+    const next = [...due.values()].sort((a, b) => a.runAt.getTime() - b.runAt.getTime() || b.recipients - a.recipients)[0];
+    return next ?? null;
+  } catch {
+    return null;
+  }
 }

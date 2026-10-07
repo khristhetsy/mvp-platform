@@ -17,6 +17,8 @@ import { loadFounderInvestorHub } from "@/lib/founder-crm/load-founder-investor-
 import { ManualOutreachBuilder } from "@/components/founder/ManualOutreachBuilder";
 import { PublicProfileEditor } from "@/components/founder/PublicProfileEditor";
 import { ensureFounderAutomatedOutreach } from "@/lib/outreach/investor-outreach";
+import { getNextManualOutreachStep, getNextOutreachBatch } from "@/lib/outreach/outreach-next-batch";
+import { NextBatchStrip, NextManualStepStrip } from "@/components/founder/OutreachNextStrips";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { FounderJourneyGate } from "@/components/founder/FounderJourneyGate";
@@ -174,6 +176,10 @@ export default async function FounderDeployPage() {
 
   // Every send this company has made, from the three tables that record them.
   const outreachRecords = company ? await loadOutreachRecords(company.id) : [];
+  // When the next automated batch and the next DIY step go out (null when nothing is scheduled to email).
+  const [nextBatch, nextManualStep] = company
+    ? await Promise.all([getNextOutreachBatch(company.id), getNextManualOutreachStep(company.id)])
+    : [null, null];
 
   const followUpsNeeded = crmView?.summary.followUpsNeeded ?? 0;
   const interestedCount = crmView?.summary.totalInterestedInvestors ?? 0;
@@ -271,6 +277,7 @@ export default async function FounderDeployPage() {
   const automatedNode =
     company && board ? (
       <>
+        {nextBatch ? <NextBatchStrip batch={nextBatch} /> : null}
         <FounderPrivateMarketTicker rows={board.rows} />
         <FounderPrivateMarketSummaryCards summary={board.summary} rankedCount={board.rows.length} />
         <FounderPrivateMarketBoard rows={board.rows} />
@@ -287,14 +294,17 @@ export default async function FounderDeployPage() {
   // ---- Step 2 · Outreach → Manual (Investor outreach wizard only) ----
   const manualNode =
     company && hub ? (
-      <ManualOutreachBuilder
-        contacts={hub.contacts.map((c) => ({
-          id: c.id,
-          name: c.investor_name,
-          email: c.email,
-          detail: [c.firm_name, c.investor_type].filter(Boolean).join(" · ") || c.email,
-        }))}
-      />
+      <div className="space-y-4">
+        {nextManualStep ? <NextManualStepStrip step={nextManualStep} /> : null}
+        <ManualOutreachBuilder
+          contacts={hub.contacts.map((c) => ({
+            id: c.id,
+            name: c.investor_name,
+            email: c.email,
+            detail: [c.firm_name, c.investor_type].filter(Boolean).join(" · ") || c.email,
+          }))}
+        />
+      </div>
     ) : (
       <EmptyState
         title="Link a company to run outreach"
