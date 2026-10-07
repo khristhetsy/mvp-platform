@@ -35,7 +35,10 @@ describe("outreach schedule", () => {
     expect(nextOutreachRun({ pauseUntil: "2026-10-12" }, now).toISOString()).toBe("2026-10-13T07:00:00.000Z");
   });
 
-  it("formats for founders", () => {
-    expect(formatRunTime(new Date("2026-10-09T19:00:00Z"))).toBe("Friday, October 9 around 19:00 UTC");
+  it("formats for founders in Pacific time, summer and winter", () => {
+    expect(formatRunTime(new Date("2026-10-09T19:00:00Z"))).toBe("Friday, October 9 around 12:00 PM PT");
+    expect(formatRunTime(new Date("2026-10-10T07:00:00Z"))).toBe("Saturday, October 10 around 12:00 AM PT");
+    // After the switch back to standard time, 07:00 UTC is 11 PM the previous day in PT.
+    expect(formatRunTime(new Date("2026-12-10T07:00:00Z"))).toBe("Wednesday, December 9 around 11:00 PM PT");
   });
 });

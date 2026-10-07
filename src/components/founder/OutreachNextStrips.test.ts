@@ -21,10 +21,10 @@ const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " "
 describe("outreach strips", () => {
   it("shows the next batch time, who it goes to, and the allowance", () => {
     const t = text(renderToStaticMarkup(createElement(NextBatchStrip, { batch: base })));
-    expect(t).toContain("Next batch: Friday, October 9 around 19:00 UTC");
+    expect(t).toContain("Next batch: Friday, October 9 around 12:00 PM PT");
     expect(t).toContain("3 investors: Jane Park, Northwind Ventures and Alder Capital.");
     expect(t).not.toContain("Not Next");
-    expect(t).toContain("2 of 5 used this period · resets October 20");
+    expect(t).toContain("2 of 5 used this period · resets October 19");
     expect(t).not.toMatch(/\d+%/);
   });
 
@@ -39,6 +39,6 @@ describe("outreach strips", () => {
       step: { label: "Follow-up 1", stepIndex: 1, runAt: new Date("2026-10-10T07:00:00Z"), recipients: 4 },
     })));
     expect(t).toContain("Next sequence step: Follow-up 1 on Saturday, October 10");
-    expect(t).toContain("Goes to 4 investors around 07:00 UTC");
+    expect(t).toContain("Goes to 4 investors around 12:00 AM PT");
   });
 });

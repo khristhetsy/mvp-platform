@@ -23,7 +23,7 @@ describe("founder is told when outreach goes out", () => {
       companyName: "KoreInside", firstName: "Sarah", investors, planName: "Basic", monthlyCap: 5, isPublished: true,
       firstRunAt: new Date("2026-10-09T19:00:00Z"),
     });
-    expect(text).toContain("The first batch goes out Friday, October 9 around 19:00 UTC");
+    expect(text).toContain("The first batch goes out Friday, October 9 around 12:00 PM PT");
   });
 
   it("queued email leaves the date out when it isn't known", () => {
@@ -36,7 +36,7 @@ describe("founder is told when outreach goes out", () => {
       companyName: "K", firstName: null, investors, sentThisMonth: 3, monthlyCap: 5, stillQueued: 2,
       nextRunAt: new Date("2026-10-16T07:00:00Z"),
     });
-    expect(text).toContain("Next batch: Friday, October 16 around 07:00 UTC");
+    expect(text).toContain("Next batch: Friday, October 16 around 12:00 AM PT");
   });
 
   it("day-before reminder names the investors, the time and the allowance, never scores", () => {
@@ -54,7 +54,7 @@ describe("founder is told when outreach goes out", () => {
       },
     });
     expect(subject).toBe("Your next investor batch goes out Friday, October 9");
-    expect(text).toContain("goes to 2 investors Friday, October 9 around 19:00 UTC");
+    expect(text).toContain("goes to 2 investors Friday, October 9 around 12:00 PM PT");
     expect(visible(html)).toContain("Andres Blank");
     expect(visible(html)).not.toContain("Marcus Badger");
     expect(text).toContain("2 of 5");

@@ -45,14 +45,30 @@ export function nextOutreachRun(
   return nextCronSlot(new Date(earliest));
 }
 
-/** "Thursday, October 9 around 19:00 UTC" for founder facing copy. */
-export function formatRunTime(at: Date): string {
-  const date = at.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" });
-  const hh = String(at.getUTCHours()).padStart(2, "0");
-  return `${date} around ${hh}:00 UTC`;
+/**
+ * Every date and time founders see for outreach is in Pacific time (PT), so
+ * there is one time zone across emails, notices and pages. The cron itself
+ * still runs on UTC hours above; only the display is converted.
+ */
+export const OUTREACH_DISPLAY_TZ = "America/Los_Angeles";
+
+/** "12:00 PM PT" */
+export function formatRunClock(at: Date): string {
+  const time = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", timeZone: OUTREACH_DISPLAY_TZ }).format(at);
+  return `${time} PT`;
 }
 
-/** "Thursday, October 9" for short labels. */
+/** "Friday, October 9" (Pacific date). */
 export function formatRunDay(at: Date): string {
-  return at.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" });
+  return at.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: OUTREACH_DISPLAY_TZ });
+}
+
+/** "October 9" (Pacific date). */
+export function formatShortDay(at: Date): string {
+  return at.toLocaleDateString("en-US", { month: "long", day: "numeric", timeZone: OUTREACH_DISPLAY_TZ });
+}
+
+/** "Friday, October 9 around 12:00 PM PT" for founder facing copy. */
+export function formatRunTime(at: Date): string {
+  return `${formatRunDay(at)} around ${formatRunClock(at)}`;
 }

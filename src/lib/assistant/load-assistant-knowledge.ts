@@ -22,6 +22,7 @@ import { getUserPlan } from "@/lib/subscriptions/get-subscription";
 import { PLAN_LABELS, type PlanType } from "@/lib/subscriptions/plans";
 import { priceLabel, priceSublabel, type PricingCatalog } from "@/lib/subscriptions/pricing-catalog";
 import { loadPricing } from "@/lib/subscriptions/pricing-server";
+import { formatShortDay } from "@/lib/outreach/outreach-schedule";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import type { Database, Profile } from "@/lib/supabase/types";
 import {
@@ -88,7 +89,7 @@ async function founderPlanKnowledge(profileId: string, companyId: string | null)
     const period = await founderCapPeriod(db, profileId);
     const used = (await reachedInPeriod(db, companyId, period.start)).size;
     const left = Math.max(0, ent.investorCap - used);
-    const resets = period.end.toISOString().slice(0, 10);
+    const resets = `${formatShortDay(period.end)} (Pacific time)`;
     lines.push(`Outreach this period: ${used} of ${ent.investorCap} investors reached, ${left} left; the allowance resets on ${resets}. Founders can see all their matches, but outreach and intro requests cannot go past the limit.`);
   }
   return lines.join("\n");
