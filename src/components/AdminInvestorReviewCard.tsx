@@ -7,6 +7,7 @@ import { formatUsd } from "@/lib/ui/format-display";
 import { investorApprovalStatusLabel } from "@/lib/investor/access";
 import { KYC_STATUS_LABELS, type KycReviewItem } from "@/lib/investor/kyc";
 import type { InvestorKycStatus, InvestorPriorDealRecord, InvestorProfileRecord } from "@/lib/investor/types";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 type Row = InvestorProfileRecord & {
   profiles: { id: string; full_name: string | null; email: string | null; created_at: string } | null;
@@ -17,7 +18,7 @@ type Row = InvestorProfileRecord & {
 
 function formatDate(value: string | null) {
   if (!value) return "—";
-  return new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+  return new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: PLATFORM_TZ });
 }
 
 function formatMoney(value: number | null) {

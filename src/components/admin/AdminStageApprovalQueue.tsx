@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { useTranslations } from "next-intl";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 export type PendingFounder = {
   profileId: string;
@@ -20,7 +21,7 @@ function formatDate(iso: string | null | undefined) {
     month: "short",
     day: "numeric",
     year: "numeric",
-    timeZone: "UTC",
+    timeZone: PLATFORM_TZ,
   });
 }
 

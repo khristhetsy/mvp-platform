@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { platformInputToIso } from "@/lib/time/platform-input";
 
 const NAVY = "#0A1A40", BLUE = "#1A6CE4", MUTED = "var(--muted-foreground)";
 interface Session { id: string; title: string; description: string | null; starts_at: string | null; ends_at: string | null; speaker: string | null; session_url: string | null; position: number }
@@ -240,7 +241,7 @@ function AddSessionForm({ conferenceId, onDone, onCancel }: { conferenceId: stri
     try {
       const r = await fetch(`/api/admin/meetings/conferences/${conferenceId}/sessions`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: title.trim(), speaker: speaker || null, starts_at: starts ? new Date(starts).toISOString() : null, ends_at: ends ? new Date(ends).toISOString() : null, session_url: url || null }),
+        body: JSON.stringify({ title: title.trim(), speaker: speaker || null, starts_at: starts ? platformInputToIso(starts) : null, ends_at: ends ? platformInputToIso(ends) : null, session_url: url || null }),
       });
       if (r.ok) onDone(); else setBusy(false);
     } catch { setBusy(false); }

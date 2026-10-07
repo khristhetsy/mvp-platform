@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import type { FounderAnalyticsSnapshot } from "@/lib/analytics/founder-analytics";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 type DrawerKey = "outreach" | "social" | "investors" | "readiness";
 
@@ -401,7 +402,7 @@ function DrawerContent({
               <BRow
                 key={row.createdAt}
                 name={new Date(row.createdAt).toLocaleDateString("en-US", {
-                  timeZone: "UTC",
+                  timeZone: PLATFORM_TZ,
                   month: "short",
                   day: "numeric",
                   year: "numeric",
@@ -618,7 +619,7 @@ export function AnalyticsChartPanelsClient({ analytics }: { analytics: FounderAn
                   <div className="mb-1 flex items-center justify-between">
                     <span className="text-xs text-slate-500">
                       {new Date(row.createdAt).toLocaleDateString("en-US", {
-                        timeZone: "UTC",
+                        timeZone: PLATFORM_TZ,
                         month: "short",
                         day: "numeric",
                         year: "numeric",

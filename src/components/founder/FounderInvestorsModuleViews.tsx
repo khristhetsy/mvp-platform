@@ -9,6 +9,7 @@ import type { FounderInvestorCrmView, FounderInvestorRelationRow } from "@/lib/d
 import { FounderToolbar, applySearch } from "@/components/founder/FounderToolbar";
 import { EMPTY_SEARCH, type SearchState } from "@/components/admin/OdooSearchBar";
 import { formatPledgeTotal } from "@/lib/data/investor-pledges";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 // ─── Pipeline donut chart ─────────────────────────────────────────────────────
 
@@ -92,7 +93,7 @@ function formatActivityDate(value: string) {
     month: "short",
     day: "numeric",
     year: "numeric",
-    timeZone: "UTC",
+    timeZone: PLATFORM_TZ,
   });
 }
 

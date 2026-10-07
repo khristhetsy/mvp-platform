@@ -12,9 +12,9 @@ const bodySchema = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("save"),
     job: z.string().min(1),
-    /** Custom schedule in Paris time, or null to keep the vercel.json one. */
+    /** Custom schedule in Pacific time, or null to keep the vercel.json one. */
     cron: z.array(z.string().min(1)).max(6).nullable(),
-    /** One-off next run as a Paris wall clock "YYYY-MM-DDTHH:MM", or null. */
+    /** One-off next run as a Pacific wall clock "YYYY-MM-DDTHH:MM", or null. */
     nextRunLocal: z.string().nullable(),
   }),
   z.object({ action: z.literal("reset"), job: z.string().min(1) }),

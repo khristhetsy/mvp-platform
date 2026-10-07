@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { PREVIEW_JOB_PATHS } from "@/lib/cron/preview-paths";
 import { MatchingSettings } from "@/components/admin/MatchingSettings";
+import { PLATFORM_TZ, PLATFORM_TZ_LABEL } from "@/lib/time/platform-tz";
 
 /** Jobs with a Settings tab. */
 const SETTINGS_JOB = "/api/cron/matching";
@@ -32,7 +33,7 @@ type Delivery = {
 
 type Viewing = { title: string; to: string; when: string | null; html: string | null; message: string | null; status?: string };
 
-const WHEN = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Paris", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const WHEN = new Intl.DateTimeFormat("en-GB", { timeZone: PLATFORM_TZ, day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
 const CHANNEL: Record<"email" | "in_app", { text: string; cls: string }> = {
   email: { text: "Email", cls: "bg-blue-50 text-blue-700" },
@@ -178,7 +179,7 @@ export function JobActivity({ path, runs }: Readonly<{ path: string; runs: React
             </div>
             <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[12.5px]">
               <dt className="text-slate-500">To</dt><dd className="text-slate-900">{viewing.to}</dd>
-              <dt className="text-slate-500">{viewing.when ? "Sent" : "Sends"}</dt><dd className="text-slate-900">{viewing.when ? `${viewing.when} Paris` : "On the next run, if nothing changes before then"}</dd>
+              <dt className="text-slate-500">{viewing.when ? "Sent" : "Sends"}</dt><dd className="text-slate-900">{viewing.when ? `${viewing.when} ${PLATFORM_TZ_LABEL}` : "On the next run, if nothing changes before then"}</dd>
               {viewing.status ? (<><dt className="text-slate-500">Result</dt><dd className="text-slate-900">{viewing.status}</dd></>) : null}
             </dl>
             {viewing.html ? (

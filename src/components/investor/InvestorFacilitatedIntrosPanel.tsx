@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 type FacilitatedRow = {
   id: string;
@@ -19,7 +20,7 @@ function formatDate(iso: string | null) {
     month: "short",
     day: "numeric",
     year: "numeric",
-    timeZone: "UTC",
+    timeZone: PLATFORM_TZ,
   });
 }
 

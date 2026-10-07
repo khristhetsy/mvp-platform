@@ -18,6 +18,7 @@ import { requireRole } from "@/lib/supabase/auth";
 import { ensureSubscriptionForProfile, getSubscriptionForProfile } from "@/lib/subscriptions/get-subscription";
 import { priceShort } from "@/lib/subscriptions/pricing-catalog";
 import { loadPricing } from "@/lib/subscriptions/pricing-server";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 function formatDate(value: string | null) {
   if (!value) return "—";
@@ -25,7 +26,7 @@ function formatDate(value: string | null) {
     month: "short",
     day: "numeric",
     year: "numeric",
-    timeZone: "UTC",
+    timeZone: PLATFORM_TZ,
   });
 }
 

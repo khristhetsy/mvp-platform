@@ -19,6 +19,7 @@ import {
   type MatchConfig,
 } from "@/lib/marketing/match-campaign/types";
 import { filterToQuery, type FounderFilterInput } from "@/lib/marketing/match-campaign/filter-params";
+import { PLATFORM_TZ, PLATFORM_TZ_LABEL } from "@/lib/time/platform-tz";
 
 type ListOption = { id: string; name: string; count: number | null };
 type Options = { industries: string[]; stages: string[]; pipelineStages: string[] };
@@ -672,7 +673,7 @@ function StepMatches({ campaign, founders, onFounders, onCampaign, onNext, onErr
         <span className="mt-0.5 block pl-6 text-[11.5px] text-[#5A6782]">
           Runs at 11:30 PM UTC, before the next day&apos;s sends. New investors and hidden investors are picked up.
           {campaign.match_config.last_rematch_at
-            ? ` Last run: ${new Date(campaign.match_config.last_rematch_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" })} UTC`
+            ? ` Last run: ${new Date(campaign.match_config.last_rematch_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: PLATFORM_TZ })} ${PLATFORM_TZ_LABEL}`
             : ""}
         </span>
       </label>
@@ -859,7 +860,7 @@ function StepSchedule({ campaign, founders, resendReady, sequenceEnabled, onCamp
   const zones = useMemo(() => timeZones(), []);
   const [date, setDate] = useState("");
   const [time, setTime] = useState("09:00");
-  const [tz, setTz] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Los_Angeles");
+  const [tz, setTz] = useState(() => PLATFORM_TZ);
   const [cap, setCap] = useState(campaign.match_config.daily_cap);
   const [busy, setBusy] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);

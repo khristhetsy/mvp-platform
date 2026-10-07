@@ -4,6 +4,7 @@ import { MetricCard } from "@/components/MetricCard";
 import { WorkflowProgressRail, type WorkflowStep } from "@/components/ui/WorkflowProgressRail";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { buildCompanyFilteredHref, type AdminCompanyWorkspaceData } from "@/lib/admin/company-workspace-types";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 export function CompanyReadinessPanel({
   readiness,
@@ -66,7 +67,7 @@ export function CompanyReadinessPanel({
           <ul className="mt-2 space-y-1 text-xs text-slate-600">
             {readiness.scoreHistory.slice(0, 5).map((row, index) => (
               <li key={`${row.created_at}-${index}`}>
-                {row.readiness_score ?? "—"} · {new Date(row.created_at).toLocaleDateString("en-US", { timeZone: "UTC" })}
+                {row.readiness_score ?? "—"} · {new Date(row.created_at).toLocaleDateString("en-US", { timeZone: PLATFORM_TZ })}
               </li>
             ))}
           </ul>

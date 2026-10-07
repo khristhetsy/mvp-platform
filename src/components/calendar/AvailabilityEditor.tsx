@@ -5,9 +5,10 @@ import { useTranslations } from "next-intl";
 import { Clock, Check, Plus, Trash2 } from "lucide-react";
 import type { AvailabilitySettings, WeeklyRule, ScheduleQuestion, ContactFieldConfig } from "@/lib/scheduling/types";
 import { DEFAULT_CONTACT_FIELDS } from "@/lib/scheduling/types";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const LOCAL_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+const LOCAL_TZ = PLATFORM_TZ;
 
 type DayState = { enabled: boolean; start: string; end: string };
 

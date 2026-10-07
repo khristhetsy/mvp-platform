@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { GoogleCalendarMeetingReadiness } from "@/components/GoogleCalendarMeetingReadiness";
 import type { MessageThreadDetail, MessageThreadListItem } from "@/lib/messaging/types";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
+import { platformInputToIso } from "@/lib/time/platform-input";
 
 type WorkspaceRole = "founder" | "investor";
 
@@ -15,7 +17,7 @@ function formatDate(value: string) {
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
-    timeZone: "UTC",
+    timeZone: PLATFORM_TZ,
   });
 }
 
@@ -120,12 +122,12 @@ export function MessagingThreadWorkspace({
     setLoading("meeting");
     setError(null);
 
-    const payload: Record<string, string> = { timezone: "UTC" };
+    const payload: Record<string, string> = { timezone: PLATFORM_TZ };
     if (meetingStart) {
-      payload.proposedStartTime = new Date(meetingStart).toISOString();
+      payload.proposedStartTime = platformInputToIso(meetingStart) ?? new Date(meetingStart).toISOString();
     }
     if (meetingEnd) {
-      payload.proposedEndTime = new Date(meetingEnd).toISOString();
+      payload.proposedEndTime = platformInputToIso(meetingEnd) ?? new Date(meetingEnd).toISOString();
     }
     if (meetingNotes.trim()) {
       payload.meetingNotes = meetingNotes.trim();
@@ -162,12 +164,12 @@ export function MessagingThreadWorkspace({
     const payload: Record<string, string> = { action };
     if (action === "propose") {
       if (meetingStart) {
-        payload.proposedStartTime = new Date(meetingStart).toISOString();
+        payload.proposedStartTime = platformInputToIso(meetingStart) ?? new Date(meetingStart).toISOString();
       }
       if (meetingEnd) {
-        payload.proposedEndTime = new Date(meetingEnd).toISOString();
+        payload.proposedEndTime = platformInputToIso(meetingEnd) ?? new Date(meetingEnd).toISOString();
       }
-      payload.timezone = "UTC";
+      payload.timezone = PLATFORM_TZ;
       if (meetingNotes.trim()) {
         payload.meetingNotes = meetingNotes.trim();
       }

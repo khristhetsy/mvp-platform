@@ -10,6 +10,7 @@ import type { Database } from "@/lib/supabase/types";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getValidGoogleAccessToken } from "@/lib/integrations/google-access-token";
 import { createCalendarEventWithMeet, isGoogleCalendarConfigured } from "@/lib/integrations/google-calendar";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 function raw(c: SupabaseClient<Database>): SupabaseClient {
   return c as unknown as SupabaseClient;
@@ -17,7 +18,7 @@ function raw(c: SupabaseClient<Database>): SupabaseClient {
 
 /** The admin whose Google calendar hosts voice-booked demos. */
 const BOOKING_USER_ID = process.env.VOICE_BOOKING_USER_ID?.trim() || null;
-const DEFAULT_TZ = "America/New_York";
+const DEFAULT_TZ = PLATFORM_TZ;
 
 /** Next business day at 15:00 in the given timezone → ISO start/end (30 min). */
 function nextBusinessSlot(): { startTime: string; endTime: string } {

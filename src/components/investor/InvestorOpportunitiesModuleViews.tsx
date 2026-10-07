@@ -6,6 +6,7 @@ import { Suspense, useMemo, useState } from "react";
 import { InvestorMatchOpportunityCard } from "@/components/InvestorMatchOpportunityCard";
 import { ModuleEmptyState } from "@/components/ui/ViewToolbar";
 import { PageSection } from "@/components/ui/workspace-layout";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 type ViewMode = "grid" | "list";
 type SortBy = "match" | "newest" | "readiness";
@@ -48,7 +49,7 @@ function formatDate(value: string | null) {
     month: "short",
     day: "numeric",
     year: "numeric",
-    timeZone: "UTC",
+    timeZone: PLATFORM_TZ,
   });
 }
 

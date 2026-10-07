@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { matchRows, searchSummary, type SearchField } from "@/lib/ui/live-search";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 export type WatchlistRow = {
   id: string;
@@ -34,7 +35,7 @@ function formatDate(value: string | null) {
     month: "short",
     day: "numeric",
     year: "numeric",
-    timeZone: "UTC",
+    timeZone: PLATFORM_TZ,
   });
 }
 

@@ -4,6 +4,7 @@
 import { marketingDb } from "@/lib/marketing/db";
 import type { Channel } from "./catalog";
 import { DEFAULT_SETTINGS, type NotifSettings, type NotifPref, type FeedItem } from "./types";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 function toTime(v: string): string {
   // Postgres returns time as "HH:MM:SS"; normalize to "HH:MM".
@@ -22,7 +23,7 @@ export async function loadSettings(adminId: string): Promise<NotifSettings> {
     quiet_end: toTime(String(data.quiet_end ?? "07:00")),
     digest_time: toTime(String(data.digest_time ?? "06:30")),
     default_channels: (data.default_channels ?? ["in_app", "email"]) as Channel[],
-    timezone: String(data.timezone ?? "Europe/Paris"),
+    timezone: String(data.timezone ?? PLATFORM_TZ),
   };
 }
 

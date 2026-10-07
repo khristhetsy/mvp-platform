@@ -15,22 +15,22 @@ const NOW = new Date("2026-09-27T10:30:00Z");
 
 describe("custom schedules in Paris time", () => {
   it("runs at the Paris wall clock time on both sides of the clock change", () => {
-    const runs = nextRunsInZone(["0 11 * * *"], new Date("2026-10-24T12:00:00Z"), 2);
+    const runs = nextRunsInZone(["0 11 * * *"], new Date("2026-10-24T12:00:00Z"), 2, "Europe/Paris");
     // 25 Oct is the switch to winter time: 11:00 Paris is 09:00 UTC before, 10:00 UTC after.
     expect(runs.map((d) => d.toISOString())).toEqual(["2026-10-25T10:00:00.000Z", "2026-10-26T10:00:00.000Z"]);
-    expect(nextRunsInZone(["0 11 * * *"], NOW)[0]?.toISOString()).toBe("2026-09-28T09:00:00.000Z");
+    expect(nextRunsInZone(["0 11 * * *"], NOW, 1, "Europe/Paris")[0]?.toISOString()).toBe("2026-09-28T09:00:00.000Z");
   });
 
   it("finds weekly runs and several at once", () => {
-    const runs = nextRunsInZone(["30 9 * * 1,3"], NOW, 3).map((d) => d.toISOString());
+    const runs = nextRunsInZone(["30 9 * * 1,3"], NOW, 3, "Europe/Paris").map((d) => d.toISOString());
     expect(runs).toEqual(["2026-09-28T07:30:00.000Z", "2026-09-30T07:30:00.000Z", "2026-10-05T07:30:00.000Z"]);
   });
 
   it("converts a datetime input value both ways", () => {
-    const at = zonedLocalToUtc("2026-09-28T09:30");
+    const at = zonedLocalToUtc("2026-09-28T09:30", "Europe/Paris");
     expect(at?.toISOString()).toBe("2026-09-28T07:30:00.000Z");
-    expect(utcToZonedLocal(at!)).toBe("2026-09-28T09:30");
-    expect(zonedLocalToUtc("2026-12-01T09:30")?.toISOString()).toBe("2026-12-01T08:30:00.000Z");
+    expect(utcToZonedLocal(at!, "Europe/Paris")).toBe("2026-09-28T09:30");
+    expect(zonedLocalToUtc("2026-12-01T09:30", "Europe/Paris")?.toISOString()).toBe("2026-12-01T08:30:00.000Z");
     expect(zonedLocalToUtc("tomorrow")).toBeNull();
   });
 });
@@ -48,9 +48,9 @@ describe("the edit form", () => {
   });
 
   it("opens on the job's vercel.json schedule read in Paris time", () => {
-    expect(formFromUtcDefault(["0 9 * * *"], NOW)).toMatchObject({ mode: "daily", times: ["11:00"] });
-    expect(formFromUtcDefault(["0 13 * * 1"], NOW)).toMatchObject({ mode: "weekly", times: ["15:00"], days: [1] });
-    expect(formFromUtcDefault(["0 23 * * 1"], NOW)).toMatchObject({ mode: "weekly", times: ["01:00"], days: [2] });
+    expect(formFromUtcDefault(["0 9 * * *"], NOW, "Europe/Paris")).toMatchObject({ mode: "daily", times: ["11:00"] });
+    expect(formFromUtcDefault(["0 13 * * 1"], NOW, "Europe/Paris")).toMatchObject({ mode: "weekly", times: ["15:00"], days: [1] });
+    expect(formFromUtcDefault(["0 23 * * 1"], NOW, "Europe/Paris")).toMatchObject({ mode: "weekly", times: ["01:00"], days: [2] });
     expect(formFromUtcDefault(["*/5 * * * *"], NOW)).toMatchObject({ mode: "every", every: 5 });
   });
 
@@ -66,13 +66,21 @@ describe("the edit form", () => {
 describe("dispatcher timing", () => {
   const base = { job: "/api/cron/founder-nudges", cron: "0 11 * * *", next_run_at: null, last_dispatch_at: "2026-09-27T08:00:00Z", updated_at: "2026-09-26T08:00:00Z" };
   it("starts a job once its Paris time has passed since the last start", () => {
-    expect(dueNow(base, new Date("2026-09-27T08:55:00Z")).run).toBe(false);
-    expect(dueNow(base, new Date("2026-09-27T09:02:00Z")).run).toBe(true);
-    expect(dueNow({ ...base, last_dispatch_at: "2026-09-27T09:02:00Z" }, new Date("2026-09-27T09:07:00Z")).run).toBe(false);
+    expect(dueNow(base, new Date("2026-09-27T08:55:00Z"), "Europe/Paris").run).toBe(false);
+    expect(dueNow(base, new Date("2026-09-27T09:02:00Z"), "Europe/Paris").run).toBe(true);
+    expect(dueNow({ ...base, last_dispatch_at: "2026-09-27T09:02:00Z" }, new Date("2026-09-27T09:07:00Z"), "Europe/Paris").run).toBe(false);
   });
   it("starts a one-off next run when its time comes", () => {
     const row = { ...base, cron: null, next_run_at: "2026-09-28T07:30:00Z" };
-    expect(dueNow(row, new Date("2026-09-28T07:25:00Z"))).toEqual({ run: false, oneOff: false });
-    expect(dueNow(row, new Date("2026-09-28T07:31:00Z"))).toEqual({ run: true, oneOff: true });
+    expect(dueNow(row, new Date("2026-09-28T07:25:00Z"), "Europe/Paris")).toEqual({ run: false, oneOff: false });
+    expect(dueNow(row, new Date("2026-09-28T07:31:00Z"), "Europe/Paris")).toEqual({ run: true, oneOff: true });
+  });
+});
+
+describe("platform zone (PT) is the default for custom schedules", () => {
+  it("reads custom schedules in Pacific time", () => {
+    // 9:00 PT on Sep 28 (PDT, UTC-7) is 16:00 UTC.
+    expect(nextRunsInZone(["0 9 * * *"], new Date("2026-09-28T00:00:00Z"))[0]?.toISOString()).toBe("2026-09-28T16:00:00.000Z");
+    expect(utcToZonedLocal(new Date("2026-09-28T16:00:00Z"))).toBe("2026-09-28T09:00");
   });
 });

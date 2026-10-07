@@ -1,6 +1,6 @@
 /**
  * Custom schedules set on Admin, System, Scheduled jobs. Unlike vercel.json
- * (always UTC), a custom schedule is kept in Paris time, so "Daily 11:00" stays
+ * (always UTC), a custom schedule is kept in Pacific time (PT), so "Daily 11:00" stays
  * 11:00 across the summer and winter clock changes. Pure, so the edit dialog,
  * the dispatcher and the tests read schedules the same way.
  */
@@ -11,7 +11,7 @@ type Field = ParsedCron["fields"][number];
 
 const offsetFormatters = new Map<string, Intl.DateTimeFormat>();
 
-/** Minutes the zone is ahead of UTC at the given instant (Paris: 60 or 120). */
+/** Minutes the zone is ahead of UTC at the given instant (PT: -420 or -480). */
 export function zoneOffsetMinutes(at: Date, tz: string = DISPLAY_TZ): number {
   let f = offsetFormatters.get(tz);
   if (!f) {

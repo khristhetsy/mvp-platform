@@ -8,6 +8,7 @@ import type {
   FounderInvestorIntroRecord,
   FounderInvestorSavedRecord,
 } from "@/lib/data/investor-interests";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 type PipelineCard = {
   id: string;
@@ -40,7 +41,7 @@ function formatDate(value: string) {
     month: "short",
     day: "numeric",
     year: "numeric",
-    timeZone: "UTC",
+    timeZone: PLATFORM_TZ,
   });
 }
 

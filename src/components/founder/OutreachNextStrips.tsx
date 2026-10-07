@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { AlertTriangle, CalendarClock, MailCheck } from "lucide-react";
 import type { NextBatch, NextManualStep } from "@/lib/outreach/outreach-next-batch";
-import { formatRunDay, formatRunTime } from "@/lib/outreach/outreach-schedule";
+import { formatRunClock, formatRunDay, formatRunTime, formatShortDay } from "@/lib/outreach/outreach-schedule";
 
 function namesLine(names: string[], limit = 3): string {
   const clean = names.filter(Boolean);
@@ -52,7 +52,7 @@ export function NextBatchStrip({ batch }: { batch: NextBatch }) {
     shown.length > 0
       ? `${shown.length} ${shown.length === 1 ? "investor" : "investors"}: ${namesLine(shown.map((i) => i.name))}.`
       : `Up to ${batch.upTo} matched ${batch.upTo === 1 ? "investor" : "investors"}.`;
-  const resets = batch.periodResetsAt ? formatRunDay(batch.periodResetsAt).split(", ").slice(1).join(", ") : null;
+  const resets = batch.periodResetsAt ? formatShortDay(batch.periodResetsAt) : null;
 
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-indigo-200 bg-white px-4 py-3 sm:flex-row sm:items-start">
@@ -88,7 +88,6 @@ export function NextBatchStrip({ batch }: { batch: NextBatch }) {
 
 /** DIY outreach: the next sequence step that will send. */
 export function NextManualStepStrip({ step }: { step: NextManualStep }) {
-  const hh = String(step.runAt.getUTCHours()).padStart(2, "0");
   return (
     <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
       <MailCheck className="mt-0.5 h-5 w-5 shrink-0 text-slate-500" aria-hidden />
@@ -97,7 +96,7 @@ export function NextManualStepStrip({ step }: { step: NextManualStep }) {
           Next sequence step: {step.label || `Step ${step.stepIndex + 1}`} on {formatRunDay(step.runAt)}
         </p>
         <p className="mt-0.5 text-xs text-slate-600">
-          Goes to {step.recipients} {step.recipients === 1 ? "investor" : "investors"} around {hh}:00 UTC. You&apos;ll get an email and a
+          Goes to {step.recipients} {step.recipients === 1 ? "investor" : "investors"} around {formatRunClock(step.runAt)}. You&apos;ll get an email and a
           notification after each step sends.
         </p>
       </div>

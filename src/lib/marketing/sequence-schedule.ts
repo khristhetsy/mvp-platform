@@ -5,8 +5,9 @@
  * runner and the tests all read a schedule the same way.
  */
 import { zonedLocalToUtc, utcToZonedLocal } from "@/lib/cron/zoned-schedule";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
-export const SCHEDULE_TZ = "America/Los_Angeles";
+export const SCHEDULE_TZ = PLATFORM_TZ;
 
 export type RepeatRule = "once" | "daily" | "weekdays" | "weekly" | "monthly";
 export const REPEAT_RULES: RepeatRule[] = ["once", "daily", "weekdays", "weekly", "monthly"];

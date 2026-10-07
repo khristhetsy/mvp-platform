@@ -12,6 +12,7 @@ import { formatApiError } from "@/lib/api/errors";
 import { adminDebug } from "@/lib/debug/admin-debug";
 import { getCompanyWorkspaceHref } from "@/lib/ui/drilldown-links";
 import { useDismiss } from "@/lib/ui/use-dismiss";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 export type AdminCompanyCardData = {
   id: string;
@@ -109,7 +110,7 @@ function formatDate(value: string | null) {
     year: "numeric",
     month: "short",
     day: "numeric",
-    timeZone: "UTC",
+    timeZone: PLATFORM_TZ,
   });
 }
 

@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { Trash2, Loader2 } from "lucide-react";
 import type { AdminCrmActivityRow } from "@/lib/data/investor-crm";
 import { getCompanyWorkspaceHref } from "@/lib/ui/drilldown-links";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 function formatActivityLabel(type: string) {
   return type
@@ -21,7 +22,7 @@ function formatDate(value: string) {
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
-    timeZone: "UTC",
+    timeZone: PLATFORM_TZ,
   });
 }
 

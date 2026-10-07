@@ -1,4 +1,5 @@
 import type { Channel } from "./catalog";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 export interface NotifSettings {
   admin_id: string;
@@ -36,5 +37,5 @@ export const DEFAULT_SETTINGS: Omit<NotifSettings, "admin_id"> = {
   quiet_end: "07:00",
   digest_time: "06:30",
   default_channels: ["in_app", "email"],
-  timezone: "Europe/Paris",
+  timezone: PLATFORM_TZ,
 };

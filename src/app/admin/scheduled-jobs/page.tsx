@@ -58,7 +58,7 @@ export default async function AdminScheduledJobsPage({ searchParams }: PageProps
 
   const rows: JobRow[] = jobs.map((j) => {
     // A custom schedule (Edit) replaces the vercel.json one; a one-off next run
-    // comes on top of whichever applies. Custom schedules are kept in Paris time.
+    // comes on top of whichever applies. Custom schedules are kept in Pacific time.
     const o = overrides.get(j.path);
     const custom = splitCron(o?.cron ?? null);
     const oneOff = o?.next_run_at ? new Date(o.next_run_at) : null;

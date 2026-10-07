@@ -6,6 +6,7 @@ import { Archive, Trash2 } from "lucide-react";
 import Link from "next/link";
 import type { NotificationRecord } from "@/lib/notifications/types";
 import { notificationCategory } from "@/lib/notifications/categories";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 type Filter = "all" | "action" | "unread";
 
@@ -15,7 +16,7 @@ function formatDate(value: string) {
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
-    timeZone: "UTC",
+    timeZone: PLATFORM_TZ,
   });
 }
 

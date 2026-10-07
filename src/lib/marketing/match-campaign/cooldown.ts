@@ -1,3 +1,4 @@
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 /**
  * Cooldown between Match campaigns. Pure helpers; the database read lives in
  * store.ts (recentMatchEmails).
@@ -29,6 +30,6 @@ export function latestByContact(rows: ReadonlyArray<{ contactId: string } & Rece
 
 /** What the data check shows: 'Emailed Sep 30 by "Your investor matches"'. */
 export function cooldownNote(r: RecentEmail): string {
-  const day = new Date(r.at).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+  const day = new Date(r.at).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: PLATFORM_TZ });
   return r.campaign ? `Emailed ${day} by "${r.campaign}"` : `Emailed ${day} by another Match campaign`;
 }

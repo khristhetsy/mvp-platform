@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 type EventPref = { in_app: boolean; email: boolean; digest: boolean };
 
@@ -41,7 +42,7 @@ const COMMON_TIMEZONES = [
 
 function detectBrowserTimezone(): string {
   try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    return PLATFORM_TZ;
   } catch {
     return "UTC";
   }
@@ -337,7 +338,7 @@ export function NotificationSettings() {
             </label>
             <select
               id="timezone"
-              value={prefs.timezone ?? "UTC"}
+              value={prefs.timezone ?? PLATFORM_TZ}
               onChange={(e) => update({ timezone: e.target.value })}
               className="w-full max-w-md rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
@@ -362,7 +363,7 @@ export function NotificationSettings() {
               <span aria-hidden="true"><i className="ti ti-clock" aria-hidden="true" /></span>
               <span>
                 Notifications are muted <b>{to12h(prefs.quiet_start)} → {to12h(prefs.quiet_end)}</b> in{" "}
-                <b>{tzOffsetLabel(prefs.timezone ?? "UTC")}</b>. The times above are interpreted in this zone.
+                <b>{tzOffsetLabel(prefs.timezone ?? PLATFORM_TZ)}</b>. The times above are interpreted in this zone.
               </span>
             </div>
           ) : null}

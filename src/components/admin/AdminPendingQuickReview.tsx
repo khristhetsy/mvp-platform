@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useState } from "react";
 import { useTranslations } from "next-intl";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 type PendingCompany = {
   id: string;
@@ -17,7 +18,7 @@ type ActionStatus = "idle" | "busy" | "approved" | "rejected" | "error";
 
 function formatDate(iso: string | null | undefined) {
   if (!iso) return null;
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: PLATFORM_TZ });
 }
 
 export function AdminPendingQuickReview({ companies }: { companies: PendingCompany[] }) {

@@ -166,7 +166,7 @@ export function ScheduledReachOutEmails() {
         </div>
       )}
       {tab === "scheduled" && items.length ? (
-        <p className="mt-1.5 text-[11.5px] text-slate-500">Times in Paris, with the founder&apos;s time below.</p>
+        <p className="mt-1.5 text-[11.5px] text-slate-500">Times in Pacific time (PT), with the founder&apos;s time below.</p>
       ) : null}
 
       {viewing ? (

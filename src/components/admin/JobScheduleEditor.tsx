@@ -11,6 +11,7 @@ import {
   type RepeatMode,
   type ScheduleForm,
 } from "@/lib/cron/zoned-schedule";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 export type EditableJob = {
   path: string;
@@ -35,7 +36,7 @@ const DAYS: Array<{ n: number; label: string }> = [
   { n: 6, label: "Sat" },
   { n: 0, label: "Sun" },
 ];
-const PREVIEW = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Paris", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+const PREVIEW = new Intl.DateTimeFormat("en-GB", { timeZone: PLATFORM_TZ, weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 
 const pill = (on: boolean): React.CSSProperties => ({
   border: `0.5px solid ${on ? "#C9CCF6" : "#e2e6ed"}`,
@@ -51,7 +52,7 @@ const input: React.CSSProperties = { border: "0.5px solid #cbd5e1", borderRadius
 const label: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: "var(--muted-foreground)", minWidth: 64 };
 const btn: React.CSSProperties = { borderRadius: 8, padding: "7px 12px", fontSize: 13, fontWeight: 600, cursor: "pointer" };
 
-/** Edit schedule and next run for one job (Admin, System, Scheduled jobs). Times are Paris time. */
+/** Edit schedule and next run for one job (Admin, System, Scheduled jobs). Times are Pacific time (PT). */
 export function JobScheduleEditor({ job, onClose, onDone }: { job: EditableJob; onClose: () => void; onDone: (message: string) => void }) {
   const [openedAt] = useState(() => new Date());
   const [form, setForm] = useState<ScheduleForm>(() => (job.custom?.cron ? formFromCron(job.custom.cron) : null) ?? formFromUtcDefault(job.defaultCron, openedAt));
@@ -177,14 +178,14 @@ export function JobScheduleEditor({ job, onClose, onDone }: { job: EditableJob; 
                   + add a time
                 </button>
               )}
-              <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Paris time</span>
+              <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Pacific time (PT)</span>
             </div>
           </>
         )}
 
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", borderTop: "0.5px solid #eef1f5", paddingTop: 12 }}>
           <span style={label}>Next run</span>
-          <input aria-label="One-off next run, Paris time" type="datetime-local" value={nextLocal} onChange={(e) => setNextLocal(e.target.value)} style={input} />
+          <input aria-label="One-off next run, Pacific time" type="datetime-local" value={nextLocal} onChange={(e) => setNextLocal(e.target.value)} style={input} />
           {nextLocal && (
             <button type="button" onClick={() => setNextLocal("")} style={{ border: "none", background: "none", color: "#64748B", fontSize: 12, cursor: "pointer" }}>
               Clear

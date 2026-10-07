@@ -8,6 +8,7 @@ import {
   buildCompanyFilteredHref,
   type AdminCompanyWorkspaceData,
 } from "@/lib/admin/company-workspace-types";
+import { PLATFORM_TZ, PLATFORM_TZ_LABEL } from "@/lib/time/platform-tz";
 
 function reviewStatusToBadge(status: string | null): "neutral" | "info" | "success" | "warning" | "danger" | "pending" {
   switch (status) {
@@ -45,7 +46,7 @@ export function CompanyWorkspaceHeader({
           company.capital_ready_at
             ? `Capital Ready since ${new Date(company.capital_ready_at).toLocaleDateString()}`
             : null,
-          `Last loaded ${new Date().toLocaleString("en-US", { timeZone: "UTC" })} UTC`,
+          `Last loaded ${new Date().toLocaleString("en-US", { timeZone: PLATFORM_TZ })} ${PLATFORM_TZ_LABEL}`,
         ]
           .filter(Boolean)
           .join(" · ")}

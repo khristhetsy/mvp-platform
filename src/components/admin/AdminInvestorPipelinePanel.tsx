@@ -10,6 +10,8 @@ import {
   type InvestorPipelineStage,
 } from "@/lib/investor-crm/admin-pipeline";
 import { getCompanyWorkspaceHref } from "@/lib/ui/drilldown-links";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
+import { platformInputToIso, toPlatformInput } from "@/lib/time/platform-input";
 
 function formatStage(stage: string) {
   return stage
@@ -94,7 +96,7 @@ function formatDate(value: string | null) {
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
-    timeZone: "UTC",
+    timeZone: PLATFORM_TZ,
   });
 }
 
@@ -141,7 +143,7 @@ export function AdminInvestorPipelinePanel({ rows, initialCompanyId, initialInve
       stage: row.stage,
       probability: row.probability,
       notes: row.notes ?? "",
-      nextFollowUpAt: row.next_follow_up_at ? row.next_follow_up_at.slice(0, 16) : "",
+      nextFollowUpAt: row.next_follow_up_at ? toPlatformInput(row.next_follow_up_at) : "",
     });
     setMessage(null);
   }
@@ -161,7 +163,7 @@ export function AdminInvestorPipelinePanel({ rows, initialCompanyId, initialInve
     };
 
     if (editState.nextFollowUpAt) {
-      payload.nextFollowUpAt = new Date(editState.nextFollowUpAt).toISOString();
+      payload.nextFollowUpAt = platformInputToIso(editState.nextFollowUpAt) ?? new Date(editState.nextFollowUpAt).toISOString();
     } else {
       payload.clearFollowUp = true;
     }

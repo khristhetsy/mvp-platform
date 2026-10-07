@@ -1,14 +1,16 @@
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 /**
  * Reading the cron expressions in vercel.json: when a job runs next, and how to
  * say its schedule in plain words. Pure, so the Scheduled jobs page and its
  * tests read expressions the same way.
  *
  * Vercel evaluates cron expressions in UTC. Everything shown to staff is
- * converted to a display time zone (Europe/Paris by default), so a job at
+ * converted to a display time zone (the platform zone, Pacific time), so a job at
  * "0 19 * * *" reads "Daily 21:00" in summer and "Daily 20:00" in winter.
  */
 
-export const DISPLAY_TZ = "Europe/Paris";
+/** Scheduled jobs are shown and edited in the platform time zone (PT). */
+export const DISPLAY_TZ = PLATFORM_TZ;
 
 type Field = { any: boolean; values: Set<number> };
 

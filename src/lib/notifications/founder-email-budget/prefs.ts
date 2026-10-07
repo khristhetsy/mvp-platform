@@ -5,6 +5,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import type { FounderEmailMode } from "./config";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 export type FounderEmailPrefs = {
   mode: FounderEmailMode;
@@ -25,7 +26,7 @@ export const DEFAULT_FOUNDER_PREFS: FounderEmailPrefs = {
 };
 
 /** Fallback zone when a founder never saved one (most founders are US based). */
-export const DEFAULT_FOUNDER_TZ = "America/Los_Angeles";
+export const DEFAULT_FOUNDER_TZ = PLATFORM_TZ;
 
 type Row = {
   user_id: string;

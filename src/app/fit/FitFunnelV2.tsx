@@ -5,6 +5,7 @@ import { Q2_RAISE, Q5_INVESTOR_TYPE, type FitAnswers } from "@/lib/fit/options";
 import { groupSectors, valuesForChips, type SectorGroup } from "@/lib/fit/sector-groups";
 import type { PublicMatchResponse, PublicMatch } from "@/lib/fit/public-match";
 import { FIT_BOOKING_FORM_DEFAULTS, resolveFitBookingForm, type FitBookingForm } from "@/lib/fit/booking-form-config";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 /**
  * /fit v2: the Match Review flow (A/B test arm; v1 is FitFunnelClient).
@@ -429,7 +430,7 @@ function ReviewBooker({ scope, onBack, onBooked }: { scope: string; onBack: () =
   const [replies, setReplies] = useState<Record<string, string[]>>({});
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const tz = typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC" : "UTC";
+  const tz = PLATFORM_TZ;
 
   useEffect(() => {
     fetch("/api/fit/booking-form").then((r) => (r.ok ? r.json() : null)).then((d) => {

@@ -1,5 +1,6 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getTranslations } from "next-intl/server";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 type EventType = "viewed" | "saved" | "interested" | "intro_requested";
 
@@ -60,7 +61,7 @@ function formatEventDate(iso: string): string {
   if (diffDays === 0) return "Today";
   if (diffDays === 1) return "Yesterday";
   if (diffDays < 7)  return `${diffDays} days ago`;
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: PLATFORM_TZ });
 }
 
 async function loadEngagementEvents(companyId: string): Promise<EngagementEvent[]> {

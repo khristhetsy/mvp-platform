@@ -6,6 +6,7 @@ import { Clock, Video, Check, Globe, ChevronLeft, ChevronRight } from "lucide-re
 import { IcapOSLogo } from "@/components/IcapOSLogo";
 import type { TimeInterval, ScheduleQuestion, ContactFieldConfig } from "@/lib/scheduling/types";
 import { DEFAULT_CONTACT_FIELDS } from "@/lib/scheduling/types";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 /** The visitor's timezone. Read on the client only: the server renders an empty
  *  label, which avoids a hydration mismatch (the server's zone is UTC). */
@@ -13,7 +14,7 @@ const noopSubscribe = () => () => {};
 function useLocalTimeZone(): string {
   return useSyncExternalStore(
     noopSubscribe,
-    () => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+    () => PLATFORM_TZ,
     () => "",
   );
 }
@@ -191,7 +192,7 @@ export function BookingClient({
           hostId,
           startTime: pending.start,
           endTime: pending.end,
-          timezone: localTz || "UTC",
+          timezone: localTz || PLATFORM_TZ,
           name: `${firstName} ${lastName}`.trim(),
           email: email.trim(),
           phone: phone.trim() || undefined,

@@ -1,5 +1,6 @@
 // Operations Hub v2 settings (single-row ops_hub_settings) + timezone helpers.
 import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 const db = serviceRoleClientUntyped;
 
@@ -18,7 +19,7 @@ export const HUB_DEFAULTS: HubSettings = {
   driftDetection: true,
   driftAutoAdd: false,
   advisoryEnabled: true,
-  runResetTz: "Europe/Paris",
+  runResetTz: PLATFORM_TZ,
   escalationPastDueDays: 21,
   playbookEditScope: "all_admins",
   driftIgnored: [],
@@ -32,7 +33,7 @@ export async function getHubSettings(): Promise<HubSettings> {
       driftDetection: data.drift_detection ?? true,
       driftAutoAdd: data.drift_auto_add ?? false,
       advisoryEnabled: data.advisory_enabled ?? true,
-      runResetTz: data.run_reset_tz ?? "Europe/Paris",
+      runResetTz: data.run_reset_tz ?? PLATFORM_TZ,
       escalationPastDueDays: data.escalation_past_due_days ?? 21,
       playbookEditScope: (data.playbook_edit_scope as HubEditScope) ?? "all_admins",
       driftIgnored: Array.isArray(data.drift_ignored) ? (data.drift_ignored as string[]) : [],

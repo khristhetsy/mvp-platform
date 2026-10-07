@@ -19,6 +19,7 @@ import type { OdooOpenActivity } from "@/lib/ir/odoo-open-activities";
 import { InvestorContactDialog } from "../../../../_shared/InvestorContactDialog";
 import { MatchBulkActions } from "./MatchBulkActions";
 import { ActivityPopover } from "./ActivityPopover";
+import { platformInputToIso, toPlatformInput } from "@/lib/time/platform-input";
 
 type Contact = { email: string | null; phone: string | null; country: string | null; membership: string | null };
 type Payload = { task: IrTask; project: IrProject; entrepreneur: EntrepreneurProfile | null; contacts: Record<string, Contact>; weeks: IrMilestone[]; months: IrMilestone[]; matches: IrMatch[]; activities: IrActivity[]; notes: IrNote[]; staff: Array<{ id: string; name: string }>; siblings: Array<{ id: string; title: string; milestone_id: string }> };
@@ -412,7 +413,7 @@ function AgentField({ projectId, taskId, matches, done, meId, onChange }: { proj
   const [type, setType] = useState<IrActivityType>("call");
   const [subject, setSubject] = useState("");
   const [outcome, setOutcome] = useState("");
-  const [when, setWhen] = useState(() => new Date().toISOString().slice(0, 16));
+  const [when, setWhen] = useState(() => toPlatformInput(new Date()));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   useEffect(() => { if (!matchId && matches[0]) setMatchId(matches[0].id); }, [matches, matchId]); // eslint-disable-line react-hooks/set-state-in-effect
@@ -420,7 +421,7 @@ function AgentField({ projectId, taskId, matches, done, meId, onChange }: { proj
   async function log() {
     if (!subject.trim()) { setErr("Say what happened."); return; }
     setBusy(true); setErr(null);
-    const r = await fetch("/api/admin/ir/activities", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId, taskId, matchId: matchId || null, type, subject: subject.trim(), outcome: outcome.trim() || null, done: true, doneAt: when ? new Date(when).toISOString() : null, assigneeId: meId }) });
+    const r = await fetch("/api/admin/ir/activities", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId, taskId, matchId: matchId || null, type, subject: subject.trim(), outcome: outcome.trim() || null, done: true, doneAt: when ? platformInputToIso(when) : null, assigneeId: meId }) });
     setBusy(false);
     if (!r.ok) { setErr((await r.json().catch(() => ({}))).error ?? "Couldn't log."); return; }
     setSubject(""); setOutcome("");

@@ -9,6 +9,7 @@ import {
   getBillingLifecycleStatus,
 } from "@/lib/billing/billing-status";
 import type { PlanType } from "@/lib/subscriptions/plans";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 function formatDate(value: string | null) {
   if (!value) {
@@ -19,7 +20,7 @@ function formatDate(value: string | null) {
     month: "short",
     day: "numeric",
     year: "numeric",
-    timeZone: "UTC",
+    timeZone: PLATFORM_TZ,
   });
 }
 

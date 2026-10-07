@@ -1,5 +1,6 @@
 import type { OperationalStatus } from "@/lib/ui/design-tokens";
 import type { AdminQueueItem, AdminQueueType } from "@/lib/queues/admin-queues";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 export const QUEUE_TYPE_LABELS: Record<AdminQueueType, string> = {
   company_reviews: "Pending Company Reviews",
@@ -80,7 +81,7 @@ export function formatQueueTimestamp(isoDate: string): string {
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
-    timeZone: "UTC",
+    timeZone: PLATFORM_TZ,
   });
 }
 

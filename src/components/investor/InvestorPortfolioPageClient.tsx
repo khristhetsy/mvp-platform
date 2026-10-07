@@ -14,6 +14,7 @@ import type {
 } from "@/lib/portfolio/types";
 import { STAGE_LABELS } from "@/lib/portfolio/types";
 import { matchRows } from "@/lib/ui/live-search";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 /* ── format helpers ── */
 const fmt = (n: number) =>
@@ -40,7 +41,7 @@ function initials(name: string) {
 }
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString("en-US", {
-    month: "short", day: "numeric", year: "numeric", timeZone: "UTC",
+    month: "short", day: "numeric", year: "numeric", timeZone: PLATFORM_TZ,
   });
 }
 function fmtCurrency(amount: number | null, currency = "USD") {

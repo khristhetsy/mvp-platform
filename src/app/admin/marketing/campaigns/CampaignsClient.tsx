@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import type { MarketingCampaign, MarketingList, MarketingTemplate } from "@/lib/marketing/types";
 import { DEPARTMENTS, UNASSIGNED, deptMeta, departmentOf, groupByDepartment } from "@/lib/marketing/department-grouping";
+import { fromPlatformInput, platformInputToIso, toPlatformInput } from "@/lib/time/platform-input";
 
 interface Props {
   campaigns: MarketingCampaign[];
@@ -39,12 +40,6 @@ type CampaignDetail = {
 
 const EDITABLE_STATUSES = ["draft", "scheduled", "paused"];
 // ISO → value for <input type="datetime-local"> (local time, no seconds/zone).
-function toLocalInput(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
 
 export function CampaignsClient({ campaigns, lists, templates, resendReady = true, defaultSender, senders = [], matchEnabled = false }: Props) {
   const router = useRouter();
@@ -153,7 +148,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
       if (!form.department) delete body.department;
       // Convert the local datetime-picker value to an absolute UTC instant so the
       // scheduled send fires at the intended local time (not misread as UTC).
-      if (form.scheduled_at) body.scheduled_at = new Date(form.scheduled_at).toISOString();
+      if (form.scheduled_at) body.scheduled_at = platformInputToIso(form.scheduled_at) ?? new Date(form.scheduled_at).toISOString();
       // Attach per-campaign overrides only when the preview diverges from the template.
       if (selectedTemplate) {
         const bodyHtml = bodyRef.current?.innerHTML ?? "";
@@ -321,7 +316,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
       reply_to: analyticsData.reply_to ?? "",
       list_id: analyticsData.list_id ?? "",
       template_id: analyticsData.template_id ?? "",
-      scheduled_at: analyticsData.scheduled_at ? toLocalInput(analyticsData.scheduled_at) : "",
+      scheduled_at: analyticsData.scheduled_at ? toPlatformInput(analyticsData.scheduled_at) : "",
       department: (analyticsData as { department?: string | null }).department ?? "",
     });
     setEditing(true);
@@ -338,7 +333,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
         reply_to: editForm.reply_to.trim() || null,
         list_id: editForm.list_id || null,
         template_id: editForm.template_id || null,
-        scheduled_at: editForm.scheduled_at ? new Date(editForm.scheduled_at).toISOString() : null,
+        scheduled_at: editForm.scheduled_at ? platformInputToIso(editForm.scheduled_at) : null,
         department: editForm.department || null,
       };
       const res = await fetch(`/api/marketing/campaigns/${analyticsId}`, {
@@ -521,7 +516,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
 
           {form.scheduled_at && (
             <div style={{ marginTop: 10, fontSize: 12, color: "#185FA5", padding: "6px 10px", background: "#E6F1FB", borderRadius: 6 }}>
-<i className="ti ti-calendar" aria-hidden="true" /> Will be scheduled to send at {new Date(form.scheduled_at).toLocaleString()}
+<i className="ti ti-calendar" aria-hidden="true" /> Will be scheduled to send at {(fromPlatformInput(form.scheduled_at) ?? new Date(form.scheduled_at)).toLocaleString()} PT
             </div>
           )}
           <div style={{ marginTop: 14, display: "flex", gap: 8, flexWrap: "wrap" }}>

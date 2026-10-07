@@ -20,6 +20,7 @@ import { BlockersPanel, EntrepreneurTab, MessageComposer } from "../../_shared/R
 import type { EntrepreneurProfile } from "@/lib/ir/db";
 import { IR_ACTIVITY_ICON, IR_ACTIVITY_LABEL, IR_ACTIVITY_TYPES, IR_STAGES, IR_STAGE_LABEL, type IrActivity, type IrActivityType, type IrBlocker, type IrMatch, type IrNote, type IrProject, type IrStage } from "@/lib/ir/types";
 import { useRouter } from "next/navigation";
+import { platformInputToIso } from "@/lib/time/platform-input";
 
 type Payload = {
   match: IrMatch; project: IrProject; activities: IrActivity[]; notes: IrNote[];
@@ -250,7 +251,7 @@ function Chatter({ projectId, matchId, open, done, notes, staff, meId, onChange,
         if (!subject.trim()) { setErr("Give it a subject."); return; }
         if (mode === "schedule" && !due) { setErr("Pick a due date."); return; }
         const body = { projectId, matchId, type, subject: subject.trim(), description: desc.trim() || null, outcome: outcome.trim() || null, nextStep: next.trim() || null,
-          dueAt: due ? new Date(due).toISOString() : null, done: mode === "log", founderVisible, assigneeId: assignee || null };
+          dueAt: due ? platformInputToIso(due) : null, done: mode === "log", founderVisible, assigneeId: assignee || null };
         const r = await fetch("/api/admin/ir/activities", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
         if (!r.ok) { setErr((await r.json().catch(() => ({}))).error ?? "Couldn't save."); return; }
       }

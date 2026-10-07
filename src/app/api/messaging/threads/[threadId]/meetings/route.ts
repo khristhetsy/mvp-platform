@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { loadThreadForUser, requireFounderMessagingApi, requireInvestorApprovedApi } from "@/lib/api/messaging";
 import { createThreadMeeting } from "@/lib/messaging/meetings";
 import { threadMeetingCreateSchema } from "@/lib/validation";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 type RouteContext = { params: Promise<{ threadId: string }> };
 
@@ -30,7 +31,7 @@ export async function POST(request: Request, context: RouteContext) {
       requestedBy: profile.id,
       proposedStartTime: meetingInput.proposedStartTime ?? null,
       proposedEndTime: meetingInput.proposedEndTime ?? null,
-      timezone: meetingInput.timezone ?? "UTC",
+      timezone: meetingInput.timezone ?? PLATFORM_TZ,
       meetingTitle: meetingInput.meetingTitle ?? null,
       meetingNotes: meetingInput.meetingNotes ?? null,
     });

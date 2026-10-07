@@ -1,6 +1,7 @@
 import { getCompanyWorkspaceHref, getDrilldownHref } from "@/lib/ui/drilldown-links";
 import { OPERATIONAL_CATEGORY_LABELS } from "@/lib/operational-activity/event-categories";
 import type { OperationalActivityFeedItem, OperationalEventCategory } from "@/lib/operational-activity/types";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 // Values are Tabler icon class names (rendered as <i className={`ti ${icon}`} />).
 const CATEGORY_ICONS: Record<OperationalEventCategory, string> = {
@@ -60,7 +61,7 @@ export function formatOperationalTimestamp(value: string) {
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
-    timeZone: "UTC",
+    timeZone: PLATFORM_TZ,
   });
 }
 

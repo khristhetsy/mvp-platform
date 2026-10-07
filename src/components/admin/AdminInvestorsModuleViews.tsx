@@ -16,6 +16,7 @@ import type { InvestorApprovalStatus, InvestorProfileRecord } from "@/lib/invest
 import type { KycReviewItem } from "@/lib/investor/kyc";
 import type { InvestorPriorDealRecord } from "@/lib/investor/types";
 import { filterInvestorProfiles, type InvestorQueryFilters } from "@/lib/ui/query-filters";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 type InvestorsPageView = "cards" | "table" | "approval" | "segments" | "activity";
 
@@ -456,7 +457,7 @@ function AdminInvestorsModuleViewsInner({
                     <p className="text-xs text-slate-500">
                       Last activity{" "}
                       {investor.lastSeen
-                        ? new Date(investor.lastSeen).toLocaleDateString("en-US", { timeZone: "UTC" })
+                        ? new Date(investor.lastSeen).toLocaleDateString("en-US", { timeZone: PLATFORM_TZ })
                         : "—"}
                     </p>
                   </div>
@@ -572,7 +573,7 @@ function AdminInvestorsModuleViewsInner({
                       <p className="text-xs text-slate-500">
                         Last activity{" "}
                         {investor.lastSeen
-                          ? new Date(investor.lastSeen).toLocaleDateString("en-US", { timeZone: "UTC" })
+                          ? new Date(investor.lastSeen).toLocaleDateString("en-US", { timeZone: PLATFORM_TZ })
                           : "—"}
                       </p>
                     </div>
