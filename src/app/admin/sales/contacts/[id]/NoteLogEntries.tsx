@@ -74,7 +74,8 @@ export function NoteLogEntries({ contactId, notes, onChange }: { contactId: stri
     const u = activeUndo;
     if (await write(u.prev, "undo")) { setUndo(null); setFlash(u.index); }
   }
-  undoRef.current = doUndo;
+  // Keep the keyboard shortcut pointed at the latest doUndo; set after render, not during it.
+  useEffect(() => { undoRef.current = doUndo; });
 
   // Ctrl/Cmd+Z undoes while the bar is showing (but not while typing in a field).
   useEffect(() => {
