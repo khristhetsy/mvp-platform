@@ -14,6 +14,7 @@ import type { PlaceholderSchema, TemplateSlot } from "@/lib/email/template-schem
 import { DEPARTMENTS } from "@/lib/marketing/department-grouping";
 
 type Master = { id: string; name: string; description: string; compiled_html: string; placeholder_schema: PlaceholderSchema };
+type Prefill = { label: string; values: Record<string, string>; sources: Record<string, string> };
 export type SavedBrandedTemplate = { id: string; name: string; subject: string; html_body: string; department: string | null };
 
 const PREVIEW_WIDTHS = { desktop: 640, mobile: 390 } as const;
@@ -24,9 +25,11 @@ const inp: React.CSSProperties = { width: "100%", fontSize: 12.5, padding: "6px 
 const btn: React.CSSProperties = { fontSize: 12, padding: "6px 12px", borderRadius: 7, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--foreground)", whiteSpace: "nowrap" };
 const label: React.CSSProperties = { display: "block", fontSize: 11.5, fontWeight: 600, color: "var(--muted-foreground)", margin: "10px 0 4px" };
 
-export function BrandedTemplateEditor({ templateId, defaultDepartment, primaryLabel = "Save", onClose, onSaved }: {
+export function BrandedTemplateEditor({ templateId, projectId, defaultDepartment, primaryLabel = "Save", onClose, onSaved }: {
   /** Edit this branded template; omit to create a new one. */
   templateId?: string;
+  /** Investor Relations project: a new template is filled from its founder. */
+  projectId?: string;
   defaultDepartment?: string;
   primaryLabel?: string;
   onClose: () => void;
@@ -44,13 +47,15 @@ export function BrandedTemplateEditor({ templateId, defaultDepartment, primaryLa
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [uploading, setUploading] = useState<string | null>(null);
+  const [prefill, setPrefill] = useState<Prefill | null>(null);
 
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        const r = await fetch("/api/marketing/branded-templates");
-        const j = (await r.json()) as { masters?: Master[]; defaults?: Record<string, string>; error?: string };
+        const q = !templateId && projectId ? `?projectId=${encodeURIComponent(projectId)}` : "";
+        const r = await fetch(`/api/marketing/branded-templates${q}`);
+        const j = (await r.json()) as { masters?: Master[]; defaults?: Record<string, string>; prefill?: Prefill | null; error?: string };
         if (!alive) return;
         if (!r.ok) { setMsg(j.error ?? "Couldn't load the designs."); return; }
         const list = j.masters ?? [];
@@ -68,7 +73,9 @@ export function BrandedTemplateEditor({ templateId, defaultDepartment, primaryLa
         } else {
           const first = list.find((m) => m.name === DEFAULT_MASTER) ?? list[0];
           if (first) setMasterId(first.id);
-          setSlots({ ...(j.defaults ?? {}) });
+          const pf = j.prefill && Object.keys(j.prefill.values).length ? j.prefill : null;
+          setPrefill(pf);
+          setSlots({ ...(j.defaults ?? {}), ...(pf?.values ?? {}) });
         }
       } catch {
         if (alive) setMsg("Couldn't load the designs. Check your connection.");
@@ -77,7 +84,7 @@ export function BrandedTemplateEditor({ templateId, defaultDepartment, primaryLa
       }
     })();
     return () => { alive = false; };
-  }, [templateId]);
+  }, [templateId, projectId]);
 
   const master = masters.find((m) => m.id === masterId) ?? null;
   const schema = master?.placeholder_schema;
@@ -100,7 +107,7 @@ export function BrandedTemplateEditor({ templateId, defaultDepartment, primaryLa
   function pickMaster(id: string) {
     if (templateId || id === masterId) return;
     setMasterId(id);
-    setSlots({ ...defaults });
+    setSlots({ ...defaults, ...(prefill?.values ?? {}) });
   }
 
   async function upload(slot: TemplateSlot, file: File) {
@@ -185,6 +192,16 @@ export function BrandedTemplateEditor({ templateId, defaultDepartment, primaryLa
           })}
         </div>
 
+        {prefill && !templateId ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", background: "#EAF3DE", color: "#27500A", fontSize: 12.5, borderBottom: "0.5px solid var(--border)" }}>
+            <i className="ti ti-user-check" aria-hidden="true" />
+            <span>Filled from the founder: <b>{prefill.label}</b></span>
+            <button type="button" onClick={() => setSlots((p) => ({ ...p, ...prefill.values }))} style={{ ...btn, marginLeft: "auto", background: "#fff", padding: "4px 10px" }}>
+              <i className="ti ti-refresh" aria-hidden="true" /> Refill from founder
+            </button>
+          </div>
+        ) : null}
+
         {loading ? (
           <div style={{ padding: 24, fontSize: 13, color: "var(--muted-foreground)" }}>Loading…</div>
         ) : (
@@ -193,7 +210,13 @@ export function BrandedTemplateEditor({ templateId, defaultDepartment, primaryLa
             <div style={{ overflowY: "auto", padding: "4px 16px 16px", borderRight: "0.5px solid var(--border)" }}>
               {fields.map((s) => (
                 <div key={s.key}>
-                  <label htmlFor={`bt-${s.key}`} style={label}>{s.label}{s.required ? <span style={{ color: "#A32D2D" }}> *</span> : null}</label>
+                  <label htmlFor={`bt-${s.key}`} style={label}>
+                    {s.label}{s.required ? <span style={{ color: "#A32D2D" }}> *</span> : null}
+                    {prefill && !templateId ? <SourceTag source={prefill.sources[s.key]} missing={s.key === "hero_image" && !(slots.hero_image ?? "").trim() ? "not in record: upload" : null} /> : null}
+                  </label>
+                  {prefill && !templateId && s.key === "terms" && master?.name === "Deal introduction" ? (
+                    <div style={{ margin: "0 0 4px" }}><SourceTag source={undefined} missing="not in record: add interest, maturity, discount, warrants as lines" /></div>
+                  ) : null}
                   {s.type === "textarea" || s.type === "richtext" || s.type === "list" || s.type === "terms" ? (
                     <textarea id={`bt-${s.key}`} value={slots[s.key] ?? ""} maxLength={s.max_length} onChange={(e) => set(s.key, e.target.value)}
                       rows={s.type === "richtext" ? 9 : s.type === "textarea" ? 3 : 6} style={{ ...inp, resize: "vertical" }} />
@@ -261,4 +284,11 @@ export function BrandedTemplateEditor({ templateId, defaultDepartment, primaryLa
       </div>
     </div>
   );
+}
+
+/** Green tag naming where a prefilled value came from, or amber when the founder record has none. */
+function SourceTag({ source, missing }: Readonly<{ source?: string; missing: string | null }>) {
+  if (source) return <span style={{ marginLeft: 6, fontSize: 10.5, fontWeight: 500, padding: "1px 6px", borderRadius: 6, background: "#EAF3DE", color: "#3B6D11" }}>{source}</span>;
+  if (missing) return <span style={{ marginLeft: 6, fontSize: 10.5, fontWeight: 500, padding: "1px 6px", borderRadius: 6, background: "#FAEEDA", color: "#854F0B" }}>{missing}</span>;
+  return null;
 }
