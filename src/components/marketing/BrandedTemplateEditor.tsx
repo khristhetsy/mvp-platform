@@ -12,9 +12,26 @@ import { condenseControls, isShort, viewKey } from "@/lib/email/condense";
 import type { CopyWithMaster } from "@/lib/email/masters-queries";
 import type { PlaceholderSchema, TemplateSlot } from "@/lib/email/template-schema";
 import { DEPARTMENTS } from "@/lib/marketing/department-grouping";
+import { ACCENT_SWATCHES, DESIGN_KEYS, dominantColor, hasDesign, mapFounderValues, readDesign, suggestLooks, writeDesign, type DesignSettings, type Look } from "@/lib/email/design";
 
 type Master = { id: string; name: string; description: string; compiled_html: string; placeholder_schema: PlaceholderSchema };
-type Prefill = { label: string; values: Record<string, string>; sources: Record<string, string> };
+type Prefill = { label: string; values: Record<string, string>; sources: Record<string, string>; website?: string | null };
+
+/** Starting values for a design: saved defaults, then the founder's data mapped onto its fields. */
+function startValues(masterName: string, defaults: Record<string, string>, prefill: Prefill | null): Record<string, string> {
+  const mapped = prefill ? mapFounderValues(masterName, prefill.values, prefill.website) : {};
+  const v: Record<string, string> = { ...defaults, ...mapped };
+  if (!(v.cta_url ?? "").trim() && mapped.cta_url_fallback) v.cta_url = mapped.cta_url_fallback;
+  delete v.cta_url_fallback;
+  return v;
+}
+
+/** Which founder value fed each field of a design (keys of the founder prefill). */
+const FOUNDER_FIELD: Record<string, Record<string, string>> = {
+  Announcement: { headline: "headline", body: "body" },
+  Newsletter: { headline: "headline", intro: "body", section_one_body: "considerations", section_two_body: "terms" },
+  Promo: { headline: "headline", subhead: "body" },
+};
 export type SavedBrandedTemplate = { id: string; name: string; subject: string; html_body: string; department: string | null };
 
 const PREVIEW_WIDTHS = { desktop: 640, mobile: 390 } as const;
@@ -75,7 +92,7 @@ export function BrandedTemplateEditor({ templateId, projectId, defaultDepartment
           if (first) setMasterId(first.id);
           const pf = j.prefill && Object.keys(j.prefill.values).length ? j.prefill : null;
           setPrefill(pf);
-          setSlots({ ...(j.defaults ?? {}), ...(pf?.values ?? {}) });
+          setSlots(startValues(first?.name ?? DEFAULT_MASTER, j.defaults ?? {}, pf));
         }
       } catch {
         if (alive) setMsg("Couldn't load the designs. Check your connection.");
@@ -104,13 +121,49 @@ export function BrandedTemplateEditor({ templateId, projectId, defaultDepartment
 
   const set = (k: string, v: string) => setSlots((p) => ({ ...p, [k]: v }));
 
+  /** Where a prefilled field's value came from, for its tag. */
+  function sourceFor(key: string): string | undefined {
+    if (!prefill || !master) return undefined;
+    if (key === "cta_url" && (slots.cta_url ?? "").trim()) {
+      if (defaults.cta_url && slots.cta_url === defaults.cta_url) return "Your last booking link";
+      if (prefill.website && slots.cta_url === prefill.website) return "Founder website";
+      return undefined;
+    }
+    const from = master.name === "Deal introduction" ? key : FOUNDER_FIELD[master.name]?.[key];
+    const src = from ? prefill.sources[from] : undefined;
+    return src && (slots[key] ?? "").trim() ? src : undefined;
+  }
+
+  // The company's banner, for the suggested looks; its strongest color feeds "Company colors".
+  const companyBanner = prefill?.values.hero_image ?? (master && hasDesign(schema) ? slots[DESIGN_KEYS.bannerImage] : "") ?? "";
+  const [bannerColor, setBannerColor] = useState<string | null>(null);
+  useEffect(() => {
+    if (!companyBanner || typeof window === "undefined") return;
+    let alive = true;
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      try {
+        const c = document.createElement("canvas");
+        c.width = 60; c.height = 18;
+        const ctx = c.getContext("2d");
+        if (!ctx) return;
+        ctx.drawImage(img, 0, 0, c.width, c.height);
+        const color = dominantColor(ctx.getImageData(0, 0, c.width, c.height).data);
+        if (alive) setBannerColor(color);
+      } catch { /* image not readable: no company color */ }
+    };
+    img.src = companyBanner;
+    return () => { alive = false; };
+  }, [companyBanner]);
+
   function pickMaster(id: string) {
     if (templateId || id === masterId) return;
     setMasterId(id);
-    setSlots({ ...defaults, ...(prefill?.values ?? {}) });
+    setSlots(startValues(masters.find((m) => m.id === id)?.name ?? "", defaults, prefill));
   }
 
-  async function upload(slot: TemplateSlot, file: File) {
+  async function upload(slot: Pick<TemplateSlot, "key">, file: File) {
     setUploading(slot.key); setMsg(null);
     try {
       const body = new FormData(); body.append("file", file);
@@ -196,7 +249,7 @@ export function BrandedTemplateEditor({ templateId, projectId, defaultDepartment
           <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", background: "#EAF3DE", color: "#27500A", fontSize: 12.5, borderBottom: "0.5px solid var(--border)" }}>
             <i className="ti ti-user-check" aria-hidden="true" />
             <span>Filled from the founder: <b>{prefill.label}</b></span>
-            <button type="button" onClick={() => setSlots((p) => ({ ...p, ...prefill.values }))} style={{ ...btn, marginLeft: "auto", background: "#fff", padding: "4px 10px" }}>
+            <button type="button" onClick={() => setSlots((p) => { const v = startValues(master?.name ?? "", {}, prefill); delete v.cta_url; return { ...p, ...v }; })} style={{ ...btn, marginLeft: "auto", background: "#fff", padding: "4px 10px" }}>
               <i className="ti ti-refresh" aria-hidden="true" /> Refill from founder
             </button>
           </div>
@@ -212,7 +265,7 @@ export function BrandedTemplateEditor({ templateId, projectId, defaultDepartment
                 <div key={s.key}>
                   <label htmlFor={`bt-${s.key}`} style={label}>
                     {s.label}{s.required ? <span style={{ color: "#A32D2D" }}> *</span> : null}
-                    {prefill && !templateId ? <SourceTag source={prefill.sources[s.key]} missing={s.key === "hero_image" && !(slots.hero_image ?? "").trim() ? "not in record: upload" : null} /> : null}
+                    {prefill && !templateId ? <SourceTag source={sourceFor(s.key)} missing={s.key === "hero_image" && !(slots.hero_image ?? "").trim() ? "not in record: upload" : null} /> : null}
                   </label>
                   {prefill && !templateId && s.key === "terms" && master?.name === "Deal introduction" ? (
                     <div style={{ margin: "0 0 4px" }}><SourceTag source={undefined} missing="not in record: add interest, maturity, discount, warrants as lines" /></div>
@@ -234,6 +287,19 @@ export function BrandedTemplateEditor({ templateId, projectId, defaultDepartment
                   )}
                 </div>
               ))}
+
+              {master && hasDesign(schema) ? (
+                <DesignPanel
+                  masterName={master.name}
+                  company={slots.company_name || prefill?.values.company_name || ""}
+                  values={slots}
+                  setValues={setSlots}
+                  companyBanner={companyBanner}
+                  bannerColor={bannerColor}
+                  uploading={uploading}
+                  onUpload={(key, f) => void upload({ key }, f)}
+                />
+              ) : null}
 
               {controls.length > 0 && schema ? (
                 <div style={{ marginTop: 14 }}>
@@ -260,7 +326,7 @@ export function BrandedTemplateEditor({ templateId, projectId, defaultDepartment
               ) : null}
 
               <p style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 14 }}>
-                <i className="ti ti-lock" aria-hidden="true" /> Locked: logo, brand colors, disclaimer, address, unsubscribe
+                <i className="ti ti-lock" aria-hidden="true" /> Locked: {hasDesign(schema) ? "disclaimer, address, unsubscribe" : "logo, brand colors, disclaimer, address, unsubscribe"}
               </p>
             </div>
 
@@ -291,4 +357,133 @@ function SourceTag({ source, missing }: Readonly<{ source?: string; missing: str
   if (source) return <span style={{ marginLeft: 6, fontSize: 10.5, fontWeight: 500, padding: "1px 6px", borderRadius: 6, background: "#EAF3DE", color: "#3B6D11" }}>{source}</span>;
   if (missing) return <span style={{ marginLeft: 6, fontSize: 10.5, fontWeight: 500, padding: "1px 6px", borderRadius: 6, background: "#FAEEDA", color: "#854F0B" }}>{missing}</span>;
   return null;
+}
+
+const chip = (on: boolean): React.CSSProperties => ({
+  fontSize: 11.5, padding: "4px 10px", borderRadius: 7, cursor: "pointer", whiteSpace: "nowrap",
+  border: on ? "2px solid #2E78F5" : "0.5px solid var(--border)", background: "transparent",
+  color: on ? "#185FA5" : "var(--foreground)", fontWeight: on ? 600 : 400,
+});
+
+/** Small picture of a look: banner, logo, headline line, text lines and button. */
+function LookThumb({ d, hasImage }: Readonly<{ d: DesignSettings; hasImage: boolean }>) {
+  const dark = d.banner !== "none";
+  const center = d.align === "center";
+  const bar = (w: string, bg: string, h = 5) => <div style={{ width: w, height: h, borderRadius: 2, background: bg, margin: center ? "0 auto" : undefined }} />;
+  return (
+    <div style={{ borderRadius: 5, overflow: "hidden", border: "0.5px solid var(--border)", background: "#fff" }}>
+      {d.banner === "image" && hasImage ? <div style={{ height: 16, background: "linear-gradient(90deg,#D9CCC3 50%,#F2EEEA 50%)" }} /> : null}
+      <div style={{ background: dark ? "#0A1A40" : "#fff", padding: "5px 7px", borderBottom: dark ? "none" : "2px solid #0A1A40", display: "grid", gap: 5 }}>
+        {bar("26%", d.logo === "icapos" ? (dark ? "#B5D4F4" : "#185FA5") : dark ? "#fff" : "#1A6CE4", 4)}
+        {bar("62%", dark ? "#fff" : "#0A1A40")}
+      </div>
+      <div style={{ padding: "6px 7px 7px", display: "grid", gap: 4 }}>
+        {bar("90%", "#D3D8E2", 4)}{bar("70%", "#D3D8E2", 4)}
+        {bar("34%", d.accent, 7)}
+      </div>
+    </div>
+  );
+}
+
+/** Design section: suggested looks, then banner, logo, accent color and alignment. */
+function DesignPanel({ masterName, company, values, setValues, companyBanner, bannerColor, uploading, onUpload }: Readonly<{
+  masterName: string; company: string; values: Record<string, string>;
+  setValues: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  companyBanner: string; bannerColor: string | null; uploading: string | null;
+  onUpload: (key: string, file: File) => void;
+}>) {
+  const [page, setPage] = useState(0);
+  const d = readDesign(values, masterName);
+  const hasLogo = !!(values[DESIGN_KEYS.logoImage] ?? "").trim();
+  const looks = suggestLooks({ company, hasBanner: !!companyBanner, hasLogo, bannerColor });
+  const pages = Math.max(1, Math.ceil(looks.length / 4));
+  const shown = looks.slice((page % pages) * 4, (page % pages) * 4 + 4);
+  const same = (a: DesignSettings, b: DesignSettings) => a.banner === b.banner && a.logo === b.logo && a.accent.toLowerCase() === b.accent.toLowerCase() && a.align === b.align;
+  const apply = (patch: Partial<DesignSettings>) => setValues((v) => writeDesign(v, patch));
+  const pickLook = (l: Look) => setValues((v) => {
+    const next = writeDesign(v, l.design);
+    if (l.design.banner === "image" && companyBanner && !(next[DESIGN_KEYS.bannerImage] ?? "").trim()) next[DESIGN_KEYS.bannerImage] = companyBanner;
+    return next;
+  });
+  const swatches = [...ACCENT_SWATCHES, ...(bannerColor && !ACCENT_SWATCHES.includes(bannerColor) ? [bannerColor] : [])];
+  const sub: React.CSSProperties = { display: "block", fontSize: 11.5, fontWeight: 600, color: "var(--muted-foreground)", margin: "10px 0 4px" };
+  const upBtn = (key: string) => (
+    <label style={{ ...chip(false), display: "inline-flex", alignItems: "center", gap: 4 }}>
+      {uploading === key ? "Uploading…" : <><i className="ti ti-upload" aria-hidden="true" /> Upload</>}
+      <input type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) onUpload(key, f); e.target.value = ""; }} />
+    </label>
+  );
+  return (
+    <div style={{ marginTop: 16, paddingTop: 10, borderTop: "0.5px solid var(--border)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <span style={{ fontSize: 12.5, fontWeight: 600 }}>Design</span>
+        <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Suggested looks{company ? ` for ${company}` : ""}</span>
+        {pages > 1 ? (
+          <button type="button" onClick={() => setPage((p) => p + 1)} style={{ marginLeft: "auto", border: "none", background: "none", color: "#185FA5", fontSize: 11.5, cursor: "pointer" }}>
+            <i className="ti ti-refresh" aria-hidden="true" /> More suggestions
+          </button>
+        ) : null}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0,1fr))", gap: 8, marginTop: 8 }}>
+        {shown.map((l) => {
+          const on = same(l.design, d);
+          return (
+            <button key={l.name} type="button" onClick={() => pickLook(l)} title={l.description}
+              style={{ textAlign: "left", padding: 6, borderRadius: 8, cursor: "pointer", background: "var(--background)", border: on ? "2px solid #2E78F5" : "0.5px solid var(--border)" }}>
+              <LookThumb d={l.design} hasImage={!!companyBanner} />
+              <div style={{ fontSize: 11.5, fontWeight: 600, margin: "5px 2px 1px", color: "var(--foreground)" }}>{on ? <i className="ti ti-check" aria-hidden="true" style={{ color: "#185FA5" }} /> : null} {l.name}</div>
+              <div style={{ fontSize: 10.5, color: "var(--muted-foreground)", margin: "0 2px", lineHeight: 1.35 }}>{l.description}</div>
+            </button>
+          );
+        })}
+      </div>
+      <p style={{ fontSize: 10.5, color: "var(--muted-foreground)", margin: "6px 0 0" }}>Picking a look sets the controls below. Change any of them after.</p>
+
+      <span style={sub}>Banner</span>
+      <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+        {([["brand", "Brand color"], ["image", "Image"], ["none", "None"]] as const).map(([v, t]) => (
+          <button key={v} type="button" style={chip(d.banner === v)} onClick={() => {
+            apply({ banner: v });
+            if (v === "image" && companyBanner && !(values[DESIGN_KEYS.bannerImage] ?? "").trim()) setValues((x) => ({ ...x, [DESIGN_KEYS.bannerImage]: companyBanner }));
+          }}>{t}</button>
+        ))}
+      </div>
+      {d.banner === "image" ? (
+        <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+          <input value={values[DESIGN_KEYS.bannerImage] ?? ""} onChange={(e) => setValues((x) => ({ ...x, [DESIGN_KEYS.bannerImage]: e.target.value }))} placeholder="Banner image link (1200 x 360)" aria-label="Banner image link" style={inp} />
+          {upBtn(DESIGN_KEYS.bannerImage)}
+        </div>
+      ) : null}
+
+      <span style={sub}>Logo</span>
+      <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+        {([["icfo", "iCFO"], ["icapos", "iCapOS"], ["company", "Company logo"]] as const).map(([v, t]) => (
+          <button key={v} type="button" style={chip(d.logo === v)} onClick={() => apply({ logo: v })}>{t}</button>
+        ))}
+      </div>
+      {d.logo === "company" ? (
+        <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+          <input value={values[DESIGN_KEYS.logoImage] ?? ""} onChange={(e) => setValues((x) => ({ ...x, [DESIGN_KEYS.logoImage]: e.target.value }))} placeholder="Company logo link" aria-label="Company logo link" style={inp} />
+          {upBtn(DESIGN_KEYS.logoImage)}
+        </div>
+      ) : null}
+
+      <span style={sub}>Accent color <span style={{ fontWeight: 400 }}>· headings and button</span></span>
+      <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap" }}>
+        {swatches.map((c) => (
+          <button key={c} type="button" aria-label={`Accent ${c}`} title={c === bannerColor ? "From the company banner" : c} onClick={() => apply({ accent: c })}
+            style={{ width: 22, height: 22, borderRadius: "50%", background: c, cursor: "pointer", border: "0.5px solid rgba(0,0,0,.2)", outline: d.accent.toLowerCase() === c.toLowerCase() ? "2px solid #2E78F5" : "none", outlineOffset: 2 }} />
+        ))}
+        <input key={d.accent} defaultValue={d.accent} onChange={(e) => { const v = e.target.value.trim(); if (/^#[0-9a-f]{6}$/i.test(v)) apply({ accent: v }); }} aria-label="Accent color hex" placeholder="#1A6CE4" style={{ ...inp, width: 88 }} />
+        {bannerColor ? <span style={{ fontSize: 10.5, color: "var(--muted-foreground)" }}>last swatch: from the banner</span> : null}
+      </div>
+
+      <span style={sub}>Banner text</span>
+      <div style={{ display: "flex", gap: 5 }}>
+        {([["left", "Left"], ["center", "Center"]] as const).map(([v, t]) => (
+          <button key={v} type="button" style={chip(d.align === v)} onClick={() => apply({ align: v })}>{t}</button>
+        ))}
+      </div>
+    </div>
+  );
 }
