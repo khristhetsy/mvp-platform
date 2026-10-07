@@ -208,6 +208,8 @@ async function refillOutreachAudience(
     investors: rows.map((r) => ({ investorRef: r.investor_ref, name: r.investor_name, matchScore: r.match_score })),
     planType,
     monthlyCap,
+    // Refilled mid-run: these go out in this same pass, so no future date.
+    firstRunAt: null,
   }).catch(() => {});
   return rows.length;
 }

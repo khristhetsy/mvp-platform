@@ -26,6 +26,10 @@ import { sendEmail } from "@/lib/email/send-email";
 import { renderEmail, type EmailBlock } from "@/lib/email/layout";
 import { recordActivity } from "@/lib/activity/emit";
 import { INTRO_TEMPLATE_KEY } from "@/lib/outreach/intro-template";
+import { formatRunDay, formatRunTime, nextOutreachRun } from "@/lib/outreach/outreach-schedule";
+import { resolveFounderOutreachConfig } from "@/lib/outreach/founder-overrides";
+import type { NextBatch } from "@/lib/outreach/outreach-next-batch";
+import { getOutreachAutomationEnabled } from "@/lib/settings/platform-settings";
 
 export type OutreachInvestor = { investorRef: string; name: string; matchScore: number };
 
@@ -152,13 +156,16 @@ export function renderQueuedEmail(input: {
   planName: string | null;
   monthlyCap: number | null;
   isPublished: boolean;
+  /** When the first batch goes out; omitted when unknown. */
+  firstRunAt?: Date | null;
 }): { subject: string; html: string; text: string } {
   const n = input.investors.length;
   const base = appBase();
   const capLine =
-    input.monthlyCap && input.monthlyCap > 0
+    (input.monthlyCap && input.monthlyCap > 0
       ? `They go out in batches, within your ${input.planName ? `${input.planName} plan ` : ""}limit of ${input.monthlyCap} introductions a month.`
-      : "They go out in batches over the coming weeks.";
+      : "They go out in batches over the coming weeks.") +
+    (input.firstRunAt ? ` The first batch goes out ${formatRunTime(input.firstRunAt)}, and we'll remind you the day before each batch after that.` : "");
   const subject = `${n} investor ${plural(n, "introduction is", "introductions are")} queued for ${input.companyName}`;
   return renderEmail({
     audience: "founder",
@@ -192,6 +199,8 @@ export function renderSentEmail(input: {
   sentThisMonth: number;
   monthlyCap: number | null;
   stillQueued: number;
+  /** When the next batch goes out, if more are queued. */
+  nextRunAt?: Date | null;
 }): { subject: string; html: string; text: string } {
   const n = input.investors.length;
   const base = appBase();
@@ -212,6 +221,9 @@ export function renderSentEmail(input: {
           { value: String(input.stillQueued), label: "Still queued" },
         ],
       },
+      ...(input.nextRunAt && input.stillQueued > 0
+        ? [{ type: "note" as const, text: `Next batch: ${formatRunTime(input.nextRunAt)}. We'll remind you the day before.` }]
+        : []),
       { type: "paragraph", text: "When an investor replies with interest, we'll make the introduction by email and let you know right away. No action is needed from you until then." },
     ],
     primary: { label: "Track your outreach", url: `${base}/founder/deploy` },
@@ -224,6 +236,30 @@ export function renderSentEmail(input: {
 }
 
 /**
+ * When a campaign's first batch will go out, for the queued email. Null when
+ * sending is off (nothing reaches investors) or it can't be worked out.
+ */
+async function firstRunFor(campaignId: string, founderId: string | null): Promise<Date | null> {
+  try {
+    if (!(await getOutreachAutomationEnabled())) return null;
+    const { data } = await db().from("investor_outreach_campaigns").select("company_id, last_run_at").eq("id", campaignId).maybeSingle();
+    const row = data as { company_id: string; last_run_at: string | null } | null;
+    if (!row) return null;
+    let startDate: string | null = null;
+    let pauseUntil: string | null = null;
+    if (founderId) {
+      const eff = await resolveFounderOutreachConfig({ id: row.company_id, founder_id: founderId });
+      if (eff.pause.enabled && !eff.pause.until) return null;
+      startDate = eff.startDate;
+      pauseUntil = eff.pause.enabled ? eff.pause.until : null;
+    }
+    return nextOutreachRun({ lastRunAt: row.last_run_at, startDate, pauseUntil });
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Introductions were queued for a founder (campaign created). Call once per
  * campaign creation with every recipient just queued.
  */
@@ -233,6 +269,11 @@ export async function notifyOutreachQueued(input: {
   investors: OutreachInvestor[];
   planType: string | null;
   monthlyCap: number | null;
+  /**
+   * When the first batch goes out. Leave undefined to work it out from the
+   * campaign; pass null when the batch is sending right now (refill mid-run).
+   */
+  firstRunAt?: Date | null;
 }): Promise<void> {
   try {
     const investors = [...input.investors].sort((a, b) => b.matchScore - a.matchScore);
@@ -240,6 +281,7 @@ export async function notifyOutreachQueued(input: {
     if (n === 0) return;
     const ctx = await loadContext(input.companyId);
     if (!ctx) return;
+    const firstRunAt = input.firstRunAt === undefined ? await firstRunFor(input.campaignId, ctx.founderId) : input.firstRunAt;
     const plan = planLabel(input.planType);
     const names = investors.map((i) => i.name);
 
@@ -254,6 +296,7 @@ export async function notifyOutreachQueued(input: {
         planName: plan,
         monthlyCap: input.monthlyCap,
         isPublished: ctx.isPublished,
+        firstRunAt,
       }),
     );
 
@@ -339,6 +382,7 @@ export async function notifyOutreachSent(input: {
           sentThisMonth: input.sentThisMonth,
           monthlyCap: input.monthlyCap,
           stillQueued: input.stillQueued,
+          nextRunAt: nextOutreachRun({ lastRunAt: new Date().toISOString() }),
         }),
       );
 
@@ -393,5 +437,148 @@ export async function notifyOutreachSent(input: {
     );
   } catch (error) {
     console.error("[capitalos] outreach sent notify failed", error instanceof Error ? error.message : error);
+  }
+}
+
+// ── Day-before reminder (automated outreach) ─────────────────────────────────
+
+/** Founder email: the next batch goes out soon. Exported for tests. */
+export function renderUpcomingEmail(input: {
+  companyName: string;
+  firstName: string | null;
+  batch: Pick<NextBatch, "runAt" | "investors" | "upTo" | "blocked" | "periodCap" | "reachedThisPeriod" | "periodResetsAt">;
+}): { subject: string; html: string; text: string } {
+  const { batch } = input;
+  const base = appBase();
+  const when = formatRunTime(batch.runAt);
+  const shown = batch.investors.slice(0, batch.upTo || batch.investors.length);
+  const count = shown.length || batch.upTo;
+  const subject = `Your next investor batch goes out ${formatRunDay(batch.runAt)}`;
+  const who =
+    shown.length > 0
+      ? `${count} ${plural(count, "investor", "investors")}`
+      : `up to ${batch.upTo} matched ${plural(batch.upTo, "investor", "investors")}`;
+  const blocks: EmailBlock[] = [];
+  if (shown.length > 0) {
+    blocks.push({ type: "paragraph", text: "Going out next" }, ...nameRows(shown));
+  }
+  if (batch.periodCap !== null) {
+    blocks.push({
+      type: "stats",
+      items: [
+        { value: `${batch.reachedThisPeriod} of ${batch.periodCap}`, label: "Reached this period" },
+        ...(batch.periodResetsAt ? [{ value: formatRunDay(batch.periodResetsAt), label: "Allowance resets" }] : []),
+      ],
+    });
+  }
+  blocks.push(
+    batch.blocked === "unpublished"
+      ? { type: "note", tone: "warning", text: "Your one-pager isn't published, so this batch will wait. Publish it before the run and it goes out on time." }
+      : { type: "note", text: "Investors receive your one-pager as it is at the moment of sending. Now is the time for any last changes." },
+  );
+  return renderEmail({
+    audience: "founder",
+    subject,
+    preheader: `Your Founder Preview goes to ${who} ${when}.`,
+    context: input.companyName,
+    headline: subject,
+    intro: `${input.firstName ? `Hi ${input.firstName}, y` : "Y"}our Founder Preview for ${input.companyName} goes to ${who} ${when}.`,
+    blocks,
+    primary: { label: "Review your one-pager", url: `${base}/founder/preview` },
+    secondary: { label: "View your outreach", url: `${base}/founder/deploy` },
+    footer: {
+      reason: "You're receiving this because automated investor outreach is active for your company.",
+      preferencesUrl: `${base}/founder/settings/email`,
+      lines: ["Introductions are generated from platform fit scoring and are not investment advice or a solicitation."],
+    },
+  });
+}
+
+/** Email and in-app notice to the founder the day before a batch. Never throws. */
+export async function notifyOutreachUpcoming(batch: NextBatch): Promise<void> {
+  try {
+    const ctx = await loadContext(batch.companyId);
+    if (!ctx?.founderId) return;
+    await emailFounder(ctx, "outreach_batch_upcoming", renderUpcomingEmail({ companyName: ctx.companyName, firstName: ctx.founderFirstName, batch }));
+    const names = batch.investors.slice(0, batch.upTo || batch.investors.length).map((i) => i.name);
+    await createNotification({
+      recipientUserId: ctx.founderId,
+      type: "outreach_batch_upcoming",
+      title: `Next outreach batch: ${formatRunDay(batch.runAt)}`,
+      message:
+        batch.blocked === "unpublished"
+          ? "Waiting on your one-pager: publish it so the batch goes out on time."
+          : names.length > 0
+            ? namesSummary(names)
+            : `Up to ${batch.upTo} matched investors`,
+      entityType: "investor_outreach_campaign",
+      entityId: batch.campaignId,
+      severity: batch.blocked === "unpublished" ? "high" : "info",
+      deepLink: "/founder/deploy",
+    });
+  } catch (error) {
+    console.error("[capitalos] outreach upcoming notify failed", error instanceof Error ? error.message : error);
+  }
+}
+
+// ── DIY (manual) outreach sends ──────────────────────────────────────────────
+
+export type ManualSend = { name: string; stepLabel: string; stepIndex: number };
+
+/** Founder email: DIY sequence steps that went out in this pass. Exported for tests. */
+export function renderManualSentEmail(input: {
+  companyName: string;
+  firstName: string | null;
+  sends: ManualSend[];
+}): { subject: string; html: string; text: string } {
+  const base = appBase();
+  const n = input.sends.length;
+  const subject = `Your outreach sequence sent ${n} ${plural(n, "email", "emails")} today`;
+  const byStep = new Map<number, ManualSend[]>();
+  for (const s of input.sends) byStep.set(s.stepIndex, [...(byStep.get(s.stepIndex) ?? []), s]);
+  const blocks: EmailBlock[] = [];
+  for (const [, sends] of [...byStep.entries()].sort((a, b) => a[0] - b[0])) {
+    blocks.push(
+      { type: "paragraph", text: sends[0].stepLabel || `Step ${sends[0].stepIndex + 1}` },
+      ...nameRows(sends.map((s) => ({ investorRef: s.name, name: s.name, matchScore: 0 })), "Sent"),
+    );
+  }
+  return renderEmail({
+    audience: "founder",
+    subject,
+    preheader: `Sent to ${namesSummary(input.sends.map((s) => s.name))}.`,
+    context: input.companyName,
+    headline: subject,
+    intro: `${input.firstName ? `Hi ${input.firstName}, y` : "Y"}our outreach sequence for ${input.companyName} sent these emails today. Replies come to you, and anyone who replies is taken out of the remaining steps if you turned that on.`,
+    blocks,
+    primary: { label: "View your outreach", url: `${base}/founder/deploy` },
+    footer: {
+      reason: "You're receiving this because you started an investor outreach sequence.",
+      preferencesUrl: `${base}/founder/settings/email`,
+      lines: ["iCFO Capital Global, Inc. does not solicit securities and is not an investment adviser."],
+    },
+  });
+}
+
+/** One email and in-app notice per founder per pass, after DIY steps send. Never throws. */
+export async function notifyManualOutreachSent(input: { companyId: string; sends: ManualSend[] }): Promise<void> {
+  try {
+    if (input.sends.length === 0) return;
+    const ctx = await loadContext(input.companyId);
+    if (!ctx?.founderId) return;
+    await emailFounder(ctx, "manual_outreach_sent", renderManualSentEmail({ companyName: ctx.companyName, firstName: ctx.founderFirstName, sends: input.sends }));
+    const n = input.sends.length;
+    await createNotification({
+      recipientUserId: ctx.founderId,
+      type: "manual_outreach_sent",
+      title: `Outreach sequence sent ${n} ${plural(n, "email", "emails")}`,
+      message: namesSummary(input.sends.map((s) => s.name)),
+      entityType: "company",
+      entityId: input.companyId,
+      severity: "info",
+      deepLink: "/founder/deploy",
+    });
+  } catch (error) {
+    console.error("[capitalos] manual outreach notify failed", error instanceof Error ? error.message : error);
   }
 }

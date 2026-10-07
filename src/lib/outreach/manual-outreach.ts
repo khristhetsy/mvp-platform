@@ -4,6 +4,7 @@ import { sendEmail } from "@/lib/email/send-email";
 import { isOutreachLiveSendEnabled } from "@/lib/outreach/investor-outreach";
 import { buildUnsubscribeUrl, filterUnsubscribed } from "@/lib/outreach/unsubscribe";
 import { renderManualEmail } from "@/lib/outreach/manual-template";
+import { notifyManualOutreachSent, type ManualSend } from "@/lib/outreach/outreach-notify";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -273,6 +274,8 @@ export async function processManualOutreach(): Promise<{ sent: number; liveSend:
     // Suppression check (CAN-SPAM): never email an unsubscribed address.
     const suppressed = await filterUnsubscribed(batch.map((r) => r.email));
     const now = Date.now();
+    // Steps that really went out this pass, for one founder notice afterwards.
+    const sentForFounder: ManualSend[] = [];
 
     for (const r of batch) {
       const stepIndex = r.next_step_index;
@@ -332,6 +335,7 @@ export async function processManualOutreach(): Promise<{ sent: number; liveSend:
       });
       if (ok) {
         sent += 1;
+        sentForFounder.push({ name: r.name?.trim() || r.email, stepLabel: step.label, stepIndex });
       } else {
         // Revert the claim so the step retries on the next pass.
         await db
@@ -339,6 +343,12 @@ export async function processManualOutreach(): Promise<{ sent: number; liveSend:
           .update({ next_step_index: stepIndex, status: "active" })
           .eq("id", r.id);
       }
+    }
+
+    // Tell the founder what their sequence sent (live sends only: in test mode
+    // nothing reached investors). Never throws.
+    if (sentForFounder.length > 0) {
+      await notifyManualOutreachSent({ companyId: campaign.company_id, sends: sentForFounder });
     }
   }
 
