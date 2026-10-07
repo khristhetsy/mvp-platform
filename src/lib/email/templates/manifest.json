@@ -48,6 +48,35 @@
         ],
         "locked": ["logo", "brand_colors", "footer_legal", "unsubscribe"]
       }
+    },
+    {
+      "slug": "deal-introduction",
+      "name": "Deal introduction",
+      "description": "Investor introduction to a company raising: hero image, highlights, terms grid, booking button and sender card.",
+      "schema": {
+        "slots": [
+          { "key": "preheader", "type": "text", "label": "Preheader (inbox preview line)", "max_length": 140, "required": false },
+          { "key": "hero_image", "type": "image", "label": "Hero banner URL (1200 x 360 image)", "required": false },
+          { "key": "company_name", "type": "text", "label": "Company name", "max_length": 80, "required": true },
+          { "key": "headline", "type": "text", "label": "Headline", "max_length": 110, "required": true },
+          { "key": "greeting", "type": "text", "label": "Greeting", "max_length": 60, "required": true },
+          { "key": "body", "type": "richtext", "label": "Body (blank line = new paragraph, **bold**)", "required": true, "condense": "first_paragraph", "condense_label": "Body" },
+          { "key": "considerations_title", "type": "text", "label": "Highlights title", "max_length": 60, "required": false },
+          { "key": "considerations", "type": "list", "label": "Highlights (one per line, **bold**)", "required": false, "condense": "first_3", "condense_label": "Highlights" },
+          { "key": "terms_title", "type": "text", "label": "Terms title", "max_length": 60, "required": false },
+          { "key": "terms", "type": "terms", "label": "Terms (one per line, Label: value)", "required": false, "condense": "hide", "condense_label": "Terms", "condense_default": "full" },
+          { "key": "cta_intro", "type": "text", "label": "Line above the button", "max_length": 200, "required": false, "condense": "hide", "condense_with": "body" },
+          { "key": "cta_text", "type": "text", "label": "Button text", "max_length": 40, "required": true },
+          { "key": "cta_url", "type": "url", "label": "Button link (booking page)", "required": true },
+          { "key": "sender_name", "type": "text", "label": "Sender name", "max_length": 80, "required": true },
+          { "key": "sender_title", "type": "text", "label": "Sender title", "max_length": 100, "required": false },
+          { "key": "sender_phone", "type": "text", "label": "Sender phone", "max_length": 40, "required": false },
+          { "key": "sender_email", "type": "text", "label": "Sender email", "max_length": 120, "required": false },
+          { "key": "sender_photo", "type": "image", "label": "Sender photo URL (leave empty to hide)", "required": false },
+          { "key": "sender_bio", "type": "textarea", "label": "Sender bio (leave empty to hide, 2 lines max)", "max_length": 280, "required": false, "condense": "hide", "condense_label": "Sender bio" }
+        ],
+        "locked": ["logo", "brand_colors", "footer_legal", "unsubscribe", "overview_url"]
+      }
     }
   ]
 }
