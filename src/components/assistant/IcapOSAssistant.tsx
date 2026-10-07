@@ -8,6 +8,7 @@ import { Send, Sparkles, X } from "lucide-react";
 import { suggestedPromptChips } from "@/lib/assistant/assistant-actions";
 import { modeIntroLabel } from "@/lib/assistant/assistant-prompts";
 import { ASSISTANT_DISCLAIMER } from "@/lib/assistant/assistant-policy";
+import { inferAssistantMode } from "@/lib/assistant/assistant-context";
 import type { AssistantChatResponse, AssistantMode } from "@/lib/assistant/types";
 import { resolveWorkspaceFromPath } from "@/lib/workspace-nav";
 
@@ -18,40 +19,10 @@ type ChatEntry = {
 
 const HISTORY_WINDOW = 20;
 
+/** One page → mode map, shared with the server (assistant-context.ts), so the two can't drift. */
 function inferClientMode(pathname: string, workspace: ReturnType<typeof resolveWorkspaceFromPath>): AssistantMode {
-  // Founder pages
-  if (pathname.startsWith("/founder/learning")) return "learning";
-  if (pathname.startsWith("/founder/readiness") || pathname.startsWith("/founder/report")) return "reports_guidance";
-  if (pathname.startsWith("/founder/capital-raise")) return "capital_raise";
-  if (pathname.startsWith("/founder/deal-room")) return "deal_room";
-  if (pathname.startsWith("/founder/contacts") || pathname.startsWith("/admin/marketing/contacts")) return "crm";
-  if (pathname.startsWith("/billing")) return "billing";
-  if (pathname.startsWith("/admin/tasks") || pathname.startsWith("/founder/tasks")) return "tasks";
-  // SPV / compliance / reports
-  if (pathname.includes("/spv") || pathname.startsWith("/investor/spvs")) return "spv_guidance";
-  if (pathname.startsWith("/admin/compliance")) return "compliance_guidance";
-  if (pathname.startsWith("/admin/reports")) return "reports_guidance";
-  // Meetings → meeting-aware assistant
-  if (pathname.startsWith("/admin/meetings")) return "meeting";
-  // CEO Hub → Chief of Staff
-  if (pathname.startsWith("/admin/ceo")) return "ceo_hub";
-  // Investor Relations Hub → IR assistant
-  if (pathname.startsWith("/admin/playbook")) return "ir_hub";
-  // Admin marketing → CMO AI
-  if (pathname.startsWith("/admin/marketing")) return "cmo_marketing";
-  // Investor pages
-  if (
-    pathname.startsWith("/investor/watchlist") ||
-    pathname.startsWith("/investor/opportunities") ||
-    pathname.startsWith("/investor/interest-pipeline")
-  ) return "investor_pipeline";
-  if (pathname.startsWith("/investor/portfolio") || pathname.startsWith("/investor/deals")) return "investor_portfolio";
-  if (pathname.startsWith("/deals") || pathname.startsWith("/investor/matching")) return "investor_matching";
-  if (pathname.startsWith("/investor/deal-room")) return "deal_room";
-
-  if (workspace === "admin") return "admin_operations";
-  if (workspace === "investor") return "investor_workflow";
-  return "founder_workflow";
+  const role = workspace === "admin" ? "admin" : workspace === "investor" ? "investor" : "founder";
+  return inferAssistantMode({ role, currentPath: pathname });
 }
 
 export function IcapOSAssistant() {

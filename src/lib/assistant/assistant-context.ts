@@ -16,12 +16,24 @@ export function inferAssistantMode(input: {
   const path = input.currentPath ?? "";
 
   // Founder pages
+  // Stage 3 – Marketing: matches, outreach, investor CRM, events, marketplace.
+  if (
+    path.startsWith("/founder/matches") ||
+    path.startsWith("/founder/matching") ||
+    path.startsWith("/founder/deploy") ||
+    path.startsWith("/founder/investor-pipeline") ||
+    path.startsWith("/founder/investors") ||
+    path.startsWith("/founder/outreach-report") ||
+    path.startsWith("/founder/events/present") ||
+    path.startsWith("/founder/private-market") ||
+    path.startsWith("/founder/stages/marketing")
+  ) return "founder_marketing";
   if (path.startsWith("/founder/learning")) return "learning";
   if (path.startsWith("/founder/readiness") || path.startsWith("/founder/report")) return "reports_guidance";
   if (path.startsWith("/founder/capital-raise") || path.startsWith("/founder/valuation")) return "capital_raise";
   if (path.startsWith("/founder/deal-room")) return "deal_room";
   if (path.startsWith("/founder/contacts") || path.startsWith("/admin/marketing/contacts")) return "crm";
-  if (path.startsWith("/billing")) return "billing";
+  if (path.startsWith("/billing") || path.startsWith("/upgrade") || path.startsWith("/founder/settings/billing")) return "billing";
   if (path.startsWith("/admin/tasks") || path.startsWith("/founder/tasks")) return "tasks";
 
   // SPV / compliance / reports
@@ -34,7 +46,7 @@ export function inferAssistantMode(input: {
   if (path.startsWith("/admin/ceo")) return "ceo_hub";
 
   // Investor Relations Hub → IR assistant
-  if (path.startsWith("/admin/playbook")) return "ir_hub";
+  if (path === "/admin/ir" || path.startsWith("/admin/ir/") || path.startsWith("/admin/playbook")) return "ir_hub";
 
   // Admin marketing → CMO AI
   if (path.startsWith("/admin/marketing")) return "cmo_marketing";

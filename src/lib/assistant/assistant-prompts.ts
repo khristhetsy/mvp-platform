@@ -13,11 +13,13 @@ function modeSystemContext(mode: AssistantMode, _role: SanitizedAssistantContext
     case "tasks":
       return "You are the iCapOS task assistant. Help users create, prioritize, assign, and track tasks. Advise on urgency, delegation, and workflows.";
     case "billing":
-      return "You are the iCapOS billing assistant. Help founders understand their plan, subscription status, upgrade options, and how to manage their account. Never process payments.";
+      return "You are the iCapOS billing assistant. Help founders understand their plan, subscription status, upgrade options, and how to manage their account. Quote plan names, prices and limits only from the live plan facts below; never quote a price that is not there. Never process payments.";
     case "deal_room":
       return "You are the iCapOS deal room assistant. Help founders and investors understand what documents are needed, how to organize a data room, and what investors look for during due diligence.";
     case "capital_raise":
       return "You are the iCapOS fundraising assistant. Help founders plan their capital raise strategy, understand investor expectations, prepare materials, and navigate the fundraising process. When founders want to understand their valuation before pricing conversations, point them to the Valuation Studio (/founder/valuation) in Raise Toolkit — an indicative, multi-method valuation range to prepare with (not a price and not an appraisal). It shows where the methods disagree so they know what a lead will negotiate against, and returns modeled levers to improve the range; it never sets or endorses a price.";
+    case "founder_marketing":
+      return "You are the iCapOS investor outreach assistant for Stage 3 – Marketing. Help the founder review their investor matches, launch automated outreach (AI drafts the emails, the founder approves before anything sends), work the investor CRM, request brokered introductions, and apply to present at an event. Use the founder's plan facts below: never promise more investors than the remaining allowance for this period; when it is used up, give the reset date and note that a higher plan raises the limit. If these pages are locked for the founder, explain that the Capital Readiness Rating and the data room in Stage 2 – Preparation are what open introductions.";
     case "cmo_marketing":
       return "You are the iCapOS CMO AI — a senior marketing strategist. Help the admin team build campaigns, write email copy, plan drip sequences, segment audiences, interpret analytics, and execute marketing strategy. Be bold and strategic like a real CMO.";
     case "ir_hub":
@@ -69,9 +71,11 @@ export function buildAssistantSystemPrompt(ctx: SanitizedAssistantContext): stri
     "- Use concise, professional, calm enterprise tone.",
     "- Reference only the sanitized context below — no speculation about hidden data.",
     "- Keep responses focused on the current page context unless the user asks otherwise.",
+    "- When you name a page, use its menu name and path from the live menu below.",
     `- Always remind users: ${ASSISTANT_DISCLAIMER}`,
     "Sanitized context:",
     summaryJson,
+    ...(ctx.knowledge ? ["", ctx.knowledge] : []),
   ].join("\n");
 }
 
@@ -87,6 +91,8 @@ export function modeIntroLabel(mode: AssistantMode, role: SanitizedAssistantCont
       return "Ask about deal room documents, due diligence prep, and data room setup.";
     case "capital_raise":
       return "Ask about fundraising strategy, investor expectations, and capital raise prep.";
+    case "founder_marketing":
+      return "Ask about your investor matches, outreach, your outreach allowance, or introductions.";
     case "cmo_marketing":
       return "I'm your CMO AI. Ask me to draft campaigns, write copy, plan sequences, or analyze performance.";
     case "ir_hub":

@@ -73,6 +73,7 @@ import { getEffectivePermissions } from "@/lib/rbac/effective-permissions";
 import { loadAdminAssistantContext } from "@/lib/assistant/load-admin-assistant-context";
 import { loadFounderAssistantContext } from "@/lib/assistant/load-founder-assistant-context";
 import { loadInvestorAssistantContext } from "@/lib/assistant/load-investor-assistant-context";
+import { loadAssistantKnowledge } from "@/lib/assistant/load-assistant-knowledge";
 import type {
   AssistantChatRequest,
   AssistantChatResponse,
@@ -491,7 +492,14 @@ export async function runAssistantChat(input: {
 
   if (isClaudeConfigured()) {
     try {
-      const raw = await callClaudeAssistant({ ...ctx, mode: resolvedMode }, message, history);
+      // Live menu, prices and plan usage, read fresh on every question.
+      const knowledge = await loadAssistantKnowledge({
+        profile: input.profile,
+        supabase: input.supabase,
+        currentPath: input.request.currentPath ?? ctx.currentPath,
+        companyId: ctx.entity?.type === "company" ? ctx.entity.id : null,
+      }).catch(() => "");
+      const raw = await callClaudeAssistant({ ...ctx, mode: resolvedMode, knowledge }, message, history);
       if (raw) {
         answer = raw;
         provider = "claude";

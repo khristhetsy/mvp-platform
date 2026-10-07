@@ -1,7 +1,7 @@
 import { COACH_DISCLAIMER, isQuizAnswerRequest, isRestrictedAdviceRequest } from "@/lib/learning/class-assistant-guardrails";
 
 export const ASSISTANT_DISCLAIMER =
-  "iCapOS Assistant provides operational workflow guidance only. This is not legal, tax, investment, or securities advice. Approval, funding, and investor outcomes are never guaranteed.";
+  "iCFO Capital Global, Inc. does not solicit securities and is not an investment adviser. The iCapOS Assistant gives workflow guidance for educational purposes only, not legal, tax, investment, or securities advice. Approval, funding, and investor outcomes are never guaranteed.";
 
 export const ASSISTANT_SAFETY_NOTES = [
   "Guidance is based on your permitted workspace summaries — not raw documents or private messages.",
