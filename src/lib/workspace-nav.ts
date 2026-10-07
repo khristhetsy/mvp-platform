@@ -182,7 +182,8 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/support",         label: "Support queue",   requiredPermission: "view_admin_dashboard" },
           { href: "/admin/support/log",     label: "Support log",     requiredPermission: "view_admin_dashboard" },
           { href: "/admin/founders-stuck",  label: "Stuck founders",  requiredPermission: "manage_companies"     },
-          { href: "/admin/intro-requests",  label: "Intro Requests",  requiredPermission: "manage_matching"      },
+          // Intro Requests (/admin/intro-requests) hidden from the menu (2026-10-07): only platform
+          // investors with a login use it and there are almost none. The page still works by URL.
           { href: "/admin/prospect-intros", label: "Brokered Intros", requiredPermission: "manage_matching"      },
         ],
       },
