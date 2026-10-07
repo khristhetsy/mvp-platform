@@ -155,6 +155,9 @@ async function rankOutreachAudience(
       // the admin requires a rated score.
       return rated ? (ps!.score as number) >= config.minInvestorScore : !config.requireRated;
     })
+    // Best matches first. The loader returns contacts unsorted when score:false,
+    // so without this the audience was the first N in load order, not the top N.
+    .sort((a, b) => (matchOf.get(b.id) ?? 0) - (matchOf.get(a.id) ?? 0))
     .slice(0, limit);
   return { ranked, matchOf };
 }
@@ -397,6 +400,28 @@ export function outreachDispatchMode(live: boolean, dispatchAllowed: boolean): "
 }
 
 /**
+ * True only when the founder has an active subscription backed by a real payment
+ * subscription (Lemon Squeezy or Stripe). Free, internal, pending, expired,
+ * canceled, and "active" rows with no payment id all return false.
+ */
+export async function hasPaidSubscription(db: SupabaseClient, founderId: string): Promise<boolean> {
+  const { data } = await db
+    .from("subscriptions")
+    .select("subscription_status, monthly_price_cents, ls_subscription_id, stripe_subscription_id")
+    .eq("profile_id", founderId)
+    .maybeSingle();
+  const sub = data as {
+    subscription_status?: string | null;
+    monthly_price_cents?: number | null;
+    ls_subscription_id?: string | null;
+    stripe_subscription_id?: string | null;
+  } | null;
+  if (!sub || sub.subscription_status !== "active") return false;
+  if (!sub.monthly_price_cents || sub.monthly_price_cents <= 0) return false;
+  return Boolean(sub.ls_subscription_id || sub.stripe_subscription_id);
+}
+
+/**
  * Weekly send pass. For each APPROVED, non-paused campaign that hasn't run in the
  * last ~6 days, advance up to `weekly_cap` queued recipients. Real email dispatch
  * only happens when INVESTOR_OUTREACH_LIVE=true; otherwise the log advances
@@ -463,6 +488,11 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
       // is held, not completed, so it resumes if they choose a plan.
       if (!founderEntitlements(eff.planType).canDistribute) continue;
     }
+    // Paid rule: only founders with a live, paid subscription get automated
+    // outreach. The plan label alone is not enough (a stale "active" row with no
+    // payment behind it must never send). Held, not completed, so it resumes
+    // once they pay.
+    if (!founderId || !(await hasPaidSubscription(db, founderId))) continue;
 
     // Atomically claim this campaign for this run by advancing last_run_at under
     // the same freshness guard. A concurrent run's identical update won't match

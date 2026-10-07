@@ -20,7 +20,7 @@ describe("renderIntroEmail (intro_fit_v1)", () => {
     expect(html).toContain("Our fit scoring matched Northstar Robotics to your stated preferences. Here&#39;s their Founder Preview, no obligation.");
     expect(html).toContain("If it&#39;s a fit, simply reply and we&#39;ll make the introduction. If not, no action is needed.");
     expect(html).toContain("Warm regards,<br/>The iCapOS Introductions Team");
-    expect(html).toContain("iCapOS is not a broker-dealer or investment adviser. Recipients should conduct their own diligence. To stop receiving introductions,");
+    expect(html).toContain("iCapOS is not a broker-dealer or investment adviser. Recipients should conduct their own diligence. iCFO Capital Global, Inc. does not solicit securities and is not an investment adviser. This content is for educational purposes only. To stop receiving introductions,");
     expect(html).toContain(">unsubscribe</a>");
     expect(text).toContain("Our fit scoring matched Northstar Robotics to your stated preferences.");
     expect(text).toContain("To stop receiving introductions, unsubscribe: https://icapos.com/u/abc");
