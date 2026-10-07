@@ -42,7 +42,6 @@ const GROUPS: NavGroup[] = [
     routes: ["/admin/marketing/settings", "/admin/marketing/console", "/admin/marketing/plan", "/admin/marketing/aeo"],
     children: [
       { label: "Settings", href: "/admin/marketing/settings/notifications" },
-      { label: "Console", href: "/admin/marketing/console" },
       { label: "Plan", href: "/admin/marketing/plan" },
       { label: "AEO", href: "/admin/marketing/aeo" },
     ],
