@@ -57,6 +57,9 @@ const KIND_ICON: Partial<Record<string, string>> = {
   founder_reopened: "ti-refresh",
   rated: "ti-star",
   closed: "ti-lock",
+  internal_note: "ti-note",
+  status_changed: "ti-adjustments",
+  priority_changed: "ti-flag",
   founder_nudged: "ti-help-circle",
 };
 

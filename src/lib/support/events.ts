@@ -35,7 +35,10 @@ export type SupportEventKind =
   | "founder_confirmed"
   | "founder_reopened"
   | "rated"
-  | "closed";
+  | "closed"
+  | "internal_note"
+  | "status_changed"
+  | "priority_changed";
 
 export type AiCost = { model: string; inputTokens: number; outputTokens: number; costUsd: number };
 
