@@ -422,6 +422,13 @@ export function AppGrid({ apps, current, tLabel, onPick }: Readonly<{
 }
 
 /** Messages icon for the top bar's right side, with the unread inbox count (polled like the sidebar's badge). */
+// Spelled out (not `/${workspace}/inbox`) so the static link audit can verify each route.
+const INBOX_HREF: Record<WorkspaceId, string> = {
+  admin: "/admin/inbox",
+  founder: "/founder/inbox",
+  investor: "/investor/inbox",
+};
+
 export function TopMenuInboxButton({ workspace }: Readonly<{ workspace: WorkspaceId }>) {
   const [unread, setUnread] = useState(0);
   useEffect(() => {
@@ -435,7 +442,7 @@ export function TopMenuInboxButton({ workspace }: Readonly<{ workspace: Workspac
     return () => { alive = false; clearInterval(id); };
   }, []);
   return (
-    <Link href={`/${workspace}/inbox`} aria-label={unread ? `Inbox, ${unread} unread` : "Inbox"} title="Inbox"
+    <Link href={INBOX_HREF[workspace]} aria-label={unread ? `Inbox, ${unread} unread` : "Inbox"} title="Inbox"
       className="relative hidden h-8 w-8 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-950 md:flex">
       <Mail className="h-[17px] w-[17px]" strokeWidth={1.75} aria-hidden />
       {unread > 0 ? (
