@@ -37,8 +37,18 @@ jobs:
       # `supabase start` boots the local stack (Postgres + auth + storage) and
       # applies everything in supabase/migrations in order. This provides the
       # auth/storage schemas and roles the migrations reference.
+      # Only the services the tests need are started: the others are image pulls
+      # from public.ecr.aws, which rate limits shared GitHub runners
+      # ("toomanyrequests: Rate exceeded"). A rate limited start is retried.
       - name: Start Supabase (applies migrations)
-        run: supabase start
+        run: |
+          for attempt in 1 2 3 4; do
+            if supabase start -x studio,imgproxy,edge-runtime,logflare,vector,mailpit,realtime,postgres-meta,supavisor; then exit 0; fi
+            echo "supabase start failed (attempt $attempt); retrying after $((attempt * 30))s"
+            supabase stop --no-backup || true
+            sleep $((attempt * 30))
+          done
+          exit 1
 
       - name: Run integration tests
         run: npm run test:integration
