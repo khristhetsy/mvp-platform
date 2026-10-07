@@ -61,6 +61,9 @@ export const DEFAULT_PREFS: NotificationPrefs = {
 // Types not listed here are NOT gated by preferences (delivered as before).
 const TYPE_TO_EVENT: Record<string, NotificationEventKey> = {
   founder_onboarding_completed: "new_founder_signup",
+  staff_new_founder_signup: "new_founder_signup",
+  staff_new_founder_payment: "new_founder_signup",
+  staff_founder_onboarding_completed: "new_founder_signup",
   compliance_event_created: "compliance_escalation",
   remediation_task_created: "remediation_overdue",
   investor_expressed_interest: "investor_interest",

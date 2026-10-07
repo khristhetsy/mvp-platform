@@ -6,6 +6,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getLatestDiligenceReport } from "@/lib/data/founder-readiness";
 import { buildCompanyOnboardingSyncUpdate } from "@/lib/onboarding/sync-progress";
 import { createNotification } from "@/lib/notifications/notifications";
+import { alertStaffNewCustomer } from "@/lib/notifications/new-customer-alerts";
 import { syncFounderRemediationTasks } from "@/lib/remediation/tasks";
 import { ONBOARDING_STEP_IDS, type OnboardingStepId } from "@/lib/onboarding/progress";
 import { requireApiProfile } from "@/lib/api/auth";
@@ -245,6 +246,13 @@ export async function PATCH(request: Request) {
       metadata: {
         progress_percent: sync.onboarding_progress_percent,
       },
+    });
+
+    await alertStaffNewCustomer({
+      event: "onboarding",
+      founderId: auth.profile.id,
+      companyId: company.id,
+      companyName: finalCompany.company_name ?? null,
     });
   }
 
