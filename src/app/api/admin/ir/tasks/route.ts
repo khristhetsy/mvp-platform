@@ -33,7 +33,7 @@ export async function GET(): Promise<Response> {
     const ids = projects.map((p) => p.id);
     if (!ids.length) return NextResponse.json({ projects: [], months: [], weeks: [], tasks: [] });
     const [{ data: tasks, error }, { data: ms }, matches] = await Promise.all([
-      db().from("ir_tasks").select("id, project_id, milestone_id, title, status, starred, deadline, created_at, assignee_id").in("project_id", ids).order("created_at"),
+      db().from("ir_tasks").select("id, project_id, milestone_id, title, status, starred, deadline, created_at, assignee_id").in("project_id", ids).is("archived_at", null).order("created_at"),
       db().from("ir_milestones").select("id, project_id, parent_id, kind, label, sort_order, starts_on, ends_on").in("project_id", ids).order("sort_order"),
       allMatches(ids),
     ]);

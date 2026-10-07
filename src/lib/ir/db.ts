@@ -172,6 +172,37 @@ export async function updateTask(id: string, patch: Partial<{ title: string; sta
   if (error) throw new Error(`updateTask: ${error.message}`);
 }
 
+/** What deleting these tasks takes with it: the investors matched in them and their activities (plus task-level ones). */
+export async function taskImpact(ids: string[]): Promise<{ tasks: number; investors: number; activities: number; odooLinked: number }> {
+  if (!ids.length) return { tasks: 0, investors: 0, activities: 0, odooLinked: 0 };
+  const [{ data: ts }, { data: ms }] = await Promise.all([
+    db().from("ir_tasks").select("id, odoo_task_id").in("id", ids),
+    db().from("ir_matches").select("id").in("task_id", ids),
+  ]);
+  const matchIds = ((ms ?? []) as Array<{ id: string }>).map((m) => m.id);
+  const [{ data: ta }, { data: ma }] = await Promise.all([
+    db().from("ir_activities").select("id").in("task_id", ids).limit(20000),
+    matchIds.length ? db().from("ir_activities").select("id").in("match_id", matchIds).limit(20000) : Promise.resolve({ data: [] }),
+  ]);
+  const acts = new Set([...((ta ?? []) as Array<{ id: string }>), ...((ma ?? []) as Array<{ id: string }>)].map((r) => r.id));
+  const rows = (ts ?? []) as Array<{ id: string; odoo_task_id: number | null }>;
+  return { tasks: rows.length, investors: matchIds.length, activities: acts.size, odooLinked: rows.filter((r) => r.odoo_task_id != null).length };
+}
+export async function setTasksArchived(ids: string[], archived: boolean): Promise<void> {
+  if (!ids.length) return;
+  const at = new Date().toISOString();
+  const { error } = await db().from("ir_tasks").update({ archived_at: archived ? at : null, updated_at: at }).in("id", ids);
+  if (error) throw new Error(`archive tasks: ${error.message}`);
+}
+/** Delete tasks for good: their investors (matches, which cascade activities, stage history and sequences) go first, then the tasks (task-level activities cascade). */
+export async function deleteTasks(ids: string[]): Promise<void> {
+  if (!ids.length) return;
+  const m = await db().from("ir_matches").delete().in("task_id", ids);
+  if (m.error) throw new Error(`delete task investors: ${m.error.message}`);
+  const t = await db().from("ir_tasks").delete().in("id", ids);
+  if (t.error) throw new Error(`delete tasks: ${t.error.message}`);
+}
+
 // ── Matches ─────────────────────────────────────────────────────────────────
 const MATCH_COLS = "id, project_id, investor_contact_id, task_id, milestone_id, stage, assignee_id, fit_tier, data_source, founder_visible, starred, stage_changed_at, term_sheet_received_at, meeting_booking_id, blockers, created_at";
 
@@ -299,7 +330,7 @@ export async function projectCounts(projectIds: string[]): Promise<Map<string, P
   const now = new Date().toISOString();
   const [{ data: m }, { data: t }, { data: a }] = await Promise.all([
     db().from("ir_matches").select("project_id, stage, term_sheet_received_at").in("project_id", projectIds),
-    db().from("ir_tasks").select("project_id, status").in("project_id", projectIds),
+    db().from("ir_tasks").select("project_id, status").in("project_id", projectIds).is("archived_at", null),
     db().from("ir_activities").select("project_id, type, due_at, done_at").in("project_id", projectIds),
   ]);
   for (const r of (m ?? []) as Array<{ project_id: string; stage: IrStage; term_sheet_received_at: string | null }>) {

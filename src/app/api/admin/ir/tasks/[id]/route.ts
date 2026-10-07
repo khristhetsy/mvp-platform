@@ -34,7 +34,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
       const raw = c.raw ?? {}; const rp = (k: string) => { const v = raw[k]; return typeof v === "string" && v.trim() ? v : null; };
       contacts[c.id] = { email: c.email, phone: c.phone ?? rp("phone") ?? rp("mobile"), country: c.country, membership: c.contact_type ? c.contact_type[0].toUpperCase() + c.contact_type.slice(1) : null };
     }
-    return NextResponse.json({ task, project, entrepreneur, contacts, weeks, months: milestones.filter((m) => m.kind === "month"), matches, activities, notes: notes.filter((n) => !n.match_id || matchIds.has(n.match_id)), staff, siblings: siblings.map((t) => ({ id: t.id, title: t.title, milestone_id: t.milestone_id })) });
+    return NextResponse.json({ task, project, entrepreneur, contacts, weeks, months: milestones.filter((m) => m.kind === "month"), matches, activities, notes: notes.filter((n) => !n.match_id || matchIds.has(n.match_id)), staff, siblings: siblings.filter((t) => !t.archived_at || t.id === id).map((t) => ({ id: t.id, title: t.title, milestone_id: t.milestone_id })) });
   } catch (e) { return failed(e, "Couldn't load the task."); }
 }
 

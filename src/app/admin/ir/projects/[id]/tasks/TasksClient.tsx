@@ -11,6 +11,9 @@
  * the Odoo kanban: one column per Odoo stage, read live from Odoo, in Odoo's stage order,
  * with pill investor chips. Tasks with no Odoo stage fall into a column for their week.
  * Group by: Week keeps the weekly board above.
+ *
+ * Active / Archived picks which tasks show. In the List view, tick tasks and use Actions to
+ * archive, unarchive or delete them (delete asks first and counts what goes with it).
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -19,6 +22,8 @@ import { formatRange } from "@/lib/ir/milestones";
 import { HScrollBoard } from "@/components/admin/HScrollBoard";
 import type { IrActivity, IrMatch, IrMilestone, IrProject, IrTask } from "@/lib/ir/types";
 import { ActivityClock } from "../../../_shared/ActivityClock";
+import { SelectionBar } from "@/components/admin/sales/SelectionBar";
+import { TaskDeleteDialog, runTaskAction, type TaskAction } from "./TaskArchiveDelete";
 
 type Payload = { project: IrProject; milestones: IrMilestone[]; matches: IrMatch[]; tasks: IrTask[]; openActivities: IrActivity[]; staff: Array<{ id: string; name: string }> };
 const STATUS_DOT: Record<string, string> = { new: "#94A3B8", in_progress: "#F59E0B", done: "#16A34A" };
@@ -40,6 +45,10 @@ export function TasksClient({ projectId, meId, initialMonth }: { projectId: stri
   const [groupBy, setGroupBy] = useState<"stage" | "week" | null>(null);
   const [stageInfo, setStageInfo] = useState<StageInfo | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [archivedView, setArchivedView] = useState(false);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [del, setDel] = useState<{ ids: string[]; label: string } | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const r = await fetch(`/api/admin/ir/projects/${projectId}`);
@@ -79,6 +88,21 @@ export function TasksClient({ projectId, meId, initialMonth }: { projectId: stri
       router.push(`/admin/ir/projects/${projectId}/tasks/${j.id}`);
     } finally { setBusy(false); }
   }
+  const DONE_LABEL: Record<TaskAction, string> = { archive: "archived", unarchive: "unarchived", delete: "deleted" };
+  function afterAction(action: TaskAction, count: number, message: string | null) {
+    setPicked(new Set()); setDel(null);
+    setNotice(`${count} task${count === 1 ? "" : "s"} ${DONE_LABEL[action]}.${message ? ` ${message}` : ""}`);
+    void load();
+  }
+  async function bulk(action: Exclude<TaskAction, "delete">) {
+    const ids = [...picked];
+    setBusy(true);
+    try {
+      const r = await runTaskAction(ids, action);
+      if (!r.ok) { setError(r.message); return; }
+      afterAction(action, ids.length, r.message);
+    } finally { setBusy(false); }
+  }
   async function star(t: IrTask) {
     await fetch(`/api/admin/ir/tasks/${t.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ starred: !t.starred }) });
     void load();
@@ -87,6 +111,8 @@ export function TasksClient({ projectId, meId, initialMonth }: { projectId: stri
   if (error && !data) return <div role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[12.5px] text-rose-700">{error}</div>;
   if (!data) return <p className="text-[13px] text-slate-400">Loading…</p>;
   const p = data.project;
+  // Active view hides archived tasks; Archived view shows only them.
+  const vis = data.tasks.filter((t) => (archivedView ? !!t.archived_at : !t.archived_at));
   const currentWeek = weeks.find((w) => w.starts_on <= today && today < w.ends_on) ?? null;
   const hasStages = (stageInfo?.stages.length ?? 0) > 0;
   const mode: "stage" | "week" = groupBy ?? (hasStages ? "stage" : "week");
@@ -126,11 +152,16 @@ export function TasksClient({ projectId, meId, initialMonth }: { projectId: stri
   // Stage columns for the selected month (an Odoo project is one month): the Odoo stages its tasks
   // sit in, in Odoo's order, then a week column for any task without an Odoo stage.
   const monthWeekIds = new Set(monthWeeks.map((w) => w.id));
-  const monthTasks = data.tasks.filter((t) => monthWeekIds.has(t.milestone_id));
+  const monthTasks = vis.filter((t) => monthWeekIds.has(t.milestone_id));
   const stageColumns = mode !== "stage" || !stageInfo ? [] : [
     ...stageInfo.stages.map((s) => ({ key: `s${s.id}`, title: s.name, weekId: null as string | null, tasks: monthTasks.filter((t) => stageInfo.byTask[t.id] === s.id) })).filter((c) => c.tasks.length > 0),
-    ...monthWeeks.map((w) => ({ key: `w${w.id}`, title: w.label, weekId: w.id as string | null, tasks: data.tasks.filter((t) => t.milestone_id === w.id && stageInfo.byTask[t.id] === undefined) })).filter((c) => c.tasks.length > 0),
+    ...monthWeeks.map((w) => ({ key: `w${w.id}`, title: w.label, weekId: w.id as string | null, tasks: vis.filter((t) => t.milestone_id === w.id && stageInfo.byTask[t.id] === undefined) })).filter((c) => c.tasks.length > 0),
   ];
+
+  const listRows = monthWeeks.flatMap((w) => vis.filter((t) => t.milestone_id === w.id).map((t) => ({ t, w }))).filter(({ t }) => { const ms = matchesByTask.get(t.id) ?? []; return !needle || ms.some(hit) || t.title.toLowerCase().includes(needle); });
+  const listIds = listRows.map(({ t }) => t.id);
+  const allPicked = listIds.length > 0 && listIds.every((id) => picked.has(id));
+  const pickedTitle = data.tasks.find((t) => picked.has(t.id))?.title ?? "task";
 
   return (
     <div>
@@ -142,7 +173,8 @@ export function TasksClient({ projectId, meId, initialMonth }: { projectId: stri
         <button type="button" disabled={busy || !currentWeek} onClick={() => currentWeek && newTask(currentWeek.id)} className="rounded-lg bg-indigo-600 px-3.5 py-1.5 text-[12.5px] font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">New</button>
         <h2 className="text-[18px] font-semibold text-slate-900">{p.title} · Tasks</h2>
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search investors…" className="ml-2 w-56 rounded-lg border border-slate-200 px-3 py-1.5 text-[13px] focus:border-indigo-400 focus:outline-none" />
-        <span className="ml-auto flex rounded-lg bg-slate-100 p-0.5" role="group" aria-label="View"><button type="button" onClick={() => setView("kanban")} aria-pressed={view === "kanban"} className={`rounded-md px-2.5 py-0.5 text-[12px] font-medium ${view === "kanban" ? "bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200" : "text-slate-600 hover:text-slate-900"}`}>Kanban</button><button type="button" onClick={() => setView("list")} aria-pressed={view === "list"} className={`rounded-md px-2.5 py-0.5 text-[12px] font-medium ${view === "list" ? "bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200" : "text-slate-600 hover:text-slate-900"}`}>List</button></span>
+        <span className="ml-auto flex rounded-lg bg-slate-100 p-0.5" role="group" aria-label="Show"><button type="button" onClick={() => { setArchivedView(false); setPicked(new Set()); }} aria-pressed={!archivedView} className={`rounded-md px-2.5 py-0.5 text-[12px] font-medium ${!archivedView ? "bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200" : "text-slate-600 hover:text-slate-900"}`}>Active</button><button type="button" onClick={() => { setArchivedView(true); setPicked(new Set()); }} aria-pressed={archivedView} className={`rounded-md px-2.5 py-0.5 text-[12px] font-medium ${archivedView ? "bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200" : "text-slate-600 hover:text-slate-900"}`}>Archived</button></span>
+        <span className="flex rounded-lg bg-slate-100 p-0.5" role="group" aria-label="View"><button type="button" onClick={() => setView("kanban")} aria-pressed={view === "kanban"} className={`rounded-md px-2.5 py-0.5 text-[12px] font-medium ${view === "kanban" ? "bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200" : "text-slate-600 hover:text-slate-900"}`}>Kanban</button><button type="button" onClick={() => setView("list")} aria-pressed={view === "list"} className={`rounded-md px-2.5 py-0.5 text-[12px] font-medium ${view === "list" ? "bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200" : "text-slate-600 hover:text-slate-900"}`}>List</button></span>
         {hasStages ? (
           <label className="text-[12px] text-slate-600">Group by
             <select value={mode} onChange={(e) => setGroupBy(e.target.value as "stage" | "week")} className="ml-1 rounded-md border border-slate-200 px-2 py-1 text-[12px]">
@@ -152,19 +184,29 @@ export function TasksClient({ projectId, meId, initialMonth }: { projectId: stri
           </label>
         ) : null}
         <label className="text-[12px] text-slate-600">Month
-          <select value={month?.id ?? ""} onChange={(e) => setMonthId(e.target.value)} className="ml-1 rounded-md border border-slate-200 px-2 py-1 text-[12px]">
+          <select value={month?.id ?? ""} onChange={(e) => { setMonthId(e.target.value); setPicked(new Set()); }} className="ml-1 rounded-md border border-slate-200 px-2 py-1 text-[12px]">
             {months.map((m) => <option key={m.id} value={m.id}>{m.label} · {formatRange(m.starts_on, m.ends_on)}</option>)}
           </select>
         </label>
         {error ? <span className="text-[12px] text-rose-600">{error}</span> : null}
       </div>
+      {notice ? <div className="mb-2 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[12.5px] text-emerald-800"><i className="ti ti-circle-check" aria-hidden="true" />{notice}<button type="button" onClick={() => setNotice(null)} aria-label="Dismiss" className="ml-auto text-emerald-700 hover:text-emerald-900"><i className="ti ti-x" aria-hidden="true" /></button></div> : null}
+      {del ? <TaskDeleteDialog ids={del.ids} label={del.label} onClose={() => setDel(null)} onDone={(action, message) => afterAction(action, del.ids.length, message)} /> : null}
 
       {view === "list" ? (
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+          <SelectionBar count={picked.size} total={listIds.length} busy={busy} onSelectAll={() => setPicked(new Set(listIds))} onClear={() => setPicked(new Set())}
+            actions={[
+              archivedView
+                ? { key: "unarchive", icon: "ti-archive-off", label: "Unarchive", run: () => void bulk("unarchive") }
+                : { key: "archive", icon: "ti-archive", label: "Archive", run: () => void bulk("archive") },
+              { key: "delete", icon: "ti-trash", label: "Delete", danger: true, run: () => setDel({ ids: [...picked], label: pickedTitle }) },
+            ]} />
           <table className="w-full text-[12.5px]">
-            <thead><tr className="bg-slate-50 text-left text-[11px] text-slate-500"><th className="px-3 py-2 font-medium">Task</th><th className="py-2 pr-2 font-medium">Week</th><th className="py-2 pr-2 font-medium">Investors</th><th className="py-2 pr-2 font-medium">Assignee</th><th className="py-2 pr-2 font-medium">Status</th><th className="py-2 pr-3 font-medium">Created</th></tr></thead>
+            <thead><tr className="bg-slate-50 text-left text-[11px] text-slate-500"><th className="w-8 py-2 pl-3"><input type="checkbox" checked={allPicked} disabled={!listIds.length} onChange={(e) => setPicked(e.target.checked ? new Set(listIds) : new Set())} aria-label="Select all tasks" /></th><th className="px-3 py-2 font-medium">Task</th><th className="py-2 pr-2 font-medium">Week</th><th className="py-2 pr-2 font-medium">Investors</th><th className="py-2 pr-2 font-medium">Assignee</th><th className="py-2 pr-2 font-medium">Status</th><th className="py-2 pr-3 font-medium">Created</th></tr></thead>
             <tbody className="divide-y divide-slate-100">
-              {monthWeeks.flatMap((w) => data.tasks.filter((t) => t.milestone_id === w.id).map((t) => ({ t, w }))).filter(({ t }) => { const ms = matchesByTask.get(t.id) ?? []; return !needle || ms.some(hit) || t.title.toLowerCase().includes(needle); }).map(({ t, w }) => { const ms = matchesByTask.get(t.id) ?? []; return <tr key={t.id} onClick={(e) => { if (!(e.target as HTMLElement).closest("a,button")) router.push(`/admin/ir/projects/${projectId}/tasks/${t.id}`); }} className="cursor-pointer hover:bg-slate-50">
+              {listRows.map(({ t, w }) => { const ms = matchesByTask.get(t.id) ?? []; return <tr key={t.id} onClick={(e) => { if (!(e.target as HTMLElement).closest("a,button")) router.push(`/admin/ir/projects/${projectId}/tasks/${t.id}`); }} className={`cursor-pointer ${picked.has(t.id) ? "bg-indigo-50/60" : "hover:bg-slate-50"}`}>
+                <td className="py-2 pl-3" onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={picked.has(t.id)} onChange={(e) => setPicked((cur) => { const n = new Set(cur); if (e.target.checked) n.add(t.id); else n.delete(t.id); return n; })} aria-label={`Select ${t.title}`} /></td>
                 <td className="px-3 py-2"><Link href={`/admin/ir/projects/${projectId}/tasks/${t.id}`} className="font-medium text-slate-900 hover:text-indigo-700">{t.starred ? <i className="ti ti-star-filled mr-1 text-amber-500" aria-hidden="true" /> : null}{t.title}</Link></td>
                 <td className="py-2 pr-2 text-slate-700">{w.label} <span className="text-slate-400">{formatRange(w.starts_on, w.ends_on)}</span></td>
                 <td className="py-2 pr-2 text-slate-700">{ms.length}{ms.length ? <span className="ml-1 text-slate-400">{ms.slice(0, 3).map((m) => m.investor_name ?? m.investor_firm ?? "Investor").join(", ")}{ms.length > 3 ? ` +${ms.length - 3}` : ""}</span> : null}</td>
@@ -172,7 +214,7 @@ export function TasksClient({ projectId, meId, initialMonth }: { projectId: stri
                 <td className="py-2 pr-2"><span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: STATUS_DOT[t.status] }} />{t.status === "in_progress" ? "In progress" : t.status === "done" ? "Done" : "New"}</span></td>
                 <td className="py-2 pr-3 text-slate-500">{fmtDay(t.created_at)}</td>
               </tr>; })}
-              {monthWeeks.every((w) => data.tasks.filter((t) => t.milestone_id === w.id).length === 0) ? <tr><td colSpan={6} className="px-3 py-6 text-center text-slate-400">No tasks in this month yet.</td></tr> : null}
+              {monthWeeks.every((w) => vis.filter((t) => t.milestone_id === w.id).length === 0) ? <tr><td colSpan={7} className="px-3 py-6 text-center text-slate-400">{archivedView ? "No archived tasks in this month." : "No tasks in this month yet."}</td></tr> : null}
             </tbody>
           </table>
         </div>
@@ -202,7 +244,7 @@ export function TasksClient({ projectId, meId, initialMonth }: { projectId: stri
       ) : (
       <HScrollBoard>
         {monthWeeks.map((w) => {
-          const tasks = data.tasks.filter((t) => t.milestone_id === w.id);
+          const tasks = vis.filter((t) => t.milestone_id === w.id);
           const done = tasks.filter((t) => t.status === "done").length;
           const pct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
           const isNow = currentWeek?.id === w.id;
