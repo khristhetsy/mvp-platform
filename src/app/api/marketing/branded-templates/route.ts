@@ -2,17 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { marketingDb } from "@/lib/marketing/db";
 import { brandedDefaults, createBrandedTemplate } from "@/lib/email/branded-templates";
+import { founderPrefill } from "@/lib/email/branded-prefill";
 
 // GET — the branded designs (masters) and starting values for the signed-in user.
-export async function GET(): Promise<NextResponse> {
+// ?projectId= adds the prefill from that Investor Relations project's founder.
+export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
     const profile = await requireRole(["admin"]);
+    const projectId = req.nextUrl.searchParams.get("projectId");
+    const prefill = projectId ? await founderPrefill(projectId).catch(() => null) : null;
     const { data, error } = await marketingDb()
       .from("email_template_masters")
       .select("id, name, description, compiled_html, placeholder_schema")
       .order("name", { ascending: true });
     if (error) throw error;
-    return NextResponse.json({ masters: data ?? [], defaults: await brandedDefaults(profile.id) });
+    return NextResponse.json({ masters: data ?? [], defaults: await brandedDefaults(profile.id), prefill });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }

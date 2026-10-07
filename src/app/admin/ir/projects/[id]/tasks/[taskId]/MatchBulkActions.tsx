@@ -176,7 +176,7 @@ export function MatchBulkActions({ matches, contacts, project, entrepreneur, sta
         <MassEmailComposer
           source="contacts" noun="investor" initialMode={composer}
           selection={{ mode: "ids", ids: [...new Set(picked.map((m) => m.investor_contact_id))], count: picked.length }}
-          extraMerge={extraMerge} previewAs={previewAs} defaultDepartment="Investor Relations" onePager={onePager} allowAttachments
+          extraMerge={extraMerge} previewAs={previewAs} defaultDepartment="Investor Relations" brandedProjectId={project.id} onePager={onePager} allowAttachments
           notice={notice} shares={shares} resolveShares={resolveShares}
           renderSequence={(done) => <IrSequencePanel matchIds={picked.map((m) => m.id)} staff={staff} ownerId={project.owner_id} onDone={(msg) => { done(msg); void onChange(); }} />}
           onSent={(sent) => {

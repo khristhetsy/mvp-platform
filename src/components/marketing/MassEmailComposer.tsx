@@ -57,13 +57,15 @@ const inp: React.CSSProperties = { fontSize: 12.5, padding: "7px 9px", borderRad
  * `resolveShares` turns into real per-recipient links right before a send or test.
  * Without them it behaves exactly as before.
  */
-export function MassEmailComposer({ source, selection, defaultEmail, onClose, noun = "contact", extraMerge, previewAs, initialMode = "once", renderSequence, onSent, defaultDepartment, onePager, allowAttachments = false, notice, shares, resolveShares }: {
+export function MassEmailComposer({ source, selection, defaultEmail, onClose, noun = "contact", extraMerge, previewAs, initialMode = "once", renderSequence, onSent, defaultDepartment, onePager, allowAttachments = false, notice, shares, resolveShares, brandedProjectId }: {
   source: "contacts" | "opportunities"; selection: SelectionPayload; defaultEmail?: string; onClose: () => void;
   noun?: string; extraMerge?: Record<string, string>; previewAs?: PreviewRecipient[]; initialMode?: "once" | "sequence";
   renderSequence?: (done: (message: string) => void) => ReactNode; onSent?: (sent: number) => void; defaultDepartment?: string;
   onePager?: { url: string; label: string } | null; allowAttachments?: boolean;
   notice?: ReactNode; shares?: ShareOption[];
   resolveShares?: (keys: string[], ctx: { testEmail?: string }) => Promise<{ buttons: Array<{ label: string; url: string }> } | { error: string }>;
+  /** Investor Relations project whose founder fills a new branded template. */
+  brandedProjectId?: string;
 }) {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [sequences, setSequences] = useState<Sequence[]>([]);
@@ -217,7 +219,7 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
 
                 {/* template */}
                 <p style={{ fontSize: 10.5, color: "var(--muted-foreground)", margin: "0 0 3px" }}>Template</p>
-                <TemplatePicker templates={templates} value={templateId} onPick={(id) => pickTemplate(id)} defaultDepartment={defaultDepartment}
+                <TemplatePicker templates={templates} value={templateId} onPick={(id) => pickTemplate(id)} defaultDepartment={defaultDepartment} brandedProjectId={brandedProjectId}
                   mergeTags={["first_name", "company", ...Object.keys(extraMerge ?? {})]}
                   onCreated={(t) => { const next = [t, ...templates]; setTemplates(next); pickTemplate(t.id, next); }} />
 
