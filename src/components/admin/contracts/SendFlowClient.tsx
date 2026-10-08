@@ -13,6 +13,7 @@ import type { TemplateField } from "@/lib/contracts/types";
 import { ContractEditor, loadEditorData, type EditorData, type EditorHandle, type FieldLink } from "./ContractEditor";
 import { TrackingTable } from "./TrackingTable";
 import { UploadContractModal } from "./UploadContractModal";
+import { PendingScheduledList, postScheduled, ScheduledNotice, ScheduleSendMenu, type ScheduledInfo } from "@/components/email/ScheduleSend";
 import { api, BLUE, btn, Card, MUTED, NAVY, Notice, SectionLabel } from "./ui";
 
 type Template = { id: string; key: string; name: string; kind: string; subtype: string | null; version: number; usage: number; versions: number; master_filename: string };
@@ -641,6 +642,7 @@ export function SendFlowClient({ contact, isAdmin, senderName, gmail, autoResume
           savedAt={savedAt}
           saveError={saveError}
           onBack={() => setStep(2)}
+          onScheduledChange={() => setRefreshKey((k) => k + 1)}
           onSent={(r) => {
             setSuccess(r);
             setEmail(null);
@@ -659,6 +661,7 @@ export function SendFlowClient({ contact, isAdmin, senderName, gmail, autoResume
 
       {/* STEP 4 */}
       <SectionLabel>Step 4 · Sent documents, tracking and actions</SectionLabel>
+      <PendingScheduledList kind="contracts" contextKey={contact.id} refreshKey={refreshKey} title="Scheduled to send" />
       <TrackingTable contactId={contact.id} refreshKey={refreshKey} isAdmin={isAdmin} />
       <p style={{ fontSize: 12, color: "#8a93a6", margin: "8px 0 0", lineHeight: 1.6 }}>
         Opens count each visit to the signing page, with the time of the last one. Cancel withdraws a pending request. Archive hides a closed document without deleting it. Delete is admin only and logged.
@@ -725,6 +728,7 @@ function EmailStep({
   saveError,
   onBack,
   onSent,
+  onScheduledChange,
 }: {
   contact: Contact;
   senderName: string | null;
@@ -740,6 +744,8 @@ function EmailStep({
   saveError: string | null;
   onBack: () => void;
   onSent: (r: { delivered: boolean; url: string; via: "gmail" | "icapos"; error?: string }) => void;
+  /** A send was scheduled, rescheduled or canceled: Step 4 reloads its Scheduled list. */
+  onScheduledChange: () => void;
 }) {
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [draftId, setDraftId] = useState<string | null>(initialEmail?.draftId ?? null);
@@ -753,6 +759,7 @@ function EmailStep({
   const [preview, setPreview] = useState(false);
   const [busy, setBusy] = useState(false);
   const [sending, setSending] = useState<"sign" | "review">("sign");
+  const [scheduled, setScheduled] = useState<ScheduledInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
   const [typed, setTyped] = useState<Record<string, string>>(initialEmail?.typed ?? {});
@@ -885,13 +892,27 @@ function EmailStep({
     setSaved(`Saved "${name}" to the library.`);
   }
 
+  function sendBody(signature: boolean) {
+    return { contactId: contact.id, documentIds: docs.map((d) => d.id), subject, body, emailDraftId: draftId, attachPdfs: signature ? attach : true, signature, via, typedValues: Object.fromEntries(Object.entries(typed).filter(([k, v]) => v.trim() && !baseValues[k])) };
+  }
+
+  /** Schedule send: the same request, sent by the scheduled email runner at that time. */
+  async function scheduleSendAt(signature: boolean, sendAt: string): Promise<string | null> {
+    setError(null);
+    const r = await postScheduled("/api/admin/sales/contracts/send", sendBody(signature), sendAt);
+    if ("error" in r) return r.error;
+    setScheduled(r);
+    onScheduledChange();
+    return null;
+  }
+
   async function send(signature = true) {
     setSending(signature ? "sign" : "review");
     setBusy(true);
     setError(null);
     const r = await api<{ delivered: boolean; url: string; deliveryError?: string }>("/api/admin/sales/contracts/send", {
       method: "POST",
-      body: JSON.stringify({ contactId: contact.id, documentIds: docs.map((d) => d.id), subject, body, emailDraftId: draftId, attachPdfs: signature ? attach : true, signature, via, typedValues: Object.fromEntries(Object.entries(typed).filter(([k, v]) => v.trim() && !baseValues[k])) }),
+      body: JSON.stringify(sendBody(signature)),
     });
     setBusy(false);
     if (!r.ok) return setError(r.data.error ?? "Send failed.");
@@ -1043,13 +1064,24 @@ function EmailStep({
                 {savingDraft ? "Saving…" : "Save draft"}
               </button>
               <button type="button" onClick={() => void saveToLibrary()} disabled={!subject.trim() || !body.trim()} style={btn()}>Save to library</button>
-              <button type="button" disabled={busy || Boolean(blockedReason)} title={blockedReason ?? "Email the PDFs for review. No signature request, no signing link."} onClick={() => void send(false)} style={{ ...btn(), border: `2px solid ${BLUE}`, color: BLUE, opacity: busy || blockedReason ? 0.5 : 1 }}>
-                {busy && sending === "review" ? "Rendering and sending…" : "Send"}
-              </button>
-              <button type="button" disabled={busy || Boolean(blockedReason)} title={blockedReason ?? undefined} onClick={() => void send()} style={{ ...btn(true), opacity: busy || blockedReason ? 0.5 : 1 }}>
-                {busy && sending === "sign" ? "Rendering and sending…" : "Send for signature"}
-              </button>
+              <span style={{ display: "inline-flex" }}>
+                <button type="button" disabled={busy || Boolean(blockedReason)} title={blockedReason ?? "Email the PDFs for review. No signature request, no signing link."} onClick={() => void send(false)} style={{ ...btn(), border: `2px solid ${BLUE}`, color: BLUE, borderRadius: "7px 0 0 7px", opacity: busy || blockedReason ? 0.5 : 1 }}>
+                  {busy && sending === "review" ? "Rendering and sending…" : "Send"}
+                </button>
+                <ScheduleSendMenu disabled={busy || Boolean(blockedReason)} title="Schedule send for review" onSchedule={(at) => scheduleSendAt(false, at)}
+                  chevronStyle={{ ...btn(), border: `2px solid ${BLUE}`, borderLeft: "none", color: BLUE, borderRadius: "0 7px 7px 0", padding: "7px 8px", height: "100%", opacity: busy || blockedReason ? 0.5 : 1 }} />
+              </span>
+              <span style={{ display: "inline-flex" }}>
+                <button type="button" disabled={busy || Boolean(blockedReason)} title={blockedReason ?? undefined} onClick={() => void send()} style={{ ...btn(true), borderRadius: "7px 0 0 7px", opacity: busy || blockedReason ? 0.5 : 1 }}>
+                  {busy && sending === "sign" ? "Rendering and sending…" : "Send for signature"}
+                </button>
+                <ScheduleSendMenu disabled={busy || Boolean(blockedReason)} title="Schedule send for signature" onSchedule={(at) => scheduleSendAt(true, at)}
+                  chevronStyle={{ ...btn(true), borderLeft: "0.5px solid rgba(255,255,255,.45)", borderRadius: "0 7px 7px 0", padding: "7px 8px", height: "100%", opacity: busy || blockedReason ? 0.5 : 1 }} />
+              </span>
             </div>
+            {scheduled ? (
+              <ScheduledNotice info={scheduled} onChange={(n) => { setScheduled(n); onScheduledChange(); }} onCanceled={() => { setScheduled(null); onScheduledChange(); }} />
+            ) : null}
             {saveError ? (
               <p style={{ fontSize: 11.5, color: "#A32D2D", textAlign: "right", margin: "6px 0 0" }}>{saveError}</p>
             ) : savedAt ? (

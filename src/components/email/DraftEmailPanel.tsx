@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { formatDraftForClipboard } from "@/lib/email/display";
 import type { EmailDraft, EmailTemplateType } from "@/lib/email/types";
 import type { UserRole } from "@/lib/supabase/types";
+import { postScheduled, ScheduledNotice, ScheduleSendMenu, type ScheduledInfo } from "@/components/email/ScheduleSend";
 
 const TEMPLATES_BY_ROLE: Record<UserRole, Array<{ type: EmailTemplateType; label: string }>> = {
   founder: [
@@ -64,6 +65,9 @@ export function DraftEmailPanel({
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [sent, setSent] = useState(false);
+  const [scheduled, setScheduled] = useState<ScheduledInfo | null>(null);
+  // Schedule send is for staff (admin and analyst) only.
+  const canSchedule = role === "admin" || role === "analyst";
   const [recipientEmail, setRecipientEmail] = useState("");
 
   const canDraft = options.length > 0;
@@ -104,6 +108,14 @@ export function DraftEmailPanel({
     if (!draft) return;
     await navigator.clipboard.writeText(formatDraftForClipboard(draft));
     setCopied(true);
+  }
+
+  async function scheduleGmail(sendAt: string): Promise<string | null> {
+    if (!draft || !recipientEmail.trim()) return "Add a recipient first.";
+    const r = await postScheduled("/api/integrations/google/gmail/send", { to: recipientEmail.trim(), subject: draft.subject, body: draft.body }, sendAt);
+    if ("error" in r) return r.error;
+    setScheduled(r);
+    return null;
   }
 
   async function sendGmail() {
@@ -195,16 +207,26 @@ export function DraftEmailPanel({
                 className="w-full rounded border border-slate-200 px-2 py-1 text-[11px]"
               />
               <div className="mt-1.5 flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={sending || !recipientEmail.trim()}
-                  onClick={() => void sendGmail()}
-                  className="rounded bg-indigo-600 px-3 py-1 text-[10px] font-semibold text-white disabled:opacity-50"
-                >
-                  {sending ? "Sending…" : "Send"}
-                </button>
+                <span className="inline-flex">
+                  <button
+                    type="button"
+                    disabled={sending || !recipientEmail.trim()}
+                    onClick={() => void sendGmail()}
+                    className={`bg-indigo-600 px-3 py-1 text-[10px] font-semibold text-white disabled:opacity-50 ${canSchedule ? "rounded-l" : "rounded"}`}
+                  >
+                    {sending ? "Sending…" : "Send"}
+                  </button>
+                  {canSchedule ? (
+                    <ScheduleSendMenu
+                      disabled={sending || !recipientEmail.trim()}
+                      onSchedule={scheduleGmail}
+                      chevronClassName="inline-flex h-full items-center rounded-r border-l border-indigo-400 bg-indigo-600 px-1.5 text-white disabled:opacity-50"
+                    />
+                  ) : null}
+                </span>
                 {sent ? <span className="text-[10px] text-emerald-700">{t("sent_successfully")}</span> : null}
               </div>
+              {scheduled ? <ScheduledNotice info={scheduled} align="left" onChange={setScheduled} onCanceled={() => setScheduled(null)} /> : null}
             </div>
           ) : (
             <p className="mt-2 text-[10px] text-slate-500">

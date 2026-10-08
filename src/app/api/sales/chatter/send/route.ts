@@ -18,6 +18,7 @@ import { sendViaGmail } from "@/lib/integrations/gmail-send";
 import { composeThread } from "@/lib/email/inbox";
 import { parseRecipients, previewFrom } from "@/lib/email/send-email";
 import { logOutboundEmailActivity } from "@/lib/sales/activity";
+import { scheduleAtFrom, scheduleSend } from "@/lib/scheduled-emails/schedule";
 
 export const dynamic = "force-dynamic";
 
@@ -52,13 +53,19 @@ export async function POST(req: Request): Promise<Response> {
   if ("error" in auth) return auth.error ?? NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { supabase, profile } = auth;
 
-  const parsed = sendSchema.safeParse(await req.json().catch(() => ({})));
+  const raw: unknown = await req.json().catch(() => ({}));
+  const parsed = sendSchema.safeParse(raw);
   if (!parsed.success) return NextResponse.json({ error: "Add a recipient, subject, and message." }, { status: 400 });
   const { via, to, toName, cc, subject, body } = parsed.data;
 
   const toList = parseRecipients(to);
   const ccList = parseRecipients(cc);
   if (toList.length === 0) return NextResponse.json({ error: "Add a valid email address." }, { status: 400 });
+
+  if (scheduleAtFrom(raw)) {
+    // Schedule send: stored now, sent through this route at that time (scheduled-emails/runner).
+    return scheduleSend({ kind: "sales_chatter", userId: profile.id, raw, toLabel: toName ? `${toName} <${toList[0]}>` : toList.join(", "), subject });
+  }
 
   if (via === "icapos") {
     try {

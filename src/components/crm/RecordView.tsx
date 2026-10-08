@@ -6,6 +6,8 @@ import { ArrowLeft, Mail, Phone, Globe, Building2, MapPin, Briefcase, Download, 
 import { type ContactFull, type CrmAnnotation, CRM_INTERNAL_STATUSES } from "@/lib/crm/types";
 import { ComposeModal } from "@/components/email/ComposeModal";
 import type { ComposeDraft } from "@/components/email/types";
+import { postScheduled } from "@/components/email/ScheduleSend";
+import { formatSendAt } from "@/lib/scheduled-emails/time";
 import { ScheduleModal } from "@/components/crm/ScheduleModal";
 import { ProfileEditModal } from "@/components/crm/ProfileEditModal";
 import { EditableProfile } from "@/components/crm/EditableProfile";
@@ -136,6 +138,7 @@ export function RecordView({ record: r, annotation, canWrite = false }: { record
   const [emailOpen, setEmailOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
+  const [scheduledMsg, setScheduledMsg] = useState<string | null>(null);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [archiving, setArchiving] = useState(false);
@@ -163,6 +166,16 @@ export function RecordView({ record: r, annotation, canWrite = false }: { record
       setArchiving(false);
       await confirmDialog({ message: err instanceof Error ? err.message : "Could not archive.", confirmLabel: "OK" });
     }
+  }
+
+  /** Schedule send: the same Gmail request, sent at that time; listed on Sales › Scheduled emails. */
+  async function scheduleEmail(draft: ComposeDraft, sendAt: string): Promise<string | null> {
+    if (!draft.to.trim() || !draft.subject.trim() || !draft.body.trim()) return "Add a recipient, a subject and a message.";
+    const res = await postScheduled("/api/integrations/google/gmail/send", { to: draft.to.trim(), subject: draft.subject.trim(), body: draft.body, html: draft.html, attachments: draft.attachments }, sendAt);
+    if ("error" in res) return res.error;
+    setEmailOpen(false);
+    setScheduledMsg(`Email scheduled for ${formatSendAt(res.sendAt)}. Change or cancel it on Sales › Scheduled emails.`);
+    return null;
   }
 
   async function sendEmail(draft: ComposeDraft) {
@@ -228,6 +241,8 @@ export function RecordView({ record: r, annotation, canWrite = false }: { record
         </div>
       </div>
 
+      {scheduledMsg ? <p className="mt-3 rounded-lg border border-[#B5D4F4] bg-[#E6F1FB] px-3 py-2 text-sm text-[#0C447C]">{scheduledMsg}</p> : null}
+
       {editOpen && <ProfileEditModal externalId={r.externalId} contactName={r.name} onClose={() => setEditOpen(false)} />}
 
       {emailOpen && (
@@ -238,6 +253,7 @@ export function RecordView({ record: r, annotation, canWrite = false }: { record
           error={emailError}
           prefill={{ to: d.email ? [d.email] : [], cc: [], subject: "", body: "", mode: "new" }}
           onSend={sendEmail}
+          onSchedule={scheduleEmail}
           onClose={() => setEmailOpen(false)}
         />
       )}

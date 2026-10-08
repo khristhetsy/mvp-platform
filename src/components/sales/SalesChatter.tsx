@@ -10,6 +10,8 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { postScheduled, ScheduleSendMenu } from "@/components/email/ScheduleSend";
+import { formatSendAt } from "@/lib/scheduled-emails/time";
 
 type Activity = {
   id: string; kind: string; summary: string; actor_name: string | null; created_at: string;
@@ -246,6 +248,18 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
     finally { setBusy(false); }
   }
 
+  /** Schedule send: the same send, made at that time; listed on Sales › Scheduled emails. */
+  async function scheduleMessage(sendAt: string): Promise<string | null> {
+    if (!contactEmail) return "This contact has no email.";
+    if (!subject.trim() || !body.trim()) return "Add a subject and message.";
+    if (via === "gmail" && senders && !senders.gmail.canSend) return "Gmail isn't ready. Connect Google, or send via iCapOS.";
+    const r = await postScheduled("/api/sales/chatter/send", { via, to: contactEmail, toName: contactName ?? null, cc: cc.trim() || null, subject: subject.trim(), body: body.trim() }, sendAt);
+    if ("error" in r) return r.error;
+    setSubject(""); setBody(""); setCc(""); setShowCc(false);
+    flash("ok", `Scheduled for ${formatSendAt(r.sendAt)} via ${via === "icapos" ? "iCapOS" : "Gmail"}. Change or cancel it on Sales › Scheduled emails.`);
+    return null;
+  }
+
   async function logNote() {
     if (!note.trim()) return;
     setBusy(true);
@@ -344,7 +358,11 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
             )}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{via === "icapos" ? "Sent by iCapOS with your saved signature. Logged to the timeline." : "Sent from your Gmail and shown in its Sent folder. Logged to the timeline."}</span>
-              <button type="button" onClick={sendMessage} disabled={busy || !contactEmail} style={{ ...primary, opacity: busy || !contactEmail ? 0.5 : 1 }}>{via === "icapos" ? "Send via iCapOS" : "Send via Gmail"}</button>
+              <span style={{ display: "inline-flex" }}>
+                <button type="button" onClick={sendMessage} disabled={busy || !contactEmail} style={{ ...primary, borderRadius: "8px 0 0 8px", opacity: busy || !contactEmail ? 0.5 : 1 }}>{via === "icapos" ? "Send via iCapOS" : "Send via Gmail"}</button>
+                <ScheduleSendMenu placement="above" disabled={busy || !contactEmail} onSchedule={scheduleMessage}
+                  chevronStyle={{ ...primary, borderRadius: "0 8px 8px 0", borderLeft: "0.5px solid rgba(255,255,255,.45)", padding: "8px 8px", display: "inline-flex", alignItems: "center", opacity: busy || !contactEmail ? 0.5 : 1 }} />
+              </span>
             </div>
           </>
         )}

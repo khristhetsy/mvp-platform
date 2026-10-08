@@ -15,6 +15,7 @@ import { alsoMatched, createActivity, db, entrepreneurProfile, getMatch, getProj
 import { sendRecordMessage } from "@/lib/ir/messages";
 import { investorHasEmail, onePagerFor, sendInvestorEmail } from "@/lib/ir/send-email";
 import { INTRO_SUBJECT, IR_STAGES, TERM_SHEET_SENT_SUBJECT } from "@/lib/ir/types";
+import { scheduleAtFrom, scheduleSend } from "@/lib/scheduled-emails/schedule";
 
 export const dynamic = "force-dynamic";
 
@@ -73,11 +74,16 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const me = await irStaff();
   if (!me) return forbidden();
   const { id } = await ctx.params;
-  const parsed = postSchema.safeParse(await req.json().catch(() => ({})));
+  const raw: unknown = await req.json().catch(() => ({}));
+  const parsed = postSchema.safeParse(raw);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid request." }, { status: 400 });
   try {
     const match = await getMatch(id);
     if (!match) return NextResponse.json({ error: "Match not found." }, { status: 404 });
+    if (parsed.data.action === "send_email" && scheduleAtFrom(raw)) {
+      // Schedule send: stored now; the email, the activity and the stage move all happen at that time.
+      return scheduleSend({ kind: "ir_match_email", userId: me.id, raw, params: { id }, toLabel: match.investor_name ?? match.investor_firm ?? "Investor", subject: parsed.data.subject, contextKey: id });
+    }
     const project = await getProject(match.project_id);
     if (parsed.data.action === "intro_sent") {
       const acts = await listActivities({ matchId: id });

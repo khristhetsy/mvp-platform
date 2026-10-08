@@ -8,6 +8,8 @@ import { SalesContactsClient } from "@/app/admin/sales/contacts/SalesContactsCli
 import { confirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmailBody } from "./EmailBody";
 import { ComposeModal } from "./ComposeModal";
+import { postScheduled, ScheduleSendMenu } from "./ScheduleSend";
+import { formatSendAt } from "@/lib/scheduled-emails/time";
 import type { AutosaveResult } from "./useComposeAutosave";
 import { SenderHeader } from "./SenderHeader";
 import { ListRowsSkeleton } from "@/components/ui/Skeleton";
@@ -407,6 +409,41 @@ export function GmailInbox() {
     }
   }, [composeContext, folder, load, openThread, closeCompose, deleteDraftById]);
 
+  // Schedule send (staff, on admin pages): the same request, sent at that time
+  // by the scheduled email runner. Listed on Sales › Scheduled emails.
+  const canSchedule = pathname?.startsWith("/admin") ?? false;
+  const scheduledNotice = (sendAt: string) => `Scheduled for ${formatSendAt(sendAt)}. Change or cancel it on Sales › Scheduled emails.`;
+
+  const onScheduleCompose = useCallback(async (draft: ComposeDraft, sendAt: string): Promise<string | null> => {
+    const inThread = (composeContext.mode === "reply" || composeContext.mode === "replyAll") && composeContext.threadId;
+    let r;
+    if (inThread) {
+      if (!draft.body.trim()) return "Message is required.";
+      r = await postScheduled(`/api/integrations/google/gmail/threads/${composeContext.threadId}/reply`, { body: draft.body, html: draft.html, toLabel: draft.to.trim(), subject: draft.subject.trim() || "Reply" }, sendAt);
+    } else {
+      const hasRecipient = draft.to.trim() || draft.cc?.trim() || draft.bcc?.trim();
+      if (!hasRecipient || !draft.subject.trim() || !draft.body.trim()) return "A recipient (To, Cc, or Bcc), a subject, and a message are required.";
+      r = await postScheduled("/api/integrations/google/gmail/send", { to: draft.to.trim() || undefined, cc: draft.cc?.trim() || undefined, bcc: draft.bcc?.trim() || undefined, subject: draft.subject.trim(), body: draft.body, html: draft.html, attachments: draft.attachments }, sendAt);
+    }
+    if ("error" in r) return r.error;
+    if (draftIdRef.current) { void deleteDraftById(draftIdRef.current); draftIdRef.current = null; }
+    clearComposeFallback();
+    setLeaveToast(null);
+    closeCompose();
+    setNotice(scheduledNotice(r.sendAt));
+    return null;
+  }, [composeContext, closeCompose, deleteDraftById]);
+
+  const scheduleQuickReply = useCallback(async (sendAt: string): Promise<string | null> => {
+    if (!thread || !replyText.trim()) return "Message is required.";
+    const last = thread.messages[thread.messages.length - 1];
+    const r = await postScheduled(`/api/integrations/google/gmail/threads/${thread.id}/reply`, { body: replyText, toLabel: last ? last.from : "", subject: thread.subject ? `Re: ${thread.subject}` : "Reply" }, sendAt);
+    if ("error" in r) return r.error;
+    setReplyText("");
+    setNotice(scheduledNotice(r.sendAt));
+    return null;
+  }, [thread, replyText]);
+
   // Reply / Reply all / Forward → wide modal (replies route in-thread).
   const recipientsOf = useCallback((): string[] => {
     if (!thread) return [];
@@ -559,7 +596,13 @@ export function GmailInbox() {
                 </div>
                 <textarea value={replyText} onChange={(e) => setReplyText(e.target.value)} rows={3} placeholder={tI18n("quick_reply")} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none" />
                 <div className="mt-2 flex justify-end">
-                  <button type="button" onClick={() => void sendReply()} disabled={replying || !replyText.trim()} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50">{replying ? <Loader2 className="h-4 w-4 animate-spin" /> : <CornerUpLeft className="h-4 w-4" />} {replying ? "Sending…" : "Reply"}</button>
+                  <span className="inline-flex">
+                    <button type="button" onClick={() => void sendReply()} disabled={replying || !replyText.trim()} className={`inline-flex items-center gap-1.5 bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50 ${canSchedule ? "rounded-l-lg" : "rounded-lg"}`}>{replying ? <Loader2 className="h-4 w-4 animate-spin" /> : <CornerUpLeft className="h-4 w-4" />} {replying ? "Sending…" : "Reply"}</button>
+                    {canSchedule ? (
+                      <ScheduleSendMenu disabled={replying || !replyText.trim()} title="Schedule reply" onSchedule={scheduleQuickReply}
+                        chevronClassName="inline-flex h-full items-center rounded-r-lg border-l border-slate-600 bg-slate-900 px-2 text-white hover:bg-slate-800 disabled:opacity-50" />
+                    ) : null}
+                  </span>
                 </div>
               </div>
             </div>
@@ -654,6 +697,7 @@ export function GmailInbox() {
         sending={sending}
         error={composeOpen ? error : null}
         onSend={(d) => void onSend(d)}
+        onSchedule={canSchedule ? onScheduleCompose : undefined}
         onClose={handleComposeClose}
         onDiscard={draftAutosaveEnabled ? (d) => void discardCompose(d) : undefined}
         autosaveSave={draftAutosaveEnabled ? saveDraftNow : undefined}

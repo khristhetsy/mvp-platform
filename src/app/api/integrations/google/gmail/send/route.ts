@@ -7,6 +7,7 @@ import { getGoogleConnectionStatus } from "@/lib/integrations/connected-accounts
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { logOutboundEmailActivity } from "@/lib/sales/activity";
+import { scheduleAtFrom, scheduleSend } from "@/lib/scheduled-emails/schedule";
 
 const attachmentSchema = z.object({
   name: z.string().max(200),
@@ -80,6 +81,11 @@ export async function POST(request: Request) {
   // Any of To / Cc / Bcc is enough — a Bcc-only blast is valid.
   if (toList.length + ccList.length + bccList.length === 0) {
     return NextResponse.json({ error: "At least one recipient (To, Cc, or Bcc) is required." }, { status: 400 });
+  }
+
+  if (scheduleAtFrom(body)) {
+    // Schedule send: stored now, sent through this route at that time (scheduled-emails/runner).
+    return scheduleSend({ kind: "gmail_send", userId: user.id, raw: body, toLabel: [...toList, ...ccList, ...bccList].join(", "), subject: parsed.data.subject });
   }
 
   const result = await sendViaGmail({
