@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { postScheduled, ScheduleSendMenu } from "@/components/email/ScheduleSend";
 import { formatSendAt } from "@/lib/scheduled-emails/time";
+import { TaskEditRow } from "./TaskEditRow";
 
 type Activity = {
   id: string; kind: string; summary: string; actor_name: string | null; created_at: string;
@@ -28,7 +29,7 @@ type Undo =
   | { type: "delete"; id: string; label: string; left: number }
   | { type: "edit"; id: string; prevText: string; prevEditedAt: string | null; left: number };
 const UNDO_SECONDS = 10;
-type Task = { id: string; title: string; task_type: string; due_date: string | null; status: string; assignee_name: string | null };
+type Task = { id: string; title: string; task_type: string; due_date: string | null; status: string; assignee_name: string | null; assignee_id?: string | null };
 type Staff = { id: string; name: string };
 type Tab = "message" | "note" | "activity";
 
@@ -82,6 +83,7 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
   const [tab, setTab] = useState<Tab>("note");
   const [activity, setActivity] = useState<Activity[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [editTaskId, setEditTaskId] = useState<string | null>(null);
   const [odooTarget, setOdooTarget] = useState<OdooTarget>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -407,6 +409,9 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
           <div style={{ fontSize: 10.5, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>Planned activities</div>
           {planned.map((t) => {
             const d = dueLabel(t.due_date);
+            if (editTaskId === t.id) {
+              return <TaskEditRow key={t.id} task={t} staff={staff} taskTypes={taskTypes} onCancel={() => setEditTaskId(null)} onSaved={async () => { setEditTaskId(null); flash("ok", "Activity updated."); await load(); }} />;
+            }
             return (
               <div key={t.id} style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 8 }}>
                 <div style={{ width: 24, height: 24, borderRadius: "50%", background: d.overdue ? "#FCEBEB" : "#FAEEDA", color: d.overdue ? "#A32D2D" : "#854F0B", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><i className="ti ti-clock" aria-hidden="true" /></div>
@@ -414,6 +419,8 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
                   <div style={{ fontSize: 12.5, color: "var(--foreground)" }}>{t.title}</div>
                   <div style={{ fontSize: 11, color: d.overdue ? "#A32D2D" : "var(--muted-foreground)" }}>{t.task_type} · {d.text}{t.assignee_name ? ` · ${t.assignee_name}` : ""}</div>
                 </div>
+                {/* Odoo activities can only be completed here, not edited. */}
+                {!t.id.startsWith("odoo:") && <button type="button" onClick={() => setEditTaskId(t.id)} disabled={busy} style={{ fontSize: 11, color: "#185FA5", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-pencil" aria-hidden="true" /> Edit</button>}
                 <button type="button" onClick={() => taskDone(t.id)} disabled={busy} style={{ fontSize: 11, color: "#0F6E56", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /> Done</button>
               </div>
             );
