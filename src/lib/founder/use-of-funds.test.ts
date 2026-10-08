@@ -64,3 +64,23 @@ describe("what is left over", () => {
     expect(unallocated([{ label: "a", percent: 60 }, { label: "b", percent: 55 }])).toBe(0);
   });
 });
+
+describe("the founder's text under the bar", () => {
+  it("keeps every line, numbers the items and turns ** into bold", async () => {
+    const { fundsTextLines } = await import("@/lib/founder/use-of-funds");
+    const lines = fundsTextLines(`${REAL}\n\nPrimary milestone: reaching [$100K ARR].`);
+    expect(lines.map((l) => l.kind)).toEqual(["para", "item", "item", "item", "para"]);
+    expect(lines[0].parts).toEqual([{ text: "$500,000 will be deployed over [12–18 months] to accelerate growth:", bold: false }]);
+    expect(lines[1].marker).toBe("1.");
+    expect(lines[1].parts[0]).toEqual({ text: "Sales & marketing", bold: true });
+    expect(lines[1].parts.map((p) => p.text).join("")).toBe("Sales & marketing (~45%) — hire [first AE / growth lead], build demand generation");
+    expect(lines[4].parts.map((p) => p.text).join("")).toBe("Primary milestone: reaching [$100K ARR].");
+  });
+
+  it("drops a stray ** instead of printing asterisks, and reads - bullets", async () => {
+    const { fundsTextLines } = await import("@/lib/founder/use-of-funds");
+    expect(fundsTextLines("**Hiring 60%")[0].parts).toEqual([{ text: "Hiring 60%", bold: false }]);
+    expect(fundsTextLines("- Marketing 40%")[0]).toEqual({ kind: "bullet", marker: null, parts: [{ text: "Marketing 40%", bold: false }] });
+    expect(fundsTextLines("  \n ")).toEqual([]);
+  });
+});

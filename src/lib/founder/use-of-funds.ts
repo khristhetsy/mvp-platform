@@ -68,3 +68,55 @@ export function unallocated(slices: FundsSlice[]): number {
   const total = slices.reduce((s, x) => s + x.percent, 0);
   return Math.max(0, Math.round(100 - total));
 }
+
+/** One run of text in a use-of-funds line; `bold` for words the founder wrapped in **. */
+export type FundsTextPart = { text: string; bold: boolean };
+
+/** One line of the founder's own text, as the one-pager shows it under the bar. */
+export type FundsTextLine = {
+  kind: "item" | "bullet" | "para";
+  /** "1." for a numbered item, null otherwise. */
+  marker: string | null;
+  parts: FundsTextPart[];
+};
+
+function boldParts(line: string): FundsTextPart[] {
+  const parts: FundsTextPart[] = [];
+  let last = 0;
+  for (const m of line.matchAll(/\*\*(.+?)\*\*/g)) {
+    if (m.index > last) parts.push({ text: line.slice(last, m.index), bold: false });
+    parts.push({ text: m[1], bold: true });
+    last = m.index + m[0].length;
+  }
+  if (last < line.length) parts.push({ text: line.slice(last), bold: false });
+  // A lone ** with no partner is markdown noise, never shown as asterisks.
+  return parts
+    .map((p) => ({ ...p, text: p.text.replace(/\*\*/g, "") }))
+    .filter((p) => p.text.length > 0);
+}
+
+/**
+ * The founder's use-of-funds text, line by line, for display under the bar:
+ * every word they wrote is kept; only markdown marks become formatting
+ * (**bold**, "1." numbered items, "-" bullets) and blank lines are dropped.
+ */
+export function fundsTextLines(text: string | null | undefined): FundsTextLine[] {
+  if (!text?.trim()) return [];
+  const out: FundsTextLine[] = [];
+  for (const raw of text.split("\n")) {
+    const line = raw.trim();
+    if (!line) continue;
+    const numbered = /^(\d{1,2})[.)]\s+(.*)$/.exec(line);
+    if (numbered) {
+      out.push({ kind: "item", marker: `${numbered[1]}.`, parts: boldParts(numbered[2]) });
+      continue;
+    }
+    const bullet = /^[-•]\s+(.*)$/.exec(line) ?? /^\*\s+(.*)$/.exec(line);
+    if (bullet) {
+      out.push({ kind: "bullet", marker: null, parts: boldParts(bullet[1]) });
+      continue;
+    }
+    out.push({ kind: "para", marker: null, parts: boldParts(line) });
+  }
+  return out;
+}

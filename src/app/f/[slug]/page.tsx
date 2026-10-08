@@ -7,6 +7,7 @@ import { loadInvestableScore } from "@/lib/founder/investable-score";
 import { InvestableScoreBadge } from "@/components/founder/InvestableScoreBadge";
 import { parseUseOfFunds } from "@/lib/founder/use-of-funds";
 import { UseOfCapitalBar } from "@/components/founder/UseOfCapitalBar";
+import { UseOfFundsText } from "@/components/founder/UseOfFundsText";
 
 export const dynamic = "force-dynamic";
 
@@ -305,7 +306,12 @@ export default async function InvestorOnePagerPage({
             </svg>
           }>
             {parseUseOfFunds(company.use_of_funds)
-              ? <UseOfCapitalBar slices={parseUseOfFunds(company.use_of_funds) ?? []} />
+              ? (
+                <>
+                  <UseOfCapitalBar slices={parseUseOfFunds(company.use_of_funds) ?? []} />
+                  <UseOfFundsText text={company.use_of_funds} />
+                </>
+              )
               : <FormattedText text={company.use_of_funds} />}
             <p style={{ fontSize: 11, color: "#94a3b8", margin: "12px 0 0" }}>
               Illustrative allocation, not a commitment.
