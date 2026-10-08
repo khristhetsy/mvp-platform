@@ -12,6 +12,10 @@ import { getStageGateStatus } from "@/lib/founder/stage-gate-status";
 import { crrFor } from "@/lib/crr/crr-for";
 import type { CrrSummary } from "@/lib/crr/blocker";
 import { StageGuideView } from "@/components/founder/StageGuide";
+import { loadOutreachStatus } from "@/lib/founder/outreach-status";
+import { applyStepMemory } from "@/lib/founder/stage-step-memory";
+import { evaluateFounderJourney } from "@/lib/founder-journey/evaluate";
+import { STAGE_SLUGS } from "@/lib/founder/stage-guides";
 
 export const dynamic = "force-dynamic";
 
@@ -61,10 +65,23 @@ export default async function FounderStageGuidePage({
       }
     : null;
 
-  const [progress, gate] = await Promise.all([
+  // Outreach status drives the Stage 3 checklist and the manual outreach banner.
+  const outreach = guide.slug === "marketing" ? await loadOutreachStatus(company.id) : null;
+
+  const [rawProgress, gate, journey] = await Promise.all([
     computeStageProgress(supabase, company, stage, profile.id),
-    getStageGateStatus(supabase, profile.id, guide.slug as StageSlug, crrSummary).catch(() => undefined),
+    getStageGateStatus(supabase, profile.id, guide.slug as StageSlug, crrSummary, outreach).catch(() => undefined),
+    evaluateFounderJourney(supabase, profile.id).catch(() => null),
   ]);
+  // Completed steps remember when they were done; no-signal steps count once opened.
+  const progress = await applyStepMemory(company.id, guide, rawProgress);
+
+  // The manual outreach banner shows only while the founder is in Stage 3 and
+  // has not sent a manual email yet.
+  const guideIdx = STAGE_SLUGS.indexOf(guide.slug as StageSlug);
+  const inThisStage = journey ? journey.stageIndex === guideIdx : false;
+  const showManualOutreachBanner = guide.slug === "marketing" && inThisStage && outreach !== null && !outreach.manual.started;
+  const nextStageSlug = STAGE_SLUGS[guideIdx + 1] ?? null;
 
   return (
     <FounderAppShell
@@ -72,7 +89,14 @@ export default async function FounderStageGuidePage({
       profileSubtitle={company?.company_name ?? "Your company"}
     >
       <WorkspacePageContainer>
-        <StageGuideView guide={guide} progress={progress} gate={gate} />
+        <StageGuideView
+          guide={guide}
+          progress={progress}
+          gate={gate}
+          stageNumber={guideIdx + 1}
+          nextStageSlug={nextStageSlug}
+          showManualOutreachBanner={showManualOutreachBanner}
+        />
       </WorkspacePageContainer>
     </FounderAppShell>
   );

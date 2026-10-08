@@ -1,6 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { AlertCircle, Bot, Check, ChevronDown, ChevronUp, Mail } from "lucide-react";
+import { ManualOutreachGuide } from "@/components/founder/ManualOutreachGuide";
+import {
+  EMPTY_OUTREACH_STATUS,
+  OUTREACH_MODE_COOKIE,
+  automatedStatusLine,
+  manualStatusLine,
+  type OutreachStatus,
+} from "@/lib/founder/outreach-status-lines";
 
 /**
  * Deploy step-menu workflow (founder-facing).
@@ -16,8 +25,8 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
  * Score — see the gate note in the Automated tab.
  */
 
-type Step = "profile" | "outreach" | "analytics" | "settings";
-type OutreachTab = "automated" | "manual";
+export type Step = "profile" | "outreach" | "analytics" | "settings";
+export type OutreachTab = "automated" | "manual";
 type Tone = "good" | "warn" | "info";
 
 export type DeployInsight = {
@@ -33,6 +42,16 @@ export type DeployAnalytics = {
   manual: { label: string; value: number }[];
   insights: DeployInsight[];
 };
+
+
+/** Remember the last Outreach mode so the next visit opens on it. */
+function rememberOutreachMode(mode: OutreachTab) {
+  try {
+    document.cookie = `${OUTREACH_MODE_COOKIE}=${mode}; path=/founder; max-age=31536000; samesite=lax`;
+  } catch {
+    /* cookies unavailable */
+  }
+}
 
 const STEPS: { key: Step; n: number; label: string }[] = [
   { key: "profile", n: 1, label: "Public Profile" },
@@ -328,6 +347,10 @@ export function DeployWorkflow({
   manual,
   analytics,
   outreachAnalytics,
+  outreachStatus = EMPTY_OUTREACH_STATUS,
+  initialStep,
+  initialMode,
+  rememberedMode,
 }: {
   companyName: string;
   investableScore: number;
@@ -338,25 +361,77 @@ export function DeployWorkflow({
   analytics: DeployAnalytics;
   /** The full analytics view — funnel, segments, follow-up debt, messages. */
   outreachAnalytics?: ReactNode;
+  /** Automated and manual status: drives the Outreach dropdown and the manual nudge. */
+  outreachStatus?: OutreachStatus;
+  /** From ?step= on the URL. */
+  initialStep?: Step | null;
+  /** From ?mode= on the URL. */
+  initialMode?: OutreachTab | null;
+  /** Last mode the founder picked (cookie). */
+  rememberedMode?: OutreachTab | null;
 }) {
-  const [step, setStep] = useState<Step>("profile");
-  const [otab, setOtab] = useState<OutreachTab>("automated");
+  const manualStarted = outreachStatus.manual.started;
+  // Deep links (?step=outreach&mode=manual) win. Otherwise Outreach opens on
+  // Manual while it hasn't been started, then on the last mode used.
+  const [step, setStep] = useState<Step>(initialStep ?? (initialMode ? "outreach" : "profile"));
+  const [otab, setOtab] = useState<OutreachTab>(
+    initialMode ?? (!manualStarted ? "manual" : rememberedMode ?? "automated"),
+  );
+  const [menuOpen, setMenuOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close the dropdown on an outside tap.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onDown = (e: MouseEvent | TouchEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("touchstart", onDown);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("touchstart", onDown);
+    };
+  }, [menuOpen]);
+
+  const chooseMode = (mode: OutreachTab) => {
+    setOtab(mode);
+    setStep("outreach");
+    setMenuOpen(false);
+    rememberOutreachMode(mode);
+  };
+
+  // Dot on the Outreach tab: green when the shown mode is going, amber when it isn't.
+  const modeGoing = otab === "manual" ? manualStarted : outreachStatus.automated.state === "running";
+  const automatedLine = automatedStatusLine(outreachStatus, { requiredNote: true });
+  const manualLine = manualStatusLine(outreachStatus, { requiredNote: true });
 
   const scoreReady = investableScore >= outreachThreshold;
 
   return (
     <div className="pb-24">
       {/* Step menu */}
-      <div className="sticky top-0 z-10 -mx-2 mb-6 border-b border-slate-200 bg-white/90 px-2 backdrop-blur">
+      <div ref={menuRef} className="sticky top-0 z-10 -mx-2 mb-6 border-b border-slate-200 bg-white/90 px-2 backdrop-blur">
         <nav className="flex gap-1 overflow-x-auto">
           {STEPS.map((s) => {
             const active = s.key === step;
+            const isOutreach = s.key === "outreach";
             return (
               <button
                 key={s.key}
                 type="button"
-                onClick={() => setStep(s.key)}
+                onClick={() => {
+                  if (isOutreach) {
+                    setStep("outreach");
+                    setMenuOpen((v) => !v);
+                  } else {
+                    setStep(s.key);
+                    setMenuOpen(false);
+                  }
+                }}
+                aria-haspopup={isOutreach ? "menu" : undefined}
+                aria-expanded={isOutreach ? menuOpen : undefined}
                 className={`relative flex items-center gap-2 whitespace-nowrap px-3.5 py-3 text-sm font-semibold transition ${
                   active ? "text-indigo-600" : "text-slate-500 hover:text-slate-800"
                 }`}
@@ -368,12 +443,77 @@ export function DeployWorkflow({
                 >
                   {s.n}
                 </span>
-                {s.label}
+                {isOutreach ? (
+                  <>
+                    {`Outreach: ${otab === "manual" ? "Manual" : "Automated"}`}
+                    <span
+                      className={`h-2 w-2 rounded-full ${modeGoing ? "bg-emerald-500" : "bg-amber-500"}`}
+                      aria-hidden="true"
+                    />
+                    {menuOpen ? (
+                      <ChevronUp className="h-4 w-4" aria-hidden="true" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" aria-hidden="true" />
+                    )}
+                  </>
+                ) : (
+                  s.label
+                )}
                 {active ? <span className="absolute inset-x-2 -bottom-px h-0.5 rounded bg-indigo-600" /> : null}
               </button>
             );
           })}
         </nav>
+
+        {/* Outreach dropdown: the two modes with their live status. */}
+        {menuOpen ? (
+          <div
+            role="menu"
+            className="absolute left-2 right-2 top-full z-30 mt-1 max-w-sm overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg sm:left-24"
+          >
+            {(
+              [
+                {
+                  mode: "automated" as const,
+                  label: "Automated",
+                  line: automatedLine,
+                  going: outreachStatus.automated.state === "running",
+                  Icon: Bot,
+                },
+                { mode: "manual" as const, label: "Manual", line: manualLine, going: manualStarted, Icon: Mail },
+              ]
+            ).map(({ mode, label, line, going, Icon }) => {
+              const selected = otab === mode;
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={selected}
+                  onClick={() => chooseMode(mode)}
+                  className={`flex w-full items-center gap-3 border-t border-slate-100 px-3 py-2.5 text-left first:border-t-0 ${
+                    selected ? "bg-indigo-50" : "hover:bg-slate-50"
+                  }`}
+                >
+                  <span
+                    className={`flex h-8 w-8 flex-none items-center justify-center rounded-lg ${
+                      going ? "bg-emerald-50 text-emerald-600" : selected ? "bg-white text-indigo-600" : "bg-slate-100 text-slate-500"
+                    }`}
+                  >
+                    <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className={`block text-sm font-semibold ${selected ? "text-indigo-700" : "text-slate-900"}`}>
+                      {label}
+                    </span>
+                    <span className={`block text-xs ${going ? "text-emerald-700" : "text-amber-700"}`}>{line}</span>
+                  </span>
+                  {selected ? <Check className="h-[18px] w-[18px] flex-none text-indigo-600" aria-hidden="true" /> : null}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
       </div>
 
       {/* ---------- STEP 1 · PUBLIC PROFILE ---------- */}
@@ -382,20 +522,24 @@ export function DeployWorkflow({
       {/* ---------- STEP 2 · OUTREACH ---------- */}
       {step === "outreach" ? (
         <div className="space-y-5">
-          <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 p-1">
-            {(["automated", "manual"] as OutreachTab[]).map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => setOtab(tab)}
-                className={`rounded-full px-4 py-1.5 text-sm font-medium capitalize transition ${
-                  otab === tab ? "bg-white text-indigo-700 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
+          {/* Manual not started: the Outreach step stays open until the first manual email. */}
+          {!manualStarted ? (
+            <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+              <AlertCircle className="h-5 w-5 flex-none text-amber-600" aria-hidden="true" />
+              <p className="flex-1 text-sm text-amber-900">
+                Manual outreach not started. Your Outreach step isn&apos;t complete until you send your first manual email.
+              </p>
+              {otab !== "manual" ? (
+                <button
+                  type="button"
+                  onClick={() => chooseMode("manual")}
+                  className="flex-none text-sm font-semibold text-amber-900 hover:underline"
+                >
+                  Start
+                </button>
+              ) : null}
+            </div>
+          ) : null}
 
           {otab === "automated" ? (
             <div className="space-y-4">
@@ -428,7 +572,10 @@ export function DeployWorkflow({
               {automated}
             </div>
           ) : (
-            <div className="space-y-4">{manual}</div>
+            <div className="space-y-4">
+              <ManualOutreachGuide key={manualStarted ? "started" : "new"} defaultOpen={!manualStarted} />
+              {manual}
+            </div>
           )}
         </div>
       ) : null}

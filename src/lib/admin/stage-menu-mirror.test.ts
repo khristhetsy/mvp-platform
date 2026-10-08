@@ -36,9 +36,9 @@ describe("Marketing menu — the CRR gate", () => {
     expect(item(m, "Capital Readiness Rating")?.status).toBe("attention");
   });
 
-  it("holds Automated outreach — it sends from iCapOS infrastructure", () => {
+  it("holds Outreach — automated sends go out from iCapOS infrastructure", () => {
     const m = getStageMirror(journey("deploy"), "deploy");
-    expect(item(m, "Automated outreach")?.status).toBe("attention");
+    expect(item(m, "Outreach")?.status).toBe("attention");
   });
 
   it("leaves matches browsable — it is the introduction request that is held", () => {
@@ -58,9 +58,9 @@ describe("Marketing menu — the CRR gate", () => {
     const m = getStageMirror(journey("deploy"), "deploy");
     const blocking = m.items.filter((i) => i.status === "attention" || i.status === "missing");
     expect(blocking.map((i) => i.label).sort()).toEqual([
-      "Automated outreach",
       "Capital Readiness Rating",
       "Investor CRM",
+      "Outreach",
     ]);
   });
 
@@ -74,7 +74,7 @@ describe("Marketing menu — the CRR gate", () => {
 
   it("clears every CRR-gated row once the engine unlocks outreach", () => {
     const m = getStageMirror(journey("deploy", { crrQualified: true }), "deploy");
-    for (const label of ["Capital Readiness Rating", "Automated outreach", "Investor matches", "Matching Center"]) {
+    for (const label of ["Capital Readiness Rating", "Outreach", "Investor matches", "Matching Center"]) {
       expect(item(m, label)?.status, label).toBe("done");
     }
   });

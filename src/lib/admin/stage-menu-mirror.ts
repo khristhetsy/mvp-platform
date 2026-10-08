@@ -80,7 +80,7 @@ const STAGE_MENU: Record<JourneyStage, MenuDef[]> = {
     // Sends into the iCapOS investor data from iCapOS infrastructure — hard gate.
     // The founder's own contacts (imported, added, introduced) — theirs outright.
     { label: "My contacts", href: "/founder/contacts" },
-    { label: "Automated outreach", href: "/founder/deploy", condition: "crrQualified" },
+    { label: "Outreach", href: "/founder/deploy", condition: "crrQualified" },
     { label: "Investor CRM", href: "/founder/investor-pipeline", condition: "hasInvestorInterest" },
     { label: "Present at event", href: "/founder/events/present" },
     { label: "Marketplace", href: "/founder/private-market" },

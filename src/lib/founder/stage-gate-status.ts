@@ -10,6 +10,7 @@ import { evaluateFounderJourney } from "@/lib/founder-journey/evaluate";
 import { STAGE_SLUGS, type StageSlug } from "@/lib/founder/stage-guides";
 import { requiredDocumentTypes } from "@/lib/documents/required-types";
 import { outreachBlocker, type CrrSummary } from "@/lib/crr/blocker";
+import type { OutreachStatus } from "@/lib/founder/outreach-status-lines";
 
 export type GateItemState = "done" | "active" | "todo";
 export type GateCta = { label: string; href: string };
@@ -166,6 +167,8 @@ export async function getStageGateStatus(
   guideSlug: StageSlug,
   /** The rating, so a cleared stage cannot claim more than it earned. */
   crr?: CrrSummary | null,
+  /** Automated and manual outreach status, for the Stage 3 checklist. */
+  outreach?: OutreachStatus | null,
 ): Promise<StageGate> {
   const state = await evaluateFounderJourney(supabase, profileId);
   const founderIdx = state.stageIndex;
@@ -246,19 +249,40 @@ export async function getStageGateStatus(
 
   if (guideSlug === "marketing") {
     const reached = c.hasDealRoom || c.hasInvestorInterest;
+    const items: GateItem[] = [
+      { label: "Preparation approved — your matched list is live", state: "done" },
+    ];
+    // Outreach completion: both modes. Shown on the checklist so a founder can
+    // see the manual half is still open; it does not change when the engine
+    // advances the stage (that stays deal room or logged interest).
+    if (outreach) {
+      items.push(
+        {
+          label: "Launch automated outreach",
+          detail: outreach.automated.launched ? undefined : "Starts once your rating clears the outreach gate.",
+          state: outreach.automated.launched ? "done" : "todo",
+          cta: { label: "Open automated outreach", href: "/founder/deploy?step=outreach&mode=automated" },
+        },
+        {
+          label: "Send your first manual outreach email",
+          detail: outreach.manual.started ? undefined : "Required. Email investors you already know from your contacts.",
+          state: outreach.manual.started ? "done" : "active",
+          cta: { label: "Start manual outreach", href: "/founder/deploy?step=outreach&mode=manual" },
+        },
+      );
+    }
+    items.push({
+      label: "Reach investors",
+      detail: "Open a data room or log your first investor interest to advance to Closing.",
+      state: reached ? "done" : "active",
+      cta: { label: "Open your data room", href: "/founder/deal-room" },
+    });
+    const active = items.find((i) => i.state === "active");
     return {
       ...base,
       headline: `Your path to ${nextStageName}`,
-      items: [
-        { label: "Preparation approved — your matched list is live", state: "done" },
-        {
-          label: "Reach investors",
-          detail: "Open a data room or log your first investor interest to advance to Closing.",
-          state: reached ? "done" : "active",
-          cta: { label: "Open your data room", href: "/founder/deal-room" },
-        },
-      ],
-      primaryCta: reached ? undefined : { label: "Open your data room", href: "/founder/deal-room" },
+      items,
+      primaryCta: active?.cta,
     };
   }
 
