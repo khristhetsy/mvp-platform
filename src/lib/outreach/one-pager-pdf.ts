@@ -6,7 +6,7 @@
 
 import PDFDocument from "pdfkit";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { parseUseOfFunds } from "@/lib/founder/use-of-funds";
+import { fundsTextLines, parseUseOfFunds } from "@/lib/founder/use-of-funds";
 
 export const ONE_PAGER_FIELDS =
   "company_name, industry, country, state, business_description, website, funding_amount, use_of_funds, revenue_stage, annual_revenue_size, key_highlights, slug, is_published";
@@ -136,6 +136,23 @@ export function renderOnePagerPdf(c: OnePagerCompany, opts: { onlineUrl?: string
             doc.font("Helvetica-Bold").fontSize(10).fillColor(NAVY).text(`${s.percent}%`, barX + barW + 8, y, { width: 40 });
             doc.y = y + 16;
           }
+          // The founder's full text under the bars, as on the online one pager.
+          doc.moveDown(0.4);
+          for (const line of fundsTextLines(c.use_of_funds)) {
+            const indent = line.kind === "para" ? 0 : 16;
+            const y = doc.y;
+            if (line.kind !== "para") {
+              doc.font("Helvetica").fontSize(10.5).fillColor(MUTED).text(line.kind === "item" ? (line.marker ?? "") : "•", left, y, { width: indent });
+            }
+            line.parts.forEach((p, i) => {
+              const opts = { width: width - indent, lineGap: 2, continued: i < line.parts.length - 1 };
+              doc.font(p.bold ? "Helvetica-Bold" : "Helvetica").fontSize(10.5).fillColor(INK);
+              if (i === 0) doc.text(safe(p.text), left + indent, y, opts);
+              else doc.text(safe(p.text), opts);
+            });
+            doc.moveDown(0.25);
+          }
+          doc.font("Helvetica").fontSize(10.5).fillColor(INK);
         } else {
           doc.text(safe(c.use_of_funds.trim()), left, doc.y, { width, lineGap: 2 });
         }
