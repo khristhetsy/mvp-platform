@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import type { Task, TaskStatus, TaskPriority } from "@/lib/tasks/types";
+import { ptDayDiff } from "@/lib/time/pt-day-diff";
 
 // ─── colour maps ──────────────────────────────────────────────────────────────
 const PRIORITY_MAP: Record<TaskPriority, { bg: string; color: string; dot: string }> = {
@@ -20,8 +21,9 @@ const STATUS_LABEL: Record<TaskStatus, string> = {
 
 function relativeDate(iso: string | null): string {
   if (!iso) return "";
-  const d = new Date(iso);
-  const diff = Math.round((d.getTime() - Date.now()) / 86400000);
+  // Calendar days in PT, not hours from now (see ptDayDiff).
+  const diff = ptDayDiff(iso);
+  if (diff === null) return "";
   if (diff === 0) return "Today";
   if (diff === 1) return "Tomorrow";
   if (diff === -1) return "Yesterday";
