@@ -39,6 +39,8 @@ export async function POST(req: Request): Promise<Response> {
     for (const docId of parsed.data.documentIds) {
       await writeAuditLog(actor.db, { userId: actor.userId, action: "contracts.sent", entityType: "contract_documents", entityId: docId, metadata: { packet_id: result.packetId, delivered: result.delivered, signature: parsed.data.signature !== false } });
     }
+    // The send went out: the saved, resumable send for this contact is done.
+    await actor.db.from("contract_send_drafts").delete().eq("contact_id", parsed.data.contactId);
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {
     if (err instanceof SendBlockedError) return bad(err.message, 409, err.details);

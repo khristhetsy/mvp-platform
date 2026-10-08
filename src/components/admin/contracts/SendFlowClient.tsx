@@ -4,9 +4,9 @@
 // Step 1 choose documents, Step 2 entity and editor, Step 3 cover email,
 // Step 4 sent documents and tracking.
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Copy, Pencil, Plus, Trash2 } from "lucide-react";
+import { Copy, FilePenLine, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import { applyEmailTokens, bestDraft, emailTokenValues, EMAIL_TOKENS_BASE, tokensIn, withTypedValues } from "@/lib/contracts/email-tokens";
 import { linkedFieldValues, linkedValue, openFields } from "@/lib/contracts/fields";
 import type { TemplateField } from "@/lib/contracts/types";
@@ -21,6 +21,17 @@ type Draft = { id: string; name: string; description: string | null; subject: st
 type OpenDoc = { id: string; templateId: string; name: string; kind: string };
 type ListRow = { id: string; status: string; template_id: string | null; locked: boolean; source?: string; title?: string | null; signature_request_id?: string | null };
 type Upload = { id: string; title: string; requestId: string | null };
+/** Cover email as it stands in Step 3; saved with the send draft. */
+type EmailState = { subject: string; body: string; attach: boolean; draftId: string | null; typed: Record<string, string> };
+/** The saved, resumable send for this contact (contract_send_drafts). */
+type SendDraft = { step: 1 | 2 | 3; term_sheet_id: string | null; extra_ids: string[]; upload_ids: string[]; unlinked: Record<string, string[]>; email: EmailState | null; updated_at: string };
+type Selection = { termSheet: string | null; extras: string[]; uploads: string[] };
+
+const SEND_AUTOSAVE_MS = 3000;
+/** Saved times show in Pacific time, like every time in iCapOS. */
+function fmtPt(iso: string): string {
+  return `${new Date(iso).toLocaleString("en-US", { timeZone: "America/Los_Angeles", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} PT`;
+}
 
 const TS_ORDER = ["convertible_note", "series_a", "safe"];
 
@@ -28,7 +39,7 @@ function fetchTemplates() {
   return api<{ templates: Template[]; renderConfigured: boolean; missingMasters?: number }>("/api/admin/sales/contracts/templates");
 }
 
-export function SendFlowClient({ contact, isAdmin, senderName }: { contact: Contact; isAdmin: boolean; senderName: string | null }) {
+export function SendFlowClient({ contact, isAdmin, senderName, autoResume = false }: { contact: Contact; isAdmin: boolean; senderName: string | null; autoResume?: boolean }) {
   const [templates, setTemplates] = useState<Template[] | null>(null);
   const [renderConfigured, setRenderConfigured] = useState(true);
   const [missingMasters, setMissingMasters] = useState(0);
@@ -53,6 +64,13 @@ export function SendFlowClient({ contact, isAdmin, senderName }: { contact: Cont
   const [history, setHistory] = useState<{ name: string; versions: { version: number; status: string; filename: string; created_at: string; author: string | null }[] } | null>(null);
   const editorRef = useRef<EditorHandle>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  // Save draft / Resume: the saved send offered on arrival, the latest cover email, and when it last saved.
+  const [savedSend, setSavedSend] = useState<SendDraft | null>(null);
+  const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [email, setEmail] = useState<EmailState | null>(null);
+  const autoResumed = useRef(false);
+  const [uploadsLoaded, setUploadsLoaded] = useState(false);
   const replaceTarget = useRef<string | null>(null);
 
   const applyTemplates = useCallback((r: Awaited<ReturnType<typeof fetchTemplates>>) => {
@@ -70,6 +88,17 @@ export function SendFlowClient({ contact, isAdmin, senderName }: { contact: Cont
     };
   }, [applyTemplates]);
 
+  // This contact's saved send, offered as Resume or Start over.
+  useEffect(() => {
+    let alive = true;
+    void api<{ draft: SendDraft | null }>(`/api/admin/sales/contracts/send-drafts?contactId=${contact.id}`).then((r) => {
+      if (alive && r.ok && r.data.draft) setSavedSend(r.data.draft);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [contact.id]);
+
   // This contact's uploaded contracts that are still drafts.
   useEffect(() => {
     let alive = true;
@@ -77,6 +106,7 @@ export function SendFlowClient({ contact, isAdmin, senderName }: { contact: Cont
       if (!alive) return;
       const list = (r.data.documents ?? []).filter((d) => d.source === "upload" && d.status === "draft" && !d.locked);
       setUploads(list.map((d) => ({ id: d.id, title: d.title ?? "Contract", requestId: d.signature_request_id ?? null })));
+      setUploadsLoaded(true);
       setChosenUploads((cur) => (cur.size ? cur : new Set(list.map((d) => d.id))));
     });
     return () => {
@@ -115,9 +145,9 @@ export function SendFlowClient({ contact, isAdmin, senderName }: { contact: Cont
   }
 
   /** Open editor: reuse this prospect's open drafts, otherwise duplicate the masters. */
-  async function openEditor() {
-    const chosen = [termSheet, ...extras].filter(Boolean) as string[];
-    const ups = uploads.filter((u) => chosenUploads.has(u.id));
+  async function openEditor(sel?: Selection) {
+    const chosen = (sel ? [sel.termSheet, ...sel.extras] : [termSheet, ...extras]).filter(Boolean) as string[];
+    const ups = uploads.filter((u) => (sel ? sel.uploads.includes(u.id) : chosenUploads.has(u.id)));
     if (!chosen.length && !ups.length) return setError("Choose at least one document.");
     setBusy(true);
     setError(null);
@@ -147,7 +177,50 @@ export function SendFlowClient({ contact, isAdmin, senderName }: { contact: Cont
     setActive(opened[0].id);
     setStep(2);
     setBusy(false);
+    return opened;
   }
+
+  /** Resume the saved send: same documents (their saved values), unlinked fields, cover email and step. */
+  async function resume() {
+    const d = savedSend;
+    if (!d || !templates || !uploadsLoaded) return;
+    const known = new Set(templates.map((t) => t.id));
+    const sel: Selection = {
+      termSheet: d.term_sheet_id && known.has(d.term_sheet_id) ? d.term_sheet_id : null,
+      extras: d.extra_ids.filter((id) => known.has(id)),
+      uploads: d.upload_ids.filter((id) => uploads.some((u) => u.id === id)),
+    };
+    setSavedSend(null);
+    if (!sel.termSheet && !sel.extras.length && !sel.uploads.length) return setError("The documents in the saved draft are no longer available. Choose documents to start again.");
+    setTermSheet(sel.termSheet);
+    setExtras(new Set(sel.extras));
+    setChosenUploads(new Set(sel.uploads));
+    setEmail(d.email);
+    const opened = await openEditor(sel);
+    if (!opened) return;
+    setUnlinked(d.unlinked ?? {});
+    setSavedAt(d.updated_at);
+    // Step 3 was reached after every document was reviewed; go straight back to the email.
+    if (d.step === 3) {
+      setReviewed(new Set(opened.map((x) => x.id)));
+      setStep(3);
+    }
+  }
+
+  async function startOver() {
+    setSavedSend(null);
+    await api(`/api/admin/sales/contracts/send-drafts?contactId=${contact.id}`, { method: "DELETE" });
+  }
+
+  // Opened from Contracts › Drafts (Resume): pick up the saved send as soon as the documents are known.
+  const autoResumeNow = useEffectEvent(() => {
+    void resume();
+  });
+  useEffect(() => {
+    if (!autoResume || autoResumed.current || !savedSend || !templates || !uploadsLoaded) return;
+    autoResumed.current = true;
+    autoResumeNow();
+  }, [autoResume, savedSend, templates, uploadsLoaded]);
 
   async function loadDoc(id: string): Promise<EditorData | null> {
     const r = await loadEditorData(id);
@@ -229,6 +302,58 @@ export function SendFlowClient({ contact, isAdmin, senderName }: { contact: Cont
     return { short: "reviewed", long: "reviewed", warn: false };
   };
 
+  // Save draft: what is open now, the step, unlinked fields and the cover email. Only once the editor is open.
+  const sendPayload = useMemo(() => {
+    if (step < 2 || !docs.length) return null;
+    return {
+      contactId: contact.id,
+      step,
+      termSheetId: docs.find((d) => d.kind === "term_sheet")?.templateId ?? null,
+      extraIds: docs.filter((d) => d.kind !== "term_sheet" && d.kind !== "upload").map((d) => d.templateId),
+      uploadIds: docs.filter((d) => d.kind === "upload").map((d) => d.id),
+      unlinked,
+      email,
+    };
+  }, [contact.id, step, docs, unlinked, email]);
+
+  const saveSend = useCallback(async () => {
+    if (!sendPayload) return;
+    const r = await api<{ updated_at: string }>("/api/admin/sales/contracts/send-drafts", { method: "PUT", body: JSON.stringify(sendPayload) });
+    if (!r.ok) return setSaveError(r.data.error ?? "Draft not saved. Check your connection.");
+    setSaveError(null);
+    setSavedAt(r.data.updated_at);
+  }, [sendPayload]);
+
+  // Autosave 3 seconds after the last change.
+  useEffect(() => {
+    if (!sendPayload) return;
+    const t = setTimeout(() => void saveSend(), SEND_AUTOSAVE_MS);
+    return () => clearTimeout(t);
+  }, [sendPayload, saveSend]);
+
+  // Also save when the page is hidden or closed.
+  const payloadRef = useRef(sendPayload);
+  useLayoutEffect(() => {
+    payloadRef.current = sendPayload;
+  }, [sendPayload]);
+  useEffect(() => {
+    const flush = () => {
+      if (!payloadRef.current) return;
+      void fetch("/api/admin/sales/contracts/send-drafts", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payloadRef.current), keepalive: true }).catch(() => undefined);
+    };
+    const onHide = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+    window.addEventListener("beforeunload", flush);
+    document.addEventListener("visibilitychange", onHide);
+    return () => {
+      window.removeEventListener("beforeunload", flush);
+      document.removeEventListener("visibilitychange", onHide);
+    };
+  }, []);
+
+  const onEmailChange = useCallback((e: EmailState) => setEmail(e), []);
+
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, fontSize: 12, color: MUTED, flexWrap: "wrap" }}>
@@ -239,6 +364,24 @@ export function SendFlowClient({ contact, isAdmin, senderName }: { contact: Cont
         <span style={{ background: "#e8f0fe", color: BLUE, fontSize: 11, padding: "2px 8px", borderRadius: 10 }}>SPV</span>
       </div>
       <h1 style={{ fontSize: 18, fontWeight: 600, color: NAVY, margin: "0 0 14px" }}>Send SPV contracts</h1>
+
+      {savedSend && step === 1 && !docs.length ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 12, padding: "12px 14px", marginBottom: 12 }}>
+          <FilePenLine size={20} color="#185FA5" aria-hidden="true" />
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#0C447C" }}>
+              Saved draft for {contact.name} · Step {savedSend.step}, {savedSend.step === 3 ? "cover email" : savedSend.step === 2 ? "editing documents" : "choosing documents"}
+            </div>
+            <div style={{ fontSize: 12, color: "#185FA5", marginTop: 2 }}>
+              {[savedSend.term_sheet_id, ...savedSend.extra_ids].map((id) => templates?.find((t) => t.id === id)?.name).filter(Boolean).concat(savedSend.upload_ids.map((id) => uploads.find((u) => u.id === id)?.title).filter(Boolean)).join(" · ") || "Documents"}
+              {" · saved "}
+              {fmtPt(savedSend.updated_at)}
+            </div>
+          </div>
+          <button type="button" disabled={busy || templates === null || !uploadsLoaded} onClick={() => void resume()} style={{ ...btn(true), opacity: busy || templates === null || !uploadsLoaded ? 0.5 : 1 }}>{busy ? "Opening…" : "Resume"}</button>
+          <button type="button" disabled={busy} onClick={() => void startOver()} style={btn()}>Start over</button>
+        </div>
+      ) : null}
 
       {error ? <div style={{ marginBottom: 10 }}><Notice tone="error">{error}</Notice></div> : null}
       {success ? (
@@ -372,9 +515,16 @@ export function SendFlowClient({ contact, isAdmin, senderName }: { contact: Cont
           docs={docs}
           editorData={editorData}
           renderConfigured={renderConfigured}
+          initialEmail={email}
+          onEmailChange={onEmailChange}
+          onSaveDraft={saveSend}
+          savedAt={savedAt}
+          saveError={saveError}
           onBack={() => setStep(2)}
           onSent={(r) => {
             setSuccess(r);
+            setEmail(null);
+            setSavedAt(null);
             setDocs([]);
             setEditorData({});
             setTermSheet(null);
@@ -447,6 +597,11 @@ function EmailStep({
   docs,
   editorData,
   renderConfigured,
+  initialEmail,
+  onEmailChange,
+  onSaveDraft,
+  savedAt,
+  saveError,
   onBack,
   onSent,
 }: {
@@ -455,20 +610,28 @@ function EmailStep({
   docs: OpenDoc[];
   editorData: Record<string, EditorData>;
   renderConfigured: boolean;
+  /** The cover email from a saved draft or from before Back to editor; used once, on open. */
+  initialEmail: EmailState | null;
+  onEmailChange: (e: EmailState) => void;
+  onSaveDraft: () => Promise<void>;
+  savedAt: string | null;
+  saveError: string | null;
   onBack: () => void;
   onSent: (r: { delivered: boolean; url: string }) => void;
 }) {
   const [drafts, setDrafts] = useState<Draft[]>([]);
-  const [draftId, setDraftId] = useState<string | null>(null);
-  const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
-  const [attach, setAttach] = useState(true);
+  const [draftId, setDraftId] = useState<string | null>(initialEmail?.draftId ?? null);
+  const [subject, setSubject] = useState(initialEmail?.subject ?? "");
+  const [body, setBody] = useState(initialEmail?.body ?? "");
+  const [attach, setAttach] = useState(initialEmail?.attach ?? true);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const resumed = useRef(Boolean(initialEmail));
   const [preview, setPreview] = useState(false);
   const [busy, setBusy] = useState(false);
   const [sending, setSending] = useState<"sign" | "review">("sign");
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
-  const [typed, setTyped] = useState<Record<string, string>>({});
+  const [typed, setTyped] = useState<Record<string, string>>(initialEmail?.typed ?? {});
   // Library draft being created or edited (id null = new), and the draft awaiting delete confirmation.
   const [editing, setEditing] = useState<{ id: string | null; name: string; description: string; subject: string; body: string } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -551,6 +714,8 @@ function EmailStep({
       if (!alive) return;
       const list = r.data.drafts ?? [];
       setDrafts(list);
+      // A resumed email keeps its own subject and body.
+      if (resumed.current) return;
       const first = bestDraft(list, baseRef.current) ?? list[0];
       if (first) {
         setDraftId(first.id);
@@ -562,6 +727,18 @@ function EmailStep({
       alive = false;
     };
   }, []);
+
+  // Keep the parent's copy current so Save draft and autosave hold this email.
+  useEffect(() => {
+    if (!subject && !body) return;
+    onEmailChange({ subject, body, attach, draftId, typed });
+  }, [subject, body, attach, draftId, typed, onEmailChange]);
+
+  async function saveDraftNow() {
+    setSavingDraft(true);
+    await onSaveDraft();
+    setSavingDraft(false);
+  }
 
   const resolvedSubject = applyEmailTokens(subject, tokenValues);
   const resolvedBody = applyEmailTokens(body, tokenValues);
@@ -736,6 +913,10 @@ function EmailStep({
             {saved ? <div style={{ marginTop: 10 }}><Notice tone="ok">{saved}</Notice></div> : null}
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 14, flexWrap: "wrap" }}>
               <button type="button" onClick={onBack} style={btn()}>Back to editor</button>
+              <button type="button" disabled={savingDraft || busy} onClick={() => void saveDraftNow()} title="Save where you are; Resume picks it up later" style={{ ...btn(), display: "inline-flex", alignItems: "center", gap: 5, opacity: savingDraft ? 0.6 : 1 }}>
+                <Save size={14} aria-hidden="true" />
+                {savingDraft ? "Saving…" : "Save draft"}
+              </button>
               <button type="button" onClick={() => void saveToLibrary()} disabled={!subject.trim() || !body.trim()} style={btn()}>Save to library</button>
               <button type="button" disabled={busy || Boolean(blockedReason)} title={blockedReason ?? "Email the PDFs for review. No signature request, no signing link."} onClick={() => void send(false)} style={{ ...btn(), border: `2px solid ${BLUE}`, color: BLUE, opacity: busy || blockedReason ? 0.5 : 1 }}>
                 {busy && sending === "review" ? "Rendering and sending…" : "Send"}
@@ -744,6 +925,11 @@ function EmailStep({
                 {busy && sending === "sign" ? "Rendering and sending…" : "Send for signature"}
               </button>
             </div>
+            {saveError ? (
+              <p style={{ fontSize: 11.5, color: "#A32D2D", textAlign: "right", margin: "6px 0 0" }}>{saveError}</p>
+            ) : savedAt ? (
+              <p style={{ fontSize: 11.5, color: "#1a7f43", textAlign: "right", margin: "6px 0 0" }}>Draft saved {fmtPt(savedAt)} · also saves on its own as you type and when you leave</p>
+            ) : null}
             {!blockedReason ? <p style={{ fontSize: 11.5, color: MUTED, textAlign: "right", margin: "6px 0 0" }}>Send emails the PDFs for review, always attached. No signature request, no signing link.</p> : null}
             {blockedReason ? <p style={{ fontSize: 11.5, color: "#8a6500", textAlign: "right", margin: "6px 0 0" }}>{blockedReason}</p> : null}
             </>
