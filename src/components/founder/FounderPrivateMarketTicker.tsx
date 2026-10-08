@@ -7,6 +7,25 @@ function abbreviateName(name: string): string {
   return `${parts[0][0].toUpperCase()}. ${parts.slice(1).join(" ")}`;
 }
 
+/** Scroll speed in pixels per second: slow enough to read each name. */
+export const TICKER_PX_PER_SECOND = 60;
+
+/**
+ * Loop length in seconds for one pass of the rows at TICKER_PX_PER_SECOND, so
+ * the speed stays the same whether a founder has 5 matches or 500. Widths are
+ * estimated from the text (about 5.5px a character, measured in Chrome at these sizes, plus the
+ * item's padding and gaps); the estimate only sets the speed, never the layout.
+ */
+export function tickerDurationSeconds(rows: Pick<FounderInvestorRow, "name" | "company" | "sectors" | "matchScore">[]): number {
+  const CHAR_PX = 5.5;
+  const ITEM_PX = 40 + 3 * 8 + 1;
+  const width = rows.reduce((sum, r) => {
+    const chars = abbreviateName(r.name).length + (r.company?.length ?? 0) + (r.sectors[0]?.length ?? 0) + `match ${r.matchScore}`.length;
+    return sum + ITEM_PX + chars * CHAR_PX;
+  }, 0);
+  return Math.max(20, Math.round(width / TICKER_PX_PER_SECOND));
+}
+
 /**
  * Scrolling strip of the founder's real ranked investors — abbreviated name,
  * firm, focus sector, and match. Real data only; no fabricated activity.
@@ -24,7 +43,7 @@ export function FounderPrivateMarketTicker({ rows }: Readonly<{ rows: FounderInv
           Live
         </span>
         <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-white to-transparent" aria-hidden />
-        <div className="cap-marquee flex w-max items-center whitespace-nowrap" style={{ animationDuration: "72s" }}>
+        <div className="cap-marquee flex w-max items-center whitespace-nowrap" style={{ animationDuration: `${tickerDurationSeconds(rows)}s` }}>
           {loop.map((r, i) => (
             <span
               key={`${r.symbol}-${i}`}
