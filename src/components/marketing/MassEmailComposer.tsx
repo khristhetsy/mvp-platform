@@ -3,6 +3,8 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { TemplatePicker } from "@/components/marketing/TemplatePicker";
 import { OdooPager } from "@/components/admin/OdooPager";
+import { ScheduleSendMenu } from "@/components/email/ScheduleSend";
+import { formatSendAt } from "@/lib/scheduled-emails/time";
 
 export type SelectionPayload = { mode: "ids" | "filter"; ids?: string[]; params?: string; group?: string; count: number };
 type Template = { id: string; name: string; subject: string; html_body: string; department: string | null };
@@ -161,6 +163,17 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
       onSent?.(j.sent ?? 0);
       setResult(`Sent ${j.sent ?? 0}${j.failed ? `, ${j.failed} failed` : ""}${j.skipped ? `, ${j.skipped} skipped` : ""}${j.skippedNoEmail ? `, ${j.skippedNoEmail} no-email` : ""}${j.skippedGuess ? `, ${j.skippedGuess} held back (guessed email)` : ""}.`);
     } finally { setBusy(false); }
+  }
+  /** Schedule send: stored now; the selection and recipients resolve when it sends. */
+  async function doSchedule(sendAt: string): Promise<string | null> {
+    setMsg(null);
+    const body = await finalBody();
+    if (body === null) return "Couldn't prepare the email.";
+    const r = await post({ action: "send", channel, templateId: templateId || null, subject: withExtra(subject) || null, html: body || null, scheduleAt: sendAt });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.sendAt) return j.error ?? "Couldn't schedule the email.";
+    setResult(`Scheduled for ${formatSendAt(j.sendAt)} to ${count.toLocaleString()} ${noun}${count === 1 ? "" : "s"}. Change or cancel it on Sales › Scheduled emails.`);
+    return null;
   }
   async function doEnroll() {
     if (!sequenceId) { setMsg("Pick a sequence."); return; }
@@ -332,9 +345,15 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
 
             {mode === "sequence" && renderSequence ? null : <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
               <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{msg ?? "Unsubscribed + no-email skipped automatically."}</span>
-              <button type="button" onClick={doSend} disabled={busy || gmailOver} style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", background: gmailOver ? "#9aa1ab" : "#2E78F5", border: "none", borderRadius: 8, padding: "8px 18px", cursor: gmailOver ? "not-allowed" : "pointer", opacity: busy ? 0.6 : 1 }}>
-                {busy ? "Working…" : mode === "sequence" ? `Enroll · ${count.toLocaleString()}` : `Send · ${count.toLocaleString()}`}
-              </button>
+              <span style={{ display: "inline-flex" }}>
+                <button type="button" onClick={doSend} disabled={busy || gmailOver} style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", background: gmailOver ? "#9aa1ab" : "#2E78F5", border: "none", borderRadius: mode === "once" ? "8px 0 0 8px" : 8, padding: "8px 18px", cursor: gmailOver ? "not-allowed" : "pointer", opacity: busy ? 0.6 : 1 }}>
+                  {busy ? "Working…" : mode === "sequence" ? `Enroll · ${count.toLocaleString()}` : `Send · ${count.toLocaleString()}`}
+                </button>
+                {mode === "once" ? (
+                  <ScheduleSendMenu placement="above" disabled={busy || gmailOver} onSchedule={doSchedule}
+                    chevronStyle={{ color: "#fff", background: gmailOver ? "#9aa1ab" : "#2E78F5", border: "none", borderLeft: "0.5px solid rgba(255,255,255,.45)", borderRadius: "0 8px 8px 0", padding: "8px 8px", display: "inline-flex", alignItems: "center", cursor: gmailOver ? "not-allowed" : "pointer", opacity: busy ? 0.6 : 1 }} />
+                ) : null}
+              </span>
             </div>}
           </>
         )}

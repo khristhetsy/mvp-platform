@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { confirmDialog } from "@/components/ui/ConfirmDialog";
 import type { EmailAttachment } from "@/lib/email/inbox";
+import { ScheduleSendMenu } from "./ScheduleSend";
 import type { ComposeDraft, ComposePrefill } from "./types";
 import { useFocusTrap, useOnEscape } from "./a11y";
 import { useComposeAutosave, type AutosaveResult } from "./useComposeAutosave";
@@ -77,6 +78,11 @@ export interface ComposeModalProps {
   autosaveFallbackKey?: string;
   /** Discard button handler (delete the draft). When omitted, Discard = close. */
   onDiscard?: (draft: ComposeDraft) => void;
+  /**
+   * When provided, an arrow beside Send opens the schedule send picker. Returns
+   * an error message, or null once the email is scheduled (the caller closes the modal).
+   */
+  onSchedule?: (draft: ComposeDraft, sendAt: string) => Promise<string | null>;
 }
 
 export function ComposeModal({
@@ -94,6 +100,7 @@ export function ComposeModal({
   autosaveSave,
   autosaveFallbackKey = "gmail-compose-fallback",
   onDiscard,
+  onSchedule,
 }: ComposeModalProps) {
   const t = useTranslations("sharedCmp");
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -642,7 +649,16 @@ export function ComposeModal({
           {onSaveDraft ? (
             <button type="button" onClick={() => onSaveDraft(draft())} disabled={sending} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"><FileText className="h-4 w-4" /> Save draft</button>
           ) : null}
-          <button type="button" onClick={() => onSend(draft())} disabled={sending} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"><Send className="h-4 w-4" /> {sending ? "Sending…" : "Send"}</button>
+          <span className="inline-flex">
+            <button type="button" onClick={() => onSend(draft())} disabled={sending} className={`inline-flex items-center gap-1.5 bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50 ${onSchedule ? "rounded-l-lg" : "rounded-lg"}`}><Send className="h-4 w-4" /> {sending ? "Sending…" : "Send"}</button>
+            {onSchedule ? (
+              <ScheduleSendMenu placement="above"
+                disabled={sending}
+                onSchedule={(at) => onSchedule(draft(), at)}
+                chevronClassName="inline-flex h-full items-center rounded-r-lg border-l border-slate-600 bg-slate-900 px-2 text-white hover:bg-slate-800 disabled:opacity-50"
+              />
+            ) : null}
+          </span>
         </div>
       </div>
     </div>

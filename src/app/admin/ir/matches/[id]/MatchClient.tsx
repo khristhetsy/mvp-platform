@@ -21,6 +21,8 @@ import type { EntrepreneurProfile } from "@/lib/ir/db";
 import { IR_ACTIVITY_ICON, IR_ACTIVITY_LABEL, IR_ACTIVITY_TYPES, IR_STAGES, IR_STAGE_LABEL, type IrActivity, type IrActivityType, type IrBlocker, type IrMatch, type IrNote, type IrProject, type IrStage } from "@/lib/ir/types";
 import { useRouter } from "next/navigation";
 import { platformInputToIso } from "@/lib/time/platform-input";
+import { PendingScheduledList, postScheduled, ScheduleSendMenu } from "@/components/email/ScheduleSend";
+import { formatSendAt } from "@/lib/scheduled-emails/time";
 
 type Payload = {
   match: IrMatch; project: IrProject; activities: IrActivity[]; notes: IrNote[];
@@ -44,6 +46,7 @@ export function MatchClient({ matchId, meId }: { matchId: string; meId: string }
   const [tab, setTab] = useState<Tab>("tasks");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [scheduledTick, setScheduledTick] = useState(0);
   const [introOpen, setIntroOpen] = useState(false);
   const [introNote, setIntroNote] = useState("");
   const [compose, setCompose] = useState<null | { onePager: boolean }>(null);
@@ -121,7 +124,8 @@ export function MatchClient({ matchId, meId }: { matchId: string; meId: string }
       <SequencePanel matchId={matchId} stage={m.stage} staff={data.staff} meId={meId} defaultManager={m.assignee_id ?? p.owner_id} onePagerUrl={data.send.onePagerUrl} open={seqOpen} onClose={() => setSeqOpen(false)} onChange={load} />
       {compose ? <EmailComposer key={compose.onePager ? "op" : "mail"} matchId={matchId} investorName={m.investor_name ?? m.investor_firm ?? "the investor"} founder={p.founder_name ?? p.title} stage={m.stage}
         hasEmail={data.send.hasEmail} onePagerUrl={data.send.onePagerUrl} onePager={compose.onePager} investorContactId={m.investor_contact_id}
-        onLogInstead={() => { setCompose(null); setIntroOpen(true); }} onClose={() => setCompose(null)} onSent={async (msg) => { setCompose(null); setNotice(msg); await load(); }} /> : null}
+        onLogInstead={() => { setCompose(null); setIntroOpen(true); }} onClose={() => setCompose(null)} onSent={async (msg) => { setCompose(null); setNotice(msg); setScheduledTick((t) => t + 1); await load(); }} /> : null}
+      <PendingScheduledList kind="ir_match_email" contextKey={matchId} refreshKey={scheduledTick} title="Scheduled emails to this investor" />
       {introOpen ? (
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-[12.5px]">
           <span className="text-indigo-900">Mark the intro email as sent from your mailbox — the &ldquo;Send intro email&rdquo; to-do is completed and the stage moves to Intro sent.</span>
@@ -343,6 +347,14 @@ function EmailComposer({ matchId, investorName, founder, stage, hasEmail, onePag
   const [err, setErr] = useState<string | null>(null);
   function pickVia(v: "icapos" | "gmail") { setVia(v); try { window.localStorage.setItem(VIA_KEY, v); } catch { /* ignore */ } }
 
+  /** Schedule send: the email, the logged activity and the stage move all happen at that time. */
+  async function schedule(sendAt: string): Promise<string | null> {
+    const r = await postScheduled(`/api/admin/ir/matches/${matchId}`, { action: "send_email", subject, body, via, includeOnePager: withOnePager }, sendAt);
+    if ("error" in r) return r.error;
+    await onSent(`Email to ${investorName} scheduled for ${formatSendAt(r.sendAt)} with ${via === "gmail" ? "Gmail" : "iCapOS"}.`);
+    return null;
+  }
+
   async function send() {
     setBusy(true); setErr(null);
     const r = await fetch(`/api/admin/ir/matches/${matchId}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "send_email", subject, body, via, includeOnePager: withOnePager }) });
@@ -381,7 +393,11 @@ function EmailComposer({ matchId, investorName, founder, stage, hasEmail, onePag
           </div>
           {err ? <p className="mt-2 text-rose-600">{err}</p> : null}
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <button type="button" disabled={busy || !subject.trim() || !body.trim()} onClick={() => void send()} className="rounded-lg bg-indigo-600 px-4 py-1.5 text-[12.5px] font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">{busy ? "Sending…" : `Send with ${via === "gmail" ? "Gmail" : "iCapOS"}`}</button>
+            <span className="inline-flex">
+              <button type="button" disabled={busy || !subject.trim() || !body.trim()} onClick={() => void send()} className="rounded-l-lg bg-indigo-600 px-4 py-1.5 text-[12.5px] font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">{busy ? "Sending…" : `Send with ${via === "gmail" ? "Gmail" : "iCapOS"}`}</button>
+              <ScheduleSendMenu disabled={busy || !subject.trim() || !body.trim()} onSchedule={schedule}
+                chevronClassName="inline-flex h-full items-center rounded-r-lg border-l border-indigo-400 bg-indigo-600 px-2 text-white hover:bg-indigo-700 disabled:opacity-60" />
+            </span>
             <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 px-3 py-1.5 text-slate-600 hover:bg-slate-50">Discard</button>
             {stage === "matched" ? <button type="button" onClick={onLogInstead} className="ml-auto text-[12px] text-slate-500 hover:text-indigo-700 hover:underline">Already sent it from your mailbox? Log it instead</button> : null}
           </div>

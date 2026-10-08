@@ -12,6 +12,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { currentJob } from "@/lib/cron/job-context";
+import { actingUserId } from "@/lib/scheduled-emails/acting-user";
 
 export const EMAIL_LOG_RETENTION_DAYS = 180;
 const MAX_HTML = 100_000;
@@ -109,6 +110,9 @@ export function userIdFromAuthCookies(cookies: Array<{ name: string; value: stri
 }
 
 async function requestUserId(): Promise<string | null> {
+  // A scheduled email is logged as sent by the person who scheduled it.
+  const acting = actingUserId();
+  if (acting) return acting;
   try {
     const { cookies } = await import("next/headers");
     return userIdFromAuthCookies((await cookies()).getAll());

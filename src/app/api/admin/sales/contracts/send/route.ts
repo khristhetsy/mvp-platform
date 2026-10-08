@@ -8,6 +8,7 @@ import { writeAuditLog } from "@/lib/data/audit";
 import { errorMessage } from "@/lib/contracts/route-helpers";
 import { getGoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
 import { hasGmailSendScope } from "@/lib/integrations/gmail-send";
+import { scheduleAtFrom, scheduleSend } from "@/lib/scheduled-emails/schedule";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -32,7 +33,8 @@ export async function POST(req: Request): Promise<Response> {
   const auth = await requireContractsApi();
   if ("error" in auth) return auth.error;
   const { actor } = auth;
-  const parsed = schema.safeParse(await req.json().catch(() => ({})));
+  const raw: unknown = await req.json().catch(() => ({}));
+  const parsed = schema.safeParse(raw);
   if (!parsed.success) return bad("Invalid send request.");
   if (!(await canSeeContact(actor, parsed.data.contactId))) return forbidden();
   if (parsed.data.via === "gmail") {
@@ -41,6 +43,12 @@ export async function POST(req: Request): Promise<Response> {
     if (!google.connected || !hasGmailSendScope(google.scopes)) {
       return bad("Your Google account is not connected for sending. Connect Google, or send from iCapOS mail.", 409);
     }
+  }
+  if (scheduleAtFrom(raw)) {
+    // Schedule send: stored now, sent through this route at that time (scheduled-emails/runner).
+    const { data: c } = await actor.db.from("crm_contacts").select("name, email").eq("id", parsed.data.contactId).maybeSingle();
+    const who = (c as { name?: string | null; email?: string | null } | null) ?? null;
+    return scheduleSend({ kind: "contracts", userId: actor.userId, raw, toLabel: who?.name || who?.email || "Contact", subject: parsed.data.subject, contextKey: parsed.data.contactId });
   }
   try {
     const result = await sendPacket(actor.db, {

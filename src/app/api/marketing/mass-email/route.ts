@@ -27,6 +27,7 @@ import { isUnsubscribed } from "@/lib/marketing/contacts";
 import { sendViaGmail, type GmailAttachment } from "@/lib/integrations/gmail-send";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { logOutboundEmailActivity } from "@/lib/sales/activity";
+import { scheduleAtFrom, scheduleSend } from "@/lib/scheduled-emails/schedule";
 
 export const dynamic = "force-dynamic";
 
@@ -78,9 +79,18 @@ async function loadAttachments(userId: string, refs: NonNullable<z.infer<typeof 
 export async function POST(req: NextRequest): Promise<Response> {
   const profile = await requireRole(["admin", "analyst"]).catch(() => null);
   if (!profile) return NextResponse.json({ error: "Staff only." }, { status: 403 });
-  const parsed = schema.safeParse(await req.json().catch(() => ({})));
+  const raw: unknown = await req.json().catch(() => ({}));
+  const parsed = schema.safeParse(raw);
   if (!parsed.success) return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   const d = parsed.data;
+  if (d.action === "send" && scheduleAtFrom(raw)) {
+    // Schedule send: stored now. The selection, template and recipients resolve at send time.
+    if (!d.templateId && !d.subject && !d.html) return NextResponse.json({ error: "Pick a template or write a subject/body first." }, { status: 400 });
+    const n = d.mode === "ids" ? (d.ids ?? []).length : 0;
+    let subj = d.subject ?? "";
+    if (!subj && d.templateId) subj = (await getTemplate(d.templateId))?.subject ?? "";
+    return scheduleSend({ kind: "mass_email", userId: profile.id, raw, toLabel: n ? `${n.toLocaleString()} ${d.source === "opportunities" ? "opportunities" : "contacts"}` : `Filtered ${d.source}`, subject: subj });
+  }
   const files = await loadAttachments(profile.id, d.attachments ?? []);
   if ("error" in files) return NextResponse.json({ error: files.error }, { status: 400 });
   const resendFiles = files.map((f) => ({ filename: f.name, content: f.content.toString("base64") }));
