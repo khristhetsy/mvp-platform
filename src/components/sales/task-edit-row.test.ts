@@ -1,11 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { TaskEditRow } from "@/components/sales/TaskEditRow";
+import { TaskEditRow, type EditableTask } from "@/components/sales/TaskEditRow";
 
 const staff = [{ id: "u1", name: "Johnny Rivera" }, { id: "u2", name: "Khris Thetsy" }];
-const task = { id: "t1", title: "Schedule follow up meeting", task_type: "Call", due_date: "2026-10-08", assignee_id: "u1" };
-const html = (t = task) => renderToStaticMarkup(createElement(TaskEditRow, { task: t, staff, onSaved: () => undefined, onCancel: () => undefined }));
+const task: EditableTask = { id: "t1", title: "Schedule follow up meeting", task_type: "Call", due_date: "2026-10-08", assignee_id: "u1" };
+const html = (t: EditableTask = task) => renderToStaticMarkup(createElement(TaskEditRow, { task: t, staff, onSaved: () => undefined, onCancel: () => undefined }));
 
 describe("Edit task row", () => {
   it("opens with the task's current title, type, due date and assignee", () => {
