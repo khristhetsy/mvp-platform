@@ -4,6 +4,7 @@ import { requireRole } from "@/lib/supabase/auth";
 import { listPipelines, listBoardOpportunities, createPipeline } from "@/lib/sales/pipelines";
 import { getSalesScope, effectiveSalesOwner } from "@/lib/sales/scope";
 import { listAssignableStaff } from "@/lib/sales/settings";
+import { loadPendingTasks } from "@/lib/sales/pipeline-pending-task";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,8 @@ export async function GET(req: NextRequest): Promise<Response> {
   const [pipelines, board, staff] = await Promise.all([listPipelines(), listBoardOpportunities(effectiveSalesOwner(scope)), listAssignableStaff()]);
   const nameById = new Map(staff.map((s) => [s.id, s.name]));
   for (const o of board) o.owner_name = o.owner_id ? nameById.get(o.owner_id) ?? null : null;
-  return NextResponse.json({ pipelines, board, staff });
+  const pendingTasks = await loadPendingTasks(board.map((o) => o.id));
+  return NextResponse.json({ pipelines, board, staff, pendingTasks });
 }
 
 const schema = z.object({ name: z.string().min(1).max(120) });
