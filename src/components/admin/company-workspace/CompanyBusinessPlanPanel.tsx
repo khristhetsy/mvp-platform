@@ -30,7 +30,8 @@ export function CompanyBusinessPlanPanel({ companyId }: { companyId: string }) {
   if (loading) return <p className="text-sm text-slate-500">{t("loading")}</p>;
   if (!plan) return <p className="text-sm text-slate-500">{t("no_business_plan_started_yet")}</p>;
 
-  const filled = BUSINESS_PLAN_SECTIONS.filter((s) => s.id !== "projections" && (plan.sections[s.id]?.content ?? "").trim().length > 0);
+  // N/A sections count as done and show their note.
+  const filled = BUSINESS_PLAN_SECTIONS.filter((s) => s.id !== "projections" && (plan.sections[s.id]?.notApplicable || (plan.sections[s.id]?.content ?? "").trim().length > 0));
   const proj = plan.projections;
 
   return (
@@ -72,8 +73,15 @@ export function CompanyBusinessPlanPanel({ companyId }: { companyId: string }) {
       <div className="space-y-2">
         {filled.map((s) => (
           <details key={s.id} className="rounded-lg border border-slate-200 bg-white px-3 py-2">
-            <summary className="cursor-pointer text-sm font-medium text-slate-800">{s.title}</summary>
-            <p className="mt-1.5 whitespace-pre-wrap text-sm text-slate-600">{plan.sections[s.id]?.content}</p>
+            <summary className="cursor-pointer text-sm font-medium text-slate-800">
+              {s.title}
+              {plan.sections[s.id]?.notApplicable && <span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">N/A</span>}
+            </summary>
+            <p className="mt-1.5 whitespace-pre-wrap text-sm text-slate-600">
+              {plan.sections[s.id]?.notApplicable
+                ? `Marked N/A${plan.sections[s.id]?.notApplicable?.note ? `: ${plan.sections[s.id]?.notApplicable?.note}` : ""}`
+                : plan.sections[s.id]?.content}
+            </p>
           </details>
         ))}
         {filled.length === 0 && <p className="text-sm text-slate-500">{t("no_section_content_yet")}</p>}

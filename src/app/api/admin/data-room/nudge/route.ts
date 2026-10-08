@@ -4,6 +4,7 @@ import * as Sentry from "@sentry/nextjs";
 import { requirePermissionApi } from "@/lib/api/permissions";
 import { notifyCompanyFounder } from "@/lib/notifications/notifications";
 import { computeDataRoomState } from "@/lib/data-room/completeness";
+import { loadNotApplicableTypes } from "@/lib/documents/not-applicable";
 import { listCompanyDocuments } from "@/lib/data/documents";
 import { sendDataRoomReminderEmail } from "@/lib/data-room/email";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -32,7 +33,8 @@ export async function POST(req: Request): Promise<Response> {
     if (!company?.founder_id) return NextResponse.json({ error: "Company or founder not found." }, { status: 404 });
 
     const { data: docs } = await listCompanyDocuments(admin, company.id);
-    const state = computeDataRoomState(docs ?? []);
+    const notApplicable = await loadNotApplicableTypes(admin, company.id).catch(() => [] as string[]);
+    const state = computeDataRoomState(docs ?? [], notApplicable);
     if (state.fullComplete) {
       return NextResponse.json({ error: "This data room is already complete." }, { status: 400 });
     }

@@ -5,6 +5,7 @@
 
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { computeDataRoomState } from "@/lib/data-room/completeness";
+import { loadNotApplicableByCompany } from "@/lib/documents/not-applicable";
 import { notifyCompanyFounderIfNotRecent } from "@/lib/notifications/notifications";
 import { sendDataRoomReminderEmail } from "@/lib/data-room/email";
 import type { DocumentRecord } from "@/lib/supabase/types";
@@ -39,9 +40,10 @@ export async function runDataRoomReminderPass(): Promise<DataRoomReminderResult>
   const companyIds = list.map((c) => c.id);
   const founderIds = list.map((c) => c.founder_id).filter((v): v is string => Boolean(v));
 
-  const [{ data: docs }, { data: profiles }] = await Promise.all([
+  const [{ data: docs }, { data: profiles }, naByCompany] = await Promise.all([
     admin.from("documents").select("company_id, document_type, status, created_at").in("company_id", companyIds),
     admin.from("profiles").select("id, full_name, email").in("id", founderIds),
+    loadNotApplicableByCompany(admin, companyIds).catch(() => new Map<string, string[]>()),
   ]);
 
   const docsByCompany = new Map<string, DocumentRecord[]>();
@@ -54,7 +56,7 @@ export async function runDataRoomReminderPass(): Promise<DataRoomReminderResult>
 
   for (const company of list) {
     const companyDocs = docsByCompany.get(company.id) ?? [];
-    const state = computeDataRoomState(companyDocs);
+    const state = computeDataRoomState(companyDocs, naByCompany.get(company.id) ?? []);
     if (state.coreComplete) continue; // only chase missing investor-access essentials
 
     const lastDocAt = companyDocs.map((d) => d.created_at).filter(Boolean).sort().at(-1) as string | undefined;

@@ -174,6 +174,9 @@ export function StageGuideView({
                     <div className="min-w-0 flex-1">
                       <h3 className="text-sm font-semibold text-[var(--text-primary)]">{step.title}</h3>
                       <p className="text-xs text-emerald-700">{completedLabel(sp)}</p>
+                      {sp?.note ? (
+                        <p className="mt-1.5 inline-block rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-600">{sp.note}</p>
+                      ) : null}
                     </div>
                     <Link
                       href={openHref}
@@ -222,6 +225,9 @@ export function StageGuideView({
                       </div>
                     )}
                     <p className="mt-2 text-sm text-[var(--text-muted)]">{step.desc}</p>
+                    {sp?.note ? (
+                      <p className="mt-2 inline-block rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-600">{sp.note}</p>
+                    ) : null}
 
                     {sp?.parts?.length ? (
                       <div className="mt-3 grid gap-2">

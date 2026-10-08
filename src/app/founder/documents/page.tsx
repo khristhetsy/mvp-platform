@@ -9,7 +9,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { DocumentUploadForm, type CategoryFile } from "@/components/DocumentUploadForm";
 import { listCompanyDocuments } from "@/lib/data/documents";
-import { loadNotApplicableTypes } from "@/lib/documents/not-applicable";
+import { loadNotApplicableEntries } from "@/lib/documents/not-applicable";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -56,9 +56,10 @@ export default async function DocumentUploadPage() {
     data: { user: authUser },
   } = await supabase.auth.getUser();
   const { data: documents } = company ? await listCompanyDocuments(db, company.id) : { data: [] };
-  const notApplicableTypes = company
-    ? await loadNotApplicableTypes(createServiceRoleClient(), company.id)
-    : [];
+  const notApplicableEntries = company
+    ? await loadNotApplicableEntries(createServiceRoleClient(), company.id)
+    : {};
+  const notApplicableTypes = Object.keys(notApplicableEntries);
   const uploadLimits = await getUploadLimits();
   const maxUploadBytes = uploadLimits.maxMb * 1024 * 1024;
 
@@ -137,6 +138,7 @@ export default async function DocumentUploadPage() {
               documentTypes={FOUNDER_DOCUMENT_TYPES.map(({ label, value }) => ({ label, value }))}
               filesByType={filesByType}
               notApplicableTypes={notApplicableTypes}
+              notApplicableEntries={notApplicableEntries}
               maxUploadBytes={maxUploadBytes}
               maxPages={uploadLimits.maxPages}
             />

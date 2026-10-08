@@ -204,8 +204,20 @@ export function renderBusinessPlanPdf(
         }
       };
 
+      // A section marked N/A prints its note instead of a blank section.
+      const naBody = (id: string) => {
+        const na = plan.sections[id]?.notApplicable;
+        return na ? `Not applicable to this company.${na.note ? ` ${na.note}` : ""}` : null;
+      };
+
       for (const def of BUSINESS_PLAN_SECTIONS) {
         if (def.id === "projections" || def.id === "exec_summary") continue;
+        const na = naBody(def.id);
+        if (na) {
+          h2(def.title);
+          body(na);
+          continue;
+        }
         const content = plan.sections[def.id]?.content?.trim();
         if (!content) continue;
         h2(def.title);
@@ -213,7 +225,11 @@ export function renderBusinessPlanPdf(
         drawSectionChart(def.id);
       }
 
-      if (plan.projections) {
+      const projectionsNa = naBody("projections");
+      if (projectionsNa) {
+        h2("Financial projections");
+        body(projectionsNa);
+      } else if (plan.projections) {
         h2("Financial projections");
         const yr = plan.projections.years;
         const line = (label: string, key: "revenue" | "grossProfit" | "operatingExpense" | "netCashFlow") =>
