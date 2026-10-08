@@ -39,7 +39,10 @@ function fetchTemplates() {
   return api<{ templates: Template[]; renderConfigured: boolean; missingMasters?: number }>("/api/admin/sales/contracts/templates");
 }
 
-export function SendFlowClient({ contact, isAdmin, senderName, autoResume = false }: { contact: Contact; isAdmin: boolean; senderName: string | null; autoResume?: boolean }) {
+/** The sender's Google connection, for the Send from choice in the email step. */
+export type GmailSender = { connected: boolean; canSend: boolean; email: string | null };
+
+export function SendFlowClient({ contact, isAdmin, senderName, gmail, autoResume = false }: { contact: Contact; isAdmin: boolean; senderName: string | null; gmail: GmailSender; autoResume?: boolean }) {
   const [templates, setTemplates] = useState<Template[] | null>(null);
   const [renderConfigured, setRenderConfigured] = useState(true);
   const [missingMasters, setMissingMasters] = useState(0);
@@ -59,7 +62,7 @@ export function SendFlowClient({ contact, isAdmin, senderName, autoResume = fals
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<{ delivered: boolean; url: string } | null>(null);
+  const [success, setSuccess] = useState<{ delivered: boolean; url: string; via: "gmail" | "icapos"; error?: string } | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [history, setHistory] = useState<{ name: string; versions: { version: number; status: string; filename: string; created_at: string; author: string | null }[] } | null>(null);
   const editorRef = useRef<EditorHandle>(null);
@@ -387,7 +390,7 @@ export function SendFlowClient({ contact, isAdmin, senderName, autoResume = fals
       {success ? (
         <div style={{ marginBottom: 10 }}>
           <Notice tone={success.delivered ? "ok" : "warn"}>
-            {success.delivered ? `Sent to ${contact.email}. Tracking is below.` : <>The documents are ready, but the email was not delivered. Send this link to {contact.email} yourself: <code style={{ userSelect: "all" }}>{success.url}</code></>}
+            {success.delivered ? `Sent to ${contact.email}${success.via === "gmail" ? " from your Gmail" : ""}. Tracking is below.` : <>The documents are ready, but the email was not delivered{success.error ? ` (${success.error})` : ""}. Send this link to {contact.email} yourself: <code style={{ userSelect: "all" }}>{success.url}</code></>}
           </Notice>
         </div>
       ) : null}
@@ -512,6 +515,7 @@ export function SendFlowClient({ contact, isAdmin, senderName, autoResume = fals
         <EmailStep
           contact={contact}
           senderName={senderName}
+          gmail={gmail}
           docs={docs}
           editorData={editorData}
           renderConfigured={renderConfigured}
@@ -594,6 +598,7 @@ function CardActions({ t, isAdmin, inline, onReplace, onHistory }: { t: Template
 function EmailStep({
   contact,
   senderName,
+  gmail,
   docs,
   editorData,
   renderConfigured,
@@ -607,6 +612,7 @@ function EmailStep({
 }: {
   contact: Contact;
   senderName: string | null;
+  gmail: GmailSender;
   docs: OpenDoc[];
   editorData: Record<string, EditorData>;
   renderConfigured: boolean;
@@ -617,7 +623,7 @@ function EmailStep({
   savedAt: string | null;
   saveError: string | null;
   onBack: () => void;
-  onSent: (r: { delivered: boolean; url: string }) => void;
+  onSent: (r: { delivered: boolean; url: string; via: "gmail" | "icapos"; error?: string }) => void;
 }) {
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [draftId, setDraftId] = useState<string | null>(initialEmail?.draftId ?? null);
@@ -626,6 +632,8 @@ function EmailStep({
   const [attach, setAttach] = useState(initialEmail?.attach ?? true);
   const [savingDraft, setSavingDraft] = useState(false);
   const resumed = useRef(Boolean(initialEmail));
+  // Send from: Gmail is preselected when the sender's Google account can send.
+  const [via, setVia] = useState<"gmail" | "icapos">(gmail.canSend ? "gmail" : "icapos");
   const [preview, setPreview] = useState(false);
   const [busy, setBusy] = useState(false);
   const [sending, setSending] = useState<"sign" | "review">("sign");
@@ -765,13 +773,13 @@ function EmailStep({
     setSending(signature ? "sign" : "review");
     setBusy(true);
     setError(null);
-    const r = await api<{ delivered: boolean; url: string }>("/api/admin/sales/contracts/send", {
+    const r = await api<{ delivered: boolean; url: string; deliveryError?: string }>("/api/admin/sales/contracts/send", {
       method: "POST",
-      body: JSON.stringify({ contactId: contact.id, documentIds: docs.map((d) => d.id), subject, body, emailDraftId: draftId, attachPdfs: signature ? attach : true, signature, typedValues: Object.fromEntries(Object.entries(typed).filter(([k, v]) => v.trim() && !baseValues[k])) }),
+      body: JSON.stringify({ contactId: contact.id, documentIds: docs.map((d) => d.id), subject, body, emailDraftId: draftId, attachPdfs: signature ? attach : true, signature, via, typedValues: Object.fromEntries(Object.entries(typed).filter(([k, v]) => v.trim() && !baseValues[k])) }),
     });
     setBusy(false);
     if (!r.ok) return setError(r.data.error ?? "Send failed.");
-    onSent({ delivered: r.data.delivered, url: r.data.url });
+    onSent({ delivered: r.data.delivered, url: r.data.url, via, error: r.data.deliveryError });
   }
 
   const blockedReason = !renderConfigured
@@ -889,6 +897,7 @@ function EmailStep({
               </label>
               <span>{docs.map((d) => d.name).join(" · ")}</span>
             </div>
+            <SendFrom gmail={gmail} via={via} onChange={setVia} />
             {used.length ? (
               <div style={{ marginTop: 12, border: "0.5px solid #e2e6ed", borderRadius: 8, padding: "10px 12px" }}>
                 <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "#8a93a6", marginBottom: 8 }}>Values in this email</div>
@@ -930,7 +939,7 @@ function EmailStep({
             ) : savedAt ? (
               <p style={{ fontSize: 11.5, color: "#1a7f43", textAlign: "right", margin: "6px 0 0" }}>Draft saved {fmtPt(savedAt)} · also saves on its own as you type and when you leave</p>
             ) : null}
-            {!blockedReason ? <p style={{ fontSize: 11.5, color: MUTED, textAlign: "right", margin: "6px 0 0" }}>Send emails the PDFs for review, always attached. No signature request, no signing link.</p> : null}
+            {!blockedReason ? <p style={{ fontSize: 11.5, color: MUTED, textAlign: "right", margin: "6px 0 0" }}>{via === "gmail" ? "Both buttons send through your Gmail. Signing reminders and the signed copy still come from iCapOS mail." : "Send emails the PDFs for review, always attached. No signature request, no signing link."}</p> : null}
             {blockedReason ? <p style={{ fontSize: 11.5, color: "#8a6500", textAlign: "right", margin: "6px 0 0" }}>{blockedReason}</p> : null}
             </>
             )}
@@ -938,6 +947,60 @@ function EmailStep({
         </div>
       </Card>
     </>
+  );
+}
+
+/** Send from: the sender's Gmail (when connected with send permission) or iCapOS mail. */
+function SendFrom({ gmail, via, onChange }: { gmail: GmailSender; via: "gmail" | "icapos"; onChange: (v: "gmail" | "icapos") => void }) {
+  const box = (on: boolean): React.CSSProperties => ({
+    flex: "1 1 220px", minWidth: 0, display: "flex", gap: 10, alignItems: "flex-start", textAlign: "left", cursor: "pointer", background: "#fff",
+    border: on ? `2px solid ${BLUE}` : "0.5px solid #d5deea", borderRadius: 8, padding: on ? "9px 11px" : "10.5px 12.5px",
+  });
+  const dot = (on: boolean) => (
+    <span style={{ width: 14, height: 14, borderRadius: "50%", border: `1.5px solid ${on ? BLUE : "#9aa6b8"}`, marginTop: 2, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      {on ? <span style={{ width: 7, height: 7, borderRadius: "50%", background: BLUE }} /> : null}
+    </span>
+  );
+  const returnTo = typeof window !== "undefined" ? `${window.location.pathname}${window.location.search}` : "/admin/sales/contracts";
+  return (
+    <div style={{ marginTop: 12 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "#8a93a6", marginBottom: 8 }}>Send from</div>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        {gmail.canSend ? (
+          <button type="button" onClick={() => onChange("gmail")} aria-pressed={via === "gmail"} style={box(via === "gmail")}>
+            {dot(via === "gmail")}
+            <span style={{ minWidth: 0 }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: NAVY }}><i className="ti ti-brand-gmail" aria-hidden="true" /> Gmail</span>
+              <span style={{ display: "block", fontSize: 12, color: MUTED, overflow: "hidden", textOverflow: "ellipsis" }}>{gmail.email ?? "Your Google account"}</span>
+              <span style={{ display: "inline-block", marginTop: 4, fontSize: 10.5, fontWeight: 600, padding: "1px 7px", borderRadius: 6, background: "#EAF3DE", color: "#3B6D11" }}>Connected</span>
+            </span>
+          </button>
+        ) : (
+          <div style={{ ...box(false), cursor: "default" }}>
+            {dot(false)}
+            <span>
+              <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: NAVY }}><i className="ti ti-brand-gmail" aria-hidden="true" /> Gmail</span>
+              <span style={{ display: "block", fontSize: 12, color: MUTED, marginBottom: 6 }}>{gmail.connected ? "Send permission not granted" : "Not connected"}</span>
+              <a href={`/api/integrations/google/connect?returnTo=${encodeURIComponent(returnTo)}`} style={{ ...btn(), display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, textDecoration: "none" }}>
+                {gmail.connected ? "Reconnect Google" : "Connect Google"} <i className="ti ti-external-link" aria-hidden="true" />
+              </a>
+            </span>
+          </div>
+        )}
+        <button type="button" onClick={() => onChange("icapos")} aria-pressed={via === "icapos"} style={box(via === "icapos")}>
+          {dot(via === "icapos")}
+          <span>
+            <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: NAVY }}><i className="ti ti-mail" aria-hidden="true" /> iCapOS mail</span>
+            <span style={{ display: "block", fontSize: 12, color: MUTED }}>Current system sender</span>
+          </span>
+        </button>
+      </div>
+      <p style={{ fontSize: 11.5, color: MUTED, margin: "8px 0 0", lineHeight: 1.6 }}>
+        {via === "gmail"
+          ? "Sends from your Gmail account. The email and PDFs appear in your Gmail Sent folder, and replies come back to your inbox in the same thread."
+          : "Sends through the iCapOS mail service. Nothing appears in your Gmail Sent folder."}
+      </p>
+    </div>
   );
 }
 

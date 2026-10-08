@@ -6,8 +6,8 @@ import { useSearchParams } from "next/navigation";
 import { GROUP_BY_OPTIONS, type GroupSection } from "@/lib/sales/contact-grouping";
 import { INVESTOR_PROFILE_OPTIONS, isListedInvestorProfile } from "@/lib/sales/investor-profile";
 import { FIELD_REGISTRY, OP_LABEL, fieldDef, isValidCondition, type FilterSpec, type Condition, type Operator, type OptionSource } from "@/lib/sales/contact-filter-spec";
-import { ToolbarGear, NewButton, type GearItem } from "@/components/admin/ToolbarGear";
-import { SalesViewControl } from "@/app/admin/sales/SalesViewControl";
+import { NewButton, type GearItem } from "@/components/admin/ToolbarGear";
+import { SalesGear } from "@/app/admin/sales/SalesViewGear";
 import { useContactsQuery, contactsParams, PAGE, type SalesContact, type Sort } from "./useContactsQuery";
 import { ContactsBulkActions, type BulkTarget } from "./ContactsBulkActions";
 import { DuplicatesView } from "./DuplicatesView";
@@ -544,7 +544,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
       )}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
         <NewButton onClick={() => setAdding((v) => !v)} />
-        <ToolbarGear items={gearItems} heading="Contacts" />
+        <SalesGear items={gearItems} heading="Contacts" />
         <input ref={csvInputRef} type="file" accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(e) => { void onImportFile(e.target.files?.[0] ?? null); e.target.value = ""; }} style={{ display: "none" }} />
         {odooSearch ? (
           <OdooSearchBar
@@ -658,7 +658,6 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
             </div>
           )}
         </div>
-        {basePath.startsWith("/admin/sales") && <SalesViewControl />}
       </div>
 
       {gearMsg && (
