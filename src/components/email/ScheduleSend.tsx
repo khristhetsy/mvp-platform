@@ -8,9 +8,11 @@
  * shows ScheduledNotice (time, Change, Cancel). Sends happen through
  * /api/cron/scheduled-emails; Sales › Scheduled emails lists them all.
  */
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type RefObject } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, Clock } from "lucide-react";
 import { formatSendAt, sendPresets, validSendAt } from "@/lib/scheduled-emails/time";
+import { PICKER_WIDTH as PANEL_W, pickerPosition } from "@/lib/scheduled-emails/picker-position";
 import { fromPlatformInput, toPlatformInput } from "@/lib/time/platform-input";
 
 const NAVY = "#0A1A40";
@@ -46,8 +48,12 @@ function defaultCustom(): string {
   return toPlatformInput(sendPresets()[0].iso);
 }
 
-/** The popover body: presets plus a PT date and time. */
-function PickerPanel({ title, actionLabel, onPick, onClose, placement = "below" }: { title: string; actionLabel: string; onPick: (iso: string) => Promise<string | null>; onClose: () => void; placement?: "below" | "above" }) {
+/**
+ * The popover body: presets plus a PT date and time. Rendered into the page
+ * body with fixed positioning beside its anchor, so a card or panel that clips
+ * its contents (overflow: hidden) can never cut it off.
+ */
+function PickerPanel({ anchor, title, actionLabel, onPick, onClose, placement = "below" }: { anchor: RefObject<HTMLElement | null>; title: string; actionLabel: string; onPick: (iso: string) => Promise<string | null>; onClose: () => void; placement?: "below" | "above" }) {
   const [custom, setCustom] = useState(defaultCustom);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,10 +70,25 @@ function PickerPanel({ title, actionLabel, onPick, onClose, placement = "below" 
     else onClose();
   }
 
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  useLayoutEffect(() => {
+    const place = () => {
+      const a = anchor.current?.getBoundingClientRect();
+      if (!a) return;
+      const h = panelRef.current?.offsetHeight ?? 330;
+      setPos(pickerPosition(a, h, { width: window.innerWidth, height: window.innerHeight }, placement));
+    };
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => { window.removeEventListener("resize", place); window.removeEventListener("scroll", place, true); };
+  }, [anchor, placement, error]);
+
   const date = custom.slice(0, 10);
   const time = custom.slice(11, 16);
-  return (
-    <div role="dialog" aria-label={title} style={{ position: "absolute", right: 0, ...(placement === "above" ? { bottom: "calc(100% + 6px)" } : { top: "calc(100% + 6px)" }), zIndex: 90, width: 300, background: "#fff", border: "0.5px solid #d5deea", borderRadius: 12, boxShadow: "0 8px 24px rgba(10,26,64,.12)", padding: 8, textAlign: "left" }}>
+  return createPortal(
+    <div ref={panelRef} data-schedule-picker="" role="dialog" aria-label={title} style={{ position: "fixed", top: pos?.top ?? -9999, left: pos?.left ?? -9999, visibility: pos ? "visible" : "hidden", zIndex: 1000, width: PANEL_W, background: "#fff", border: "0.5px solid #d5deea", borderRadius: 12, boxShadow: "0 8px 24px rgba(10,26,64,.12)", padding: 8, textAlign: "left" }}>
       <div style={{ fontSize: 11.5, fontWeight: 600, color: MUTED, padding: "4px 8px 6px" }}>{title}</div>
       {presets.map((p) => (
         <button key={p.label} type="button" disabled={busy} onClick={() => void pick(p.iso)} style={{ display: "flex", width: "100%", justifyContent: "space-between", gap: 8, border: "none", background: "none", borderRadius: 6, padding: "7px 8px", fontSize: 12.5, color: NAVY, cursor: "pointer" }}
@@ -91,7 +112,8 @@ function PickerPanel({ title, actionLabel, onPick, onClose, placement = "below" 
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -99,7 +121,12 @@ function useOutsideClose(open: boolean, close: () => void) {
   const ref = useRef<HTMLSpanElement>(null);
   useEffect(() => {
     if (!open) return;
-    const onDown = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) close(); };
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as Element | null;
+      // The picker is portaled to the page body: a click inside it is not "outside".
+      if (t?.closest?.("[data-schedule-picker]")) return;
+      if (ref.current && !ref.current.contains(t as Node)) close();
+    };
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") close(); };
     document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onKey);
@@ -131,7 +158,7 @@ export function ScheduleSendMenu({ onSchedule, disabled, title = "Schedule send"
         onClick={() => setOpen((o) => !o)} className={chevronClassName} style={chevronStyle}>
         <ChevronDown size={14} aria-hidden="true" />
       </button>
-      {open ? <PickerPanel title={title} actionLabel="Schedule" onPick={onSchedule} onClose={() => setOpen(false)} placement={placement} /> : null}
+      {open ? <PickerPanel anchor={ref} title={title} actionLabel="Schedule" onPick={onSchedule} onClose={() => setOpen(false)} placement={placement} /> : null}
     </span>
   );
 }
@@ -157,7 +184,7 @@ export function ScheduledNotice({ info, onChange, onCanceled, align = "right", s
         <span aria-hidden="true">·</span>
         <button type="button" style={link} onClick={async () => { const err = await patchScheduled(info.id, { action: "cancel" }); if (err) setError(err); else onCanceled(); }}>Cancel</button>
         {open ? (
-          <PickerPanel title="Change send time" actionLabel="Save time" onClose={() => setOpen(false)}
+          <PickerPanel anchor={ref} title="Change send time" actionLabel="Save time" onClose={() => setOpen(false)}
             onPick={async (iso) => { const err = await patchScheduled(info.id, { action: "reschedule", sendAt: iso }); if (!err) onChange({ id: info.id, sendAt: iso }); return err; }} />
         ) : null}
       </span>
@@ -174,7 +201,7 @@ export function RescheduleButton({ id, onChanged, style, label = "Change" }: { i
     <span ref={ref} style={{ position: "relative", display: "inline-flex" }}>
       <button type="button" style={style} aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen((o) => !o)}>{label}</button>
       {open ? (
-        <PickerPanel title="Change send time" actionLabel="Save time" onClose={() => setOpen(false)}
+        <PickerPanel anchor={ref} title="Change send time" actionLabel="Save time" onClose={() => setOpen(false)}
           onPick={async (iso) => { const err = await patchScheduled(id, { action: "reschedule", sendAt: iso }); if (!err) onChanged(iso); return err; }} />
       ) : null}
     </span>

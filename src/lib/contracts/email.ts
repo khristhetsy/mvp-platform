@@ -117,6 +117,58 @@ export async function sendCoverEmailViaGmail(input: {
   return { delivered: true };
 }
 
+/**
+ * A test copy of the cover email, sent only to the person sending: "[TEST]" in
+ * the subject, a test note at the top, and the button pointing back to the
+ * send page (a test creates no signing link). Same body, sender and PDFs as
+ * the real send, so what arrives is what the prospect would get.
+ */
+export function buildTestCoverEmail(input: { subject: string; body: string; senderName: string; reviewOnly?: boolean; backUrl: string; prospectName: string }): RenderedEmail {
+  return renderEmail({
+    audience: "shared",
+    subject: `[TEST] ${input.subject}`,
+    preheader: `Test copy. Only you received this; nothing was sent to ${input.prospectName}.`,
+    context: COMPANY,
+    blocks: [
+      { type: "note", tone: "warning", text: `Test copy. Only you received this; nothing was sent to ${input.prospectName}. The button below goes back to the send page, because a test creates no signing link.` },
+      ...paragraphs(input.body),
+      { type: "note", text: input.reviewOnly ? "The documents are attached. No signature is requested." : "No account needed. The link is unique to you." },
+    ],
+    primary: { label: input.reviewOnly ? "View documents" : "Review and sign", url: input.backUrl },
+    footer: { reason: `${input.senderName} sent you these documents from ${COMPANY}.` },
+  });
+}
+
+/** Sends the test copy to the sender, through the same route the real send would use. */
+export async function sendTestCoverEmail(input: {
+  via: "gmail" | "icapos";
+  userId: string;
+  to: string;
+  senderName: string;
+  senderEmail: string | null;
+  mail: RenderedEmail;
+  attachments: Attachment[];
+}): Promise<{ delivered: boolean }> {
+  if (!input.to.includes("@")) return { delivered: false };
+  if (input.via !== "gmail") {
+    return send({ to: input.to, fromName: `${input.senderName}, iCFO Capital Global`, replyTo: input.senderEmail, mail: input.mail, attachments: input.attachments });
+  }
+  const r = await sendViaGmail({
+    userId: input.userId,
+    to: input.to,
+    subject: input.mail.subject,
+    body: input.mail.text,
+    html: input.mail.html,
+    attachments: input.attachments.map((a) => ({ name: a.filename, mimeType: "application/pdf", content: a.content })),
+  });
+  if ("error" in r) {
+    await logOutboundEmail({ to: input.to, subject: input.mail.subject, html: input.mail.html, text: input.mail.text, status: "failed", error: r.error.message.slice(0, 300), source: "spv-contracts-test" });
+    throw r.error;
+  }
+  await logOutboundEmail({ to: input.to, subject: input.mail.subject, html: input.mail.html, text: input.mail.text, status: "sent", providerId: `gmail:${r.messageId}`, source: "spv-contracts-test" });
+  return { delivered: true };
+}
+
 export async function sendReminderEmail(input: { to: string; firstName: string | null; documents: string[]; token: string; senderName: string; senderEmail: string | null }) {
   const mail = renderEmail({
     audience: "shared",

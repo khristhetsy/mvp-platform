@@ -6,7 +6,7 @@
 
 import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Copy, FilePenLine, Pencil, Plus, Save, Trash2 } from "lucide-react";
+import { Copy, Eye, FilePenLine, Pencil, Plus, Save, Send as SendIcon, Trash2, X } from "lucide-react";
 import { applyEmailTokens, bestDraft, emailTokenValues, EMAIL_TOKENS_BASE, tokensIn, withTypedValues } from "@/lib/contracts/email-tokens";
 import { linkedFieldValues, linkedValue, openFields } from "@/lib/contracts/fields";
 import type { TemplateField } from "@/lib/contracts/types";
@@ -761,6 +761,10 @@ function EmailStep({
   const [sending, setSending] = useState<"sign" | "review">("sign");
   const [scheduled, setScheduled] = useState<ScheduledInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Preview email and Send test: read only, they never touch the prospect's record.
+  const [emailPreview, setEmailPreview] = useState<EmailPreviewData | null>(null);
+  const [checkBusy, setCheckBusy] = useState<"preview" | "test" | null>(null);
+  const [testResult, setTestResult] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
   const [typed, setTyped] = useState<Record<string, string>>(initialEmail?.typed ?? {});
   // Library draft being created or edited (id null = new), and the draft awaiting delete confirmation.
@@ -904,6 +908,32 @@ function EmailStep({
     setScheduled(r);
     onScheduledChange();
     return null;
+  }
+
+  async function openPreview(signature: boolean) {
+    setCheckBusy("preview");
+    setError(null);
+    const r = await api<Omit<EmailPreviewData, "signature"> & { signature: boolean }>("/api/admin/sales/contracts/send/check", {
+      method: "POST",
+      body: JSON.stringify({ action: "preview", ...sendBody(signature) }),
+    });
+    setCheckBusy(null);
+    if (!r.ok) return setError(r.data.error ?? "Could not build the preview.");
+    setEmailPreview(r.data);
+  }
+
+  async function sendTestToMe(signature: boolean) {
+    setCheckBusy("test");
+    setError(null);
+    setTestResult(null);
+    const r = await api<{ to: string; attachments: number; sentAt: string }>("/api/admin/sales/contracts/send/check", {
+      method: "POST",
+      body: JSON.stringify({ action: "test", ...sendBody(signature) }),
+    });
+    setCheckBusy(null);
+    if (!r.ok) return setError(r.data.error ?? "The test send failed.");
+    const pdfs = r.data.attachments === 1 ? "the PDF" : r.data.attachments ? `the ${r.data.attachments} PDFs` : "no PDFs";
+    setTestResult(`Test sent to ${r.data.to} at ${fmtPt(r.data.sentAt)} with ${pdfs}. Subject starts with [TEST]. Nothing went to ${contact.name}.`);
   }
 
   async function send(signature = true) {
@@ -1064,6 +1094,16 @@ function EmailStep({
                 {savingDraft ? "Saving…" : "Save draft"}
               </button>
               <button type="button" onClick={() => void saveToLibrary()} disabled={!subject.trim() || !body.trim()} style={btn()}>Save to library</button>
+              <button type="button" disabled={busy || checkBusy !== null || Boolean(blockedReason)} title={blockedReason ?? "See the finished email and its PDFs before anything is sent"} onClick={() => void openPreview(true)}
+                style={{ ...btn(), border: `1.5px solid ${NAVY}`, display: "inline-flex", alignItems: "center", gap: 5, opacity: busy || checkBusy !== null || blockedReason ? 0.5 : 1 }}>
+                <Eye size={14} aria-hidden="true" />
+                {checkBusy === "preview" ? "Building preview…" : "Preview email"}
+              </button>
+              <button type="button" disabled={busy || checkBusy !== null || Boolean(blockedReason)} title={blockedReason ?? "Send this email and its PDFs to yourself only, with [TEST] in the subject"} onClick={() => void sendTestToMe(true)}
+                style={{ ...btn(), border: `1.5px solid ${NAVY}`, display: "inline-flex", alignItems: "center", gap: 5, opacity: busy || checkBusy !== null || blockedReason ? 0.5 : 1 }}>
+                <SendIcon size={14} aria-hidden="true" />
+                {checkBusy === "test" ? "Sending test…" : "Send test to me"}
+              </button>
               <span style={{ display: "inline-flex" }}>
                 <button type="button" disabled={busy || Boolean(blockedReason)} title={blockedReason ?? "Email the PDFs for review. No signature request, no signing link."} onClick={() => void send(false)} style={{ ...btn(), border: `2px solid ${BLUE}`, color: BLUE, borderRadius: "7px 0 0 7px", opacity: busy || blockedReason ? 0.5 : 1 }}>
                   {busy && sending === "review" ? "Rendering and sending…" : "Send"}
@@ -1079,6 +1119,20 @@ function EmailStep({
                   chevronStyle={{ ...btn(true), borderLeft: "0.5px solid rgba(255,255,255,.45)", borderRadius: "0 7px 7px 0", padding: "7px 8px", height: "100%", opacity: busy || blockedReason ? 0.5 : 1 }} />
               </span>
             </div>
+            {testResult ? (
+              <p role="status" style={{ fontSize: 12, color: "#1a7f43", background: "#ECFDF3", border: "0.5px solid #ABEFC6", borderRadius: 7, padding: "6px 10px", margin: "8px 0 0", marginLeft: "auto", width: "fit-content", maxWidth: "100%" }}>{testResult}</p>
+            ) : null}
+            {emailPreview ? (
+              <EmailPreviewModal
+                data={emailPreview}
+                busy={busy || checkBusy !== null}
+                testing={checkBusy === "test"}
+                onClose={() => setEmailPreview(null)}
+                onMode={(signature) => void openPreview(signature)}
+                onTest={() => void sendTestToMe(emailPreview.signature).then(() => setEmailPreview(null))}
+                onSend={() => { const sig = emailPreview.signature; setEmailPreview(null); void send(sig); }}
+              />
+            ) : null}
             {scheduled ? (
               <ScheduledNotice info={scheduled} onChange={(n) => { setScheduled(n); onScheduledChange(); }} onCanceled={() => { setScheduled(null); onScheduledChange(); }} />
             ) : null}
@@ -1155,3 +1209,77 @@ function SendFrom({ gmail, via, onChange }: { gmail: GmailSender; via: "gmail" |
 const iconBtn = { border: "none", background: "none", color: "#5a6b87", cursor: "pointer", padding: "2px 4px", fontSize: 11, display: "inline-flex", alignItems: "center" } as const;
 const draftLabel = { display: "block", fontSize: 11.5, fontWeight: 600, color: "#3a4a63", marginBottom: 4 } as const;
 const draftInput = { width: "100%", boxSizing: "border-box", border: "0.5px solid #d5deea", borderRadius: 7, padding: "9px 12px", fontSize: 13, color: NAVY, marginBottom: 10 } as const;
+
+type EmailPreviewData = {
+  to: string;
+  toName: string;
+  subject: string;
+  html: string;
+  signature: boolean;
+  attachments: Array<{ documentId: string; filename: string; title: string }>;
+  from: { name: string; email: string | null; via: "gmail" | "icapos" };
+};
+
+/** Preview email: the finished cover email and its PDFs, exactly as the prospect would get them. */
+function EmailPreviewModal({ data, busy, testing, onClose, onMode, onTest, onSend }: {
+  data: EmailPreviewData;
+  busy: boolean;
+  testing: boolean;
+  onClose: () => void;
+  onMode: (signature: boolean) => void;
+  onTest: () => void;
+  onSend: () => void;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  const seg = (on: boolean) => ({ ...btn(on), padding: "6px 11px", fontSize: 12 });
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(10,26,64,.45)", display: "flex", justifyContent: "center", alignItems: "flex-start", padding: "40px 16px", overflowY: "auto" }}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div role="dialog" aria-modal="true" aria-label="Email preview" style={{ width: "100%", maxWidth: 820, background: "#fff", borderRadius: 14, boxShadow: "0 20px 50px rgba(10,26,64,.3)", overflow: "hidden", textAlign: "left" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap", padding: "14px 20px", borderBottom: "0.5px solid #e2e8f0" }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: NAVY }}>Email preview</span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <button type="button" disabled={busy} onClick={() => !data.signature && onMode(true)} style={seg(data.signature)}>As Send for signature</button>
+            <button type="button" disabled={busy} onClick={() => data.signature && onMode(false)} style={seg(!data.signature)}>As Send (review only)</button>
+            <button type="button" aria-label="Close preview" onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", color: MUTED, padding: 6, display: "inline-flex" }}><X size={18} aria-hidden="true" /></button>
+          </span>
+        </div>
+        <dl style={{ display: "grid", gridTemplateColumns: "70px 1fr", rowGap: 4, margin: 0, padding: "12px 20px", fontSize: 13, background: "#f8fafc", borderBottom: "0.5px solid #eef1f5" }}>
+          <dt style={{ color: MUTED }}>From</dt>
+          <dd style={{ margin: 0, color: NAVY, overflowWrap: "anywhere" }}>{data.from.name}{data.from.email ? ` <${data.from.email}>` : ""} <span style={{ color: MUTED }}>· {data.from.via === "gmail" ? "via your Gmail" : "via iCapOS mail"}</span></dd>
+          <dt style={{ color: MUTED }}>To</dt>
+          <dd style={{ margin: 0, color: NAVY, overflowWrap: "anywhere" }}>{data.toName} &lt;{data.to}&gt;</dd>
+          <dt style={{ color: MUTED }}>Subject</dt>
+          <dd style={{ margin: 0, color: NAVY, fontWeight: 600 }}>{data.subject}</dd>
+        </dl>
+        {/* The email's own HTML, sandboxed: no scripts, links go nowhere. */}
+        <iframe title="Email body" sandbox="" srcDoc={data.html} style={{ width: "100%", height: 460, border: "none", display: "block" }} />
+        <div style={{ padding: "12px 20px 16px", borderTop: "0.5px solid #eef1f5" }}>
+          <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: ".05em", color: MUTED, marginBottom: 8 }}>
+            {data.attachments.length ? `${data.attachments.length} ATTACHMENT${data.attachments.length === 1 ? "" : "S"}` : "NO ATTACHMENTS (the PDFs open from the signing link)"}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 8 }}>
+            {data.attachments.map((a) => (
+              <a key={a.documentId} href={`/api/admin/sales/contracts/${a.documentId}/pdf?kind=preview`} target="_blank" rel="noreferrer"
+                style={{ display: "flex", flexDirection: "column", gap: 3, border: "0.5px solid #d5deea", borderRadius: 9, padding: "9px 11px", textDecoration: "none", color: NAVY }}>
+                <span style={{ fontSize: 10.5, fontWeight: 700, color: "#B42318" }}>PDF</span>
+                <span style={{ fontSize: 12.5, fontWeight: 600, overflowWrap: "anywhere" }}>{a.filename}</span>
+                <span style={{ fontSize: 12, color: BLUE }}>Open</span>
+              </a>
+            ))}
+          </div>
+          {data.signature ? <p style={{ fontSize: 11.5, color: MUTED, margin: "8px 0 0" }}>The Review and sign button gets its signing link when you send. It is inactive here.</p> : null}
+        </div>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, flexWrap: "wrap", padding: "12px 20px", borderTop: "0.5px solid #e2e8f0", background: "#f8fafc" }}>
+          <button type="button" onClick={onClose} style={btn()}>Back to edit</button>
+          <button type="button" disabled={busy} onClick={onTest} style={{ ...btn(), border: `1.5px solid ${NAVY}`, opacity: busy ? 0.6 : 1 }}>{testing ? "Sending test…" : "Send test to me"}</button>
+          <button type="button" disabled={busy} onClick={onSend} style={{ ...btn(true), opacity: busy ? 0.6 : 1 }}>{data.signature ? "Send for signature" : "Send"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
