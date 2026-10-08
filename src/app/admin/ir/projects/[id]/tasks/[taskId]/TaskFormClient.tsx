@@ -19,6 +19,7 @@ import type { OdooOpenActivity } from "@/lib/ir/odoo-open-activities";
 import { InvestorContactDialog } from "../../../../_shared/InvestorContactDialog";
 import { MatchBulkActions } from "./MatchBulkActions";
 import { ActivityPopover } from "./ActivityPopover";
+import { OdooProjectStage } from "../../../../_shared/OdooProjectStage";
 import { TaskDeleteDialog, runTaskAction, type TaskAction } from "../TaskArchiveDelete";
 import { platformInputToIso, toPlatformInput } from "@/lib/time/platform-input";
 
@@ -199,6 +200,8 @@ export function TaskFormClient({ taskId, meId, initialTab, added, sequenced = nu
             next={{ href: next ? `${base}/${next.id}` : undefined, title: next ? `${next.title} (Alt+N)` : undefined }} />
         </span>
       </div>
+      {/* Odoo project stage and status, click a step to move the project in Odoo */}
+      <OdooProjectStage projectId={p.id} className="mb-3" />
       {/* Stage: big chevron bar, click a step to move; ▾ menu to pick or edit */}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
