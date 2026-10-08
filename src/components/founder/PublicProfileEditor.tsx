@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 /**
  * Deploy → Step 1 · Public Profile, laid out like the business plan and pitch
@@ -87,7 +88,13 @@ type Values = Record<FieldKey, string>;
 export function PublicProfileEditor({
   companyId,
   initial,
-}: Readonly<{ companyId: string; initial: Partial<Record<FieldKey, string | null>> }>) {
+  lastSavedAt,
+}: Readonly<{
+  companyId: string;
+  initial: Partial<Record<FieldKey, string | null>>;
+  /** The company record's last save, shown beside a Save button with nothing to save. */
+  lastSavedAt?: string | null;
+}>) {
   const start = useMemo(() => {
     const v = {} as Values;
     for (const s of SECTIONS) for (const f of s.fields) v[f.key] = initial[f.key] ?? "";
@@ -100,6 +107,7 @@ export function PublicProfileEditor({
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
   const [previewKey, setPreviewKey] = useState(0);
+  const [savedAt, setSavedAt] = useState<string | null>(lastSavedAt ?? null);
 
   const section = SECTIONS.find((s) => s.id === active) ?? SECTIONS[0];
   const sectionDone = (s: Section) => s.locked || s.fields.every((f) => values[f.key].trim().length > 0);
@@ -135,6 +143,7 @@ export function PublicProfileEditor({
         return;
       }
       setSaved((p) => ({ ...p, ...payload }));
+      setSavedAt(new Date().toISOString());
       setPreviewKey((k) => k + 1);
       setMessage({ tone: "ok", text: "Saved. The preview is updated." });
     } catch {
@@ -242,6 +251,15 @@ export function PublicProfileEditor({
                   >
                     Discard
                   </button>
+                ) : !saving && !message ? (
+                  <span className="inline-flex items-center gap-1.5 text-xs text-slate-500" role="status">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M20 6 9 17l-5-5" />
+                    </svg>
+                    {savedAt
+                      ? `No changes to save. Last saved ${new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: PLATFORM_TZ }).format(new Date(savedAt))}.`
+                      : "No changes to save."}
+                  </span>
                 ) : null}
               </div>
             </div>

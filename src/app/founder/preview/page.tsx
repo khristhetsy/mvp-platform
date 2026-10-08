@@ -8,6 +8,7 @@ import { loadInvestableScore } from "@/lib/founder/investable-score";
 import { InvestableScoreBadge } from "@/components/founder/InvestableScoreBadge";
 import { parseUseOfFunds } from "@/lib/founder/use-of-funds";
 import { UseOfCapitalBar } from "@/components/founder/UseOfCapitalBar";
+import { UseOfFundsText } from "@/components/founder/UseOfFundsText";
 
 export const dynamic = "force-dynamic";
 
@@ -315,7 +316,12 @@ export default async function FounderPreviewPage({
         {pub.use_of_funds && (
           <Section title="Use of capital" icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke="#374151" strokeWidth="2"/><path d="M12 6v2m0 8v2M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" stroke="#374151" strokeWidth="2" strokeLinecap="round"/></svg>}>
             {parseUseOfFunds(pub.use_of_funds)
-              ? <UseOfCapitalBar slices={parseUseOfFunds(pub.use_of_funds) ?? []} />
+              ? (
+                <>
+                  <UseOfCapitalBar slices={parseUseOfFunds(pub.use_of_funds) ?? []} />
+                  <UseOfFundsText text={pub.use_of_funds} />
+                </>
+              )
               : <FormattedText text={pub.use_of_funds} />}
             <p style={{ fontSize: 11, color: "#94a3b8", margin: "12px 0 0" }}>
               Illustrative allocation, not a commitment.

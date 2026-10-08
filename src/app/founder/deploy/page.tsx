@@ -282,6 +282,7 @@ export default async function FounderDeployPage({
             use_of_funds: company.use_of_funds ?? null,
             founder_goals: company.founder_goals ?? null,
           }}
+          lastSavedAt={(company as unknown as { updated_at?: string | null }).updated_at ?? null}
         />
       ) : null}
       {publicHref && isPublished ? (
