@@ -39,6 +39,7 @@ import { StageMenuMirror } from "@/components/admin/company-workspace/StageMenuM
 import { NotificationSettings } from "@/components/admin/company-workspace/NotificationSettings";
 import { SubscriptionManager } from "@/components/admin/company-workspace/SubscriptionManager";
 import { CompanyBasicsEditor } from "@/components/admin/company-workspace/CompanyBasicsEditor";
+import { InvestorReachPanel } from "@/components/admin/investor-reach/InvestorReachPanel";
 
 // Overview is the at-a-glance dashboard (default landing) — it holds the cross-cutting
 // cards + staff controls. The stage keys (initialize/qualify/deploy/optimize) are the
@@ -48,6 +49,7 @@ const TABS = [
   { key: "initialize", label: "Onboarding" },
   { key: "qualify", label: "Preparation" },
   { key: "deploy", label: "Marketing" },
+  { key: "reach", label: "Investor reach" },
   { key: "optimize", label: "Closing" },
   { key: "tools", label: "Analytics & Tools" },
   { key: "settings", label: "Settings" },
@@ -319,6 +321,9 @@ export function AdminCompanyWorkspace({
           {spvOperations}
         </div>
       ) : null}
+
+      {/* ---------- INVESTOR REACH ---------- */}
+      {tab === "reach" ? <InvestorReachPanel companyId={companyId} /> : null}
 
       {/* ---------- OPTIMIZE ---------- */}
       {tab === "optimize" ? (
