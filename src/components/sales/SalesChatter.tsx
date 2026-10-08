@@ -13,6 +13,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { postScheduled, ScheduleSendMenu } from "@/components/email/ScheduleSend";
 import { formatSendAt } from "@/lib/scheduled-emails/time";
 import { TaskEditRow } from "./TaskEditRow";
+import { ptDayDiff } from "@/lib/time/pt-day-diff";
 
 type Activity = {
   id: string; kind: string; summary: string; actor_name: string | null; created_at: string;
@@ -59,9 +60,13 @@ function icon(kind: string) { return KIND_ICON[kind] ?? { icon: "ti-point", colo
 function ago(iso: string) { return new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); }
 function dueLabel(iso: string | null): { text: string; overdue: boolean } {
   if (!iso) return { text: "no due date", overdue: false };
-  const d = new Date(iso).getTime(); const days = Math.round((d - Date.now()) / 86400000);
+  // Calendar days in PT, not hours from now: a date-only due date of tomorrow
+  // used to round to 0 in a PT evening and read "due today".
+  const days = ptDayDiff(iso);
+  if (days === null) return { text: "no due date", overdue: false };
   if (days < 0) return { text: `${-days}d overdue`, overdue: true };
   if (days === 0) return { text: "due today", overdue: false };
+  if (days === 1) return { text: "due tomorrow", overdue: false };
   return { text: `due in ${days}d`, overdue: false };
 }
 
