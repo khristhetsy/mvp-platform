@@ -2,10 +2,13 @@
 
 import Link from "next/link";
 import { AlertCircle, ArrowRight, Check, CheckCircle2, CircleDashed, Pencil, Sparkles } from "lucide-react";
+
 import type { StageGuide, StageGuideStep } from "@/lib/founder/stage-guides";
 import type { StageProgress, StepProgress } from "@/lib/founder/stage-progress";
 import type { StageGate } from "@/lib/founder/stage-gate-status";
 import { StageGatePanel } from "@/components/founder/StageGatePanel";
+
+const HOW_IT_WORKS_SEP = " \u00b7 ";
 
 function askAssistant(prompt: string) {
   window.dispatchEvent(new CustomEvent("icapos-assistant:ask", { detail: { prompt } }));
@@ -177,11 +180,36 @@ export function StageGuideView({
                       {sp?.note ? (
                         <p className="mt-1.5 inline-block rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-600">{sp.note}</p>
                       ) : null}
+                      {sp?.parts?.some((p) => p.chip) ? (
+                        /* Multi-part steps (Outreach) keep each part's live status visible. */
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          {sp.parts.map((part) =>
+                            part.chip ? (
+                              <span
+                                key={part.key}
+                                className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700"
+                              >
+                                <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                                {part.chip}
+                              </span>
+                            ) : null,
+                          )}
+                          {sp.doneLink ? (
+                            <Link
+                              href={sp.doneLink.href}
+                              className="inline-flex items-center gap-1 text-xs font-medium text-[var(--brand-indigo,#2E78F5)] hover:underline"
+                            >
+                              {sp.doneLink.label}
+                              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                            </Link>
+                          ) : null}
+                        </div>
+                      ) : null}
                     </div>
                     <Link
                       href={openHref}
                       onClick={() => recordVisit(step)}
-                      className="inline-flex flex-none items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                      className="inline-flex flex-none items-center gap-1.5 self-start rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
                     >
                       <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
                       Edit
@@ -243,10 +271,27 @@ export function StageGuideView({
                             ) : (
                               <CircleDashed className="h-5 w-5 flex-none text-amber-600" aria-hidden="true" />
                             )}
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-1">
                               <p className="text-sm font-medium text-[var(--text-primary)]">{part.label}</p>
-                              <p className="text-xs text-[var(--text-muted)]">{part.desc}</p>
+                              <p className="text-xs text-[var(--text-muted)]">
+                                {part.desc}
+                                {part.status ? (
+                                  <span className={part.done ? "text-slate-600" : "text-amber-700"}> {part.status}</span>
+                                ) : null}
+                              </p>
+                              {!part.done && part.howItWorks?.length ? (
+                                <p className="mt-1 text-xs text-slate-400">{part.howItWorks.join(HOW_IT_WORKS_SEP)}</p>
+                              ) : null}
                             </div>
+                            {part.href ? (
+                              <Link
+                                href={part.href}
+                                className="inline-flex flex-none items-center gap-1 text-xs font-medium text-[var(--brand-indigo,#2E78F5)] hover:underline"
+                              >
+                                {part.linkLabel ?? "Open"}
+                                <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                              </Link>
+                            ) : null}
                           </div>
                         ))}
                       </div>
@@ -254,11 +299,11 @@ export function StageGuideView({
 
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                       <Link
-                        href={openHref}
+                        href={sp?.primary?.href ?? openHref}
                         onClick={() => recordVisit(step)}
                         className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--brand-indigo,#2E78F5)] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
                       >
-                        {step.hrefLabel}
+                        {sp?.primary?.label ?? step.hrefLabel}
                         <ArrowRight className="h-3.5 w-3.5" />
                       </Link>
 

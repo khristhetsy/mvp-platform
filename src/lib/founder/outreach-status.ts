@@ -53,10 +53,30 @@ export async function loadOutreachStatus(companyId: string | null | undefined): 
     }
 
     const manualSent = manualRes.count ?? 0;
+    // Opens and replies on manual emails, for the Stage 3 Outreach card. Only
+    // counted once something has been sent.
+    let manualOpened = 0;
+    let manualReplied = 0;
+    if (manualSent > 0) {
+      const [openedRes, repliedRes] = await Promise.all([
+        db
+          .from("founder_manual_outreach_recipients")
+          .select("id", { count: "exact", head: true })
+          .eq("company_id", companyId)
+          .not("opened_at", "is", null),
+        db
+          .from("founder_manual_outreach_recipients")
+          .select("id", { count: "exact", head: true })
+          .eq("company_id", companyId)
+          .not("replied_at", "is", null),
+      ]);
+      manualOpened = openedRes.count ?? 0;
+      manualReplied = repliedRes.count ?? 0;
+    }
     const state: AutomatedOutreachState = !launched ? "not_started" : running ? "running" : "paused";
     return {
       automated: { state, sent: automatedSent, launched },
-      manual: { sent: manualSent, started: manualSent > 0 },
+      manual: { sent: manualSent, started: manualSent > 0, opened: manualOpened, replied: manualReplied },
       complete: launched && manualSent > 0,
     };
   } catch {
