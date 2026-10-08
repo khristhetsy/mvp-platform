@@ -20,6 +20,12 @@ export type StageConditions = {
   requiredDocsUploaded: boolean;
   hasDealRoom: boolean;
   hasInvestorInterest: boolean;
+  /**
+   * Outreach step complete: automated launched AND at least one manual email
+   * sent (loadOutreachStatus). Filled in by the admin company workspace only; the
+   * founder journey evaluator leaves it unset. Never gates stage advancement.
+   */
+  outreachComplete?: boolean;
 };
 
 export type FounderJourneyState = {

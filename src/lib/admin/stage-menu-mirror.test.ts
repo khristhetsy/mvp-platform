@@ -73,10 +73,22 @@ describe("Marketing menu — the CRR gate", () => {
   });
 
   it("clears every CRR-gated row once the engine unlocks outreach", () => {
-    const m = getStageMirror(journey("deploy", { crrQualified: true }), "deploy");
+    const m = getStageMirror(journey("deploy", { crrQualified: true, outreachComplete: true }), "deploy");
     for (const label of ["Capital Readiness Rating", "Outreach", "Investor matches", "Matching Center"]) {
       expect(item(m, label)?.status, label).toBe("done");
     }
+  });
+});
+
+describe("Marketing menu — Outreach covers automated and manual", () => {
+  it("stays on Attention with the CRR cleared until a manual email has gone out", () => {
+    const m = getStageMirror(journey("deploy", { crrQualified: true, outreachComplete: false }), "deploy");
+    expect(item(m, "Outreach")?.status).toBe("attention");
+  });
+
+  it("is Done once automated is launched and the first manual email is sent", () => {
+    const m = getStageMirror(journey("deploy", { crrQualified: true, outreachComplete: true }), "deploy");
+    expect(item(m, "Outreach")?.status).toBe("done");
   });
 });
 

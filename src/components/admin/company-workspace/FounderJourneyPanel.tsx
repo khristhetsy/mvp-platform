@@ -6,7 +6,8 @@ import Link from "next/link";
 import type { FounderJourneyState, JourneyStage } from "@/lib/founder-journey/types";
 import { JOURNEY_STAGES } from "@/lib/founder-journey/types";
 import { OUTREACH_GATE } from "@/lib/crr/weight-sets";
-import { buildCompanyFilteredHref } from "@/lib/admin/company-workspace-types";
+import { buildCompanyFilteredHref, type AdminOutreachSummary } from "@/lib/admin/company-workspace-types";
+import { automatedStatusLine, manualResultsLine } from "@/lib/founder/outreach-status-lines";
 
 const STAGE_META: Record<JourneyStage, { label: string; blurb: string }> = {
   initialize: { label: "Onboarding", blurb: "Company profile & onboarding" },
@@ -29,7 +30,60 @@ type Gate = {
    * because listing both made staff chase two things when either would do.
    */
   anyOf?: string;
+  /**
+   * A completion item: part of finishing the stage, but it never holds
+   * advancement. Listed on its own line, not under "To advance".
+   */
+  completion?: boolean;
 };
+
+/** "Oct 8" in Pacific time, the platform's one time zone. */
+function ptDay(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "America/Los_Angeles" });
+}
+
+/**
+ * Stage 3 Outreach covers automated AND manual. Same rule and same data as the
+ * founder's Outreach page: done only when automated is launched and the first
+ * manual email has gone out. Shown once the founder has reached Marketing.
+ */
+function outreachGate(o: AdminOutreachSummary, companyId: string): Gate {
+  const done = (o.automated.launched ? 1 : 0) + (o.manual.started ? 1 : 0);
+  const auto = `Automated ${automatedStatusLine(o).toLowerCase()}`;
+  const manual = o.manual.started ? `Manual ${manualResultsLine(o)}` : "Manual not started";
+  const points: string[] = [];
+  if (o.complete) {
+    points.push(`Automated: ${automatedStatusLine(o)}`, `Manual: ${manualResultsLine(o)}`);
+  } else {
+    if (!o.manual.started) {
+      points.push("The founder adds recipients from My contacts, or investors they already know, under Outreach › Manual");
+      points.push("They pick a template or draft with AI and send the first manual email");
+      points.push("Manual outreach reminders run on their own (day 3, day 7, then weekly) and stop at the first manual send");
+    }
+    if (!o.automated.launched) {
+      points.push(
+        o.automated.state === "not_started"
+          ? "Automated launches once the CRR clears the gate and the founder opens their Outreach page"
+          : "Resume automated outreach",
+      );
+    }
+  }
+  return {
+    key: "outreach",
+    label: o.complete ? "Outreach run" : `Outreach run · ${done} of 2`,
+    detail: `${auto} · ${manual}`,
+    met: o.complete,
+    completion: true,
+    why: o.complete
+      ? "Both outreach modes have run: automated is launched and the founder has sent manual emails."
+      : "Outreach completes only when automated is launched AND the first manual email has gone out. This is a completion item for Marketing; it does not hold advancement to Closing.",
+    points,
+    action: { label: "Open Marketing menu", href: `/admin/companies/${companyId}#deploy` },
+  };
+}
 
 function approvalBadge(status: FounderJourneyState["approvalStatus"]) {
   switch (status) {
@@ -44,7 +98,17 @@ function approvalBadge(status: FounderJourneyState["approvalStatus"]) {
   }
 }
 
-function buildGates(journey: FounderJourneyState, companyId: string): Gate[] {
+function buildGates(journey: FounderJourneyState, companyId: string, outreach?: AdminOutreachSummary | null): Gate[] {
+  const gates = baseGates(journey, companyId);
+  // Outreach only means something once the founder has reached Marketing.
+  if (outreach && journey.stageIndex >= JOURNEY_STAGES.indexOf("deploy")) {
+    const at = gates.findIndex((g) => g.key === "crr");
+    gates.splice(at + 1, 0, outreachGate(outreach, companyId));
+  }
+  return gates;
+}
+
+function baseGates(journey: FounderJourneyState, companyId: string): Gate[] {
   const c = journey.conditions;
   const readinessDetail =
     c.readinessScore != null
@@ -200,15 +264,18 @@ function ReminderPill({ r }: { r: ReminderStatus | undefined }) {
 export function FounderJourneyPanel({
   journey,
   companyId,
-}: Readonly<{ journey: FounderJourneyState; companyId: string }>) {
+  outreach,
+}: Readonly<{ journey: FounderJourneyState; companyId: string; outreach?: AdminOutreachSummary | null }>) {
   const { stage, stageIndex, approvalStatus, approvalFeedback, pendingApproval } = journey;
   const badge = approvalBadge(approvalStatus);
-  const gates = buildGates(journey, companyId);
+  const gates = buildGates(journey, companyId, outreach);
   const pending = pendingGates(gates);
   // The CRR holds what iCapOS sends on the founder's behalf; the rest is what
   // moves them to the next stage. Saying "3 pending" ran the two together.
   const blocking = pending.filter((g) => g.key === "crr");
-  const toAdvance = pending.filter((g) => g.key !== "crr");
+  const toAdvance = pending.filter((g) => g.key !== "crr" && !g.completion);
+  const completionPending = pending.filter((g) => g.completion);
+  const manualReminder = outreach?.manualReminder ?? null;
   const [openKey, setOpenKey] = useState<string | null>(null);
   const active = gates.find((g) => g.key === openKey) ?? null;
 
@@ -316,16 +383,30 @@ export function FounderJourneyPanel({
           >
             <span
               className={`mt-0.5 flex h-4 w-4 flex-none items-center justify-center rounded-full text-[10px] font-bold ${
-                g.met ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-600"
+                g.met ? "bg-emerald-100 text-emerald-700" : g.completion ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-600"
               }`}
               aria-hidden
             >
-              {g.met ? <i className="ti ti-check" aria-hidden="true" /> : <i className="ti ti-x" aria-hidden="true" />}
+              {g.met ? (
+                <i className="ti ti-check" aria-hidden="true" />
+              ) : g.completion ? (
+                <i className="ti ti-alert-circle" aria-hidden="true" />
+              ) : (
+                <i className="ti ti-x" aria-hidden="true" />
+              )}
             </span>
             <span className="min-w-0 flex-1">
               <span className="block text-xs font-medium text-slate-800">{g.label}</span>
               <span className="block text-[11px] text-slate-500">{g.detail}</span>
-              {!g.met ? <span className="mt-1 block"><ReminderPill r={reminders[g.key]} /></span> : null}
+              {!g.met && g.key === "outreach" ? (
+                manualReminder && manualReminder.sendsCount > 0 && manualReminder.lastSentAt ? (
+                  <span className="mt-1 block">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                      <i className="ti ti-circle-check" aria-hidden="true" /> Manual reminder sent · {ptDay(manualReminder.lastSentAt)} PT
+                    </span>
+                  </span>
+                ) : null
+              ) : !g.met ? <span className="mt-1 block"><ReminderPill r={reminders[g.key]} /></span> : null}
             </span>
             <span className="mt-0.5 flex-none text-[11px] font-medium text-slate-400">
               {g.met ? "Details" : "Resolve"} ›
@@ -340,6 +421,12 @@ export function FounderJourneyPanel({
             <p>
               <span className="font-semibold text-red-600">{blocking.length} blocking this stage:</span>{" "}
               {blocking.map((p) => p.label).join(", ")} — outreach and introductions are held.
+            </p>
+          ) : null}
+          {completionPending.length > 0 ? (
+            <p>
+              <span className="font-semibold text-amber-700">To complete Marketing:</span>{" "}
+              {completionPending.map((p) => p.label).join(", ")}. Does not hold advancement.
             </p>
           ) : null}
           {toAdvance.length > 0 ? (
@@ -373,10 +460,10 @@ export function FounderJourneyPanel({
             <div className="mb-2 flex items-center justify-between">
               <span
                 className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                  active.met ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
+                  active.met ? "bg-emerald-50 text-emerald-700" : active.completion ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700"
                 }`}
               >
-                {active.met ? "Satisfied" : "Blocking"}
+                {active.met ? "Satisfied" : active.completion ? "To complete" : "Blocking"}
               </span>
               <button
                 type="button"
@@ -408,7 +495,21 @@ export function FounderJourneyPanel({
               ))}
             </ul>
 
-            {!active.met ? (
+            {!active.met && active.key === "outreach" ? (
+              <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <div className="mb-1.5 flex items-center gap-2">
+                  <i className="ti ti-robot text-[14px] text-indigo-600" aria-hidden="true" />
+                  <span className="text-[11.5px] font-semibold text-slate-800">Manual outreach reminders</span>
+                  <span className="text-[10.5px] text-slate-500">· day 3, day 7, then weekly · stops at the first manual send</span>
+                </div>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-500">
+                  <span><i className="ti ti-send text-emerald-600" aria-hidden="true" /> Last sent {ptDay(manualReminder?.lastSentAt)} PT</span>
+                  <span><i className="ti ti-clock text-sky-600" aria-hidden="true" /> Next {manualReminder?.paused ? "paused" : `${ptDay(manualReminder?.nextSendAt)} PT`}</span>
+                  <span>{manualReminder?.sendsCount ?? 0} sent so far</span>
+                </div>
+              </div>
+            ) : null}
+            {!active.met && active.key !== "outreach" ? (
               <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
                 <div className="mb-1.5 flex items-center gap-2">
                   <i className="ti ti-robot text-[14px] text-indigo-600" aria-hidden="true" />
