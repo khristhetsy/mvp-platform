@@ -13,6 +13,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { EntrepreneurProfile } from "@/lib/ir/db";
 import type { MetricCounts } from "@/lib/ir/metrics";
+import { OdooProjectStage } from "../../_shared/OdooProjectStage";
 import { IR_PROJECT_STATUSES, type IrMilestone, type IrProject, type IrProjectStatus } from "@/lib/ir/types";
 import type { FeedItem, ProjectFormAnalytics } from "@/app/api/admin/ir/projects/[id]/form/route";
 
@@ -118,6 +119,7 @@ export function ProjectFormClient({ projectId, initialTab }: { projectId: string
           />
           <select value={p.status} disabled={busy} onChange={(e) => patch({ status: e.target.value })} className={inp} aria-label="Status">{IR_PROJECT_STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}</select>
         </div>
+        <OdooProjectStage projectId={p.id} className="border-b border-slate-100 px-4 py-2.5" />
 
         <div className="px-5 py-4">
           <h2 className="flex items-center gap-2 text-[22px] font-semibold text-slate-900">
