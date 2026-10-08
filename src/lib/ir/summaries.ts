@@ -11,6 +11,7 @@ import { reportData, type ReportData } from "@/lib/ir/report";
 import { sendEmail } from "@/lib/email/send-email";
 import type { IrMilestone, IrProject } from "@/lib/ir/types";
 import { renderEmail } from "@/lib/email/layout";
+import { reportCaptions } from "@/lib/ir/report-captions";
 
 export type DueSummary = { project: IrProject; kind: "week" | "month"; milestone: IrMilestone };
 
@@ -38,21 +39,25 @@ export function summaryHtml(d: ReportData): { subject: string; html: string; tex
   const total = d.pipeline.reduce((s, p) => s + p.count, 0);
   const cell = "padding:6px 8px;border-bottom:1px solid #E2E7F0;font-size:13px;color:#0F1B33";
   const head = "padding:6px 8px;border-bottom:1px solid #E2E7F0;font-size:11px;color:#5B6B86;text-align:left";
+  const cap = reportCaptions(d);
+  const capP = (t: string) => `<p style="font-size:12px;line-height:1.5;color:#5B6B86;margin:0 0 6px">${esc(t)}</p>`;
   const body = `
 <div style="color:#0F1B33">
   <h1 style="font-size:20px;margin:0 0 4px">Your investor outreach summary</h1>
   <p style="font-size:13px;color:#5B6B86;margin:0 0 16px">${esc(d.period.label)} · ${esc(d.project.monthLabel)} of the project</p>
   <p style="font-size:14px;line-height:1.6;margin:0 0 16px">Hi ${esc(first)}, ${esc(d.summary.replace(/^[^,]+, your/, "your"))}</p>
+  ${capP(cap.activity)}
   <table style="border-collapse:collapse;width:100%;margin-bottom:18px"><thead><tr><th style="${head}">Measure</th><th style="${head};text-align:right">This period</th><th style="${head};text-align:right">${d.prevMetrics ? "Previous" : ""}</th><th style="${head};text-align:right">${d.prevMetrics ? "Change" : ""}</th></tr></thead>
   <tbody>${rows.map(([l, k]) => `<tr><td style="${cell}">${l}</td><td style="${cell};text-align:right">${d.metrics[k]}</td><td style="${cell};text-align:right">${d.prevMetrics ? d.prevMetrics[k] : ""}</td><td style="${cell};text-align:right">${delta(k)}</td></tr>`).join("")}</tbody></table>
   <h2 style="font-size:15px;margin:0 0 6px">Pipeline at period end <span style="font-weight:400;font-size:12px;color:#5B6B86">${esc(d.asOf)}</span></h2>
+  ${capP(cap.pipelineAlone)}
   <table style="border-collapse:collapse;width:100%;margin-bottom:18px"><tbody>${d.pipeline.map((p) => `<tr><td style="${cell}">${esc(p.label)}</td><td style="${cell};text-align:right">${p.count}</td></tr>`).join("")}<tr><td style="${cell};font-weight:600">Total matched</td><td style="${cell};text-align:right;font-weight:600">${total}</td></tr></tbody></table>
   <h2 style="font-size:15px;margin:0 0 6px">Communications log</h2>
   <p style="font-size:12px;color:#5B6B86;margin:0 0 6px">Every investor contact made on your behalf this period. Firms are named once a meeting is booked.</p>
   ${d.comms.length ? `<table style="border-collapse:collapse;width:100%;margin-bottom:18px"><thead><tr><th style="${head}">Date</th><th style="${head}">Channel</th><th style="${head}">Firm</th><th style="${head}">What happened</th><th style="${head}">Next step</th></tr></thead><tbody>${d.comms.map((c) => `<tr><td style="${cell}">${esc(c.date)}</td><td style="${cell}">${esc(c.channel)}</td><td style="${cell}">${esc(c.firm)}</td><td style="${cell}">${esc(c.what)}</td><td style="${cell};color:#5B6B86">${esc(c.next)}</td></tr>`).join("")}</tbody></table>` : `<p style="font-size:13px;color:#5B6B86;margin:0 0 18px">No investor contact logged in this period.</p>`}
   <h2 style="font-size:15px;margin:0 0 6px">Notes from your Investor Relations team</h2>
   ${d.notes.length ? d.notes.map((n) => `<p style="font-size:13px;line-height:1.55;margin:0 0 8px"><strong>${esc(n.date)}.</strong> ${esc(n.body)}</p>`).join("") : `<p style="font-size:13px;color:#5B6B86;margin:0 0 18px">No notes this period.</p>`}
-  ${d.upcoming.length ? `<h2 style="font-size:15px;margin:18px 0 6px">Upcoming meetings</h2><ul style="font-size:13px;margin:0 0 18px;padding-left:18px">${d.upcoming.map((u) => `<li>${esc(u.firm)} · ${esc(u.when)}</li>`).join("")}</ul>` : ""}
+  ${d.upcoming.length ? `<h2 style="font-size:15px;margin:18px 0 6px">Upcoming meetings</h2>${capP(cap.upcoming)}<ul style="font-size:13px;margin:0 0 18px;padding-left:18px">${d.upcoming.map((u) => `<li>${esc(u.firm)} · ${esc(u.when)}</li>`).join("")}</ul>` : ""}
   <p style="font-size:13px;line-height:1.55;margin:18px 0">Ask your iCFO contact before approaching any investor directly, so outreach is not duplicated. Your full written report with the executive summary is prepared and sent by ${esc(d.project.owner_name ?? "your Investor Relations contact")}.</p>
 </div>`;
   const subject = `${d.project.title} investor outreach summary · ${d.period.label.split(" · ")[0]}`;

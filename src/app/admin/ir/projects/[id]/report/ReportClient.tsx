@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { formatRange } from "@/lib/ir/milestones";
 import type { ExecSummary, ReportData, ReportKind } from "@/lib/ir/report";
+import { reportCaptions } from "@/lib/ir/report-captions";
 
 type View = "live" | "doc";
 const seg = (on: boolean) => `rounded-md px-2.5 py-1 text-[12px] font-medium ${on ? "bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200" : "text-slate-600 hover:text-slate-900"}`;
@@ -141,6 +142,7 @@ export function ReportClient({ projectId, meName }: { projectId: string; meName:
 
       {view === "live" ? (
         <>
+          <p className="-mb-1 text-[12px] text-slate-500">{reportCaptions(data).cards}</p>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             {METRICS.map(([k, label]) => { const d = delta(k); return (
               <div key={k} className="rounded-xl border border-slate-200 bg-white p-4">
@@ -163,6 +165,7 @@ export function ReportClient({ projectId, meName }: { projectId: string; meName:
             <div className="flex flex-col gap-4">
               <div className="rounded-xl border border-slate-200 bg-white p-4">
                 <div className="mb-2 flex items-baseline justify-between"><h3 className="text-[15px] font-semibold text-slate-900">Pipeline at period end</h3><span className="text-[12px] text-slate-500">{data.asOf}</span></div>
+                <p className="mb-2 text-[12px] text-slate-500">{reportCaptions(data).pipelineAlone}</p>
                 <ul className="flex flex-col gap-1.5 text-[12.5px]">{data.pipeline.map((p) => <li key={p.stage} className="grid grid-cols-[130px_1fr_32px] items-center gap-2"><span className="text-slate-700">{p.label}</span><span className="h-2 rounded bg-slate-100"><span className="block h-2 rounded" style={{ width: `${total ? (p.count / total) * 100 : 0}%`, background: p.stage === "committed" ? "#1E8A57" : p.stage === "passed" ? "#9AA6BA" : "#1A6CE4" }} /></span><span className="text-right font-medium text-slate-900">{p.count}</span></li>)}</ul>
               </div>
               <div className="rounded-xl border border-slate-200 bg-white p-4">
@@ -249,6 +252,7 @@ function CommsTable({ rows, compact }: { rows: ReportData["comms"]; compact?: bo
 function Document({ d, ex, preparedBy }: { d: ReportData; ex: ExecSummary; preparedBy: string }) {
   const total = d.pipeline.reduce((s, p) => s + p.count, 0);
   const cmp = Boolean(d.prevMetrics);
+  const cap = reportCaptions(d);
   return (
     <div className="mx-auto w-full max-w-[760px] rounded-xl border border-slate-200 bg-white p-10 shadow-sm">
       <div className="flex items-start justify-between border-b-2 border-[#0A1A40] pb-3">
@@ -269,14 +273,18 @@ function Document({ d, ex, preparedBy }: { d: ReportData; ex: ExecSummary; prepa
       <H3>Watch items</H3><UL items={ex.watch} />
       <H3>Asks of {d.project.title}</H3><UL items={ex.asks} />
       <H2>Outreach and meetings by {d.trend.kind}</H2>
+      <Caption>{cap.trend}</Caption>
       <Bars t={d.trend} />
       <p className="mt-1 text-[10.5px] text-slate-500">Introductions go out in batches; meetings tend to follow one to three periods later, which is why the two bars rarely peak together.</p>
       <H2>Pipeline funnel</H2>
+      <Caption>{cap.funnel}</Caption>
       <Funnel items={d.pipeline} />
       <H2>Activity this period</H2>
+      <Caption>{cap.activity}</Caption>
       <table className="w-full text-[11.5px]"><thead><tr className="bg-slate-50 text-left text-[10.5px] text-slate-500"><th className="px-2 py-1 font-medium">Measure</th><th className="px-2 py-1 text-right font-medium">This period</th><th className="px-2 py-1 text-right font-medium">{cmp ? "Previous" : ""}</th><th className="px-2 py-1 text-right font-medium">{cmp ? "Change" : ""}</th></tr></thead>
         <tbody className="divide-y divide-slate-100">{METRICS.map(([k, label]) => { const dv = cmp ? d.metrics[k] - d.prevMetrics![k] : 0; return <tr key={k}><td className="px-2 py-1">{label}</td><td className="px-2 py-1 text-right">{d.metrics[k]}</td><td className="px-2 py-1 text-right">{cmp ? d.prevMetrics![k] : ""}</td><td className="px-2 py-1 text-right">{cmp ? (dv > 0 ? `+${dv}` : dv) : ""}</td></tr>; })}</tbody></table>
       <H2>Investor pipeline at period end</H2>
+      <Caption>{cap.pipelineTable}</Caption>
       <table className="w-full text-[11.5px]"><thead><tr className="bg-slate-50 text-left text-[10.5px] text-slate-500"><th className="px-2 py-1 font-medium">Stage</th><th className="px-2 py-1 text-right font-medium">Investors</th><th className="px-2 py-1 text-right font-medium">Share of {total}</th></tr></thead>
         <tbody className="divide-y divide-slate-100">{d.pipeline.map((p) => <tr key={p.stage}><td className="px-2 py-1">{p.label}</td><td className="px-2 py-1 text-right">{p.count}</td><td className="px-2 py-1 text-right">{total ? `${Math.round((p.count / total) * 100)}%` : "—"}</td></tr>)}<tr><td className="px-2 py-1 font-semibold">Total matched</td><td className="px-2 py-1 text-right font-semibold">{total}</td><td /></tr></tbody></table>
       <H2>Communications log</H2>
@@ -285,6 +293,7 @@ function Document({ d, ex, preparedBy }: { d: ReportData; ex: ExecSummary; prepa
       <H2>Notes from your Investor Relations team</H2>
       {d.notes.length === 0 ? <p className="text-[12px] text-slate-400">No notes for this period.</p> : d.notes.map((n, i) => <p key={i} className="mb-1 text-[12px] text-slate-800"><strong className="font-semibold">{n.date}.</strong> {n.body}</p>)}
       <H2>Upcoming meetings</H2>
+      <Caption>{cap.upcoming}</Caption>
       {d.upcoming.length === 0 ? <p className="text-[12px] text-slate-400">None booked.</p> : <table className="w-full text-[11.5px]"><thead><tr className="bg-slate-50 text-left text-[10.5px] text-slate-500"><th className="px-2 py-1 font-medium">Firm</th><th className="px-2 py-1 font-medium">When</th></tr></thead><tbody className="divide-y divide-slate-100">{d.upcoming.map((u, i) => <tr key={i}><td className="px-2 py-1">{u.firm}</td><td className="px-2 py-1">{u.when}</td></tr>)}</tbody></table>}
       <H2>Next period</H2>
       <p className="text-[12px] leading-relaxed text-slate-800">Your team continues outreach against the matched list, with follow ups scheduled for investors who have met with you and data room access for those in diligence. Ask your iCFO contact before approaching any investor directly, so outreach is not duplicated.</p>
@@ -295,6 +304,7 @@ function Document({ d, ex, preparedBy }: { d: ReportData; ex: ExecSummary; prepa
 }
 
 const H2 = ({ children }: { children: React.ReactNode }) => <h4 className="mb-2 mt-6 border-b border-slate-200 pb-1 text-[13px] font-semibold text-[#0A1A40]">{children}</h4>;
+const Caption = ({ children }: { children: React.ReactNode }) => <p className="mb-2 text-[11px] leading-relaxed text-slate-500">{children}</p>;
 const H3 = ({ children }: { children: React.ReactNode }) => <h5 className="mb-1 mt-3 text-[12px] font-semibold text-slate-900">{children}</h5>;
 const UL = ({ items }: { items: string[] }) => items.length ? <ul className="list-disc pl-5 text-[12px] leading-relaxed text-slate-800">{items.map((x, i) => <li key={i}>{x}</li>)}</ul> : <p className="text-[12px] text-slate-400">None this period.</p>;
 

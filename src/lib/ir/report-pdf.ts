@@ -7,6 +7,7 @@
 import PDFDocument from "pdfkit";
 import type { ExecSummary, FrozenReport } from "@/lib/ir/report";
 import { createCanvas, masthead } from "@/lib/diligence/pdf-primitives";
+import { reportCaptions } from "@/lib/ir/report-captions";
 
 const NAVY = "#0A1A40", BLUE = "#1A6CE4", GREEN = "#1E8A57", GREY = "#9AA6BA", INK = "#0F1B33", MUTED = "#5B6B86", LINE = "#E2E7F0", PALE = "#EEF1F6";
 const FIRM = "iCFO Capital Global, Inc.";
@@ -92,19 +93,22 @@ export function renderReportPdf(r: FrozenReport, ex: ExecSummary): Promise<Buffe
     h3("Watch items"); bullets(ex.watch);
     h3(`Asks of ${r.project.title}`); bullets(ex.asks);
 
-    h2(`Outreach and meetings by ${r.trend.kind}`); bars();
-    h2("Pipeline funnel"); funnel();
+    const cap = reportCaptions(r);
+    const caption = (t: string) => { p(t, { size: 8.5, color: MUTED }); doc.moveDown(0.2); };
+    // Keep each chart's heading and caption on the same page as the chart.
+    need(230); h2(`Outreach and meetings by ${r.trend.kind}`); caption(cap.trend); bars();
+    need(r.pipeline.length * 18 + 80); h2("Pipeline funnel"); caption(cap.funnel); funnel();
 
-    h2("Activity this period");
+    h2("Activity this period"); caption(cap.activity);
     const cmp = Boolean(r.prevMetrics);
     const rows: Array<[string, keyof typeof r.metrics]> = [["Introductions sent", "intros"], ["Investors contacted", "contacted"], ["Meetings booked", "booked"], ["Meetings held", "held"], ["Commitments", "committed"]];
     table(["Measure", "This period", cmp ? "Previous" : "", cmp ? "Change" : ""], rows.map(([lab, k]) => { const d = cmp ? r.metrics[k] - r.prevMetrics![k] : 0; return [lab, String(r.metrics[k]), cmp ? String(r.prevMetrics![k]) : "", cmp ? (d > 0 ? `+${d}` : String(d)) : ""]; }), [W * 0.46, W * 0.18, W * 0.18, W * 0.18], [false, true, true, true]);
 
-    h2("Investor pipeline at period end");
+    h2("Investor pipeline at period end"); caption(cap.pipelineTable);
     const tot = r.pipeline.reduce((s, x) => s + x.count, 0);
     table(["Stage", "Investors", `Share of ${tot}`], [...r.pipeline.map((x) => [x.label, String(x.count), tot ? `${Math.round((x.count / tot) * 100)}%` : "—"]), ["Total matched", String(tot), ""]], [W * 0.5, W * 0.25, W * 0.25], [false, true, true]);
 
-    h2("Communications log");
+    need(90); h2("Communications log");
     p("Every investor contact made on your behalf in this period, with the outcome and the next step. Firms are named once a meeting is booked.", { size: 9, color: MUTED });
     doc.moveDown(0.3);
     table(["Date", "Channel", "Firm", "What happened", "Next step"], r.comms.map((c) => [c.date, c.channel, c.firm, c.what, c.next]), [W * 0.1, W * 0.17, W * 0.2, W * 0.33, W * 0.2]);
@@ -113,7 +117,7 @@ export function renderReportPdf(r: FrozenReport, ex: ExecSummary): Promise<Buffe
     if (!r.notes.length) p("No notes for this period.", { color: MUTED });
     for (const n of r.notes) { need(24); doc.font("Helvetica-Bold").fontSize(10).fillColor(INK).text(`${n.date}. `, { continued: true }).font("Helvetica").text(n.body, { lineGap: 2 }); doc.moveDown(0.3); }
 
-    h2("Upcoming meetings");
+    need(80); h2("Upcoming meetings"); caption(cap.upcoming);
     table(["Firm", "When"], r.upcoming.map((u) => [u.firm, u.when]), [W * 0.6, W * 0.4]);
 
     h2("Next period");
