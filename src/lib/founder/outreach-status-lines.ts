@@ -8,7 +8,8 @@ export type AutomatedOutreachState = "running" | "paused" | "not_started";
 
 export type OutreachStatus = {
   automated: { state: AutomatedOutreachState; sent: number; launched: boolean };
-  manual: { sent: number; started: boolean };
+  /** opened and replied are manual emails with an open or reply recorded (optional, display only). */
+  manual: { sent: number; started: boolean; opened?: number; replied?: number };
   /** Both modes used — the Outreach step is done. */
   complete: boolean;
 };
@@ -29,4 +30,12 @@ export function automatedStatusLine(s: OutreachStatus, opts?: { requiredNote?: b
 export function manualStatusLine(s: OutreachStatus, opts?: { requiredNote?: boolean }): string {
   if (s.manual.started) return `${s.manual.sent} sent`;
   return opts?.requiredNote ? "Not started, needed to complete Stage 3" : "Not started";
+}
+
+/** Short result line for manual outreach: "8 sent, 3 opened, 1 replied". */
+export function manualResultsLine(s: OutreachStatus): string {
+  const parts = [`${s.manual.sent} sent`];
+  if (s.manual.opened) parts.push(`${s.manual.opened} opened`);
+  if (s.manual.replied) parts.push(`${s.manual.replied} replied`);
+  return parts.join(", ");
 }

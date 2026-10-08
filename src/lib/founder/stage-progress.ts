@@ -15,6 +15,7 @@ import { loadFounderMilestones } from "@/lib/data/founder-milestones";
 import { loadOutreachStatus } from "@/lib/founder/outreach-status";
 import { naSummaryNote } from "@/lib/documents/na-shared";
 import { businessPlanCoreProgress } from "@/lib/business-plan/completion";
+import { automatedStatusLine, manualResultsLine } from "@/lib/founder/outreach-status-lines";
 
 export type StepState = "done" | "in_progress" | "not_started" | "unknown";
 export interface StepPart {
@@ -22,6 +23,15 @@ export interface StepPart {
   label: string;
   desc: string;
   done: boolean;
+  /** Live status line, e.g. "Running, 24 sent to your matched list". */
+  status?: string;
+  /** How it works, shown only while the part is not done. */
+  howItWorks?: string[];
+  /** Chip text on the collapsed completed card. */
+  chip?: string;
+  /** Row link into this part. */
+  href?: string;
+  linkLabel?: string;
 }
 export interface StepProgress {
   percent: number | null;
@@ -34,6 +44,10 @@ export interface StepProgress {
   badge?: string;
   /** Shown under the step, e.g. "1 item marked N/A: Customer contracts". N/A counts as done. */
   note?: string;
+  /** Overrides the step's primary button, e.g. straight to the part still missing. */
+  primary?: { label: string; href: string };
+  /** Secondary link on the collapsed completed card. */
+  doneLink?: { label: string; href: string };
 }
 export interface StageProgress {
   /** keyed by step href */
@@ -149,23 +163,42 @@ export async function computeStageProgress(
     // Outreach is done only when both modes are used: automated launched AND
     // the first manual email sent. Each half is worth 50%.
     const outreachDone = [outreach.automated.launched, outreach.manual.started].filter(Boolean).length;
+    const AUTOMATED_HREF = "/founder/deploy?step=outreach&mode=automated";
+    const MANUAL_HREF = "/founder/deploy?step=outreach&mode=manual";
+    const automatedLine = automatedStatusLine(outreach);
     const outreachStep: StepProgress = {
       ...step(outreachDone * 50),
-      badge: `${outreachDone} of 2 done`,
+      badge: `${outreachDone} of 2`,
       parts: [
         {
           key: "automated",
-          label: "Automated",
-          desc: "AI intros to platform matches. You approve each send.",
+          label: "Automated outreach",
+          desc: "AI intros to your matched investors. You approve each send.",
+          status: outreach.automated.launched ? `${automatedLine} to your matched list` : "Not started",
+          chip: `Automated: ${automatedLine.charAt(0).toLowerCase()}${automatedLine.slice(1)}`,
           done: outreach.automated.launched,
+          href: AUTOMATED_HREF,
+          linkLabel: outreach.automated.launched ? "View" : "Start",
         },
         {
           key: "manual",
-          label: "Manual",
-          desc: "Email investors you already know from your contacts.",
+          label: "Manual outreach",
+          desc: "Your own emails to contacts you pick.",
+          status: outreach.manual.started ? manualResultsLine(outreach) : "Not started",
+          howItWorks: ["Pick contacts: My contacts, file, LinkedIn", "3 emails: day 0, 3, 7", "One pager attached"],
+          chip: `Manual: ${manualResultsLine(outreach)}`,
           done: outreach.manual.started,
+          href: MANUAL_HREF,
+          linkLabel: outreach.manual.started ? "Open" : "Start",
         },
       ],
+      // Send the founder straight to the half that is still missing.
+      primary: !outreach.manual.started
+        ? { label: "Start manual outreach", href: MANUAL_HREF }
+        : !outreach.automated.launched
+          ? { label: "Open automated outreach", href: AUTOMATED_HREF }
+          : undefined,
+      doneLink: { label: "Open manual", href: MANUAL_HREF },
     };
     return rollup({
       "/founder/deploy": outreachStep,
