@@ -90,6 +90,7 @@ export function MatchingQueueClient({ projectId, taskId, initialView }: { projec
   const [loading, setLoading] = useState(true);
   const [cols, setCols] = useState<ColKey[]>(DEFAULT_COLS);
   const [colsOpen, setColsOpen] = useState(false);
+  const [colsListOpen, setColsListOpen] = useState(false);
   const [hideContacted, setHideContacted] = useState(false);
   const [profile, setProfile] = useState<Row | null>(null);
   const [mode, setMode] = useState<"match" | "search">(initialView?.mode ?? "match");
@@ -258,27 +259,57 @@ export function MatchingQueueClient({ projectId, taskId, initialView }: { projec
           {([["match", proposedLabel], ["search", "Search all investors"]] as const).map(([k, l]) => <button key={k} type="button" aria-pressed={mode === k} onClick={() => setMode(k)} className={`px-3 py-1.5 text-[12.5px] ${mode === k ? "bg-indigo-50 font-semibold text-indigo-800" : "bg-white text-slate-600 hover:bg-slate-50"}`}>{l}</button>)}
         </div>
   );
-  const toolsEl = (<>
-        <label className="inline-flex items-center gap-1.5 text-[12.5px] text-slate-600"><input type="checkbox" checked={hideContacted} onChange={(e) => setHide(e.target.checked)} /> Hide already contacted</label>
+  const toolsEl = (
         <div className="relative" data-cols-menu>
-          <button type="button" onClick={() => setColsOpen((o) => !o)} aria-expanded={colsOpen} aria-haspopup="true" className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[12.5px] font-medium text-slate-700 hover:bg-slate-50"><i className="ti ti-columns" aria-hidden="true" /> Columns <span className="text-slate-400">{cols.length}/{COLS.length}</span></button>
+          <button type="button" onClick={() => { setColsOpen((o) => !o); setColsListOpen(false); }} aria-expanded={colsOpen} aria-haspopup="true" aria-label="Selection and view options" title="Selection and view options"
+            className={`relative flex h-8 w-8 items-center justify-center rounded-lg border text-[17px] ${colsOpen || picked.size ? "border-indigo-400 bg-indigo-50 text-indigo-700" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}>
+            <i className="ti ti-settings" aria-hidden="true" />
+            {picked.size ? <span className="absolute -right-2 -top-2 min-w-[18px] rounded-full bg-indigo-600 px-1 text-center text-[10px] font-semibold leading-[18px] text-white">{picked.size > 999 ? "999+" : picked.size}</span> : null}
+          </button>
           {colsOpen ? (
-            <div className="absolute right-0 z-20 mt-1 w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-lg" role="menu">
-              <p className="px-2 pb-1 text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">Show columns</p>
-              <label className="flex items-center gap-2 rounded-md px-2 py-1.5 text-[12.5px] text-slate-400"><input type="checkbox" checked disabled /> Investor <span className="ml-auto text-[10.5px]">Always on</span></label>
-              {COLS.map((c) => (
-                <label key={c.key} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-[12.5px] text-slate-700 hover:bg-slate-50">
-                  <input type="checkbox" checked={cols.includes(c.key)} onChange={(e) => setColumns(e.target.checked ? COLS.filter((x) => x.key === c.key || cols.includes(x.key)).map((x) => x.key) : cols.filter((k) => k !== c.key))} /> {c.label}
-                </label>
-              ))}
-              <div className="mt-1 flex justify-between border-t border-slate-100 px-2 pt-2 text-[12px]">
-                <button type="button" onClick={() => setColumns(DEFAULT_COLS)} className="text-indigo-700 hover:underline">Reset to default</button>
-                <button type="button" onClick={() => setColumns(COLS.map((c) => c.key))} className="text-indigo-700 hover:underline">Show all</button>
-              </div>
+            <div className="absolute right-0 z-30 mt-1 w-64 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg" role="menu">
+              <p className="px-2.5 pb-1 pt-1 text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">Selection · {picked.size.toLocaleString("en-US")} selected</p>
+              <button type="button" role="menuitem" disabled={busy || !picked.size} onClick={() => { setColsOpen(false); void confirm(); }} className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[12.5px] disabled:cursor-not-allowed disabled:opacity-50 bg-indigo-600 font-semibold text-white hover:bg-indigo-700"><i className="ti ti-check" aria-hidden="true" /> {busy ? "Confirming…" : `Confirm ${picked.size ? picked.size.toLocaleString("en-US") : ""} investor${picked.size === 1 ? "" : "s"}`}</button>
+              <button type="button" role="menuitem" disabled={busy || !picked.size} onClick={() => { setColsOpen(false); void openSequence(); }} className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[12.5px] disabled:cursor-not-allowed disabled:opacity-50 mt-0.5 font-medium text-indigo-800 hover:bg-indigo-50"><i className="ti ti-bolt" aria-hidden="true" /> Confirm + auto sequence</button>
+              <button type="button" role="menuitem" disabled={!picked.size} onClick={() => setPicked(new Set())} className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[12.5px] disabled:cursor-not-allowed disabled:opacity-50 text-slate-700 hover:bg-slate-50"><i className="ti ti-x" aria-hidden="true" /> Clear selection</button>
+              <div className="my-1 border-t border-slate-100" />
+              <p className="px-2.5 pb-1 pt-1 text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">View</p>
+              <label className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[12.5px] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer text-slate-700 hover:bg-slate-50"><input type="checkbox" checked={hideContacted} onChange={(e) => setHide(e.target.checked)} /> Hide already contacted</label>
+              <button type="button" role="menuitem" aria-expanded={colsListOpen} onClick={() => setColsListOpen((o) => !o)} className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[12.5px] disabled:cursor-not-allowed disabled:opacity-50 text-slate-700 hover:bg-slate-50"><i className="ti ti-columns" aria-hidden="true" /> Columns <span className="ml-auto text-slate-400">{cols.length}/{COLS.length} <i className={`ti ${colsListOpen ? "ti-chevron-down" : "ti-chevron-right"}`} aria-hidden="true" /></span></button>
+              {colsListOpen ? (
+                <div className="ml-2 border-l border-slate-100 pl-1">
+                  <label className="flex items-center gap-2 rounded-md px-2 py-1.5 text-[12.5px] text-slate-400"><input type="checkbox" checked disabled /> Investor <span className="ml-auto text-[10.5px]">Always on</span></label>
+                  {COLS.map((c) => (
+                    <label key={c.key} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-[12.5px] text-slate-700 hover:bg-slate-50">
+                      <input type="checkbox" checked={cols.includes(c.key)} onChange={(e) => setColumns(e.target.checked ? COLS.filter((x) => x.key === c.key || cols.includes(x.key)).map((x) => x.key) : cols.filter((k) => k !== c.key))} /> {c.label}
+                    </label>
+                  ))}
+                  <div className="mt-1 flex justify-between border-t border-slate-100 px-2 pt-2 text-[12px]">
+                    <button type="button" onClick={() => setColumns(DEFAULT_COLS)} className="text-indigo-700 hover:underline">Reset to default</button>
+                    <button type="button" onClick={() => setColumns(COLS.map((c) => c.key))} className="text-indigo-700 hover:underline">Show all</button>
+                  </div>
+                </div>
+              ) : null}
             </div>
           ) : null}
+        {seq ? (
+          <div className="absolute right-0 top-full z-30 mt-2 w-[360px] rounded-xl border border-indigo-200 bg-white p-4 text-[12.5px] shadow-xl" role="dialog" aria-label="Auto sequence for the selected investors">
+            <div className="mb-2 flex items-center"><p className="text-[13.5px] font-semibold text-slate-900"><i className="ti ti-bolt" aria-hidden="true" /> Auto sequence for {picked.size.toLocaleString("en-US")} investor{picked.size === 1 ? "" : "s"}</p><button type="button" onClick={() => setSeq(null)} aria-label="Close" className="ml-auto text-slate-400 hover:text-slate-700"><i className="ti ti-x" aria-hidden="true" /></button></div>
+            {seq.setupNeeded ? <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">Auto sequences need migration <code>20260928100000_ir_sequences.sql</code> run in the Supabase SQL editor first.</p> : (
+              <div className="space-y-2">
+                <label className="block text-[11.5px] text-slate-500">Sequence<select value={seq.template} onChange={(e) => setSeq({ ...seq, template: e.target.value })} className="mt-0.5 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-[12.5px]">{Object.entries(SEQUENCE_TEMPLATES).map(([k, t]) => <option key={k} value={k}>{t.name} · {t.steps.length} steps (days {t.steps.map((s) => s.day).join(", ")})</option>)}</select></label>
+                <label className="block text-[11.5px] text-slate-500">Account manager to alert<select value={seq.manager} onChange={(e) => setSeq({ ...seq, manager: e.target.value })} className="mt-0.5 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-[12.5px]">{seq.staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
+                <div className="flex gap-4">{(["icapos", "gmail"] as const).map((k) => <label key={k} className="inline-flex items-center gap-1.5"><input type="radio" name="bulk-via" checked={seq.via === k} onChange={() => setSeq({ ...seq, via: k })} /> {k === "icapos" ? "iCapOS" : "Gmail"}</label>)}</div>
+                {seq.via === "gmail" ? <p className="text-[11.5px] text-amber-700">Opens and clicks can&rsquo;t be tracked on Gmail sends.</p> : null}
+                <label className="inline-flex items-center gap-1.5"><input type="checkbox" checked={seq.notifyEmail} onChange={(e) => setSeq({ ...seq, notifyEmail: e.target.checked })} /> Email the alerts too (always in iCapOS notifications)</label>
+                <p className="text-[11.5px] text-slate-500">Alerts on opens, clicks, replies and meetings; stops on a reply or meeting. Edit any one of them later from its record. The first emails go out within 15 minutes.</p>
+                <button type="button" disabled={busy || !seq.manager} onClick={() => void confirm(true)} className="w-full rounded-lg bg-indigo-600 px-3 py-1.5 font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">{busy ? "Confirming…" : `Confirm ${picked.size.toLocaleString("en-US")} and start sequence`}</button>
+              </div>
+            )}
+          </div>
+        ) : null}
         </div>
-  </>);
+  );
 
   const view: QueueView = mode === "search"
     ? { mode, groupBy: searchView.groupBy, open: searchView.open }
@@ -302,32 +333,13 @@ export function MatchingQueueClient({ projectId, taskId, initialView }: { projec
         {!noSector && !data.thin ? <MatchTotals total={data.total} contacted={data.contacted ?? 0} loading={loading} hideContacted={hideContacted} onNeverContacted={() => setHide(!hideContacted)} /> : null}
       </div>
 
-      <div className="sticky top-0 z-20 mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-md">
-        <span className="text-[12.5px] text-slate-600">{picked.size.toLocaleString("en-US")} selected</span>
-        {picked.size ? <button type="button" onClick={() => setPicked(new Set())} className="text-[12.5px] text-indigo-700 hover:underline">Unselect all</button> : null}
-        {pickedContacted ? <span className="rounded-md bg-amber-50 px-2 py-1 text-[12px] text-amber-900">{pickedContacted} already worked for this founder</span> : null}
-        {progress ? <span className="text-[12px] text-indigo-700">{progress}</span> : null}
-        {error ? <span className="text-[12px] text-rose-600">{error}</span> : null}
-        <Link href={back} className="ml-auto rounded-lg border border-slate-200 px-3 py-1.5 text-[12.5px] text-slate-600 hover:bg-slate-50">Cancel</Link>
-        <button type="button" disabled={busy || !picked.size} onClick={() => void openSequence()} aria-expanded={!!seq} className="rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-[12.5px] font-medium text-indigo-800 hover:bg-indigo-50 disabled:opacity-60"><i className="ti ti-bolt" aria-hidden="true" /> Confirm + auto sequence</button>
-        <button type="button" disabled={busy || !picked.size} onClick={() => void confirm()} className="rounded-lg bg-indigo-600 px-4 py-1.5 text-[12.5px] font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">{busy ? "Confirming…" : `Confirm ${picked.size ? picked.size.toLocaleString("en-US") : ""} investor${picked.size === 1 ? "" : "s"}`}</button>
-        {seq ? (
-          <div className="absolute right-0 top-full z-30 mt-2 w-[360px] rounded-xl border border-indigo-200 bg-white p-4 text-[12.5px] shadow-xl" role="dialog" aria-label="Auto sequence for the selected investors">
-            <div className="mb-2 flex items-center"><p className="text-[13.5px] font-semibold text-slate-900"><i className="ti ti-bolt" aria-hidden="true" /> Auto sequence for {picked.size.toLocaleString("en-US")} investor{picked.size === 1 ? "" : "s"}</p><button type="button" onClick={() => setSeq(null)} aria-label="Close" className="ml-auto text-slate-400 hover:text-slate-700"><i className="ti ti-x" aria-hidden="true" /></button></div>
-            {seq.setupNeeded ? <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">Auto sequences need migration <code>20260928100000_ir_sequences.sql</code> run in the Supabase SQL editor first.</p> : (
-              <div className="space-y-2">
-                <label className="block text-[11.5px] text-slate-500">Sequence<select value={seq.template} onChange={(e) => setSeq({ ...seq, template: e.target.value })} className="mt-0.5 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-[12.5px]">{Object.entries(SEQUENCE_TEMPLATES).map(([k, t]) => <option key={k} value={k}>{t.name} · {t.steps.length} steps (days {t.steps.map((s) => s.day).join(", ")})</option>)}</select></label>
-                <label className="block text-[11.5px] text-slate-500">Account manager to alert<select value={seq.manager} onChange={(e) => setSeq({ ...seq, manager: e.target.value })} className="mt-0.5 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-[12.5px]">{seq.staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
-                <div className="flex gap-4">{(["icapos", "gmail"] as const).map((k) => <label key={k} className="inline-flex items-center gap-1.5"><input type="radio" name="bulk-via" checked={seq.via === k} onChange={() => setSeq({ ...seq, via: k })} /> {k === "icapos" ? "iCapOS" : "Gmail"}</label>)}</div>
-                {seq.via === "gmail" ? <p className="text-[11.5px] text-amber-700">Opens and clicks can&rsquo;t be tracked on Gmail sends.</p> : null}
-                <label className="inline-flex items-center gap-1.5"><input type="checkbox" checked={seq.notifyEmail} onChange={(e) => setSeq({ ...seq, notifyEmail: e.target.checked })} /> Email the alerts too (always in iCapOS notifications)</label>
-                <p className="text-[11.5px] text-slate-500">Alerts on opens, clicks, replies and meetings; stops on a reply or meeting. Edit any one of them later from its record. The first emails go out within 15 minutes.</p>
-                <button type="button" disabled={busy || !seq.manager} onClick={() => void confirm(true)} className="w-full rounded-lg bg-indigo-600 px-3 py-1.5 font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">{busy ? "Confirming…" : `Confirm ${picked.size.toLocaleString("en-US")} and start sequence`}</button>
-              </div>
-            )}
-          </div>
-        ) : null}
-      </div>
+      {pickedContacted || progress || error ? (
+        <div className="mb-3 flex flex-wrap items-center gap-3 text-[12px]">
+          {pickedContacted ? <span className="rounded-md bg-amber-50 px-2 py-1 text-amber-900">{pickedContacted} already worked for this founder</span> : null}
+          {progress ? <span className="text-indigo-700">{progress}</span> : null}
+          {error ? <span className="text-rose-600">{error}</span> : null}
+        </div>
+      ) : null}
 
       {mode === "search" ? (
         <InvestorSearchTab
@@ -510,23 +522,18 @@ function MatchTotals({ total, contacted, loading, hideContacted, onNeverContacte
   const never = Math.max(0, total - contacted);
   const pct = (n: number) => (total ? `${Math.round((n / total) * 100)}%` : "0%");
   const num = (n: number) => (loading ? "…" : n.toLocaleString("en-US"));
-  const tile = "rounded-lg border bg-white px-3 py-2 text-left";
+  const tile = "flex min-w-0 items-baseline gap-1.5 whitespace-nowrap rounded-lg border bg-white px-3 py-1.5 text-left text-[12px]";
   return (
-    <div className="grid w-full grid-cols-1 gap-2.5 sm:grid-cols-3">
-      <div className={`${tile} border-indigo-200`}>
-        <p className="text-[12px] text-slate-500"><i className="ti ti-users" aria-hidden="true" /> Total investors matched</p>
-        <p className="text-[22px] font-semibold leading-tight text-slate-900">{num(total)}</p>
-        <p className="text-[11.5px] text-slate-400">Fit the founder&rsquo;s filters</p>
+    <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-3">
+      <div className={`${tile} border-indigo-200`} title="Investors that fit the founder's filters">
+        <i className="ti ti-users text-slate-400" aria-hidden="true" /><span className="text-[15px] font-semibold text-slate-900">{num(total)}</span><span className="truncate text-slate-500">matched</span>
       </div>
-      <button type="button" onClick={onNeverContacted} aria-pressed={hideContacted} title={hideContacted ? "Show every proposal" : "Show only investors never contacted for this founder"} className={`${tile} ${hideContacted ? "border-2 border-indigo-500 px-[11px] py-[7px]" : "border-indigo-200 hover:border-indigo-400"}`}>
-        <p className="text-[12px] text-slate-500"><i className="ti ti-mail-off" aria-hidden="true" /> Never contacted</p>
-        <p className="text-[22px] font-semibold leading-tight text-slate-900">{num(never)} {!loading ? <span className="text-[12.5px] font-normal text-slate-500">{pct(never)}</span> : null}</p>
-        <p className="text-[11.5px] text-indigo-700">{hideContacted ? "Showing only these · show all" : "Show only these"} <i className="ti ti-arrow-right" aria-hidden="true" /></p>
+      <button type="button" onClick={onNeverContacted} aria-pressed={hideContacted} title={hideContacted ? "Show every proposal" : "Show only investors never contacted for this founder"} className={`${tile} ${hideContacted ? "border-2 border-indigo-500 px-[11px] py-[5px]" : "border-indigo-200 hover:border-indigo-400"}`}>
+        <i className="ti ti-mail-off text-slate-400" aria-hidden="true" /><span className="text-[15px] font-semibold text-slate-900">{num(never)}</span><span className="truncate text-slate-500">never contacted{!loading ? ` · ${pct(never)}` : ""}</span>
+        <span className="ml-auto text-indigo-700">{hideContacted ? "Show all" : "Show only"} <i className="ti ti-arrow-right" aria-hidden="true" /></span>
       </button>
-      <div className={`${tile} border-indigo-200`}>
-        <p className="text-[12px] text-slate-500"><i className="ti ti-mail-check" aria-hidden="true" /> Already contacted</p>
-        <p className="text-[22px] font-semibold leading-tight text-slate-900">{num(contacted)} {!loading ? <span className="text-[12.5px] font-normal text-slate-500">{pct(contacted)}</span> : null}</p>
-        <p className="text-[11.5px] text-slate-400">Any outreach for this founder</p>
+      <div className={`${tile} border-indigo-200`} title="Any outreach for this founder">
+        <i className="ti ti-mail-check text-slate-400" aria-hidden="true" /><span className="text-[15px] font-semibold text-slate-900">{num(contacted)}</span><span className="truncate text-slate-500">already contacted{!loading ? ` · ${pct(contacted)}` : ""}</span>
       </div>
     </div>
   );
