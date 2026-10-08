@@ -19,7 +19,11 @@ type Template = { id: string; key: string; name: string; kind: string; subtype: 
 type Contact = { id: string; name: string; email: string | null; company: string | null };
 type Draft = { id: string; name: string; description: string | null; subject: string; body: string };
 type OpenDoc = { id: string; templateId: string; name: string; kind: string };
-type ListRow = { id: string; status: string; template_id: string | null; locked: boolean; source?: string; title?: string | null; signature_request_id?: string | null };
+type ListRow = { id: string; status: string; template_id: string | null; locked: boolean; source?: string; title?: string | null; signature_request_id?: string | null; version?: number; created_at?: string; updated_at?: string; template?: { name: string; kind: string } | null; entity?: { short_name: string; legal_name: string } | null };
+/** A contract this contact already has in progress (an unsent draft made from a master). */
+type InProgress = { id: string; templateId: string; name: string; entity: string | null; version: number; updatedAt: string; copyNo: number };
+/** How Step 1 opens the editor: continue picked drafts, start fresh copies, or the default (reuse the latest draft per document). */
+type OpenMode = { kind: "continue"; docByTemplate: Record<string, string> } | { kind: "new" } | { kind: "default" };
 type Upload = { id: string; title: string; requestId: string | null };
 /** Cover email as it stands in Step 3; saved with the send draft. */
 type EmailState = { subject: string; body: string; attach: boolean; draftId: string | null; typed: Record<string, string> };
@@ -74,6 +78,11 @@ export function SendFlowClient({ contact, isAdmin, senderName, gmail, autoResume
   const [email, setEmail] = useState<EmailState | null>(null);
   const autoResumed = useRef(false);
   const [uploadsLoaded, setUploadsLoaded] = useState(false);
+  // Contracts in progress for this contact: offered as Continue selected or Create new contract.
+  const [inProgress, setInProgress] = useState<InProgress[]>([]);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [choiceMade, setChoiceMade] = useState(false);
+  const [openMode, setOpenMode] = useState<OpenMode>({ kind: "default" });
   const replaceTarget = useRef<string | null>(null);
 
   const applyTemplates = useCallback((r: Awaited<ReturnType<typeof fetchTemplates>>) => {
@@ -107,10 +116,28 @@ export function SendFlowClient({ contact, isAdmin, senderName, gmail, autoResume
     let alive = true;
     void api<{ documents: ListRow[] }>(`/api/admin/sales/contracts?contactId=${contact.id}`).then((r) => {
       if (!alive) return;
-      const list = (r.data.documents ?? []).filter((d) => d.source === "upload" && d.status === "draft" && !d.locked);
+      const all = r.data.documents ?? [];
+      const list = all.filter((d) => d.source === "upload" && d.status === "draft" && !d.locked);
       setUploads(list.map((d) => ({ id: d.id, title: d.title ?? "Contract", requestId: d.signature_request_id ?? null })));
       setUploadsLoaded(true);
       setChosenUploads((cur) => (cur.size ? cur : new Set(list.map((d) => d.id))));
+      // Unsent drafts made from masters, newest edit first; copies of the same document are numbered by age.
+      const fromMasters = all.filter((d) => d.status === "draft" && !d.locked && d.template_id && d.source !== "upload");
+      const byAge = [...fromMasters].sort((a, b) => (a.created_at ?? "").localeCompare(b.created_at ?? ""));
+      const seen: Record<string, number> = {};
+      const copyNo: Record<string, number> = {};
+      for (const d of byAge) copyNo[d.id] = seen[d.template_id as string] = (seen[d.template_id as string] ?? 0) + 1;
+      const rows = fromMasters
+        .map((d) => ({ id: d.id, templateId: d.template_id as string, name: d.template?.name ?? "Contract", entity: d.entity?.short_name ?? d.entity?.legal_name ?? null, version: d.version ?? 1, updatedAt: d.updated_at ?? d.created_at ?? "", copyNo: copyNo[d.id] }))
+        .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+      setInProgress(rows);
+      // Tick the latest draft of each document by default.
+      setPicked((cur) => {
+        if (cur.size) return cur;
+        const latest = new Map<string, string>();
+        for (const d of rows) if (!latest.has(d.templateId)) latest.set(d.templateId, d.id);
+        return new Set(latest.values());
+      });
     });
     return () => {
       alive = false;
@@ -147,8 +174,10 @@ export function SendFlowClient({ contact, isAdmin, senderName, gmail, autoResume
     if (r.ok) setHistory(r.data);
   }
 
-  /** Open editor: reuse this prospect's open drafts, otherwise duplicate the masters. */
-  async function openEditor(sel?: Selection) {
+  /** Open editor: continue the drafts picked, make fresh copies (Create new contract),
+   *  or by default reuse this prospect's latest draft of each document and copy the masters for the rest. */
+  async function openEditor(sel?: Selection, modeOverride?: OpenMode) {
+    const mode = modeOverride ?? openMode;
     const chosen = (sel ? [sel.termSheet, ...sel.extras] : [termSheet, ...extras]).filter(Boolean) as string[];
     const ups = uploads.filter((u) => (sel ? sel.uploads.includes(u.id) : chosenUploads.has(u.id)));
     if (!chosen.length && !ups.length) return setError("Choose at least one document.");
@@ -156,7 +185,13 @@ export function SendFlowClient({ contact, isAdmin, senderName, gmail, autoResume
     setError(null);
     const list = await api<{ documents: ListRow[] }>(`/api/admin/sales/contracts?contactId=${contact.id}`);
     const drafts = (list.data.documents ?? []).filter((d) => d.status === "draft" && !d.locked && d.template_id);
-    const reuse = new Map(drafts.map((d) => [d.template_id as string, d.id]));
+    // The list is newest edit first; keep the first (latest) draft per document.
+    const reuse = new Map<string, string>();
+    if (mode.kind === "continue") {
+      for (const [t, id] of Object.entries(mode.docByTemplate)) if (drafts.some((d) => d.id === id)) reuse.set(t, id);
+    } else if (mode.kind === "default") {
+      for (const d of drafts) if (!reuse.has(d.template_id as string)) reuse.set(d.template_id as string, d.id);
+    }
     const missing = chosen.filter((t) => !reuse.has(t));
     if (missing.length) {
       const r = await api<{ documents: { id: string }[] }>("/api/admin/sales/contracts", { method: "POST", body: JSON.stringify({ contactId: contact.id, templateIds: missing }) });
@@ -166,6 +201,8 @@ export function SendFlowClient({ contact, isAdmin, senderName, gmail, autoResume
       }
       missing.forEach((t, i) => reuse.set(t, r.data.documents[i].id));
     }
+    // After Create new contract made the copies, going back and reopening keeps using them.
+    if (mode.kind === "new") setOpenMode({ kind: "continue", docByTemplate: Object.fromEntries(reuse) });
     const opened = [
       ...chosen.map((t) => {
         const tpl = templates!.find((x) => x.id === t)!;
@@ -213,6 +250,42 @@ export function SendFlowClient({ contact, isAdmin, senderName, gmail, autoResume
   async function startOver() {
     setSavedSend(null);
     await api(`/api/admin/sales/contracts/send-drafts?contactId=${contact.id}`, { method: "DELETE" });
+  }
+
+  /** Tick a draft; only one draft per document can open at a time. */
+  function togglePick(d: InProgress) {
+    setPicked((cur) => {
+      const next = new Set(cur);
+      if (next.has(d.id)) next.delete(d.id);
+      else {
+        for (const o of inProgress) if (o.templateId === d.templateId) next.delete(o.id);
+        next.add(d.id);
+      }
+      return next;
+    });
+  }
+
+  /** Continue selected: open the ticked drafts with everything entered so far. */
+  async function continuePicked() {
+    if (!templates) return;
+    const chosen = inProgress.filter((d) => picked.has(d.id));
+    if (!chosen.length) return setError("Tick at least one contract to continue.");
+    const kinds = new Map(templates.map((t) => [t.id, t.kind]));
+    const ts = chosen.find((d) => kinds.get(d.templateId) === "term_sheet")?.templateId ?? null;
+    const ex = chosen.filter((d) => kinds.get(d.templateId) !== "term_sheet").map((d) => d.templateId);
+    const mode: OpenMode = { kind: "continue", docByTemplate: Object.fromEntries(chosen.map((d) => [d.templateId, d.id])) };
+    setChoiceMade(true);
+    setOpenMode(mode);
+    setTermSheet(ts);
+    setExtras(new Set(ex));
+    await openEditor({ termSheet: ts, extras: ex, uploads: [...chosenUploads] }, mode);
+  }
+
+  /** Create new contract: pick documents in Step 1 and start fresh copies from the masters. */
+  function createNew() {
+    setChoiceMade(true);
+    setOpenMode({ kind: "new" });
+    setError(null);
   }
 
   // Opened from Contracts › Drafts (Resume): pick up the saved send as soon as the documents are known.
@@ -368,8 +441,10 @@ export function SendFlowClient({ contact, isAdmin, senderName, gmail, autoResume
       </div>
       <h1 style={{ fontSize: 18, fontWeight: 600, color: NAVY, margin: "0 0 14px" }}>Send SPV contracts</h1>
 
-      {savedSend && step === 1 && !docs.length ? (
-        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 12, padding: "12px 14px", marginBottom: 12 }}>
+      {step === 1 && !docs.length && (savedSend || (inProgress.length > 0 && !choiceMade)) ? (
+        <div style={{ background: "#fff", border: "0.5px solid #dbe3ee", borderRadius: 12, padding: 14, marginBottom: 12 }}>
+          {savedSend ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 12, padding: "12px 14px", marginBottom: inProgress.length && !choiceMade ? 10 : 0 }}>
           <FilePenLine size={20} color="#185FA5" aria-hidden="true" />
           <div style={{ flex: 1, minWidth: 220 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: "#0C447C" }}>
@@ -383,6 +458,47 @@ export function SendFlowClient({ contact, isAdmin, senderName, gmail, autoResume
           </div>
           <button type="button" disabled={busy || templates === null || !uploadsLoaded} onClick={() => void resume()} style={{ ...btn(true), opacity: busy || templates === null || !uploadsLoaded ? 0.5 : 1 }}>{busy ? "Opening…" : "Resume"}</button>
           <button type="button" disabled={busy} onClick={() => void startOver()} style={btn()}>Start over</button>
+        </div>
+          ) : null}
+          {inProgress.length > 0 && !choiceMade ? (
+            <div>
+              <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 6 }}>
+                <FilePenLine size={20} color={BLUE} aria-hidden="true" />
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>
+                    {contact.name.split(" ")[0] || contact.name} has {inProgress.length} contract{inProgress.length === 1 ? "" : "s"} in progress
+                  </div>
+                  <div style={{ fontSize: 12, color: MUTED }}>Pick up where you left off, or start a new contract. Nothing is sent yet.</div>
+                </div>
+              </div>
+              {inProgress.map((d) => (
+                <label key={d.id} style={{ display: "grid", gridTemplateColumns: "22px minmax(0,1fr) auto", gap: 10, alignItems: "center", padding: "9px 0", borderTop: "0.5px solid #eef1f5", cursor: "pointer" }}>
+                  <input type="checkbox" checked={picked.has(d.id)} onChange={() => togglePick(d)} aria-label={`Continue ${d.name}`} />
+                  <span style={{ minWidth: 0 }}>
+                    <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: NAVY, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {d.name}
+                      {d.copyNo > 1 ? <span style={{ color: MUTED, fontWeight: 400 }}> #{d.copyNo}</span> : null}
+                    </span>
+                    <span style={{ display: "block", fontSize: 11.5, color: MUTED }}>
+                      {[d.entity, `v${d.version}`, d.updatedAt ? `last edited ${fmtPt(d.updatedAt)}` : null].filter(Boolean).join(" · ")}
+                    </span>
+                  </span>
+                  <span style={{ fontSize: 11, background: "#F3F5F8", color: "#5a6b87", borderRadius: 6, padding: "2px 8px" }}>Draft</span>
+                </label>
+              ))}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, borderTop: "0.5px solid #eef1f5", paddingTop: 12, marginTop: 2 }}>
+                <button type="button" disabled={busy || templates === null || !uploadsLoaded || !picked.size} onClick={() => void continuePicked()} style={{ ...btn(true), opacity: busy || templates === null || !uploadsLoaded || !picked.size ? 0.5 : 1 }}>
+                  {busy ? "Opening…" : `Continue selected (${picked.size})`}
+                </button>
+                <button type="button" disabled={busy} onClick={createNew} style={{ ...btn(), display: "inline-flex", alignItems: "center", gap: 5 }}>
+                  <Plus size={14} aria-hidden="true" /> Create new contract
+                </button>
+              </div>
+              <div style={{ fontSize: 11.5, color: MUTED, marginTop: 8 }}>
+                Continue opens the editor with everything you entered. Create new starts fresh copies from the masters; these drafts stay in Contracts until you delete or archive them.
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : null}
 

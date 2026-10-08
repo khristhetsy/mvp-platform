@@ -19,6 +19,7 @@ type Row = {
   updated_at: string;
   archived_at: string | null;
   contact_id: string | null;
+  template_id?: string | null;
   created_at: string;
   source?: "template" | "upload";
   contract_type?: ContractType | null;
@@ -65,6 +66,17 @@ const SEARCH_FIELDS: SearchField<Row>[] = [
 
 export function ContractsListClient() {
   const [rows, setRows] = useState<Row[]>([]);
+  // A second copy of the same document for the same contact (Create new contract) shows as "#2".
+  const copyNo = useMemo(() => {
+    const seen: Record<string, number> = {};
+    const out: Record<string, number> = {};
+    for (const r of [...rows].sort((a, b) => a.created_at.localeCompare(b.created_at))) {
+      if (!r.contact_id || !r.template_id) continue;
+      const k = `${r.contact_id}:${r.template_id}`;
+      out[r.id] = seen[k] = (seen[k] ?? 0) + 1;
+    }
+    return out;
+  }, [rows]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState<SearchState>({ ...EMPTY_SEARCH, groupBy: "none" });
@@ -271,6 +283,7 @@ export function ContractsListClient() {
                   <Link key={r.id} href={`/admin/sales/contracts/${r.id}`} style={{ display: "grid", gridTemplateColumns: grid, padding: "11px 14px", borderTop: "0.5px solid #eef1f5", alignItems: "center", fontSize: 12.5, color: NAVY, textDecoration: "none" }}>
                     <div style={{ fontWeight: 600, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       <Highlight text={r.template?.name} query={q} />
+                      {(copyNo[r.id] ?? 1) > 1 ? <span style={{ color: MUTED, fontWeight: 400 }}> #{copyNo[r.id]}</span> : null}
                       {r.template?.kind === "upload" ? <span style={{ marginLeft: 6, fontSize: 9.5, fontWeight: 700, background: "#FCEBEB", color: "#A32D2D", borderRadius: 4, padding: "1px 5px" }}>PDF</span> : null}
                     </div>
                     <div style={{ minWidth: 0 }}>
