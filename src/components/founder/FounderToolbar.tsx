@@ -18,6 +18,11 @@ import {
 
 export type ColumnToggle = { key: string; label: string; hidden?: boolean };
 export type Density = "comfortable" | "compact";
+/** Page tools tucked into the gear: a view switch and page actions (export, import). */
+export type ToolbarGearMenu = {
+  view?: { value: string; options: { id: string; label: string; icon?: string }[]; onChange: (id: string) => void };
+  actions?: { key: string; label: string; icon?: string; run: () => void }[];
+};
 
 const btn: React.CSSProperties = {
   border: "1px solid var(--border, #D6DDE8)", borderRadius: 8, padding: "5px 11px", fontSize: 12,
@@ -36,7 +41,7 @@ const head: React.CSSProperties = { fontSize: 10, letterSpacing: ".06em", textTr
 export function FounderToolbar({
   scope, state, onChange, quick, fields, groups,
   placeholder, noGroupId = "none", primary, columns, onToggleColumn,
-  density = "comfortable", onDensity, count, countLabel = "records", right,
+  density = "comfortable", onDensity, count, countLabel = "records", right, gear,
 }: {
   /** Page key — namespaced to `founder:<scope>` by the API. */
   scope: string;
@@ -58,6 +63,8 @@ export function FounderToolbar({
   countLabel?: string;
   /** Anything extra on the far right (a view switcher the page owns, say). */
   right?: ReactNode;
+  /** Optional page tools shown in the gear menu, above the view settings. */
+  gear?: ToolbarGearMenu;
 }) {
   const [gearOpen, setGearOpen] = useState(false);
   const [colsOpen, setColsOpen] = useState(false);
@@ -68,14 +75,48 @@ export function FounderToolbar({
     <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderBottom: "1px solid var(--border, #EEF1F6)", flexWrap: "wrap" }}>
       {primary}
 
-      {(onDensity || columns) && (
+      {(onDensity || columns || gear) && (
         <div ref={gearRef} style={{ position: "relative" }}>
           <button type="button" style={{ ...btn, padding: "5px 8px" }} aria-label="View settings" aria-expanded={gearOpen} onClick={() => setGearOpen((v) => !v)}>
             <i className="ti ti-settings" aria-hidden="true" />
           </button>
           {gearOpen && (
-            <div style={menu}>
-              <p style={head}>View settings</p>
+            <div style={gear ? { ...menu, left: 0, right: "auto", minWidth: 230 } : menu}>
+              {gear?.view && (
+                <>
+                  <p style={head}>View</p>
+                  <div style={{ display: "flex", margin: "2px 12px 6px", border: "1px solid var(--border, #D6DDE8)", borderRadius: 8, overflow: "hidden" }}>
+                    {gear.view.options.map((o) => {
+                      const on = gear.view?.value === o.id;
+                      return (
+                        <button
+                          key={o.id}
+                          type="button"
+                          aria-pressed={on}
+                          onClick={() => { gear.view?.onChange(o.id); setGearOpen(false); }}
+                          style={{ flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "6px 8px", fontSize: 12.5, border: "none", cursor: "pointer", background: on ? "var(--blue, #1A6CE4)" : "transparent", color: on ? "#fff" : "var(--text-secondary, #475569)" }}
+                        >
+                          {o.icon ? <i className={`ti ${o.icon}`} aria-hidden="true" /> : null}
+                          {o.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+              {gear?.actions?.length ? (
+                <>
+                  {gear.view ? <div style={{ borderTop: "0.5px solid var(--border, #eef1f5)", margin: "5px 0" }} /> : null}
+                  {gear.actions.map((a) => (
+                    <button key={a.key} type="button" style={row} onClick={() => { setGearOpen(false); a.run(); }}>
+                      <span style={{ width: 14, color: "var(--text-secondary, #64748B)" }}>{a.icon ? <i className={`ti ${a.icon}`} aria-hidden="true" /> : null}</span>
+                      <span>{a.label}</span>
+                    </button>
+                  ))}
+                </>
+              ) : null}
+              {(onDensity || columns?.length) && gear ? <div style={{ borderTop: "0.5px solid var(--border, #eef1f5)", margin: "5px 0" }} /> : null}
+              {!gear || onDensity || columns?.length ? <p style={head}>View settings</p> : null}
               {onDensity && (["comfortable", "compact"] as const).map((d) => (
                 <button key={d} type="button" style={row} onClick={() => { onDensity(d); setGearOpen(false); }}>
                   <span style={{ width: 14, color: "#4F46E5" }}>{density === d ? "✓" : ""}</span>
