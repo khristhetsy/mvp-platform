@@ -12,9 +12,9 @@ import { SendFlowClient } from "@/components/admin/contracts/SendFlowClient";
 export const dynamic = "force-dynamic";
 
 /** Sales Hub › Send SPV Contracts, for one SPV-tagged prospect. */
-export default async function SendContractsPage({ searchParams }: { searchParams: Promise<{ contact?: string }> }) {
+export default async function SendContractsPage({ searchParams }: { searchParams: Promise<{ contact?: string; resume?: string }> }) {
   const profile = await requireRole(["admin", "analyst"]);
-  const { contact: contactId } = await searchParams;
+  const { contact: contactId, resume } = await searchParams;
   if (!contactId) redirect("/admin/sales/contracts");
 
   const [scope, data, eff] = await Promise.all([
@@ -36,6 +36,7 @@ export default async function SendContractsPage({ searchParams }: { searchParams
       contact={{ id: c.id, name: c.name, email: c.email, company: c.company }}
       isAdmin={eff.isSuperAdmin || eff.permissions.includes("manage_settings")}
       senderName={profile.full_name ?? null}
+      autoResume={resume === "1"}
     />,
   );
 }

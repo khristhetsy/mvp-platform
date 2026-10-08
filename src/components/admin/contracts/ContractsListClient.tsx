@@ -30,6 +30,13 @@ type Row = {
   request: { open_count: number; last_opened_at: string | null } | null;
 };
 
+/** A saved, resumable send (Send Contracts › Save draft). */
+type SavedSend = { contact_id: string; step: number; term_sheet_id: string | null; extra_ids: string[]; upload_ids: string[]; updated_at: string; contact: { name: string | null; company: string | null } | null };
+const STEP_LABEL: Record<number, string> = { 1: "choosing documents", 2: "editing documents", 3: "cover email" };
+function fmtPt(iso: string): string {
+  return `${new Date(iso).toLocaleString("en-US", { timeZone: "America/Los_Angeles", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} PT`;
+}
+
 const QUICK = [
   { key: "awaiting", label: "Awaiting signature" },
   { key: "countersign", label: "Awaiting countersign" },
@@ -66,6 +73,20 @@ export function ContractsListClient() {
   const [view, setView] = useState<"all" | "uploaded">("all");
   const [type, setType] = useState<ContractType | "">("");
   const withArchived = search.quick.includes("archived");
+  const showDrafts = search.quick.includes("drafts") && view === "all";
+  const [sends, setSends] = useState<SavedSend[]>([]);
+
+  // Drafts also lists saved sends, each resumable where it was left.
+  useEffect(() => {
+    if (!showDrafts) return;
+    let alive = true;
+    void api<{ drafts: SavedSend[] }>("/api/admin/sales/contracts/send-drafts").then((r) => {
+      if (alive && r.ok) setSends(r.data.drafts ?? []);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [showDrafts]);
 
   useEffect(() => {
     let alive = true;
@@ -161,6 +182,27 @@ export function ContractsListClient() {
         </div>
 
         {error ? <div style={{ padding: 14 }}><Notice tone="error">{error}</Notice></div> : null}
+
+        {showDrafts && sends.length ? (
+          <div style={{ borderBottom: "0.5px solid #eef1f5" }}>
+            <div style={{ padding: "8px 14px", background: "var(--muted)", fontSize: 10.5, fontWeight: 500, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Saved sends · {sends.length}</div>
+            {sends.map((d) => {
+              const n = (d.term_sheet_id ? 1 : 0) + d.extra_ids.length + d.upload_ids.length;
+              return (
+                <Link key={d.contact_id} href={`/admin/sales/contracts/send?contact=${d.contact_id}&resume=1`} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 14px", borderTop: "0.5px solid #eef1f5", fontSize: 12.5, color: NAVY, textDecoration: "none", flexWrap: "wrap" }}>
+                  <div style={{ flex: "1 1 220px", minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.contact?.name ?? "Contact"}</div>
+                    <div style={{ fontSize: 11, color: MUTED }}>{d.contact?.company ?? ""}</div>
+                  </div>
+                  <span style={{ fontSize: 12, color: MUTED }}>{n} {n === 1 ? "document" : "documents"}</span>
+                  <span style={{ fontSize: 11, color: MUTED }}>saved {fmtPt(d.updated_at)}</span>
+                  <span style={{ fontSize: 11, fontWeight: 600, background: "#FAEEDA", color: "#854F0B", borderRadius: 6, padding: "3px 8px" }}>Draft · Step {d.step}, {STEP_LABEL[d.step] ?? ""}</span>
+                  <span style={{ color: "#1A6CE4", fontWeight: 600 }}>Resume ›</span>
+                </Link>
+              );
+            })}
+          </div>
+        ) : null}
 
         {view === "uploaded" ? (
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", padding: "10px 14px", borderBottom: "0.5px solid #eef1f5" }}>
