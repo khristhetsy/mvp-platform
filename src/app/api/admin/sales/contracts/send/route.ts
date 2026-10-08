@@ -6,6 +6,8 @@ import { AnchorNotFoundError } from "@/lib/contracts/signature-anchors";
 import { RenderFailedError, RenderUnavailableError } from "@/lib/contracts/render-pdf";
 import { writeAuditLog } from "@/lib/data/audit";
 import { errorMessage } from "@/lib/contracts/route-helpers";
+import { getGoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
+import { hasGmailSendScope } from "@/lib/integrations/gmail-send";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -21,6 +23,8 @@ const schema = z.object({
   typedValues: z.record(z.string(), z.string().max(300)).optional(),
   /** False: send for review only, no signature request. */
   signature: z.boolean().optional(),
+  /** Send the cover email from the sender's own Gmail (default: iCapOS mail). */
+  via: z.enum(["gmail", "icapos"]).optional(),
 });
 
 /** POST — send the selected drafts with one cover email, for signature or (signature: false) for review only. */
@@ -31,13 +35,20 @@ export async function POST(req: Request): Promise<Response> {
   const parsed = schema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return bad("Invalid send request.");
   if (!(await canSeeContact(actor, parsed.data.contactId))) return forbidden();
+  if (parsed.data.via === "gmail") {
+    // Checked before anything is written, so a lapsed Google connection sends nothing.
+    const google = await getGoogleConnectionStatus(actor.db, actor.userId);
+    if (!google.connected || !hasGmailSendScope(google.scopes)) {
+      return bad("Your Google account is not connected for sending. Connect Google, or send from iCapOS mail.", 409);
+    }
+  }
   try {
     const result = await sendPacket(actor.db, {
       ...parsed.data,
       sender: { id: actor.userId, name: actor.profile.full_name ?? actor.profile.email ?? "iCFO", email: actor.profile.email ?? null, actorLabel: actor.actorLabel },
     });
     for (const docId of parsed.data.documentIds) {
-      await writeAuditLog(actor.db, { userId: actor.userId, action: "contracts.sent", entityType: "contract_documents", entityId: docId, metadata: { packet_id: result.packetId, delivered: result.delivered, signature: parsed.data.signature !== false } });
+      await writeAuditLog(actor.db, { userId: actor.userId, action: "contracts.sent", entityType: "contract_documents", entityId: docId, metadata: { packet_id: result.packetId, delivered: result.delivered, signature: parsed.data.signature !== false, via: parsed.data.via ?? "icapos" } });
     }
     // The send went out: the saved, resumable send for this contact is done.
     await actor.db.from("contract_send_drafts").delete().eq("contact_id", parsed.data.contactId);

@@ -7,6 +7,7 @@ import "server-only";
 import { getAppUrl, getResendApiKey } from "@/lib/env";
 import { esc, fromFor, renderEmail, type RenderedEmail } from "@/lib/email/layout";
 import { logOutboundEmail } from "@/lib/email/email-log";
+import { sendViaGmail } from "@/lib/integrations/gmail-send";
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 const COMPANY = "iCFO Capital Global, Inc.";
@@ -81,6 +82,39 @@ export async function sendCoverEmail(input: {
 }) {
   const mail = buildCoverEmail({ subject: input.subject, body: input.body, url: packetUrl(input.token), senderName: input.senderName, reviewOnly: input.reviewOnly });
   return send({ to: input.to, fromName: `${input.senderName}, iCFO Capital Global`, replyTo: input.senderEmail, mail, attachments: input.attachments });
+}
+
+/**
+ * The cover email sent from the sender's own connected Gmail account (gmail.send).
+ * Same content and attachments as the iCapOS mail version; the message lands in
+ * the sender's Gmail Sent folder and replies thread there.
+ */
+export async function sendCoverEmailViaGmail(input: {
+  userId: string;
+  to: string;
+  subject: string;
+  body: string;
+  token: string;
+  senderName: string;
+  attachments: Attachment[];
+  reviewOnly?: boolean;
+}): Promise<{ delivered: boolean }> {
+  if (!input.to.includes("@")) return { delivered: false };
+  const mail = buildCoverEmail({ subject: input.subject, body: input.body, url: packetUrl(input.token), senderName: input.senderName, reviewOnly: input.reviewOnly });
+  const r = await sendViaGmail({
+    userId: input.userId,
+    to: input.to,
+    subject: mail.subject,
+    body: mail.text,
+    html: mail.html,
+    attachments: input.attachments.map((a) => ({ name: a.filename, mimeType: "application/pdf", content: a.content })),
+  });
+  if ("error" in r) {
+    await logOutboundEmail({ to: input.to, subject: mail.subject, html: mail.html, text: mail.text, status: "failed", error: r.error.message.slice(0, 300), source: "spv-contracts" });
+    throw r.error;
+  }
+  await logOutboundEmail({ to: input.to, subject: mail.subject, html: mail.html, text: mail.text, status: "sent", providerId: `gmail:${r.messageId}`, source: "spv-contracts" });
+  return { delivered: true };
 }
 
 export async function sendReminderEmail(input: { to: string; firstName: string | null; documents: string[]; token: string; senderName: string; senderEmail: string | null }) {

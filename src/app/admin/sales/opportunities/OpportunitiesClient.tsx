@@ -6,8 +6,8 @@ import { useSearchParams } from "next/navigation";
 import { MassEmailComposer } from "@/components/marketing/MassEmailComposer";
 import { SelectionBar, ActionResult, runBulk, type SelectionAction } from "@/components/admin/sales/SelectionBar";
 import { OdooSearchBar, EMPTY_SEARCH, textMatch, type SearchState } from "@/components/admin/OdooSearchBar";
-import { ToolbarGear, NewButton, downloadCsv, type GearItem } from "@/components/admin/ToolbarGear";
-import { SalesViewControl } from "@/app/admin/sales/SalesViewControl";
+import { NewButton, downloadCsv, type GearItem } from "@/components/admin/ToolbarGear";
+import { SalesGear } from "@/app/admin/sales/SalesViewGear";
 
 type Stage = { id: string; name: string; sort_order: number; is_won: boolean };
 type Opp = {
@@ -350,7 +350,7 @@ export function OpportunitiesClient({ canExport = false, meId = "" }: { canExpor
       <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, overflow: "visible" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderBottom: "0.5px solid #eef1f5", flexWrap: "wrap" }}>
           <NewButton onClick={() => setAdding((v) => !v)} />
-          <ToolbarGear items={gearItems} heading="Opportunities" />
+          <SalesGear items={gearItems} heading="Opportunities" />
           <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{filtered.length}{filtered.length !== opps.length ? ` / ${opps.length}` : ""}</span>
           <OdooSearchBar scope="opportunities" state={search} onChange={setSearch} quick={QUICK_FILTERS} fields={searchFields} groups={GROUP_OPTIONS} noGroupId="none" placeholder="Search opportunity, contact, or email…" width={520} />
 
@@ -368,7 +368,6 @@ export function OpportunitiesClient({ canExport = false, meId = "" }: { canExpor
             </>}
           </div>
 
-          <SalesViewControl />
         </div>
 
         {adding && (

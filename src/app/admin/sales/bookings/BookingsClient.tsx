@@ -2,8 +2,8 @@
 
 import { Fragment, useMemo, useState } from "react";
 import { OdooSearchBar, EMPTY_SEARCH, textMatch, type SearchState } from "@/components/admin/OdooSearchBar";
-import { ToolbarGear, downloadCsv, type GearItem } from "@/components/admin/ToolbarGear";
-import { SalesViewControl } from "@/app/admin/sales/SalesViewControl";
+import { downloadCsv, type GearItem } from "@/components/admin/ToolbarGear";
+import { SalesGear } from "@/app/admin/sales/SalesViewGear";
 import Link from "next/link";
 import type { Booking } from "@/lib/scheduling/bookings";
 import { SOURCE_CONFIDENCE_LABEL, isHighConfidence } from "@/lib/attribution/source";
@@ -89,7 +89,7 @@ export function BookingsClient({ bookings: initial, campaigns = [], canExport = 
   return (
     <div style={{ padding: "0 24px 24px" }}>
       <div style={{ display: "flex", alignItems: "center", marginBottom: 14, gap: 10, flexWrap: "wrap" }}>
-        <ToolbarGear heading="Bookings" items={[
+        <SalesGear heading="Bookings" items={[
           ...(canExport ? [{ key: "export", icon: "ti-download", label: "Export all", hint: `${filtered.length.toLocaleString()} matching`, onClick: () => downloadCsv(`bookings-${new Date().toISOString().slice(0, 10)}.csv`, ["Invitee", "Email", "Company", "Event", "Host", "Start", "End", "Status"], filtered.map((b) => [b.booker_name, b.booker_email, b.booker_company, b.event_type, b.host_name ?? b.host_email ?? "", b.start_time, b.end_time, b.status])) } as GearItem] : []),
           { key: "events", icon: "ti-calendar-event", label: "Event types and scheduling link", href: "/admin/sales/settings" },
         ]} />
@@ -102,7 +102,6 @@ export function BookingsClient({ bookings: initial, campaigns = [], canExport = 
           fields={searchFields}
           groups={[{ id: "none", label: "None" }, { id: "host", label: "Host" }, { id: "event", label: "Event type" }, { id: "week", label: "Week" }]}
           noGroupId="none" placeholder="Search invitee, email, event…" width={460} />
-        <SalesViewControl />
       </div>
 
       {bookings.length === 0 ? (

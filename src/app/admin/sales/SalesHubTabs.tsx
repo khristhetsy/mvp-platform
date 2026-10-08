@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 
 export const SALES_HUB_TABS: { label: string; href: string }[] = [
   { label: "Dashboard", href: "/admin/sales" },
@@ -16,60 +15,20 @@ export const SALES_HUB_TABS: { label: string; href: string }[] = [
   { label: "Settings", href: "/admin/sales/settings" },
 ];
 
-type Member = { id: string; name: string };
-
 const TABS = SALES_HUB_TABS;
 
-/** `viewOnly`: compact chrome — the tabs live in the top bar, so only the View control renders here. */
-export function SalesHubTabs({ viewOnly = false, inline = false }: { viewOnly?: boolean; inline?: boolean } = {}) {
+/** The Sales tab row (classic chrome). The View Me / Team control lives in each page's gear (SalesViewGear). */
+export function SalesHubTabs() {
   const pathname = usePathname();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const viewAs = searchParams.get("viewAs"); // null | "me" | userId
-  const [members, setMembers] = useState<Member[]>([]);
-  const [canViewTeam, setCanViewTeam] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  // Gated on the manage_crm permission: Member Sales reps get canViewTeam=false,
-  // so the View toggle is hidden and they only ever see their own accounts.
-  useEffect(() => {
-    let active = true;
-    fetch("/api/sales/view-scope")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (!active || !d) return;
-        setCanViewTeam(Boolean(d.canViewTeam));
-        if (Array.isArray(d.members)) setMembers(d.members);
-      })
-      .catch(() => {});
-    return () => { active = false; };
-  }, []);
 
   // Preserve viewAs across tab navigation (Settings is never scoped).
   const tabSuffix = viewAs && viewAs !== "team" ? `?viewAs=${encodeURIComponent(viewAs)}` : "";
-  const selectedMember = useMemo(() => members.find((m) => m.id === viewAs) ?? null, [members, viewAs]);
-  const mode: "me" | "team" | "user" = viewAs === "me" ? "me" : selectedMember ? "user" : "team";
 
-  function setView(value: string) {
-    const sp = new URLSearchParams(searchParams.toString());
-    if (value === "team") sp.delete("viewAs");
-    else sp.set("viewAs", value);
-    const qs = sp.toString();
-    router.push(qs ? `${pathname}?${qs}` : pathname);
-    setMenuOpen(false);
-  }
-
-  const seg = (active: boolean): React.CSSProperties => ({
-    fontSize: 11.5, fontWeight: active ? 600 : 400, padding: "4px 11px", cursor: "pointer",
-    color: active ? "#fff" : "var(--muted-foreground)", background: active ? "#4338CA" : "transparent", border: "none",
-  });
-
-  if (viewOnly && !canViewTeam) return null;
   return (
-    <div style={viewOnly
-      ? { display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12, marginBottom: inline ? 0 : 8, marginLeft: inline ? "auto" : undefined, flexWrap: "wrap" }
-      : { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, borderBottom: "0.5px solid var(--border)", marginBottom: 18, flexWrap: "wrap" }}>
-      {!viewOnly && <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, borderBottom: "0.5px solid var(--border)", marginBottom: 18, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
         {TABS.map((t) => {
           const active = t.href === "/admin/sales" ? pathname === t.href : pathname.startsWith(t.href);
           const href = t.href === "/admin/sales/settings" ? t.href : `${t.href}${tabSuffix}`;
@@ -83,40 +42,7 @@ export function SalesHubTabs({ viewOnly = false, inline = false }: { viewOnly?: 
             </Link>
           );
         })}
-      </div>}
-
-      {canViewTeam && (
-        <div style={{ position: "relative", paddingBottom: viewOnly ? 0 : 6 }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, padding: "3px 4px 3px 9px" }}>
-            <i className="ti ti-eye" style={{ fontSize: 14, color: "#4338CA" }} aria-hidden="true" />
-            <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>View</span>
-            <div style={{ display: "inline-flex", border: "0.5px solid var(--border)", borderRadius: 7, overflow: "hidden" }}>
-              <button type="button" onClick={() => setView("me")} style={seg(mode === "me")}>Me</button>
-              <button type="button" onClick={() => setView("team")} style={seg(mode === "team")}>Team</button>
-              {members.length > 0 && (
-                <button type="button" onClick={() => setMenuOpen((v) => !v)} style={{ ...seg(mode === "user"), display: "inline-flex", alignItems: "center", gap: 4 }}>
-                  {selectedMember ? selectedMember.name : "Someone else"}
-                  <i className="ti ti-chevron-down" style={{ fontSize: 12 }} aria-hidden="true" />
-                </button>
-              )}
-            </div>
-          </div>
-          {menuOpen && (
-            <>
-              <div onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 20 }} />
-              <div style={{ position: "absolute", top: "calc(100% + 4px)", right: 0, zIndex: 30, width: 220, maxHeight: 300, overflowY: "auto", background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 10, boxShadow: "0 10px 28px rgba(0,0,0,0.14)", padding: 5 }}>
-                {members.map((m) => (
-                  <button type="button" key={m.id} onClick={() => setView(m.id)} style={{ width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 8, padding: "7px 9px", background: m.id === viewAs ? "#F7F6FE" : "transparent", border: "none", borderRadius: 7, cursor: "pointer", fontSize: 12.5, color: "var(--foreground)" }}>
-                    <span style={{ width: 22, height: 22, borderRadius: "50%", background: "#EEEDFE", color: "#0A1A40", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 500, flexShrink: 0 }}>{m.name.slice(0, 2).toUpperCase()}</span>
-                    <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.name}</span>
-                    {m.id === viewAs && <i className="ti ti-check" style={{ marginLeft: "auto", color: "#4338CA" }} aria-hidden="true" />}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -8,6 +8,8 @@ import { getSalesScope } from "@/lib/sales/scope";
 import { getContactProfile } from "@/lib/sales/contacts";
 import { SalesHubHeader } from "../../SalesHubHeader";
 import { SendFlowClient } from "@/components/admin/contracts/SendFlowClient";
+import { getGoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
+import { hasGmailSendScope } from "@/lib/integrations/gmail-send";
 
 export const dynamic = "force-dynamic";
 
@@ -17,10 +19,11 @@ export default async function SendContractsPage({ searchParams }: { searchParams
   const { contact: contactId, resume } = await searchParams;
   if (!contactId) redirect("/admin/sales/contracts");
 
-  const [scope, data, eff] = await Promise.all([
+  const [scope, data, eff, google] = await Promise.all([
     getSalesScope(profile),
     getContactProfile(contactId),
     getEffectivePermissions(createServiceRoleClient(), profile.id, profile),
+    getGoogleConnectionStatus(createServiceRoleClient(), profile.id),
   ]);
   const visible = data && (scope.canSeeAllContacts || data.contact.assignee_ids.includes(profile.id));
   const shell = (body: ReactNode) => (
@@ -37,6 +40,7 @@ export default async function SendContractsPage({ searchParams }: { searchParams
       isAdmin={eff.isSuperAdmin || eff.permissions.includes("manage_settings")}
       senderName={profile.full_name ?? null}
       autoResume={resume === "1"}
+      gmail={{ connected: google.connected, canSend: google.connected && hasGmailSendScope(google.scopes), email: google.email }}
     />,
   );
 }

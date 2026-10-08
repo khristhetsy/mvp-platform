@@ -25,7 +25,7 @@ import {
   type ContactLite,
 } from "./store";
 import { applyEmailTokens, emailTokenValues, withTypedValues } from "./email-tokens";
-import { appBase, notifySender, sendCoverEmail, sendExecutedCopy, sendReminderEmail, type Attachment } from "./email";
+import { appBase, notifySender, sendCoverEmail, sendCoverEmailViaGmail, sendExecutedCopy, sendReminderEmail, type Attachment } from "./email";
 import { buildCertificate } from "./certificate";
 import type { ContractDocument, ContractTemplate, CountersignField, IssuingEntity, TemplateField } from "./types";
 import { STOP_STATUSES } from "./types";
@@ -204,6 +204,8 @@ export type SendInput = {
   typedValues?: Record<string, string>;
   /** False: email the PDFs for review only, with no signature request. Defaults to true. */
   signature?: boolean;
+  /** "gmail": send the cover email from the sender's connected Gmail. Default iCapOS mail. */
+  via?: "gmail" | "icapos";
   sender: { id: string; name: string; email: string | null; actorLabel: string };
 };
 
@@ -211,7 +213,7 @@ export type SendInput = {
  * Fail closed: every document is validated and rendered before anything is
  * written, so a problem with one document sends nothing.
  */
-export async function sendPacket(db: Db, input: SendInput): Promise<{ packetId: string; token: string; delivered: boolean; url: string }> {
+export async function sendPacket(db: Db, input: SendInput): Promise<{ packetId: string; token: string; delivered: boolean; url: string; deliveryError?: string }> {
   if (!input.documentIds.length) throw new SendBlockedError("Choose at least one document.");
   const bundles: Bundle[] = [];
   for (const id of input.documentIds) {
@@ -365,23 +367,36 @@ export async function sendPacket(db: Db, input: SendInput): Promise<{ packetId: 
   }
 
   let delivered = false;
+  let deliveryError: string | null = null;
   try {
-    delivered = (await sendCoverEmail({
-      to: contact.email,
-      subject: subject.text,
-      body: body.text,
-      token,
-      senderName: input.sender.name,
-      senderEmail: input.sender.email,
-      attachments,
-      reviewOnly: !signature,
-    })).delivered;
-  } catch {
+    delivered = (input.via === "gmail"
+      ? await sendCoverEmailViaGmail({
+          userId: input.sender.id,
+          to: contact.email,
+          subject: subject.text,
+          body: body.text,
+          token,
+          senderName: input.sender.name,
+          attachments,
+          reviewOnly: !signature,
+        })
+      : await sendCoverEmail({
+          to: contact.email,
+          subject: subject.text,
+          body: body.text,
+          token,
+          senderName: input.sender.name,
+          senderEmail: input.sender.email,
+          attachments,
+          reviewOnly: !signature,
+        })).delivered;
+  } catch (err) {
     delivered = false;
+    if (input.via === "gmail") deliveryError = err instanceof Error ? err.message : "Gmail send failed.";
   }
   await db.from("contract_packets").update({ delivered }).eq("id", packet.id);
   for (const p of prepared) await addEvent(db, p.b.doc.id, delivered ? "delivered" : "not_delivered", "system");
-  return { packetId: packet.id as string, token, delivered, url: `${appBase()}/contracts/${token}` };
+  return { packetId: packet.id as string, token, delivered, url: `${appBase()}/contracts/${token}`, ...(deliveryError ? { deliveryError } : {}) };
 }
 
 // ── Tracking actions ───────────────────────────────────────────────────────

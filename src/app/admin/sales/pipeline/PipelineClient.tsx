@@ -5,8 +5,8 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { SelectionBar, ActionResult, runBulk, type SelectionAction } from "@/components/admin/sales/SelectionBar";
 import { OdooSearchBar, EMPTY_SEARCH, textMatch, type SearchState } from "@/components/admin/OdooSearchBar";
-import { ToolbarGear, NewButton, downloadCsv, type GearItem } from "@/components/admin/ToolbarGear";
-import { SalesViewControl } from "@/app/admin/sales/SalesViewControl";
+import { NewButton, downloadCsv, type GearItem } from "@/components/admin/ToolbarGear";
+import { SalesGear } from "@/app/admin/sales/SalesViewGear";
 import { HScrollBoard } from "@/components/admin/HScrollBoard";
 import type { PendingTask } from "@/lib/sales/pipeline-pending-task";
 
@@ -249,7 +249,7 @@ export function PipelineClient({ canExport = false, meId = "" }: { canExport?: b
       )}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
         <NewButton onClick={() => setAdding((v) => !v)} />
-        <ToolbarGear items={gearItems} heading="Pipeline" />
+        <SalesGear items={gearItems} heading="Pipeline" />
         <select value={selId} onChange={(e) => setSelId(e.target.value)} style={{ fontSize: 12.5, fontWeight: 600, padding: "6px 10px", borderRadius: 8, border: "1px solid #2E78F5", background: "#EFF6FF", color: "#1A6CE4" }}>
           {pipelines.map((p) => <option key={p.id} value={p.id}>{p.name}{p.is_default ? " (default)" : ""}</option>)}
         </select>
@@ -261,7 +261,6 @@ export function PipelineClient({ canExport = false, meId = "" }: { canExport?: b
           <button type="button" onClick={() => setView("list")} style={segBtn(view === "list")}><i className="ti ti-list" aria-hidden="true" /> List</button>
           <button type="button" onClick={() => setView("stages")} style={segBtn(view === "stages")}>Edit stages</button>
         </div>
-        <SalesViewControl />
       </div>
 
       {adding && (

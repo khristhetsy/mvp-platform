@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 
 /** Odoo-style ⚙ menu beside the New button: imports, exports, page-level settings. */
@@ -8,11 +8,16 @@ export type GearItem =
   | { key: string; icon: string; label: string; onClick: () => void; hint?: string; sep?: boolean }
   | { key: string; icon: string; label: string; href: string; hint?: string; sep?: boolean };
 
-export function ToolbarGear({ items, heading }: { items: GearItem[]; heading?: string }) {
+/**
+ * `top`: an optional section rendered above the page items (Sales puts its View
+ * Me / Team / Someone else section here); it gets a close callback.
+ * `after`: rendered right of the gear button (Sales shows whose data is in view).
+ */
+export function ToolbarGear({ items, heading, top, after }: { items: GearItem[]; heading?: string; top?: (close: () => void) => ReactNode; after?: ReactNode }) {
   const [open, setOpen] = useState(false);
-  if (items.length === 0) return null;
+  if (items.length === 0 && !top) return null;
   return (
-    <div style={{ position: "relative" }}>
+    <div style={{ position: "relative", display: "inline-flex", alignItems: "center", gap: 8 }}>
       <button type="button" onClick={() => setOpen((v) => !v)} aria-label="More actions" aria-haspopup="true" aria-expanded={open}
         style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, borderRadius: 8, border: "0.5px solid var(--border-strong, #cbd5e1)", background: open ? "var(--muted)" : "#fff", color: "var(--muted-foreground)", cursor: "pointer" }}>
         <i className="ti ti-settings" style={{ fontSize: 16 }} aria-hidden="true" />
@@ -21,7 +26,9 @@ export function ToolbarGear({ items, heading }: { items: GearItem[]; heading?: s
         <>
           <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 39 }} />
           <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 40, width: 230, background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 10, boxShadow: "0 10px 28px rgba(0,0,0,0.14)", padding: "5px 0" }}>
-            {heading && <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".05em", color: "var(--muted-foreground)", padding: "6px 13px 4px" }}>{heading}</div>}
+            {top && top(() => setOpen(false))}
+            {top && items.length > 0 && <div style={{ borderTop: "0.5px solid #eef1f5", margin: "4px 0" }} />}
+            {heading && items.length > 0 && <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".05em", color: "var(--muted-foreground)", padding: "6px 13px 4px" }}>{heading}</div>}
             {items.map((it) => {
               const inner = (
                 <>
@@ -43,6 +50,7 @@ export function ToolbarGear({ items, heading }: { items: GearItem[]; heading?: s
           </div>
         </>
       )}
+      {after}
     </div>
   );
 }
