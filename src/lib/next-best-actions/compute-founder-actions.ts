@@ -5,6 +5,8 @@ import type { NextBestAction } from "@/lib/next-best-actions/types";
 import { listCompanyDocuments } from "@/lib/data/documents";
 import { computeReadinessScore, getLatestDiligenceReport } from "@/lib/data/founder-readiness";
 import { computeDataRoomState, type DataRoomState } from "@/lib/data-room/completeness";
+import { loadNotApplicableTypes } from "@/lib/documents/not-applicable";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { listFounderCompanyUpdates } from "@/lib/company-updates/company-updates";
 import { listFounderInvestorContacts } from "@/lib/founder-crm/contacts";
 import { evaluateFounderOutreachReadiness } from "@/lib/founder-crm/outreach-readiness";
@@ -149,12 +151,14 @@ export async function loadFounderNbaContext(
       readiness: row.operational_readiness_status,
     }));
 
+  const notApplicable = await loadNotApplicableTypes(createServiceRoleClient(), company.id).catch(() => [] as string[]);
+
   return {
     company,
     onboardingPercent: onboarding.percent,
     onboardingComplete: onboarding.isComplete,
     currentOnboardingStep: onboarding.currentStep,
-    dataRoom: computeDataRoomState(docs),
+    dataRoom: computeDataRoomState(docs, notApplicable),
     readinessScore,
     remediationHighOpen: highOpen,
     remediationActive: remediation.summary.active,

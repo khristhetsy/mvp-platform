@@ -13,6 +13,8 @@ import { BUSINESS_PLAN_SECTIONS } from "@/lib/business-plan/sections";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { loadFounderMilestones } from "@/lib/data/founder-milestones";
 import { loadOutreachStatus } from "@/lib/founder/outreach-status";
+import { naSummaryNote } from "@/lib/documents/na-shared";
+import { businessPlanCoreProgress } from "@/lib/business-plan/completion";
 
 export type StepState = "done" | "in_progress" | "not_started" | "unknown";
 export interface StepPart {
@@ -30,6 +32,8 @@ export interface StepProgress {
   parts?: StepPart[];
   /** Short status chip text overriding the percentage (e.g. "1 of 2 done"). */
   badge?: string;
+  /** Shown under the step, e.g. "1 item marked N/A: Customer contracts". N/A counts as done. */
+  note?: string;
 }
 export interface StageProgress {
   /** keyed by step href */
@@ -83,20 +87,18 @@ export async function computeStageProgress(
     const documents = docsRes.data ?? [];
     const notApplicableCodes = await loadNotApplicableTypes(createServiceRoleClient(), company.id).catch(() => [] as string[]);
     const checklist = buildDocumentChecklist(documents, undefined, notApplicableCodes);
-    const applicable = checklist.filter((c) => c.status !== "not_applicable");
-    const uploadedCount = applicable.filter((c) => c.status === "uploaded" || c.status === "needs_review").length;
-    const docsPercent = applicable.length ? (uploadedCount / applicable.length) * 100 : 0;
+    // N/A counts as done: it fills its slot like an upload, and the step says so.
+    const naItems = checklist.filter((c) => c.status === "not_applicable");
+    const doneCount = checklist.filter((c) => c.status === "uploaded" || c.status === "needs_review" || c.status === "not_applicable").length;
+    const docsPercent = checklist.length ? (doneCount / checklist.length) * 100 : 0;
+    const docsNote = naSummaryNote(naItems.map((c) => c.label));
     const hasDoc = (label: string) =>
       checklist.some((c) => c.label === label && (c.status === "uploaded" || c.status === "needs_review"));
+    const isNaDoc = (label: string) => checklist.some((c) => c.label === label && c.status === "not_applicable");
 
     const profilePercent = buildProfileCompletion(company).percent;
 
-    const coreIds = BUSINESS_PLAN_SECTIONS.filter((s) => s.core).map((s) => s.id);
-    const planPercent = plan
-      ? (coreIds.filter((id) => ((plan.sections?.[id]?.content ?? "") as string).trim().length > 0).length /
-          Math.max(coreIds.length, 1)) *
-        100
-      : 0;
+    const planProgress = businessPlanCoreProgress(plan, BUSINESS_PLAN_SECTIONS);
 
     const diligenceReport = (reportRes as { data?: { readiness_score?: number | null } | null } | null)?.data ?? null;
     const hasReport = Boolean(diligenceReport);
@@ -123,9 +125,13 @@ export async function computeStageProgress(
     return rollup({
       // Keyed on the step's own href — the rating step links to the rating.
       "/founder/readiness": readinessStep,
-      "/founder/business-plan": step(planPercent),
-      "/founder/pitch-deck": step(hasDoc("Pitch deck") ? 100 : 0),
-      "/founder/readiness/data-room": step(docsPercent),
+      "/founder/business-plan": { ...step(planProgress.percent), note: naSummaryNote(planProgress.naTitles, "section") },
+      "/founder/pitch-deck": hasDoc("Pitch deck")
+        ? step(100)
+        : isNaDoc("Pitch deck")
+          ? { ...step(100), note: naSummaryNote(["Pitch deck"]) }
+          : step(0),
+      "/founder/readiness/data-room": { ...step(docsPercent), note: docsNote },
       "/founder/report": step(hasReport ? 100 : 0),
     });
   }

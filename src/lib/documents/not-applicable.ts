@@ -1,18 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-/**
- * Document types a founder is allowed to mark "Not applicable".
- * Stored in canonical (normalized) form. Critical docs (pitch deck, financials,
- * cap table) are intentionally excluded so the readiness signal can't be gamed.
- */
-export const NA_ALLOWED_TYPES = new Set(["CUSTOMER_CONTRACTS", "LEGAL_DOCUMENTS", "OTHER"]);
-
-/** Normalize a UI document-type value to the canonical code stored everywhere. */
-export function normalizeNaType(input: string): string {
-  const value = input.toUpperCase().trim();
-  if (value === "LEGAL_DOCUMENT") return "LEGAL_DOCUMENTS";
-  return value;
-}
+export { NA_ALLOWED_TYPES, normalizeNaType } from "./na-shared";
+import { NA_ALLOWED_TYPES, normalizeNaType, type NaEntry } from "./na-shared";
 
 /** Load the set of document types marked Not-applicable for a company (canonical codes). */
 export async function loadNotApplicableTypes(
@@ -23,7 +12,38 @@ export async function loadNotApplicableTypes(
     .from("document_not_applicable")
     .select("document_type")
     .eq("company_id", companyId);
-  return (data ?? []).map((r: { document_type: string }) => r.document_type.toUpperCase());
+  return (data ?? []).map((r: { document_type: string }) => normalizeNaType(r.document_type));
+}
+
+/** N/A markers with their note, time and who marked them (name), keyed by canonical code. */
+export async function loadNotApplicableEntries(
+  admin: SupabaseClient,
+  companyId: string,
+): Promise<Record<string, NaEntry>> {
+  const { data } = await admin
+    .from("document_not_applicable")
+    .select("document_type, reason, marked_by, created_at")
+    .eq("company_id", companyId);
+  const rows = (data ?? []) as Array<{ document_type: string; reason: string | null; marked_by: string | null; created_at: string | null }>;
+  const ids = [...new Set(rows.map((r) => r.marked_by).filter((v): v is string => Boolean(v)))];
+  const names = new Map<string, string>();
+  if (ids.length) {
+    const { data: people } = await admin.from("profiles").select("id, full_name, email").in("id", ids);
+    for (const p of (people ?? []) as Array<{ id: string; full_name: string | null; email: string | null }>) {
+      names.set(p.id, p.full_name || p.email || "");
+    }
+  }
+  const out: Record<string, NaEntry> = {};
+  for (const r of rows) {
+    const code = normalizeNaType(r.document_type);
+    out[code] = {
+      documentType: code,
+      note: r.reason?.trim() || null,
+      markedAt: r.created_at,
+      markedByName: (r.marked_by && names.get(r.marked_by)) || null,
+    };
+  }
+  return out;
 }
 
 /** Insert or remove a Not-applicable marker. Caller must have verified ownership. */
@@ -52,4 +72,23 @@ export async function setNotApplicable(
     .eq("company_id", input.companyId)
     .eq("document_type", type);
   return { error: error?.message ?? null };
+}
+
+/** N/A codes for many companies at once (batch passes: reminders, admin tracker). */
+export async function loadNotApplicableByCompany(
+  admin: SupabaseClient,
+  companyIds: string[],
+): Promise<Map<string, string[]>> {
+  const out = new Map<string, string[]>();
+  if (!companyIds.length) return out;
+  const { data } = await admin
+    .from("document_not_applicable")
+    .select("company_id, document_type")
+    .in("company_id", companyIds);
+  for (const r of (data ?? []) as Array<{ company_id: string; document_type: string }>) {
+    const arr = out.get(r.company_id) ?? [];
+    arr.push(normalizeNaType(r.document_type));
+    out.set(r.company_id, arr);
+  }
+  return out;
 }

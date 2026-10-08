@@ -1,6 +1,7 @@
 import { listCompanyDocuments } from "@/lib/data/documents";
 import { getLatestDiligenceReport } from "@/lib/data/founder-readiness";
 import { computeDataRoomState } from "@/lib/data-room/completeness";
+import { loadNotApplicableTypes } from "@/lib/documents/not-applicable";
 import { computeFounderOnboardingProgress } from "@/lib/onboarding/progress";
 import { getFounderFeatureAccess } from "@/lib/subscriptions/founder-access";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -50,7 +51,8 @@ export async function evaluateFounderOutreachReadiness(
     storedStepState: company.onboarding_step_state,
   });
 
-  const dataRoom = computeDataRoomState(documents ?? []);
+  const notApplicable = await loadNotApplicableTypes(adminClient, company.id).catch(() => [] as string[]);
+  const dataRoom = computeDataRoomState(documents ?? [], notApplicable);
   const businessPlan = (documents ?? []).some((doc) => doc.document_type === "BUSINESS_PLAN");
   const descriptionOk = (company.business_description?.trim().length ?? 0) >= 50;
   const raiseOk = company.funding_amount != null && Number(company.funding_amount) > 0;

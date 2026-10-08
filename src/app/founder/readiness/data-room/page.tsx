@@ -17,6 +17,8 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { DealCompanyEmptyState } from "@/components/founder/DealCompanyEmptyState";
 import { resolveActingFounderScope } from "@/lib/admin/act-on-behalf";
+import { loadNotApplicableEntries } from "@/lib/documents/not-applicable";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Data room" };
@@ -52,6 +54,7 @@ export default async function FounderDataRoomPage() {
   // behalf; otherwise the staff session hits RLS and the page renders empty.
   const db = acting ? acting.supabase : supabase;
   const documents = company ? (await listCompanyDocuments(db, company.id)).data ?? [] : [];
+  const notApplicableEntries = await loadNotApplicableEntries(createServiceRoleClient(), company.id).catch(() => ({}));
   const [activity, engagement, questions] = company
     ? await Promise.all([
         listDataRoomActivity(company.id),
@@ -72,7 +75,7 @@ export default async function FounderDataRoomPage() {
             title={t("your_data_room")}
             description={t("everything_investors_and_our_diligence_team_ne")}
           />
-          <DataRoomReadinessCard documents={documents} />
+          <DataRoomReadinessCard documents={documents} notApplicableEntries={notApplicableEntries} />
           <div className="mt-6 grid gap-6 lg:grid-cols-2">
             <DataRoomAccessPanel />
             <DataRoomActivityPanel items={activity} />

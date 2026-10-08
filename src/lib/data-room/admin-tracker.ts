@@ -4,6 +4,7 @@
 
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { computeDataRoomState } from "@/lib/data-room/completeness";
+import { loadNotApplicableByCompany } from "@/lib/documents/not-applicable";
 import type { DocumentRecord } from "@/lib/supabase/types";
 
 export interface DataRoomTrackerRow {
@@ -57,7 +58,7 @@ export async function loadDataRoomTracker(): Promise<{ rows: DataRoomTrackerRow[
   const companyIds = companyList.map((c) => c.id);
   const founderIds = companyList.map((c) => c.founder_id).filter((v): v is string => Boolean(v));
 
-  const [{ data: docs }, { data: profiles }, { data: nudges }] = await Promise.all([
+  const [{ data: docs }, { data: profiles }, { data: nudges }, naByCompany] = await Promise.all([
     admin.from("documents").select("company_id, document_type, status, created_at").in("company_id", companyIds),
     founderIds.length
       ? admin.from("profiles").select("id, full_name, email").in("id", founderIds)
@@ -70,6 +71,7 @@ export async function loadDataRoomTracker(): Promise<{ rows: DataRoomTrackerRow[
           .in("recipient_user_id", founderIds)
           .order("created_at", { ascending: false })
       : Promise.resolve({ data: [] as Array<{ recipient_user_id: string; created_at: string }> }),
+    loadNotApplicableByCompany(admin, companyIds).catch(() => new Map<string, string[]>()),
   ]);
 
   const docsByCompany = new Map<string, DocumentRecord[]>();
@@ -86,7 +88,7 @@ export async function loadDataRoomTracker(): Promise<{ rows: DataRoomTrackerRow[
 
   const rows: DataRoomTrackerRow[] = companyList.map((c) => {
     const companyDocs = docsByCompany.get(c.id) ?? [];
-    const state = computeDataRoomState(companyDocs);
+    const state = computeDataRoomState(companyDocs, naByCompany.get(c.id) ?? []);
     const profile = c.founder_id ? profileById.get(c.founder_id) : null;
     const lastDocAt = companyDocs
       .map((d) => d.created_at)

@@ -8,7 +8,7 @@ import { requiredDocumentTypes } from "@/lib/documents/required-types";
 import { QUALIFY_REQUIRED_DOCUMENTS } from "@/lib/founder-journey/documents";
 import type { DocumentRecord } from "@/lib/supabase/types";
 
-export type DataRoomStatus = "uploaded" | "needs_review" | "missing";
+export type DataRoomStatus = "uploaded" | "needs_review" | "missing" | "not_applicable";
 export type FastestPath = "generate" | "upload";
 
 export interface DataRoomItem {
@@ -33,8 +33,10 @@ export interface DataRoomState {
   items: DataRoomItem[];
   total: number;
   completed: number;
-  percent: number; // 0..100 across the full required set
+  percent: number; // 0..100 across the full required set (N/A counts as done)
   missingCount: number;
+  /** Items the founder marked N/A — they count as done. */
+  notApplicableCount: number;
   needsReviewCount: number;
   // Core = the 3 Qualify docs that unlock investor access.
   coreTotal: number;
@@ -101,10 +103,10 @@ export function computeDataRoomState(
   /** Canonical document-type codes marked "not applicable" — excluded from totals. */
   notApplicableCodes: readonly string[] = [],
 ): DataRoomState {
-  const checklist = buildDocumentChecklist(documents, requiredDocumentTypes, notApplicableCodes)
-    // N/A types are excluded entirely: they never count as missing and never
-    // reduce the completeness percentage. (Type predicate narrows the status.)
-    .filter((c): c is Omit<typeof c, "status"> & { status: DataRoomStatus } => c.status !== "not_applicable");
+  // N/A types count as done: never missing, and they fill their slot in the
+  // percentage like an upload does. They still carry status "not_applicable" so
+  // every surface can show the N/A note.
+  const checklist = buildDocumentChecklist(documents, requiredDocumentTypes, notApplicableCodes);
 
   const items: DataRoomItem[] = checklist.map((c) => {
     const gen = GENERATORS[c.label];
@@ -125,6 +127,7 @@ export function computeDataRoomState(
   const total = items.length;
   const completed = items.filter((i) => i.status !== "missing").length;
   const missingCount = items.filter((i) => i.status === "missing").length;
+  const notApplicableCount = items.filter((i) => i.status === "not_applicable").length;
   const needsReviewCount = items.filter((i) => i.status === "needs_review").length;
   const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
 
@@ -145,6 +148,7 @@ export function computeDataRoomState(
     completed,
     percent,
     missingCount,
+    notApplicableCount,
     needsReviewCount,
     coreTotal: coreItems.length,
     coreCompleted,

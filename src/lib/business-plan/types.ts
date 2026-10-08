@@ -2,9 +2,18 @@ import type { ProjectionAssumptions, ProjectionResult } from "./projections";
 
 export type BusinessPlanStatus = "draft" | "finalized";
 
+export interface BusinessPlanSectionNa {
+  /** Optional reason, shown wherever the section appears (editor, export, stage page). */
+  note: string | null;
+  /** ISO time it was marked. */
+  at: string;
+}
+
 export interface BusinessPlanSectionContent {
   content: string;
   aiGenerated: boolean;
+  /** Set when the founder marked this section N/A. N/A counts as done. */
+  notApplicable?: BusinessPlanSectionNa | null;
 }
 
 export interface BusinessPlan {

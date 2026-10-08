@@ -8,6 +8,7 @@ import { computeProjections } from "@/lib/business-plan/projections";
 import { checkAssumptions } from "@/lib/business-plan/sanity";
 import type { ProjectionAssumptions, ProjectionResult } from "@/lib/business-plan/projections";
 import type { BusinessPlan } from "@/lib/business-plan/types";
+import { formatPt } from "@/lib/documents/na-shared";
 import type { AllocationSlice, MarketSize, PainBar, BeforeAfter, MatrixPoint, TractionChart as TractionData } from "@/lib/business-plan/charts";
 import { DEFAULT_CHARTS } from "@/lib/business-plan/charts";
 import { ProjectionsChart, MarketChart, FundsChart, ProblemChart, SolutionChart, CompetitionChart, TractionChart } from "./BusinessPlanSectionChart";
@@ -51,6 +52,8 @@ export function BusinessPlanGeneratorClient() {
   const [filling, setFilling] = useState(false);
   const [preview, setPreview] = useState(false);
   const [design, setDesign] = useState<PlanDesign>("modern");
+  /** Section whose "Mark N/A" note box is open, and the note being typed. */
+  const [naDraft, setNaDraft] = useState<{ id: string; note: string } | null>(null);
 
   useEffect(() => {
     let on = true;
@@ -98,8 +101,9 @@ export function BusinessPlanGeneratorClient() {
   );
 
   const filledCount = useMemo(() => {
-    let n = visibleSections.filter((s) => s.id !== PROJ_ID && (sections[s.id]?.content ?? "").trim().length > 0).length;
-    if (assumptions && visibleSections.some((s) => s.id === PROJ_ID)) n += 1;
+    // N/A counts as done.
+    let n = visibleSections.filter((s) => s.id !== PROJ_ID && (sections[s.id]?.notApplicable || (sections[s.id]?.content ?? "").trim().length > 0)).length;
+    if ((assumptions || sections[PROJ_ID]?.notApplicable) && visibleSections.some((s) => s.id === PROJ_ID)) n += 1;
     return n;
   }, [sections, assumptions, visibleSections]);
 
@@ -134,14 +138,14 @@ export function BusinessPlanGeneratorClient() {
     }
   }
 
-  async function save(status?: "draft" | "finalized") {
+  async function save(status?: "draft" | "finalized", sectionsOverride?: SectionMap) {
     setSaving(true);
     setError(null);
     try {
       const res = await fetch("/api/founder/business-plan", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sections, assumptions, projections, charts: { allocation, market, problem, solution, competition, traction, design }, ...(status ? { status } : {}) }),
+        body: JSON.stringify({ sections: sectionsOverride ?? sections, assumptions, projections, charts: { allocation, market, problem, solution, competition, traction, design }, ...(status ? { status } : {}) }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(typeof j.error === "string" ? j.error : "Could not save.");
@@ -151,6 +155,18 @@ export function BusinessPlanGeneratorClient() {
     } finally {
       setSaving(false);
     }
+  }
+
+  /** Mark a section N/A (or undo it) and save right away. N/A counts as done. */
+  async function setSectionNa(id: string, na: boolean, note: string | null = null) {
+    const prev = sections[id] ?? { content: "", aiGenerated: false };
+    const next: SectionMap = {
+      ...sections,
+      [id]: { ...prev, notApplicable: na ? { note: note?.trim() || null, at: new Date().toISOString() } : null },
+    };
+    setSections(next);
+    setNaDraft(null);
+    await save(undefined, next);
   }
 
   // Picking a design persists it immediately (stashed in charts.design) so the
@@ -272,11 +288,13 @@ export function BusinessPlanGeneratorClient() {
             <div key={g} className="mb-2">
               <p className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">{g}</p>
               {visibleSections.filter((s) => s.group === g).map((s) => {
-                const done = s.id === PROJ_ID ? Boolean(assumptions) : (sections[s.id]?.content ?? "").trim().length > 0;
+                const isNa = Boolean(sections[s.id]?.notApplicable);
+                const done = isNa || (s.id === PROJ_ID ? Boolean(assumptions) : (sections[s.id]?.content ?? "").trim().length > 0);
                 return (
                   <button type="button" key={s.id} onClick={() => setActive(s.id)} className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] transition ${activeId === s.id ? "bg-[var(--indigo-soft)] font-medium text-[var(--indigo)]" : "text-[var(--text-secondary)] hover:bg-slate-50"}`}>
                     <span className={`inline-block h-1.5 w-1.5 flex-none rounded-full ${done ? "bg-emerald-500" : "bg-slate-300"}`} />
                     <span className="flex-1">{s.title}</span>
+                    {isNa && <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">N/A</span>}
                   </button>
                 );
               })}
@@ -297,7 +315,43 @@ export function BusinessPlanGeneratorClient() {
           <h2 className="text-base font-semibold text-[var(--navy)]">{def.title}</h2>
           <p className="mt-1 text-sm text-[var(--text-muted)]">{def.help}</p>
 
-          {activeId === PROJ_ID ? (
+          {sections[activeId]?.notApplicable ? (
+            <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-600">N/A · counts as done</span>
+                <span className="text-xs text-slate-500">Marked N/A · {formatPt(sections[activeId]?.notApplicable?.at)}</span>
+              </div>
+              <p className="mt-2 text-sm text-slate-600">
+                {sections[activeId]?.notApplicable?.note ? `Note: ${sections[activeId]?.notApplicable?.note}` : "No note added."} This note shows in the exported plan instead of a blank section.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button type="button" onClick={() => void setSectionNa(activeId, false)} disabled={saving} className="rounded-md border border-[var(--border-subtle)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] disabled:opacity-50">Undo N/A</button>
+                <button type="button" onClick={() => void setSectionNa(activeId, false)} disabled={saving} className="cap-btn-primary rounded-md px-3 py-1.5 text-xs font-medium disabled:opacity-50">{activeId === PROJ_ID ? "Fill projections instead" : "Write this section instead"}</button>
+              </div>
+            </div>
+          ) : naDraft?.id === activeId ? (
+            <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <input
+                id={`bp-na-note-${activeId}`}
+                aria-label={`Why ${def.title} does not apply`}
+                value={naDraft.note}
+                onChange={(e) => setNaDraft({ id: activeId, note: e.target.value })}
+                maxLength={300}
+                placeholder="Why it doesn't apply (optional)"
+                className="min-w-0 flex-1 rounded-md border border-[var(--border-subtle)] bg-white px-2.5 py-1.5 text-sm"
+              />
+              <button type="button" onClick={() => setNaDraft(null)} className="rounded-md border border-[var(--border-subtle)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)]">Cancel</button>
+              <button type="button" onClick={() => void setSectionNa(activeId, true, naDraft.note)} disabled={saving} className="cap-btn-primary rounded-md px-3 py-1.5 text-xs font-medium disabled:opacity-50">Mark N/A</button>
+            </div>
+          ) : (
+            <div className="mt-2">
+              <button type="button" onClick={() => setNaDraft({ id: activeId, note: "" })} className="text-xs font-medium text-[var(--text-muted)] underline-offset-2 hover:underline">
+                Doesn&apos;t apply to us? Mark N/A
+              </button>
+            </div>
+          )}
+
+          {sections[activeId]?.notApplicable ? null : activeId === PROJ_ID ? (
             <div className="mt-4">
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {ASSUMPTION_DEFS.map((d) => (

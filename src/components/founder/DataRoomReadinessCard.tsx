@@ -3,6 +3,7 @@ import { useTranslations } from "next-intl";
 import { computeDataRoomState, groupDataRoomByFolder, DATA_ROOM_UNLOCKS } from "@/lib/data-room/completeness";
 import { DocumentViewButton } from "./DocumentViewButton";
 import type { DocumentRecord } from "@/lib/supabase/types";
+import { naMarkedLine, type NaEntry } from "@/lib/documents/na-shared";
 
 /**
  * The single most important founder-facing surface: how complete is your data
@@ -12,12 +13,15 @@ import type { DocumentRecord } from "@/lib/supabase/types";
 export function DataRoomReadinessCard({
   documents,
   showAllItems = true,
+  notApplicableEntries = {},
 }: {
   documents: DocumentRecord[];
   showAllItems?: boolean;
+  /** Saved N/A markers keyed by canonical code; N/A items count as done. */
+  notApplicableEntries?: Record<string, NaEntry>;
 }) {
   const t = useTranslations("founderCmp");
-  const state = computeDataRoomState(documents);
+  const state = computeDataRoomState(documents, Object.keys(notApplicableEntries));
   const complete = state.fullComplete;
 
   const ringColor = complete ? "#1D9E75" : state.coreComplete ? "#2E78F5" : "#BA7517";
@@ -54,6 +58,11 @@ export function DataRoomReadinessCard({
           </div>
         </div>
       </div>
+      {state.notApplicableCount > 0 && (
+        <p className="mt-3 text-xs text-slate-500">
+          {state.completed} of {state.total} done ({state.completed - state.notApplicableCount} uploaded, {state.notApplicableCount} N/A)
+        </p>
+      )}
 
       {/* Core (investor-access) progress */}
       <div className="mt-5 rounded-xl border border-slate-100 bg-slate-50/70 p-4">
@@ -99,16 +108,27 @@ export function DataRoomReadinessCard({
               <ul className="grid gap-2 sm:grid-cols-2">
                 {items.map((item) => {
                   const done = item.status !== "missing";
+                  const isNa = item.status === "not_applicable";
+                  const na = isNa ? notApplicableEntries[item.code] : undefined;
                   return (
                     <li key={item.code} className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 px-3 py-2">
                       <span className="flex min-w-0 items-center gap-2">
-                        <span className={`inline-flex h-4 w-4 flex-none items-center justify-center rounded-full text-[10px] ${done ? "bg-[#1D9E75] text-white" : "border border-slate-300 text-transparent"}`}><i className="ti ti-check" aria-hidden="true" /></span>
-                        <span className="truncate text-sm text-slate-700">
-                          {item.label}
-                          {item.core && <span className="ml-1.5 rounded bg-indigo-50 px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-indigo-700">core</span>}
+                        <span className={`inline-flex h-4 w-4 flex-none items-center justify-center rounded-full text-[10px] ${isNa ? "bg-slate-400 text-white" : done ? "bg-[#1D9E75] text-white" : "border border-slate-300 text-transparent"}`}><i className="ti ti-check" aria-hidden="true" /></span>
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm text-slate-700">
+                            {item.label}
+                            {item.core && <span className="ml-1.5 rounded bg-indigo-50 px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-indigo-700">core</span>}
+                          </span>
+                          {isNa && (
+                            <span className="block text-[11px] leading-4 text-slate-500">
+                              {na ? naMarkedLine(na) : "Marked N/A"}{na?.note ? ` · ${na.note}` : ""}
+                            </span>
+                          )}
                         </span>
                       </span>
-                      {done ? (
+                      {isNa ? (
+                        <span className="flex-none rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">N/A · counts as done</span>
+                      ) : done ? (
                         <span className="flex flex-none items-center gap-2">
                           {item.documentId && item.status === "uploaded" && (
                             <DocumentViewButton

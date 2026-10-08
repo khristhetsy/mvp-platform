@@ -54,4 +54,16 @@ describe("data-room completeness", () => {
     expect(s.fullComplete).toBe(true);
     expect(s.coreComplete).toBe(true);
   });
+
+  it("counts N/A items as done and keeps them visible", () => {
+    const all = ["Pitch deck", "Financial model", "Cap table", "Business plan", "Team bios", "Legal documents", "Corporate documents", "Market research"]
+      .map((l) => doc(l.toUpperCase().replaceAll(" ", "_")));
+    const s = computeDataRoomState(all, ["CUSTOMER_CONTRACTS"]);
+    expect(s.total).toBe(9);
+    expect(s.completed).toBe(9);
+    expect(s.notApplicableCount).toBe(1);
+    expect(s.percent).toBe(100);
+    expect(s.fullComplete).toBe(true);
+    expect(s.items.find((i) => i.code === "CUSTOMER_CONTRACTS")?.status).toBe("not_applicable");
+  });
 });

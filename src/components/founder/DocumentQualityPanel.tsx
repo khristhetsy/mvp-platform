@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { normalizeNaType } from "@/lib/documents/na-shared";
 import { useTranslations } from "next-intl";
 
 // ---------------------------------------------------------------------------
@@ -165,15 +166,14 @@ type UploadedDoc = {
 
 // Canonical codes a founder may flag "Not applicable". Matches the API allow-list.
 function specIsNotApplicable(spec: DocSpec, naTypes: Set<string>): boolean {
-  const canonical = spec.typeCode === "LEGAL_DOCUMENT" ? "LEGAL_DOCUMENTS" : spec.typeCode;
-  return naTypes.has(spec.typeCode) || naTypes.has(canonical);
+  return naTypes.has(spec.typeCode) || naTypes.has(normalizeNaType(spec.typeCode));
 }
 
 function computeOverallScore(docs: UploadedDoc[], naTypes: Set<string>): number {
   // Delegate to isUploaded() so alias resolution is consistent with the checklist display.
   // Capped at 100 — the 3 supplementary types (weight 5 each) act as bonus points.
   // A spec flagged "Not applicable" is credited its weight so it never reads as a
-  // penalty (only non-critical types can be flagged, enforced server-side).
+  // penalty: N/A counts as done.
   const raw = DOC_SPECS.reduce((sum, spec) => {
     if (isUploaded(spec, docs) || specIsNotApplicable(spec, naTypes)) return sum + spec.weight;
     return sum;
@@ -254,7 +254,7 @@ function DocCard({ spec, uploaded, notApplicable, count = 0 }: { spec: DocSpec; 
             <p className="text-xs font-semibold text-slate-900" style={notApplicable ? { color: "#94a3b8" } : undefined}>{spec.label}</p>
             <p className="text-[10px] text-slate-400">
               {notApplicable
-                ? "Not applicable — excluded from your score"
+                ? "Marked N/A · counts as done"
                 : uploaded
                 ? `${count} file${count === 1 ? "" : "s"}`
                 : spec.critical
