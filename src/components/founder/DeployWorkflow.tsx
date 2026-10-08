@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { AlertCircle, Bot, Check, ChevronDown, ChevronUp, Mail } from "lucide-react";
+import { AlertCircle, BarChart3, Bot, Check, ChevronDown, ChevronUp, IdCard, Mail, Send, Settings, type LucideIcon } from "lucide-react";
 import { ManualOutreachGuide } from "@/components/founder/ManualOutreachGuide";
 import {
   EMPTY_OUTREACH_STATUS,
@@ -53,11 +53,11 @@ function rememberOutreachMode(mode: OutreachTab) {
   }
 }
 
-const STEPS: { key: Step; n: number; label: string }[] = [
-  { key: "profile", n: 1, label: "Public Profile" },
-  { key: "outreach", n: 2, label: "Outreach" },
-  { key: "analytics", n: 3, label: "Analytics" },
-  { key: "settings", n: 4, label: "Settings" },
+const STEPS: { key: Step; Icon: LucideIcon; label: string }[] = [
+  { key: "profile", Icon: IdCard, label: "Public Profile" },
+  { key: "outreach", Icon: Send, label: "Outreach" },
+  { key: "analytics", Icon: BarChart3, label: "Analytics" },
+  { key: "settings", Icon: Settings, label: "Settings" },
 ];
 
 const STEP_TIPS: Record<Step, string> = {
@@ -413,7 +413,8 @@ export function DeployWorkflow({
     <div className="pb-24">
       {/* Step menu */}
       <div ref={menuRef} className="sticky top-0 z-10 -mx-2 mb-6 border-b border-slate-200 bg-white/90 px-2 backdrop-blur">
-        <nav className="flex gap-1 overflow-x-auto">
+        {/* No overflow scroller here: it showed a stray scrollbar beside the tabs. Tabs wrap on narrow screens. */}
+        <nav className="flex flex-wrap gap-x-1">
           {STEPS.map((s) => {
             const active = s.key === step;
             const isOutreach = s.key === "outreach";
@@ -436,13 +437,7 @@ export function DeployWorkflow({
                   active ? "text-indigo-600" : "text-slate-500 hover:text-slate-800"
                 }`}
               >
-                <span
-                  className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] ${
-                    active ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-500"
-                  }`}
-                >
-                  {s.n}
-                </span>
+                <s.Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden="true" />
                 {isOutreach ? (
                   <>
                     {`Outreach: ${otab === "manual" ? "Manual" : "Automated"}`}
@@ -459,7 +454,7 @@ export function DeployWorkflow({
                 ) : (
                   s.label
                 )}
-                {active ? <span className="absolute inset-x-2 -bottom-px h-0.5 rounded bg-indigo-600" /> : null}
+                {active ? <span className="absolute inset-x-2 bottom-0 h-0.5 rounded bg-indigo-600" /> : null}
               </button>
             );
           })}

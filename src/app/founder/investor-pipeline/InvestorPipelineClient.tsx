@@ -8,6 +8,7 @@ import { SelectionBar, type SelectionAction } from "@/components/admin/sales/Sel
 import { ScoreRing } from "@/components/ui/ScoreRing";
 import { EMPTY_SEARCH, type SearchState } from "@/components/admin/OdooSearchBar";
 import { useVocabulary } from "@/lib/vocabulary/provider";
+import { InvestorCardPanel } from "./InvestorCardPanel";
 
 type MeetingStatus = "none" | "requested" | "scheduled";
 type OutreachStatus = "not_started" | "contacted" | "in_progress" | "closed";
@@ -62,6 +63,8 @@ interface PipelineInvestor {
   preferred_stages: string[] | null;
   focus_sectors: string[] | null;
   notes: string | null;
+  last_contact_date?: string | null;
+  next_follow_up_date?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -210,6 +213,9 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
 
   // Profile popup
   const [profileOf, setProfileOf] = useState<PipelineInvestor | null>(null);
+  // Board card detail panel (opens on card click)
+  const [panelId, setPanelId] = useState<string | null>(null);
+  const panelInvestor = panelId ? investors.find((i) => i.id === panelId) ?? null : null;
 
   // Import from matches modal
   const [showImport, setShowImport] = useState(false);
@@ -490,6 +496,20 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
           countLabel="investors"
           placeholder="Search investor, firm, sector…"
           primary={<button type="button" onClick={openAdd} className="cap-btn-primary rounded-lg px-3 py-1.5 text-[12.5px] font-semibold">+ Add Investor</button>}
+          gear={{
+            view: {
+              value: viewMode,
+              options: [
+                { id: "board", label: "Board", icon: "ti-layout-columns" },
+                { id: "table", label: "Table", icon: "ti-table" },
+              ],
+              onChange: (v) => setViewMode(v as "table" | "board"),
+            },
+            actions: [
+              { key: "export", label: "Export CSV", icon: "ti-file-export", run: exportCSV },
+              { key: "import", label: "Import from Matches", icon: "ti-arrows-join", run: openImport },
+            ],
+          }}
           quick={[
             { key: "interested", label: "Interested" },
             { key: "has_meeting", label: "Meeting requested or booked" },
@@ -511,30 +531,6 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
             { id: "type", label: "Investor type" },
           ]}
         />
-      </div>
-
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex-1" />
-        <div className="inline-flex overflow-hidden rounded-lg border" style={{ borderColor: "var(--border-subtle)" }}>
-          {(["board", "table"] as const).map((m) => (
-            <button type="button"
-              key={m}
-              onClick={() => setViewMode(m)}
-              className="px-3 py-2 text-sm font-medium capitalize transition-colors"
-              style={viewMode === m
-                ? { background: "var(--blue)", color: "#fff" }
-                : { background: "#fff", color: "var(--text-secondary)" }}
-            >
-              {m}
-            </button>
-          ))}
-        </div>
-        <button type="button" onClick={exportCSV} className="rounded-lg border px-3 py-2 text-sm font-medium transition-colors hover:bg-slate-50" style={{ borderColor: "var(--border-subtle)", color: "var(--text-secondary)" }}>
-          Export CSV
-        </button>
-        <button type="button" onClick={openImport} className="cap-btn-secondary rounded-lg px-4 py-2 text-sm font-semibold">
-          Import from Matches
-        </button>
       </div>
 
       {/* Board view — kanban by pipeline stage */}
@@ -573,13 +569,14 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
                         draggable
                         onDragStart={(e) => { setDraggingId(inv.id); e.dataTransfer.effectAllowed = "move"; }}
                         onDragEnd={() => { setDraggingId(null); setDragOverStage(null); }}
-                        className="cursor-grab rounded-lg border bg-white p-2.5 active:cursor-grabbing"
+                        onClick={() => setPanelId(inv.id)}
+                        className="cursor-pointer rounded-lg border bg-white p-2.5 transition-colors hover:border-[var(--blue)] active:cursor-grabbing"
                         style={{ borderColor: "var(--border-subtle)", boxShadow: "var(--shadow-panel)", opacity: draggingId === inv.id ? 0.5 : 1 }}
                       >
                         <div className="flex items-start gap-2.5">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-start justify-between gap-1.5">
-                              <button type="button" onClick={() => router.push(`/founder/investor-pipeline/${inv.id}`)} className="text-left text-[13px] font-semibold hover:underline" style={{ color: "var(--text-primary)" }}>{inv.name}</button>
+                              <button type="button" onClick={(e) => { e.stopPropagation(); setPanelId(inv.id); }} className="text-left text-[13px] font-semibold hover:underline" style={{ color: "var(--text-primary)" }}>{inv.name}</button>
                               {inv.source === "platform_match" && !inv.platform_investor_id && (
                                 <span className="flex-none rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-500">Prospect</span>
                               )}
@@ -595,10 +592,11 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
                           </span>
                         </div>
                         <div className="mt-2 flex items-center gap-1.5">
-                          <button type="button" onClick={() => router.push(`/founder/investor-pipeline/${inv.id}`)} className="rounded-md border px-2 py-1 text-[11px] font-medium" style={{ borderColor: "var(--border-subtle)", color: "var(--blue)" }}>Open</button>
+                          <button type="button" onClick={(e) => { e.stopPropagation(); router.push(`/founder/investor-pipeline/${inv.id}`); }} className="rounded-md border px-2 py-1 text-[11px] font-medium" style={{ borderColor: "var(--border-subtle)", color: "var(--blue)" }}>Open</button>
                           <select
                             value={inv.pipeline_stage ?? "new"}
                             onChange={(e) => handleStageChange(inv.id, e.target.value as PipelineStage)}
+                            onClick={(e) => e.stopPropagation()}
                             className="flex-1 rounded-md border px-1.5 py-1 text-[11px]"
                             style={{ borderColor: "var(--border-subtle)", color: "var(--text-secondary)" }}
                             aria-label={`Move ${inv.name} to another stage`}
@@ -699,6 +697,17 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
           </table>
         </div>
       </div>
+      )}
+
+      {/* ── Board card detail panel ──────────────────────────────────────────── */}
+      {panelInvestor && (
+        <InvestorCardPanel
+          key={panelInvestor.id}
+          investor={panelInvestor}
+          stages={PIPELINE_STAGES}
+          onClose={() => setPanelId(null)}
+          onStageChange={(id, stage) => handleStageChange(id, stage as PipelineStage)}
+        />
       )}
 
       {/* ── Profile popup ──────────────────────────────────────────────────────── */}
