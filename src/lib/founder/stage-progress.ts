@@ -12,11 +12,24 @@ import { getBusinessPlan } from "@/lib/business-plan/store";
 import { BUSINESS_PLAN_SECTIONS } from "@/lib/business-plan/sections";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { loadFounderMilestones } from "@/lib/data/founder-milestones";
+import { loadOutreachStatus } from "@/lib/founder/outreach-status";
 
 export type StepState = "done" | "in_progress" | "not_started" | "unknown";
+export interface StepPart {
+  key: string;
+  label: string;
+  desc: string;
+  done: boolean;
+}
 export interface StepProgress {
   percent: number | null;
   state: StepState;
+  /** First time this step was seen done (ISO), from founder_stage_step_progress. */
+  completedAt?: string | null;
+  /** Sub-parts that together make the step (Outreach: automated + manual). */
+  parts?: StepPart[];
+  /** Short status chip text overriding the percentage (e.g. "1 of 2 done"). */
+  badge?: string;
 }
 export interface StageProgress {
   /** keyed by step href */
@@ -119,16 +132,37 @@ export async function computeStageProgress(
 
   if (slug === "marketing") {
     const admin = createServiceRoleClient() as unknown as SupabaseClient;
-    const [hasOutreach, hasIntro, hasInterest, hasSaved, hasApplication] = await Promise.all([
-      hasRow(admin, "outreach_campaigns", { company_id: company.id }),
+    const [outreach, hasIntro, hasInterest, hasSaved, hasApplication] = await Promise.all([
+      loadOutreachStatus(company.id),
       hasRow(admin, "intro_requests", { company_id: company.id }),
       hasRow(admin, "investor_interests", { company_id: company.id }),
       hasRow(admin, "saved_deals", { company_id: company.id }),
       hasRow(admin, "speaker_applications", { applicant_id: profileId }),
     ]);
     const inPipeline = hasIntro || hasInterest || hasSaved;
+    // Outreach is done only when both modes are used: automated launched AND
+    // the first manual email sent. Each half is worth 50%.
+    const outreachDone = [outreach.automated.launched, outreach.manual.started].filter(Boolean).length;
+    const outreachStep: StepProgress = {
+      ...step(outreachDone * 50),
+      badge: `${outreachDone} of 2 done`,
+      parts: [
+        {
+          key: "automated",
+          label: "Automated",
+          desc: "AI intros to platform matches. You approve each send.",
+          done: outreach.automated.launched,
+        },
+        {
+          key: "manual",
+          label: "Manual",
+          desc: "Email investors you already know from your contacts.",
+          done: outreach.manual.started,
+        },
+      ],
+    };
     return rollup({
-      "/founder/deploy": step(hasOutreach ? 100 : 0),
+      "/founder/deploy": outreachStep,
       "/founder/investor-pipeline": step(inPipeline ? 100 : 0),
       "/founder/events/present": step(hasApplication ? 100 : 0),
     });

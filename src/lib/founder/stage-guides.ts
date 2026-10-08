@@ -14,6 +14,12 @@ export type StageGuideStep = {
   href: string;
   hrefLabel: string;
   ai: StageGuideAi;
+  /** No measurable signal: the step counts as done once the founder opens it
+   *  from the guide (recorded in founder_stage_step_progress). */
+  doneOnVisit?: boolean;
+  /** Where the primary button goes when it differs from href (href stays the
+   *  progress key). */
+  openHref?: string;
 };
 
 export type StageGuide = {
@@ -46,6 +52,7 @@ const GUIDES: Record<StageSlug, StageGuide> = {
         desc: "See what's done and what's next across all four stages at a glance.",
         href: "/founder/journey",
         hrefLabel: "Open My Progress",
+        doneOnVisit: true,
         ai: { kind: "assistant", prompt: "Based on where I am, what should I focus on first to become investment-ready?" },
       },
       {
@@ -111,14 +118,16 @@ const GUIDES: Record<StageSlug, StageGuide> = {
         desc: "See investors matched to your sector, stage, and raise — ranked by fit.",
         href: "/founder/matches",
         hrefLabel: "Open matches",
+        doneOnVisit: true,
         ai: { kind: "assistant", prompt: "Which of my matched investors are the best fit for my raise, and why?" },
       },
       {
-        title: "Launch automated outreach",
-        desc: "AI-drafted, personalized intros to matched investors — you approve before anything sends.",
+        title: "Run your outreach",
+        desc: "Two ways to reach investors. Use both to complete this step.",
         href: "/founder/deploy",
+        openHref: "/founder/deploy?step=outreach",
         hrefLabel: "Open outreach",
-        ai: { kind: "tool", href: "/founder/deploy", label: "Draft emails with AI" },
+        ai: { kind: "tool", href: "/founder/deploy?step=outreach&mode=manual", label: "Draft emails with AI" },
       },
       {
         title: "Work your investor CRM",
@@ -139,6 +148,7 @@ const GUIDES: Record<StageSlug, StageGuide> = {
         desc: "See where investors drop off and what to improve in your funnel.",
         href: "/founder/analytics",
         hrefLabel: "Open analytics",
+        doneOnVisit: true,
         ai: { kind: "assistant", prompt: "How can I improve my investor conversion rate based on my outreach and pipeline?" },
       },
     ],
@@ -182,6 +192,7 @@ const GUIDES: Record<StageSlug, StageGuide> = {
         desc: "Set and monitor the milestones you committed to — proof you're executing.",
         href: "/founder/milestones",
         hrefLabel: "Open milestones",
+        doneOnVisit: true,
         ai: { kind: "assistant", prompt: "What milestones should I set and track after closing my round?" },
       },
     ],

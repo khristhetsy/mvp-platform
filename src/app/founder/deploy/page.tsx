@@ -25,7 +25,16 @@ import { FounderJourneyGate } from "@/components/founder/FounderJourneyGate";
 import { FounderPrivateMarketBoard } from "@/components/founder/FounderPrivateMarketBoard";
 import { FounderPrivateMarketSummaryCards } from "@/components/founder/FounderPrivateMarketSummaryCards";
 import { FounderPrivateMarketTicker } from "@/components/founder/FounderPrivateMarketTicker";
-import { DeployWorkflow, type DeployAnalytics, type DeployInsight } from "@/components/founder/DeployWorkflow";
+import { cookies } from "next/headers";
+import {
+  DeployWorkflow,
+  type DeployAnalytics,
+  type DeployInsight,
+  type OutreachTab,
+  type Step as DeployStep,
+} from "@/components/founder/DeployWorkflow";
+import { loadOutreachStatus } from "@/lib/founder/outreach-status";
+import { OUTREACH_MODE_COOKIE } from "@/lib/founder/outreach-status-lines";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 
@@ -122,7 +131,18 @@ function buildDeployInsights(input: {
   return insights;
 }
 
-export default async function FounderDeployPage() {
+const DEPLOY_STEPS: DeployStep[] = ["profile", "outreach", "analytics", "settings"];
+const asMode = (v: unknown): OutreachTab | null => (v === "automated" || v === "manual" ? v : null);
+
+export default async function FounderDeployPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ step?: string; mode?: string }>;
+}) {
+  const sp = (await searchParams) ?? {};
+  const initialStep = DEPLOY_STEPS.includes(sp.step as DeployStep) ? (sp.step as DeployStep) : null;
+  const initialMode = asMode(sp.mode);
+  const rememberedMode = asMode((await cookies()).get(OUTREACH_MODE_COOKIE)?.value);
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
   const { company } = await getActiveCompanyForUser(profile);
@@ -180,6 +200,8 @@ export default async function FounderDeployPage() {
   const [nextBatch, nextManualStep] = company
     ? await Promise.all([getNextOutreachBatch(company.id), getNextManualOutreachStep(company.id)])
     : [null, null];
+  // Automated and manual status for the Outreach dropdown and the manual nudge.
+  const outreachStatus = await loadOutreachStatus(company?.id);
 
   const followUpsNeeded = crmView?.summary.followUpsNeeded ?? 0;
   const interestedCount = crmView?.summary.totalInterestedInvestors ?? 0;
@@ -345,6 +367,10 @@ export default async function FounderDeployPage() {
               automated={automatedNode}
               manual={manualNode}
               analytics={analytics}
+              outreachStatus={outreachStatus}
+              initialStep={initialStep}
+              initialMode={initialMode}
+              rememberedMode={rememberedMode}
               outreachAnalytics={
                 <OutreachAnalytics
                   records={outreachRecords}

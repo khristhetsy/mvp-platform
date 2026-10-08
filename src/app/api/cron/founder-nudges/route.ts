@@ -10,13 +10,14 @@ import {
 import { runDataRoomReminderPass } from "@/lib/data-room/reminder-pass";
 import { nudgeStalledJourneyFounders } from "@/lib/notifications/founder-nudges";
 import { runStageGateReminderPass } from "@/lib/notifications/stage-gate-reminders";
+import { runManualOutreachReminderPass } from "@/lib/notifications/manual-outreach-reminders";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 /**
- * Daily founder nudges: the data room reminder cadence, stalled journey nudges
- * and stage gate reminders. These used to run at the end of
+ * Daily founder nudges: the data room reminder cadence, stalled journey nudges,
+ * stage gate reminders and manual outreach reminders (Stage 3). These used to run at the end of
  * /api/cron/run-orchestration, which hits its 60 second limit before reaching
  * them, so they never finished (last data room reminder: 2026-07-14). Here they
  * have their own budget and do not depend on the orchestration pass.
@@ -40,8 +41,9 @@ async function handle(request: Request) {
   const dataRoomReminders = await safe("data_room_reminders", runDataRoomReminderPass);
   const journeyNudges = await safe("journey_nudges", nudgeStalledJourneyFounders);
   const gateReminders = await safe("stage_gate_reminders", runStageGateReminderPass);
+  const manualOutreachReminders = await safe("manual_outreach_reminders", runManualOutreachReminderPass);
 
-  return NextResponse.json({ ok: true, dataRoomReminders, journeyNudges, gateReminders });
+  return NextResponse.json({ ok: true, dataRoomReminders, journeyNudges, gateReminders, manualOutreachReminders });
 }
 
 async function scheduledGET(request: Request) {
