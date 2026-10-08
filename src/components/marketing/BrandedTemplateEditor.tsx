@@ -12,6 +12,7 @@ import { condenseControls, isShort, viewKey } from "@/lib/email/condense";
 import type { CopyWithMaster } from "@/lib/email/masters-queries";
 import type { PlaceholderSchema, TemplateSlot } from "@/lib/email/template-schema";
 import { DEPARTMENTS } from "@/lib/marketing/department-grouping";
+import { TERM_FIELDS, addTermLine, hasTermLine, removeTermLine } from "@/lib/email/founder-fields";
 import { ACCENT_SWATCHES, DESIGN_KEYS, dominantColor, hasDesign, mapFounderValues, readDesign, suggestLooks, writeDesign, type DesignSettings, type Look } from "@/lib/email/design";
 
 type Master = { id: string; name: string; description: string; compiled_html: string; placeholder_schema: PlaceholderSchema };
@@ -54,6 +55,62 @@ const FOUNDER_FIELD: Record<string, Record<string, string>> = {
   Newsletter: { headline: "headline", intro: "body", section_one_body: "considerations", section_two_body: "terms" },
   Promo: { headline: "headline", subhead: "body" },
 };
+/** Founder fields taken out of the email (comma list) and values inserted with "+ Insert" ({ field: slot }); saved with the template. */
+const OFF_KEY = "founder_off";
+const INS_KEY = "founder_inserted";
+const readOff = (s: Record<string, string>) => new Set((s[OFF_KEY] ?? "").split(",").filter(Boolean));
+function readIns(s: Record<string, string>): Record<string, string> {
+  try { const v = JSON.parse(s[INS_KEY] || "{}") as unknown; return v && typeof v === "object" ? (v as Record<string, string>) : {}; } catch { return {}; }
+}
+/** The field a design puts terms lines in. */
+const termSlot = (masterName: string) => (masterName === "Deal introduction" ? "terms" : masterName === "Newsletter" ? "section_two_body" : null);
+const IMAGE_SLOTS = new Set<string>([DESIGN_KEYS.bannerImage, DESIGN_KEYS.logoImage, "hero_image"]);
+
+/** Take one founder field out of the email: its terms line goes, or the fields it filled are cleared. */
+function excludeField(masterName: string, s: Record<string, string>, key: string, defaults: Record<string, string>): Record<string, string> {
+  const out = { ...s };
+  const ts = termSlot(masterName);
+  if (TERM_FIELDS.includes(key)) {
+    if (ts) {
+      out[ts] = removeTermLine(out[ts] ?? "", key);
+      if (masterName === "Newsletter" && !out[ts].trim()) out.section_two_title = "";
+    }
+    return out;
+  }
+  for (const t of usedBy(masterName)[key] ?? []) {
+    if (IMAGE_SLOTS.has(t)) continue;
+    out[t] = t === "cta_url" ? (defaults.cta_url ?? "") : "";
+  }
+  if (masterName === "Newsletter" && key === "considerations") out.section_one_title = "";
+  return out;
+}
+
+/** Put a removed founder field back, the way the founder fill puts it in. */
+function includeField(masterName: string, s: Record<string, string>, key: string, prefill: Prefill): Record<string, string> {
+  const out = { ...s };
+  const ts = termSlot(masterName);
+  if (TERM_FIELDS.includes(key)) {
+    const f = prefill.fields.find((x) => x.key === key);
+    if (ts && f) {
+      out[ts] = addTermLine(out[ts] ?? "", key, f.value);
+      if (masterName === "Newsletter" && !(out.section_two_title ?? "").trim()) out.section_two_title = "Terms";
+    }
+    return out;
+  }
+  const fresh = startValues(masterName, {}, prefill);
+  for (const t of usedBy(masterName)[key] ?? []) if (!IMAGE_SLOTS.has(t) && fresh[t] !== undefined) out[t] = fresh[t];
+  if (masterName === "Newsletter" && key === "considerations" && fresh.section_one_title) out.section_one_title = fresh.section_one_title;
+  return out;
+}
+
+/** Re-apply the template's removed fields after a fill. */
+function applyOff(masterName: string, s: Record<string, string>, off: Set<string>, defaults: Record<string, string>): Record<string, string> {
+  let out = { ...s };
+  for (const k of off) out = excludeField(masterName, out, k, defaults);
+  if (off.size) out[OFF_KEY] = [...off].join(",");
+  return out;
+}
+
 export type SavedBrandedTemplate = { id: string; name: string; subject: string; html_body: string; department: string | null };
 
 const PREVIEW_WIDTHS = { desktop: 640, mobile: 390 } as const;
@@ -170,7 +227,7 @@ export function BrandedTemplateEditor({ templateId, projectId, defaultDepartment
       const pf = j.prefill;
       setPrefill(pf);
       setSlots((p) => {
-        const next = { ...keepDesign(p), ...startValues(master?.name ?? "", defaults, pf) };
+        const next = applyOff(master?.name ?? "", { ...keepDesign(p), ...startValues(master?.name ?? "", defaults, pf) }, readOff(p), defaults);
         // A new founder brings their own banner and logo when they have them.
         if (!pf.values.hero_image) delete next[DESIGN_KEYS.bannerImage];
         if (!pf.values.logo_image) delete next[DESIGN_KEYS.logoImage];
@@ -180,7 +237,7 @@ export function BrandedTemplateEditor({ templateId, projectId, defaultDepartment
   }
 
   /** "+ Insert": add a founder value to the field last clicked (or the main text field). */
-  function insertFounder(value: string) {
+  function insertFounder(key: string, value: string) {
     const target = (lastField && fields.some((f) => f.key === lastField) ? lastField : null)
       ?? fields.find((f) => f.type === "richtext" || f.type === "textarea")?.key ?? fields[0]?.key;
     if (!target) return;
@@ -188,9 +245,42 @@ export function BrandedTemplateEditor({ templateId, projectId, defaultDepartment
     const multi = slot?.type === "richtext" || slot?.type === "textarea" || slot?.type === "list" || slot?.type === "terms";
     setSlots((p) => {
       const cur = (p[target] ?? "").trim();
-      return { ...p, [target]: cur ? `${cur}${multi ? (slot?.type === "richtext" ? "\n\n" : "\n") : " "}${value}` : value };
+      const ins = { ...readIns(p), [key]: target };
+      return { ...p, [target]: cur ? `${cur}${multi ? (slot?.type === "richtext" ? "\n\n" : "\n") : " "}${value}` : value, [INS_KEY]: JSON.stringify(ins) };
     });
     setMsg(`Inserted into ${slot?.label ?? target}.`);
+  }
+
+  /** "Undo" on an inserted value: take it back out of the field it went into. */
+  function undoInsert(key: string) {
+    const value = prefill?.fields.find((f) => f.key === key)?.value ?? "";
+    setSlots((p) => {
+      const ins = readIns(p);
+      const target = ins[key];
+      delete ins[key];
+      const next: Record<string, string> = { ...p, [INS_KEY]: JSON.stringify(ins) };
+      if (target && value) {
+        const cur = p[target] ?? "";
+        const i = cur.lastIndexOf(value);
+        if (i >= 0) {
+          let start = i;
+          while (start > 0 && /\s/.test(cur[start - 1])) start--;
+          next[target] = (cur.slice(0, start) + cur.slice(i + value.length)).replace(/^\s+/, "");
+        }
+      }
+      return next;
+    });
+  }
+
+  /** "Remove" / "Add back" on a founder field. */
+  function toggleField(key: string, include: boolean) {
+    if (!master || !prefill) return;
+    setSlots((p) => {
+      const off = readOff(p);
+      if (include) off.delete(key); else off.add(key);
+      const next = include ? includeField(master.name, p, key, prefill) : excludeField(master.name, p, key, defaults);
+      return { ...next, [OFF_KEY]: [...off].join(",") };
+    });
   }
 
   /** Where a prefilled field's value came from, for its tag. */
@@ -232,7 +322,8 @@ export function BrandedTemplateEditor({ templateId, projectId, defaultDepartment
   function pickMaster(id: string) {
     if (templateId || id === masterId) return;
     setMasterId(id);
-    setSlots(startValues(masters.find((m) => m.id === id)?.name ?? "", defaults, prefill));
+    const name = masters.find((m) => m.id === id)?.name ?? "";
+    setSlots((p) => applyOff(name, startValues(name, defaults, prefill), readOff(p), defaults));
   }
 
   async function upload(slot: Pick<TemplateSlot, "key">, file: File) {
@@ -321,7 +412,7 @@ export function BrandedTemplateEditor({ templateId, projectId, defaultDepartment
           prefill={prefill}
           busy={founderBusy}
           onPick={(ref) => void chooseFounder(ref)}
-          onRefill={() => setSlots((p) => { const v = startValues(master?.name ?? "", {}, prefill); delete v.cta_url; return { ...p, ...v }; })}
+          onRefill={() => setSlots((p) => { const v = startValues(master?.name ?? "", {}, prefill); delete v.cta_url; return applyOff(master?.name ?? "", { ...p, ...v }, readOff(p), defaults); })}
         />
 
         {loading ? (
@@ -334,6 +425,8 @@ export function BrandedTemplateEditor({ templateId, projectId, defaultDepartment
                 <FounderDataPanel prefill={prefill} masterName={master.name} slots={slots} slotLabel={(k) => (fields.find((f) => f.key === k)?.label ?? (k === DESIGN_KEYS.bannerImage ? "Banner" : k === DESIGN_KEYS.logoImage ? "Logo" : k)).replace(/\s*\(.*\)\s*$/, "").replace(/^Hero banner URL$/, "Banner")}
                   hasDesign={hasDesign(schema)}
                   onInsert={insertFounder}
+                  onToggle={toggleField}
+                  onUndo={undoInsert}
                   onUseLogo={(url) => setSlots((p) => writeDesign({ ...p, [DESIGN_KEYS.logoImage]: url }, { logo: "company" }))} />
               ) : null}
 
@@ -642,12 +735,28 @@ function FounderBar({ prefill, busy, onPick, onRefill }: Readonly<{
 }
 
 /** Everything in the founder's record, with where each piece is used or "+ Insert". */
-function FounderDataPanel({ prefill, masterName, slots, slotLabel, hasDesign: designable, onInsert, onUseLogo }: Readonly<{
+function FounderDataPanel({ prefill, masterName, slots, slotLabel, hasDesign: designable, onInsert, onToggle, onUndo, onUseLogo }: Readonly<{
   prefill: Prefill; masterName: string; slots: Record<string, string>; slotLabel: (key: string) => string;
-  hasDesign: boolean; onInsert: (value: string) => void; onUseLogo: (url: string) => void;
+  hasDesign: boolean; onInsert: (key: string, value: string) => void; onToggle: (key: string, include: boolean) => void; onUndo: (key: string) => void; onUseLogo: (url: string) => void;
 }>) {
+  const off = readOff(slots);
+  const ins = readIns(slots);
+  const ts = termSlot(masterName);
+  const targetsOf = (f: FounderField) => TERM_FIELDS.includes(f.key)
+    ? (ts && hasTermLine(slots[ts] ?? "", f.key) ? [ts] : [])
+    : (usedBy(masterName)[f.key] ?? []).filter((k) => {
+      const v = (slots[k] ?? "").trim();
+      if (!v) return false;
+      if (k === "cta_url") return v === f.value.trim();
+      if (k === DESIGN_KEYS.logoImage) return slots[DESIGN_KEYS.logo] === "company" && v === f.value.trim();
+      return true;
+    });
+  const SECTION_NAMES: Record<string, string> = { section_one_body: "Highlights section", section_two_body: "Terms section" };
+  const nameOf = (k: string) => SECTION_NAMES[k] ?? slotLabel(k);
+  const inserted = (f: FounderField) => !!ins[f.key] && (slots[ins[f.key]] ?? "").includes(f.value);
+  const inEmail = prefill.fields.filter((f) => !off.has(f.key) && (targetsOf(f).length > 0 || inserted(f))).length;
+  const link: React.CSSProperties = { fontSize: 10.5, color: "var(--muted-foreground)", background: "transparent", border: "none", cursor: "pointer", padding: "1px 2px", whiteSpace: "nowrap" };
   const [open, setOpen] = useState(true);
-  const map = usedBy(masterName);
   const tag = (bg: string, fg: string): React.CSSProperties => ({ fontSize: 10.5, padding: "1px 6px", borderRadius: 6, background: bg, color: fg, whiteSpace: "nowrap", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis" });
   return (
     <div style={{ margin: "10px 0 4px", border: "0.5px solid var(--border)", borderRadius: 9 }}>
@@ -655,7 +764,7 @@ function FounderDataPanel({ prefill, masterName, slots, slotLabel, hasDesign: de
         style={{ display: "flex", width: "100%", alignItems: "center", gap: 6, padding: "8px 10px", border: "none", background: "transparent", cursor: "pointer", color: "var(--foreground)" }}>
         <i className={`ti ti-chevron-${open ? "down" : "right"}`} aria-hidden="true" />
         <b style={{ fontSize: 12.5 }}>Founder data</b>
-        <span style={{ fontSize: 10.5, color: "var(--muted-foreground)" }}>{prefill.fields.length} fields</span>
+        <span style={{ fontSize: 10.5, color: "var(--muted-foreground)" }}>{prefill.fields.length} fields · {inEmail} in email</span>
         <a href={prefill.recordUrl} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ marginLeft: "auto", fontSize: 11, color: "#185FA5" }}>
           Open founder record <i className="ti ti-external-link" aria-hidden="true" />
         </a>
@@ -663,22 +772,30 @@ function FounderDataPanel({ prefill, masterName, slots, slotLabel, hasDesign: de
       {open ? (
         <div style={{ padding: "0 10px 6px" }}>
           {prefill.fields.map((f) => {
-            const targets = (map[f.key] ?? []).filter((k) => {
-              const v = (slots[k] ?? "").trim();
-              if (!v) return false;
-              if (k === "cta_url") return v === f.value.trim();
-              if (k === DESIGN_KEYS.logoImage) return slots[DESIGN_KEYS.logo] === "company" && v === f.value.trim();
-              return true;
-            });
+            const targets = targetsOf(f);
+            const isOff = off.has(f.key);
+            const isImage = targets.some((t) => IMAGE_SLOTS.has(t));
             const isLogo = f.key === "logo_image";
             return (
               <div key={f.key} style={{ display: "grid", gridTemplateColumns: "92px minmax(0,1fr) auto", gap: 6, alignItems: "start", padding: "5px 0", borderTop: "0.5px solid var(--border)", fontSize: 11.5 }}>
-                <span style={{ color: "var(--muted-foreground)" }}>{f.label}</span>
-                <span style={{ overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", wordBreak: "break-word" }} title={f.value}>{isLogo ? f.value.split("/").pop() : f.value}</span>
-                {targets.length ? <span style={tag("#EAF3DE", "#3B6D11")} title={[...new Set(targets.map(slotLabel))].join(", ")}>{[...new Set(targets.map(slotLabel))].join(", ")}</span>
+                <span style={{ color: "var(--muted-foreground)", textDecoration: isOff ? "line-through" : undefined }}>{f.label}</span>
+                <span style={{ overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", wordBreak: "break-word", textDecoration: isOff ? "line-through" : undefined, color: isOff ? "var(--muted-foreground)" : undefined }} title={f.value}>{isLogo ? f.value.split("/").pop() : f.value}</span>
+                {isOff ? <button type="button" onClick={() => onToggle(f.key, true)} title="Put this back in the email" style={{ ...tag("transparent", "#185FA5"), border: "0.5px solid #B5D4F4", cursor: "pointer" }}>+ Add back</button>
+                  : targets.length ? (
+                    <span style={{ display: "inline-flex", flexDirection: "column", alignItems: "flex-end", gap: 1 }}>
+                      <span style={tag("#EAF3DE", "#3B6D11")} title={[...new Set(targets.map(nameOf))].join(", ")}>{isImage || targets.includes("cta_url") ? "" : "In "}{[...new Set(targets.map(nameOf))].join(", ")}</span>
+                      {isImage ? null : <button type="button" onClick={() => onToggle(f.key, false)} title="Take this out of the email" style={link}>✕ Remove</button>}
+                    </span>
+                  )
+                  : inserted(f) ? (
+                    <span style={{ display: "inline-flex", flexDirection: "column", alignItems: "flex-end", gap: 1 }}>
+                      <span style={tag("#EAF3DE", "#3B6D11")} title={nameOf(ins[f.key])}>Inserted</span>
+                      <button type="button" onClick={() => onUndo(f.key)} title={`Take it out of ${nameOf(ins[f.key])}`} style={link}>✕ Undo</button>
+                    </span>
+                  )
                   : isLogo ? (designable ? <button type="button" onClick={() => onUseLogo(f.value)} style={{ ...tag("transparent", "#185FA5"), border: "0.5px solid #B5D4F4", cursor: "pointer" }}>Use as logo</button> : <span style={tag("transparent", "var(--muted-foreground)")}>not in this design</span>)
                   : f.key === "hero_image" ? <span style={tag("transparent", "var(--muted-foreground)")}>{designable ? "pick Image in Design" : "not in this design"}</span>
-                  : <button type="button" onClick={() => onInsert(f.value)} style={{ ...tag("transparent", "#185FA5"), border: "0.5px solid #B5D4F4", cursor: "pointer" }}>+ Insert</button>}
+                  : <button type="button" onClick={() => onInsert(f.key, f.value)} style={{ ...tag("transparent", "#185FA5"), border: "0.5px solid #B5D4F4", cursor: "pointer" }}>+ Insert</button>}
               </div>
             );
           })}

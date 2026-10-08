@@ -7,6 +7,7 @@
 // banner. Read only: nothing is written back to the founder record.
 
 import { db, entrepreneurProfile, getProject } from "@/lib/ir/db";
+import { TERM_FIELDS, termLine, termValue } from "./founder-fields";
 
 export type FounderRef = { kind: "project" | "company"; id: string };
 export type FounderField = { key: string; label: string; value: string };
@@ -115,15 +116,7 @@ export function valuesFrom(fields: FounderField[]): { values: Record<string, str
   put("body", f.get("body")?.value, f.get("body")?.label);
   const hl = f.get("considerations");
   put("considerations", hl ? splitNumbered(hl.value) : "", hl?.label);
-  const terms: string[] = [];
-  const raise = f.get("raise")?.value;
-  if (raise) terms.push(`Raise: ${raise.split(" (")[0].split(" · ")[0]}`);
-  const stage = f.get("funding_stage")?.value.split(" · ")[0];
-  if (stage) terms.push(`Funding stage: ${stage}`);
-  if (f.get("capital_type")) terms.push(`Capital type: ${f.get("capital_type")!.value}`);
-  const rev = f.get("revenue")?.value.split(" · ")[0];
-  if (rev) terms.push(`Revenue: ${rev}`);
-  if (f.get("use_of_funds")) terms.push(`Use of funds: ${f.get("use_of_funds")!.value}`);
+  const terms = TERM_FIELDS.map((k) => f.get(k)).filter((x): x is FounderField => !!x && !!termValue(x.key, x.value)).map((x) => termLine(x.key, x.value));
   put("terms", terms.join("\n"), terms.length ? "Questionnaire" : undefined);
   put("logo_image", f.get("logo_image")?.value, "Logo");
   return { values, sources };
