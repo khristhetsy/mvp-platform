@@ -222,7 +222,7 @@ export function AdminCompanyWorkspace({
           </WorkspaceSection>
 
           <WorkspaceSection icon="ti-route" tone="purple" title="Where they are" subtitle="Current stage, gates, and what's pending to advance" action={reachOutAction}>
-            <FounderJourneyPanel journey={data.journey} companyId={data.company.id} />
+            <FounderJourneyPanel journey={data.journey} companyId={data.company.id} outreach={data.outreach} />
           </WorkspaceSection>
 
           {workflowDependencies.length > 0 || nextBestActions.length > 0 ? (

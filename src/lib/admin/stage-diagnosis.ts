@@ -19,6 +19,8 @@ import { documentTypeCode } from "@/lib/data/founder-readiness";
 import type { StoredFactor } from "@/lib/crr/weight-sets";
 import type { FactorKey } from "@/lib/ai/readiness-scoring";
 import type { FounderJourneyState, JourneyStage } from "@/lib/founder-journey/types";
+import type { AdminOutreachSummary } from "@/lib/admin/company-workspace-types";
+import { automatedStatusLine, manualResultsLine } from "@/lib/founder/outreach-status-lines";
 
 /** One line in "what's missing" — a label and the size of the gap. */
 export type MissingRow = {
@@ -199,6 +201,124 @@ function conditionDiagnosis(
   return { headline: when.headline, measured: true, problem: [when.problem], missing: when.missing, fixes: when.fixes, source };
 }
 
+/** "Oct 8" in Pacific time, the platform's one time zone. */
+function ptDay(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "America/Los_Angeles" });
+}
+
+/**
+ * The Outreach item covers automated AND manual. It is done only when automated
+ * is launched and the first manual email has gone out, the same rule the
+ * founder's Stage 3 guide uses (loadOutreachStatus). Automated is what the CRR
+ * gate holds; manual goes to the founder's own contacts and is open at any CRR.
+ */
+export function outreachDiagnosis(
+  outreach: AdminOutreachSummary,
+  crr: { unlocked: boolean; short: number; score: number; gate: number },
+): ItemDiagnosis {
+  const a = outreach.automated;
+  const m = outreach.manual;
+  const done = (a.launched ? 1 : 0) + (m.started ? 1 : 0);
+
+  const autoLine = a.launched
+    ? `Automated ${automatedStatusLine(outreach).toLowerCase()}`
+    : crr.unlocked
+      ? "Automated not launched"
+      : `Automated held, ${crr.short} points to the gate`;
+  const manualLine = m.started ? `Manual ${manualResultsLine(outreach)}` : "Manual not started";
+
+  const source =
+    "investor_outreach_campaigns + founder_manual_outreach_recipients, the same status the founder's Outreach page reads";
+
+  if (outreach.complete) {
+    return {
+      headline: `${autoLine} · ${manualLine}`,
+      measured: true,
+      problem: ["Outreach is complete: automated is launched and manual has started, so this item is not blocking."],
+      missing: [],
+      fixes: [{ text: "Nothing blocking. Watch replies and move warm investors to the Investor CRM.", who: "Staff" }],
+      source,
+    };
+  }
+
+  const problem: string[] = [];
+  if (a.launched && !m.started) {
+    problem.push(`Automated is ${a.state === "paused" ? "paused" : "running"} (${a.sent} sent). No manual email has gone out, and Outreach completes only when both have.`);
+  } else if (!a.launched && m.started) {
+    problem.push(
+      crr.unlocked
+        ? `Manual is under way (${m.sent} sent). Automated has not launched yet, and Outreach completes only when both have.`
+        : `Manual is under way (${m.sent} sent). Automated is held until the CRR clears the gate (${crr.score}/${crr.gate}), and Outreach completes only when both have.`,
+    );
+  } else {
+    problem.push("Neither outreach mode has started. Outreach completes once automated is launched and the first manual email is sent.");
+    problem.push(
+      crr.unlocked
+        ? "Both modes are open."
+        : `Automated is held until the CRR clears the gate (${crr.score}/${crr.gate}); manual goes to the founder's own contacts and can start now.`,
+    );
+  }
+
+  const missing: MissingRow[] = [
+    {
+      label: a.launched ? "Automated · done" : "Automated",
+      note: a.launched ? `${a.sent} sent` : crr.unlocked ? "not launched" : `held · ${crr.short} to the gate`,
+    },
+    { label: m.started ? "Manual · done" : "Manual", note: m.started ? manualResultsLine(outreach) : "0 sent" },
+  ];
+
+  const fixes: FixStep[] = [];
+  if (!m.started) {
+    fixes.push({
+      text: "Founder adds recipients (My contacts or investors they already know) and sends the first manual email.",
+      who: "Founder · Outreach › Manual",
+      impact: "1 of 2",
+    });
+    const r = outreach.manualReminder;
+    if (r?.paused) {
+      fixes.push({ text: "Manual outreach reminders are paused for this company.", who: "Reminders" });
+    } else if (r && r.sendsCount > 0) {
+      const last = ptDay(r.lastSentAt);
+      const next = ptDay(r.nextSendAt);
+      fixes.push({
+        text: `Reminder cadence is running (day 3, day 7, then weekly): ${r.sendsCount} sent${last ? `, last ${last} PT` : ""}${next ? `, next ${next} PT` : ""}. It stops at the first manual send.`,
+        who: "Automatic",
+      });
+    } else {
+      fixes.push({
+        text: "Manual outreach reminders run with the daily founder nudges (bell, then email on day 3, day 7 and weekly) and stop at the first manual send.",
+        who: "Automatic",
+      });
+    }
+  }
+  if (!a.launched) {
+    fixes.push(
+      crr.unlocked
+        ? {
+            text: "Automated is unlocked but no approved campaign exists yet. It is created when the founder opens their Outreach page.",
+            who: "Founder · Outreach",
+            impact: "1 of 2",
+          }
+        : {
+            text: "Automated opens on its own when the CRR crosses the gate. Work the Preparation list.",
+            who: "Automatic",
+          },
+    );
+  }
+
+  return {
+    headline: `${autoLine} · ${manualLine} · ${done} of 2`,
+    measured: true,
+    problem,
+    missing,
+    fixes,
+    source,
+  };
+}
+
 /** Everything one stage tab needs: the drawers, the banner, and the email's facts. */
 export type StageDiagnosis = {
   byHref: Record<string, ItemDiagnosis>;
@@ -216,6 +336,7 @@ export async function diagnoseStage(
   companyId: string | null,
   journey: FounderJourneyState,
   stage: JourneyStage,
+  outreach?: AdminOutreachSummary | null,
 ): Promise<{ byHref: Record<string, ItemDiagnosis>; situation: StageSituation; summary: string; crr: Crr | null }> {
   const c = journey.conditions;
   const crr = companyId ? await crrFor(companyId) : null;
@@ -318,23 +439,25 @@ export async function diagnoseStage(
     // The requirement this stage runs on. Same diagnosis the Preparation row
     // shows — one reader, so the two tabs can never disagree about the number.
     if (crr) byHref["/founder/readiness/wizard"] = crrDiagnosis(crr, gapLines, crrFixes);
-    byHref["/founder/deploy"] = {
-      headline: unlocked ? "outreach unlocked" : `blocked — ${short} points to the gate`,
-      measured: true,
-      problem: unlocked
-        ? ["Outreach is unlocked; sequences can enrol."]
-        : [`Sequences cannot enrol: the engine flag outreach_unlocked is false at ${crr?.score ?? 0}/${crr?.gate ?? 65}.`],
-      missing: unlocked ? [] : [{ label: "Points to the gate", note: String(short) }],
-      fixes: unlocked
-        ? [{ text: "Nothing blocking. Enrol the founder in a sequence when they are ready.", who: "Staff" }]
-        : [
-            {
-              text: "Nothing to do in this stage. Work the Preparation list — this unlocks on its own the moment the score crosses the gate, with no staff action.",
-              who: "Automatic",
-            },
-          ],
-      source: "CRR engine gate (OUTREACH_GATE) — the same flag the founder page reads",
-    };
+    byHref["/founder/deploy"] = outreach
+      ? outreachDiagnosis(outreach, { unlocked, short, score: crr?.score ?? 0, gate: crr?.gate ?? 65 })
+      : {
+          headline: unlocked ? "outreach unlocked" : `blocked — ${short} points to the gate`,
+          measured: true,
+          problem: unlocked
+            ? ["Outreach is unlocked; sequences can enrol."]
+            : [`Sequences cannot enrol: the engine flag outreach_unlocked is false at ${crr?.score ?? 0}/${crr?.gate ?? 65}.`],
+          missing: unlocked ? [] : [{ label: "Points to the gate", note: String(short) }],
+          fixes: unlocked
+            ? [{ text: "Nothing blocking. Enrol the founder in a sequence when they are ready.", who: "Staff" }]
+            : [
+                {
+                  text: "Nothing to do in this stage. Work the Preparation list — this unlocks on its own the moment the score crosses the gate, with no staff action.",
+                  who: "Automatic",
+                },
+              ],
+          source: "CRR engine gate (OUTREACH_GATE) — the same flag the founder page reads",
+        };
     byHref["/founder/investor-pipeline"] = conditionDiagnosis(
       c.hasInvestorInterest,
       {
@@ -415,9 +538,10 @@ export async function diagnoseStage(
 export async function diagnoseAllStages(
   companyId: string | null,
   journey: FounderJourneyState,
+  outreach?: AdminOutreachSummary | null,
 ): Promise<Record<JourneyStage, StageDiagnosis>> {
   const stages: JourneyStage[] = ["initialize", "qualify", "deploy", "optimize"];
-  const results = await Promise.all(stages.map((s) => diagnoseStage(companyId, journey, s)));
+  const results = await Promise.all(stages.map((s) => diagnoseStage(companyId, journey, s, outreach)));
 
   const out = {} as Record<JourneyStage, StageDiagnosis>;
   stages.forEach((stage, i) => {

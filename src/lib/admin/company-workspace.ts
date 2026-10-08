@@ -2,6 +2,7 @@ import type {
   AdminCompanyWorkspaceData,
   AdminCompanyWorkspaceSpvSummary,
   AdminInvestableFactorScores,
+  AdminOutreachSummary,
 } from "@/lib/admin/company-workspace-types";
 import type { AdminCompanyRow } from "@/lib/data/admin";
 import { mapAdminCompaniesToCardData } from "@/lib/data/admin";
@@ -32,6 +33,8 @@ import { listSubscriptionsByProfileIds } from "@/lib/subscriptions/get-subscript
 import type { DocumentRecord } from "@/lib/supabase/types";
 import { crrFor } from "@/lib/crr/crr-for";
 import { diagnoseAllStages } from "@/lib/admin/stage-diagnosis";
+import { loadOutreachStatus } from "@/lib/founder/outreach-status";
+import { MANUAL_OUTREACH_GATE_KEY } from "@/lib/notifications/manual-outreach-reminders";
 
 const TIMELINE_LIMIT = 25;
 const COMPLIANCE_LIMIT = 10;
@@ -372,6 +375,39 @@ export async function getAdminCompanyWorkspace(companyId: string): Promise<Admin
     interestAmountTotal += Number(row.interest_amount) || 0;
   }
 
+  // Outreach = automated AND manual, read by the same loader the founder's
+  // Outreach page uses, so the admin row, the drawer and the Overview tile can
+  // never disagree with what the founder sees.
+  const [outreachStatus, manualReminderRes] = await Promise.all([
+    loadOutreachStatus(companyId),
+    admin
+      .from("stage_gate_reminders")
+      .select("sends_count, last_sent_at, next_send_at, resolved_at, paused")
+      .eq("company_id", companyId)
+      .eq("gate_key", MANUAL_OUTREACH_GATE_KEY)
+      .maybeSingle(),
+  ]);
+  const manualReminderRow = (manualReminderRes.data ?? null) as {
+    sends_count: number | null;
+    last_sent_at: string | null;
+    next_send_at: string | null;
+    resolved_at: string | null;
+    paused: boolean | null;
+  } | null;
+  const outreach: AdminOutreachSummary = {
+    ...outreachStatus,
+    manualReminder: manualReminderRow
+      ? {
+          sendsCount: manualReminderRow.sends_count ?? 0,
+          lastSentAt: manualReminderRow.last_sent_at,
+          nextSendAt: manualReminderRow.next_send_at,
+          resolvedAt: manualReminderRow.resolved_at,
+          paused: manualReminderRow.paused ?? false,
+        }
+      : null,
+  };
+  const journey = { ...journeyState, conditions: { ...journeyState.conditions, outreachComplete: outreachStatus.complete } };
+
   const pitchDeckPresent = companyRow.documents.some(
     (doc) => doc.document_type?.toUpperCase() === "PITCH_DECK",
   );
@@ -389,10 +425,11 @@ export async function getAdminCompanyWorkspace(companyId: string): Promise<Admin
       milestoneLabel,
     },
     investable,
-    journey: journeyState,
+    journey,
+    outreach,
     // Per-stage diagnosis resolved server-side: the workspace shell is a client
     // component, so it cannot await this itself.
-    stageDiagnosis: await diagnoseAllStages(companyId, journeyState),
+    stageDiagnosis: await diagnoseAllStages(companyId, journey, outreach),
     investorActivity: {
       savedDeals: savedDealsCount.count ?? 0,
       interests: interestsResult.count ?? 0,

@@ -32,7 +32,8 @@ type ConditionKey =
   | "crrQualified"
   | "requiredDocsUploaded"
   | "hasDealRoom"
-  | "hasInvestorInterest";
+  | "hasInvestorInterest"
+  | "outreachComplete";
 
 type MenuDef = {
   label: string;
@@ -80,7 +81,9 @@ const STAGE_MENU: Record<JourneyStage, MenuDef[]> = {
     // Sends into the iCapOS investor data from iCapOS infrastructure — hard gate.
     // The founder's own contacts (imported, added, introduced) — theirs outright.
     { label: "My contacts", href: "/founder/contacts" },
-    { label: "Outreach", href: "/founder/deploy", condition: "crrQualified" },
+    // Outreach covers automated AND manual: done only when automated is launched
+    // and the first manual email has gone out (the founder's Stage 3 rule).
+    { label: "Outreach", href: "/founder/deploy", condition: "outreachComplete" },
     { label: "Investor CRM", href: "/founder/investor-pipeline", condition: "hasInvestorInterest" },
     { label: "Present at event", href: "/founder/events/present" },
     { label: "Marketplace", href: "/founder/private-market" },

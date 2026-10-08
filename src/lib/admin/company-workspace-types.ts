@@ -6,6 +6,21 @@ import type { summarizeRemediationTasks } from "@/lib/remediation/tasks";
 import type { FactorKey, FactorScore } from "@/lib/ai/readiness-scoring";
 import type { FounderJourneyState, JourneyStage } from "@/lib/founder-journey/types";
 import type { StageDiagnosis } from "@/lib/admin/stage-diagnosis";
+import type { OutreachStatus } from "@/lib/founder/outreach-status-lines";
+
+/**
+ * Outreach for the admin workspace: the founder's own status (automated and
+ * manual) plus where the manual outreach reminder cadence stands.
+ */
+export type AdminOutreachSummary = OutreachStatus & {
+  manualReminder: {
+    sendsCount: number;
+    lastSentAt: string | null;
+    nextSendAt: string | null;
+    resolvedAt: string | null;
+    paused: boolean;
+  } | null;
+};
 
 export type AdminInvestableFactorScores = Record<FactorKey, FactorScore>;
 
@@ -51,6 +66,8 @@ export type AdminCompanyWorkspaceData = {
    *  stage situation the reach-out email is written from. Resolved server-side
    *  because the workspace shell is a client component. */
   stageDiagnosis: Record<JourneyStage, StageDiagnosis>;
+  /** Outreach status (automated and manual), the same one the founder page reads. */
+  outreach: AdminOutreachSummary;
   investorActivity: {
     savedDeals: number;
     interests: number;
