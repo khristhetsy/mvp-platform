@@ -8,6 +8,7 @@ import { OdooSearchBar, EMPTY_SEARCH, textMatch, type SearchState } from "@/comp
 import { ToolbarGear, NewButton, downloadCsv, type GearItem } from "@/components/admin/ToolbarGear";
 import { SalesViewControl } from "@/app/admin/sales/SalesViewControl";
 import { HScrollBoard } from "@/components/admin/HScrollBoard";
+import type { PendingTask } from "@/lib/sales/pipeline-pending-task";
 
 type Stage = { id: string; pipeline_id: string; name: string; sort_order: number; is_won: boolean; sequence_id: string | null };
 type SeqOption = { id: string; name: string; status: string };
@@ -17,6 +18,13 @@ type BoardOpp = { id: string; title: string; value_cents: number | null; billing
 const money = (c: number | null) => (c == null ? "" : `$${(c / 100).toLocaleString()}`);
 const moneyShort = (c: number) => (c >= 1000 ? `$${Math.round(c / 100000)}k` : `$${Math.round(c / 100)}`);
 const STAGE_ACCENTS = ["#2E78F5", "#EF9F27", "#639922", "#888780", "#4338CA", "#0F6E56"];
+const TASK_ICON: Record<string, string> = { call: "ti-phone", email: "ti-mail", meeting: "ti-users", "follow-up": "ti-arrow-forward-up", todo: "ti-checkbox", "to-do": "ti-checkbox", demo: "ti-presentation", proposal: "ti-file-text" };
+const TASK_STYLE: Record<PendingTask["state"], { bg: string; fg: string }> = { overdue: { bg: "#FCEBEB", fg: "#A32D2D" }, today: { bg: "#FAEEDA", fg: "#854F0B" }, planned: { bg: "#F4F5F7", fg: "#5F5E5A" } };
+const fmtTaskDay = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+function taskWhen(t: PendingTask): string {
+  const base = t.state === "overdue" && t.due ? `Overdue · ${fmtTaskDay(t.due)}` : t.state === "today" ? "Today" : t.due ? fmtTaskDay(t.due) : "No date";
+  return t.more > 0 ? `${base} · +${t.more} more` : base;
+}
 const isStalled = (o: BoardOpp) => o.updated_at != null && Date.now() - new Date(o.updated_at).getTime() > 14 * 86400000;
 const ownerLabel = (o: BoardOpp) => o.owner_name ?? "Unassigned";
 const sourceLabel = (o: BoardOpp) => (o.source && o.source.toLowerCase() === "odoo" ? "Odoo" : o.source ? o.source : "Manual");
@@ -38,6 +46,7 @@ export function PipelineClient({ canExport = false, meId = "" }: { canExport?: b
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [board, setBoard] = useState<BoardOpp[]>([]);
   const [staff, setStaff] = useState<{ id: string; name: string }[]>([]);
+  const [pendingTasks, setPendingTasks] = useState<Record<string, PendingTask>>({});
   const [selId, setSelId] = useState<string>("");
   // "list" is the line view: same deals as the board, one row each, with selection.
   const [view, setView] = useState<"board" | "list" | "stages">(() => loadLS<"board" | "list" | "stages">("pipeline.view", "board"));
@@ -72,6 +81,7 @@ export function PipelineClient({ canExport = false, meId = "" }: { canExport?: b
     setPipelines(data.pipelines ?? []);
     setBoard(data.board ?? []);
     setStaff(data.staff ?? []);
+    setPendingTasks(data.pendingTasks ?? {});
     setSelId((cur) => cur || (data.pipelines?.[0]?.id ?? ""));
   }, [viewQ]);
 
@@ -334,6 +344,19 @@ export function PipelineClient({ canExport = false, meId = "" }: { canExport?: b
                           : <span />}
                         {o.probability != null && <span style={{ fontSize: 10, color: "#3B6D11" }}>{o.probability}%</span>}
                       </div>
+                      {(() => {
+                        const t = pendingTasks[o.id];
+                        if (!t) return <Link href={`/admin/sales/opportunities/${o.id}`} style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 6, fontSize: 10.5, color: "#94A3B8", textDecoration: "none" }}><i className="ti ti-calendar-off" aria-hidden="true" /> No pending task</Link>;
+                        const st = TASK_STYLE[t.state];
+                        const label = `${t.type}${t.title ? `: ${t.title}` : ""}`;
+                        return (
+                          <Link href={`/admin/sales/opportunities/${o.id}`} title={`${label} · ${taskWhen(t)}`} style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 6, padding: "4px 7px", borderRadius: 6, background: st.bg, color: st.fg, fontSize: 10.5, textDecoration: "none", minWidth: 0 }}>
+                            <i className={`ti ${TASK_ICON[t.type.toLowerCase()] ?? "ti-checkbox"}`} aria-hidden="true" />
+                            <span style={{ flex: 1, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{label}</span>
+                            <span style={{ whiteSpace: "nowrap" }}>{taskWhen(t)}</span>
+                          </Link>
+                        );
+                      })()}
                       <div style={{ display: "flex", gap: 6, marginTop: 7, alignItems: "center" }}>
                         <Link href={`/admin/sales/opportunities/${o.id}`} style={{ fontSize: 10, color: "#185FA5", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 6, padding: "3px 8px", textDecoration: "none", whiteSpace: "nowrap" }}><i className="ti ti-external-link" aria-hidden="true" /> Open</Link>
                         <select value={s.id} onChange={(e) => moveOpp(o.id, e.target.value)} disabled={busy} style={{ flex: 1, minWidth: 0, fontSize: 10.5, padding: "3px 5px", borderRadius: 6, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--muted-foreground)" }}>
