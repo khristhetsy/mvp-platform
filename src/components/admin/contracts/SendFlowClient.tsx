@@ -756,6 +756,14 @@ function EmailStep({
   const resumed = useRef(Boolean(initialEmail));
   // Send from: Gmail is preselected when the sender's Google account can send.
   const [via, setVia] = useState<"gmail" | "icapos">(gmail.canSend ? "gmail" : "icapos");
+  // Send as (company) and email style; both remember the last choice in this browser.
+  const [brand, setBrandState] = useState<CoverBrand>(() => {
+    const b = readLook(LOOK_BRAND_KEY);
+    return b === "icapos" ? "icapos" : "icfo";
+  });
+  const [style, setStyleState] = useState<CoverStyle>(() => (readLook(LOOK_STYLE_KEY) === "branded" ? "branded" : "plain"));
+  const setBrand = (b: CoverBrand) => { setBrandState(b); try { window.localStorage.setItem(LOOK_BRAND_KEY, b); } catch { /* ignore */ } };
+  const setStyle = (v: CoverStyle) => { setStyleState(v); try { window.localStorage.setItem(LOOK_STYLE_KEY, v); } catch { /* ignore */ } };
   const [preview, setPreview] = useState(false);
   const [busy, setBusy] = useState(false);
   const [sending, setSending] = useState<"sign" | "review">("sign");
@@ -897,7 +905,7 @@ function EmailStep({
   }
 
   function sendBody(signature: boolean) {
-    return { contactId: contact.id, documentIds: docs.map((d) => d.id), subject, body, emailDraftId: draftId, attachPdfs: signature ? attach : true, signature, via, typedValues: Object.fromEntries(Object.entries(typed).filter(([k, v]) => v.trim() && !baseValues[k])) };
+    return { contactId: contact.id, documentIds: docs.map((d) => d.id), subject, body, emailDraftId: draftId, attachPdfs: signature ? attach : true, signature, via, brand, style, typedValues: Object.fromEntries(Object.entries(typed).filter(([k, v]) => v.trim() && !baseValues[k])) };
   }
 
   /** Schedule send: the same request, sent by the scheduled email runner at that time. */
@@ -1064,6 +1072,7 @@ function EmailStep({
               </label>
               <span>{docs.map((d) => d.name).join(" · ")}</span>
             </div>
+            <CoverLookPicker brand={brand} style={style} onBrand={setBrand} onStyle={setStyle} />
             <SendFrom gmail={gmail} via={via} onChange={setVia} />
             {used.length ? (
               <div style={{ marginTop: 12, border: "0.5px solid #e2e6ed", borderRadius: 8, padding: "10px 12px" }}>
@@ -1149,6 +1158,57 @@ function EmailStep({
         </div>
       </Card>
     </>
+  );
+}
+
+type CoverBrand = "icfo" | "icapos";
+type CoverStyle = "plain" | "branded";
+const LOOK_BRAND_KEY = "contracts.send.brand";
+const LOOK_STYLE_KEY = "contracts.send.style";
+/** Last Send as / Email style choice in this browser; null when storage is unavailable. */
+function readLook(key: string): string | null {
+  try {
+    return typeof window === "undefined" ? null : window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+/** Send as (iCFO Capital Global or iCapOS) and Email style (plain like Gmail, or the branded card). */
+function CoverLookPicker({ brand, style, onBrand, onStyle }: { brand: CoverBrand; style: CoverStyle; onBrand: (b: CoverBrand) => void; onStyle: (s: CoverStyle) => void }) {
+  const box = (on: boolean): React.CSSProperties => ({
+    flex: "1 1 220px", minWidth: 0, display: "flex", gap: 10, alignItems: "flex-start", textAlign: "left", cursor: "pointer", background: "#fff",
+    border: on ? `2px solid ${BLUE}` : "0.5px solid #d5deea", borderRadius: 8, padding: on ? "9px 11px" : "10.5px 12.5px",
+  });
+  const dot = (on: boolean) => (
+    <span style={{ width: 14, height: 14, borderRadius: "50%", border: `1.5px solid ${on ? BLUE : "#9aa6b8"}`, marginTop: 2, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      {on ? <span style={{ width: 7, height: 7, borderRadius: "50%", background: BLUE }} /> : null}
+    </span>
+  );
+  const label = { fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "#8a93a6", marginBottom: 8 } as const;
+  const opt = (on: boolean, onClick: () => void, icon: string, title: string, note: string) => (
+    <button type="button" onClick={onClick} aria-pressed={on} style={box(on)}>
+      {dot(on)}
+      <span style={{ minWidth: 0 }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: NAVY }}>{icon ? <i className={`ti ${icon}`} aria-hidden="true" /> : null} {title}</span>
+        <span style={{ display: "block", fontSize: 12, color: MUTED }}>{note}</span>
+      </span>
+    </button>
+  );
+  return (
+    <div style={{ marginTop: 12 }}>
+      <div style={label}>Send as</div>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        {opt(brand === "icfo", () => onBrand("icfo"), "ti-building-bank", "iCFO Capital Global, Inc.", "Your iCFO signature and logo")}
+        {opt(brand === "icapos", () => onBrand("icapos"), "ti-chart-dots", "iCapOS", "Your signature with the iCapOS logo")}
+      </div>
+      <p style={{ fontSize: 11.5, color: MUTED, margin: "8px 0 0", lineHeight: 1.6 }}>Sets the logo, company name, tagline and website in your signature. The iCFO disclaimer is always included.</p>
+      <div style={{ ...label, marginTop: 12 }}>Email style</div>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        {opt(style === "plain", () => onStyle("plain"), "ti-mail", "Plain email", "Looks typed in Gmail, with your signature")}
+        {opt(style === "branded", () => onStyle("branded"), "ti-layout-navbar", "Branded card", "The header card and Review and sign button")}
+      </div>
+    </div>
   );
 }
 
@@ -1272,7 +1332,7 @@ function EmailPreviewModal({ data, busy, testing, onClose, onMode, onTest, onSen
               </a>
             ))}
           </div>
-          {data.signature ? <p style={{ fontSize: 11.5, color: MUTED, margin: "8px 0 0" }}>The Review and sign button gets its signing link when you send. It is inactive here.</p> : null}
+          {data.signature ? <p style={{ fontSize: 11.5, color: MUTED, margin: "8px 0 0" }}>The signing link is added when you send. It is inactive here.</p> : null}
         </div>
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, flexWrap: "wrap", padding: "12px 20px", borderTop: "0.5px solid #e2e8f0", background: "#f8fafc" }}>
           <button type="button" onClick={onClose} style={btn()}>Back to edit</button>

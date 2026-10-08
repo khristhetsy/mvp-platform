@@ -7,9 +7,10 @@ import "server-only";
 import type { Db } from "./access";
 import { bundleOpenFields, fileBase, loadBundle, renderBundlePdf, SendBlockedError, type SendInput } from "./service";
 import { applyEmailTokens, emailTokenValues, withTypedValues } from "./email-tokens";
+import { resolveCoverLook } from "./cover-look";
 import { appBase, buildCoverEmail, buildTestCoverEmail, sendTestCoverEmail, type Attachment } from "./email";
 
-export type ComposeInput = Omit<SendInput, "sender" | "emailDraftId"> & { senderName: string };
+export type ComposeInput = Omit<SendInput, "sender" | "emailDraftId"> & { senderName: string; userId: string };
 
 async function compose(db: Db, input: ComposeInput) {
   if (!input.documentIds.length) throw new SendBlockedError("Choose at least one document.");
@@ -59,7 +60,8 @@ export type SendPreview = {
 export async function previewSend(db: Db, input: ComposeInput): Promise<SendPreview> {
   const c = await compose(db, input);
   // The signing link only exists once the real send runs; the preview points nowhere.
-  const mail = buildCoverEmail({ subject: c.subject, body: c.body, url: "#", senderName: input.senderName, reviewOnly: !c.signature });
+  const look = await resolveCoverLook(input.userId, input.brand ?? "icfo", input.style ?? "plain");
+  const mail = buildCoverEmail({ subject: c.subject, body: c.body, url: "#", senderName: input.senderName, reviewOnly: !c.signature, look });
   return {
     to: c.contact.email!,
     toName: c.contact.name,
@@ -71,12 +73,14 @@ export async function previewSend(db: Db, input: ComposeInput): Promise<SendPrev
 }
 
 /** Sends a test copy, with the real PDFs, to the sender only. */
-export async function sendTest(db: Db, input: ComposeInput & { userId: string; senderEmail: string | null; via: "gmail" | "icapos" }): Promise<{ to: string; delivered: boolean; attachments: number }> {
+export async function sendTest(db: Db, input: ComposeInput & { senderEmail: string | null; via: "gmail" | "icapos" }): Promise<{ to: string; delivered: boolean; attachments: number }> {
   if (!input.senderEmail) throw new SendBlockedError("Your profile has no email address to send the test to.");
   const c = await compose(db, input);
   const attachments: Attachment[] = [];
   if (c.attachPdfs) for (const b of c.bundles) attachments.push({ filename: `${fileBase(b)}.pdf`, content: await renderBundlePdf(db, b, "final") });
+  const look = await resolveCoverLook(input.userId, input.brand ?? "icfo", input.style ?? "plain");
   const mail = buildTestCoverEmail({
+    look,
     subject: c.subject,
     body: c.body,
     senderName: input.senderName,
@@ -84,6 +88,6 @@ export async function sendTest(db: Db, input: ComposeInput & { userId: string; s
     backUrl: `${appBase()}/admin/sales/contracts/send?contact=${encodeURIComponent(input.contactId)}`,
     prospectName: c.contact.name,
   });
-  const { delivered } = await sendTestCoverEmail({ via: input.via, userId: input.userId, to: input.senderEmail, senderName: input.senderName, senderEmail: input.senderEmail, mail, attachments });
+  const { delivered } = await sendTestCoverEmail({ via: input.via, userId: input.userId, to: input.senderEmail, senderName: input.senderName, senderEmail: input.senderEmail, mail, attachments, look });
   return { to: input.senderEmail, delivered, attachments: attachments.length };
 }

@@ -23,6 +23,10 @@ const schema = z.object({
   typedValues: z.record(z.string(), z.string().max(300)).optional(),
   signature: z.boolean().optional(),
   via: z.enum(["gmail", "icapos"]).optional(),
+  /** Send as iCFO Capital Global or iCapOS (signature, logo, From name). */
+  brand: z.enum(["icfo", "icapos"]).optional(),
+  /** Plain email like Gmail (default) or the branded card. */
+  style: z.enum(["plain", "branded"]).optional(),
 });
 
 /**
@@ -41,7 +45,7 @@ export async function POST(req: Request): Promise<Response> {
   const senderName = actor.profile.full_name ?? actor.profile.email ?? "iCFO";
   try {
     if (action === "preview") {
-      const preview = await previewSend(actor.db, { ...input, senderName });
+      const preview = await previewSend(actor.db, { ...input, senderName, userId: actor.userId });
       return NextResponse.json({ ok: true, ...preview, from: { name: senderName, email: actor.profile.email ?? null, via: input.via ?? "icapos" } });
     }
     if (input.via === "gmail") {
