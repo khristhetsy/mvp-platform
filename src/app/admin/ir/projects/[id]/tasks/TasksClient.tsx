@@ -29,6 +29,7 @@ import { ActivityClock } from "../../../_shared/ActivityClock";
 import { SelectionBar } from "@/components/admin/sales/SelectionBar";
 import { TaskDeleteDialog, runTaskAction, type TaskAction } from "./TaskArchiveDelete";
 import { EditTaskDialog } from "./EditTaskDialog";
+import { TaskViewGear } from "./TaskViewGear";
 
 type Payload = { project: IrProject; milestones: IrMilestone[]; matches: IrMatch[]; tasks: IrTask[]; openActivities: IrActivity[]; staff: Array<{ id: string; name: string }> };
 const STATUS_DOT: Record<string, string> = { new: "#94A3B8", in_progress: "#F59E0B", done: "#16A34A" };
@@ -216,23 +217,20 @@ export function TasksClient({ projectId, meId, initialMonth }: { projectId: stri
       </div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <button type="button" disabled={busy || !currentWeek} onClick={() => currentWeek && newTask(currentWeek.id)} className="rounded-lg bg-indigo-600 px-3.5 py-1.5 text-[12.5px] font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">New</button>
+        <TaskViewGear
+          archived={archivedView}
+          onArchived={(v) => { setArchivedView(v); setPicked(new Set()); }}
+          view={view}
+          onView={setView}
+          groupBy={mode}
+          onGroupBy={setGroupBy}
+          hasStages={hasStages}
+          months={months.map((m) => ({ id: m.id, label: `${m.label} · ${formatRange(m.starts_on, m.ends_on)}` }))}
+          monthId={month?.id ?? ""}
+          onMonth={(id) => { setMonthId(id); setPicked(new Set()); }}
+        />
         <h2 className="text-[18px] font-semibold text-slate-900">{p.title} · Tasks</h2>
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search investors…" className="ml-2 w-56 rounded-lg border border-slate-200 px-3 py-1.5 text-[13px] focus:border-indigo-400 focus:outline-none" />
-        <span className="ml-auto flex rounded-lg bg-slate-100 p-0.5" role="group" aria-label="Show"><button type="button" onClick={() => { setArchivedView(false); setPicked(new Set()); }} aria-pressed={!archivedView} className={`rounded-md px-2.5 py-0.5 text-[12px] font-medium ${!archivedView ? "bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200" : "text-slate-600 hover:text-slate-900"}`}>Active</button><button type="button" onClick={() => { setArchivedView(true); setPicked(new Set()); }} aria-pressed={archivedView} className={`rounded-md px-2.5 py-0.5 text-[12px] font-medium ${archivedView ? "bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200" : "text-slate-600 hover:text-slate-900"}`}>Archived</button></span>
-        <span className="flex rounded-lg bg-slate-100 p-0.5" role="group" aria-label="View"><button type="button" onClick={() => setView("kanban")} aria-pressed={view === "kanban"} className={`rounded-md px-2.5 py-0.5 text-[12px] font-medium ${view === "kanban" ? "bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200" : "text-slate-600 hover:text-slate-900"}`}>Kanban</button><button type="button" onClick={() => setView("list")} aria-pressed={view === "list"} className={`rounded-md px-2.5 py-0.5 text-[12px] font-medium ${view === "list" ? "bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200" : "text-slate-600 hover:text-slate-900"}`}>List</button></span>
-        {hasStages ? (
-          <label className="text-[12px] text-slate-600">Group by
-            <select value={mode} onChange={(e) => setGroupBy(e.target.value as "stage" | "week")} className="ml-1 rounded-md border border-slate-200 px-2 py-1 text-[12px]">
-              <option value="stage">Stage</option>
-              <option value="week">Week</option>
-            </select>
-          </label>
-        ) : null}
-        <label className="text-[12px] text-slate-600">Month
-          <select value={month?.id ?? ""} onChange={(e) => { setMonthId(e.target.value); setPicked(new Set()); }} className="ml-1 rounded-md border border-slate-200 px-2 py-1 text-[12px]">
-            {months.map((m) => <option key={m.id} value={m.id}>{m.label} · {formatRange(m.starts_on, m.ends_on)}</option>)}
-          </select>
-        </label>
         {error ? <span className="text-[12px] text-rose-600">{error}</span> : null}
       </div>
       {notice ? <div className="mb-2 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[12.5px] text-emerald-800"><i className="ti ti-circle-check" aria-hidden="true" />{notice}<button type="button" onClick={() => setNotice(null)} aria-label="Dismiss" className="ml-auto text-emerald-700 hover:text-emerald-900"><i className="ti ti-x" aria-hidden="true" /></button></div> : null}
