@@ -25,6 +25,8 @@ import {
   type ContactLite,
 } from "./store";
 import { applyEmailTokens, emailTokenValues, withTypedValues } from "./email-tokens";
+import { resolveCoverLook } from "./cover-look";
+import type { CoverBrand, CoverStyle } from "./cover-signature";
 import { appBase, notifySender, sendCoverEmail, sendCoverEmailViaGmail, sendExecutedCopy, sendReminderEmail, type Attachment } from "./email";
 import { buildCertificate } from "./certificate";
 import type { ContractDocument, ContractTemplate, CountersignField, IssuingEntity, TemplateField } from "./types";
@@ -206,6 +208,10 @@ export type SendInput = {
   signature?: boolean;
   /** "gmail": send the cover email from the sender's connected Gmail. Default iCapOS mail. */
   via?: "gmail" | "icapos";
+  /** Which company the cover email goes out as. Default iCFO Capital Global. */
+  brand?: CoverBrand;
+  /** "plain": reads like a typed Gmail email with your signature (default). "branded": the card. */
+  style?: CoverStyle;
   sender: { id: string; name: string; email: string | null; actorLabel: string };
 };
 
@@ -366,6 +372,7 @@ export async function sendPacket(db: Db, input: SendInput): Promise<{ packetId: 
     if (attachPdfs) attachments.push({ filename: `${fileBase(b)}.pdf`, content: p.pdf });
   }
 
+  const look = await resolveCoverLook(input.sender.id, input.brand ?? "icfo", input.style ?? "plain");
   let delivered = false;
   let deliveryError: string | null = null;
   try {
@@ -379,6 +386,7 @@ export async function sendPacket(db: Db, input: SendInput): Promise<{ packetId: 
           senderName: input.sender.name,
           attachments,
           reviewOnly: !signature,
+          look,
         })
       : await sendCoverEmail({
           to: contact.email,
@@ -389,6 +397,7 @@ export async function sendPacket(db: Db, input: SendInput): Promise<{ packetId: 
           senderEmail: input.sender.email,
           attachments,
           reviewOnly: !signature,
+          look,
         })).delivered;
   } catch (err) {
     delivered = false;

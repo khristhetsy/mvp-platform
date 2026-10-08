@@ -8,6 +8,7 @@ import { getAppUrl, getResendApiKey } from "@/lib/env";
 import { esc, fromFor, renderEmail, type RenderedEmail } from "@/lib/email/layout";
 import { logOutboundEmail } from "@/lib/email/email-log";
 import { sendViaGmail } from "@/lib/integrations/gmail-send";
+import { COVER_COMPANY, COVER_FROM_SUFFIX, htmlToText, type CoverLook } from "./cover-signature";
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 const COMPANY = "iCFO Capital Global, Inc.";
@@ -57,16 +58,53 @@ function paragraphs(text: string) {
     .map((p) => ({ type: "html" as const, html: `<p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#1f2937">${esc(p).replace(/\n/g, "<br>")}</p>` }));
 }
 
-export function buildCoverEmail(input: { subject: string; body: string; url: string; senderName: string; reviewOnly?: boolean }): RenderedEmail {
+/**
+ * Plain cover email: reads like an email typed in Gmail. The body, one line
+ * with the signing (or viewing) link, then the sender's own signature. No
+ * header card, no button.
+ */
+function buildPlainCover(input: { subject: string; body: string; url: string; reviewOnly?: boolean; look: CoverLook; testNote?: string }): RenderedEmail {
+  const p = (html: string) => `<p style="margin:0 0 14px;">${html}</p>`;
+  const bodyParas = input.body
+    .split(/\n{2,}/)
+    .map((x) => x.trim())
+    .filter(Boolean);
+  const linkLabel = input.reviewOnly ? "View the documents" : "Review and sign the documents";
+  const linkLine = input.reviewOnly
+    ? `The documents are attached for your review. No signature is requested. You can also <a href="${esc(input.url)}" style="color:#1155cc;">view them online</a>.`
+    : `<a href="${esc(input.url)}" style="color:#1155cc;">${linkLabel}</a>. No account is needed, and the link is unique to you.`;
+  const linkText = input.reviewOnly
+    ? `The documents are attached for your review. No signature is requested. You can also view them online: ${input.url}`
+    : `${linkLabel}: ${input.url}\nNo account is needed, and the link is unique to you.`;
+  const html = [
+    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#222222;">',
+    input.testNote ? p(`<i style="color:#854F0B;">${esc(input.testNote)}</i>`) : "",
+    ...bodyParas.map((x) => p(esc(x).replace(/\n/g, "<br>"))),
+    p(linkLine),
+    `<div style="margin-top:18px;">${input.look.signatureHtml}</div>`,
+    "</div>",
+  ].join("");
+  const text = [input.testNote ?? "", ...bodyParas, linkText, htmlToText(input.look.signatureHtml)].filter(Boolean).join("\n\n");
+  return { subject: input.subject, html, text };
+}
+
+export function buildCoverEmail(input: { subject: string; body: string; url: string; senderName: string; reviewOnly?: boolean; look?: CoverLook }): RenderedEmail {
+  if (input.look?.style === "plain") return buildPlainCover({ ...input, look: input.look });
+  const company = input.look ? COVER_COMPANY[input.look.brand] : COMPANY;
   return renderEmail({
     audience: "shared",
     subject: input.subject,
     preheader: input.reviewOnly ? "Documents for your review." : "Documents for your review and signature.",
-    context: COMPANY,
+    context: company,
     blocks: [...paragraphs(input.body), { type: "note", text: input.reviewOnly ? "The documents are attached. No signature is requested." : "No account needed. The link is unique to you." }],
     primary: { label: input.reviewOnly ? "View documents" : "Review and sign", url: input.url },
-    footer: { reason: `${input.senderName} sent you these documents from ${COMPANY}.` },
+    footer: { reason: `${input.senderName} sent you these documents from ${company}.` },
   });
+}
+
+/** From display name for iCapOS mail sends: "Khris Thetsy, iCapOS". */
+function fromNameFor(senderName: string, look?: CoverLook) {
+  return `${senderName}, ${look ? COVER_FROM_SUFFIX[look.brand] : "iCFO Capital Global"}`;
 }
 
 export async function sendCoverEmail(input: {
@@ -79,9 +117,11 @@ export async function sendCoverEmail(input: {
   attachments: Attachment[];
   /** Review only: no signing link wording. */
   reviewOnly?: boolean;
+  /** Plain or branded, iCFO or iCapOS. Omitted: the branded iCFO card (resends). */
+  look?: CoverLook;
 }) {
-  const mail = buildCoverEmail({ subject: input.subject, body: input.body, url: packetUrl(input.token), senderName: input.senderName, reviewOnly: input.reviewOnly });
-  return send({ to: input.to, fromName: `${input.senderName}, iCFO Capital Global`, replyTo: input.senderEmail, mail, attachments: input.attachments });
+  const mail = buildCoverEmail({ subject: input.subject, body: input.body, url: packetUrl(input.token), senderName: input.senderName, reviewOnly: input.reviewOnly, look: input.look });
+  return send({ to: input.to, fromName: fromNameFor(input.senderName, input.look), replyTo: input.senderEmail, mail, attachments: input.attachments });
 }
 
 /**
@@ -98,9 +138,10 @@ export async function sendCoverEmailViaGmail(input: {
   senderName: string;
   attachments: Attachment[];
   reviewOnly?: boolean;
+  look?: CoverLook;
 }): Promise<{ delivered: boolean }> {
   if (!input.to.includes("@")) return { delivered: false };
-  const mail = buildCoverEmail({ subject: input.subject, body: input.body, url: packetUrl(input.token), senderName: input.senderName, reviewOnly: input.reviewOnly });
+  const mail = buildCoverEmail({ subject: input.subject, body: input.body, url: packetUrl(input.token), senderName: input.senderName, reviewOnly: input.reviewOnly, look: input.look });
   const r = await sendViaGmail({
     userId: input.userId,
     to: input.to,
@@ -123,19 +164,30 @@ export async function sendCoverEmailViaGmail(input: {
  * send page (a test creates no signing link). Same body, sender and PDFs as
  * the real send, so what arrives is what the prospect would get.
  */
-export function buildTestCoverEmail(input: { subject: string; body: string; senderName: string; reviewOnly?: boolean; backUrl: string; prospectName: string }): RenderedEmail {
+export function buildTestCoverEmail(input: { subject: string; body: string; senderName: string; reviewOnly?: boolean; backUrl: string; prospectName: string; look?: CoverLook }): RenderedEmail {
+  if (input.look?.style === "plain") {
+    return buildPlainCover({
+      subject: `[TEST] ${input.subject}`,
+      body: input.body,
+      url: input.backUrl,
+      reviewOnly: input.reviewOnly,
+      look: input.look,
+      testNote: `Test copy. Only you received this; nothing was sent to ${input.prospectName}. The link below goes back to the send page, because a test creates no signing link.`,
+    });
+  }
+  const company = input.look ? COVER_COMPANY[input.look.brand] : COMPANY;
   return renderEmail({
     audience: "shared",
     subject: `[TEST] ${input.subject}`,
     preheader: `Test copy. Only you received this; nothing was sent to ${input.prospectName}.`,
-    context: COMPANY,
+    context: company,
     blocks: [
       { type: "note", tone: "warning", text: `Test copy. Only you received this; nothing was sent to ${input.prospectName}. The button below goes back to the send page, because a test creates no signing link.` },
       ...paragraphs(input.body),
       { type: "note", text: input.reviewOnly ? "The documents are attached. No signature is requested." : "No account needed. The link is unique to you." },
     ],
     primary: { label: input.reviewOnly ? "View documents" : "Review and sign", url: input.backUrl },
-    footer: { reason: `${input.senderName} sent you these documents from ${COMPANY}.` },
+    footer: { reason: `${input.senderName} sent you these documents from ${company}.` },
   });
 }
 
@@ -148,10 +200,11 @@ export async function sendTestCoverEmail(input: {
   senderEmail: string | null;
   mail: RenderedEmail;
   attachments: Attachment[];
+  look?: CoverLook;
 }): Promise<{ delivered: boolean }> {
   if (!input.to.includes("@")) return { delivered: false };
   if (input.via !== "gmail") {
-    return send({ to: input.to, fromName: `${input.senderName}, iCFO Capital Global`, replyTo: input.senderEmail, mail: input.mail, attachments: input.attachments });
+    return send({ to: input.to, fromName: fromNameFor(input.senderName, input.look), replyTo: input.senderEmail, mail: input.mail, attachments: input.attachments });
   }
   const r = await sendViaGmail({
     userId: input.userId,

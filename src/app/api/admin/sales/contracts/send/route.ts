@@ -26,6 +26,10 @@ const schema = z.object({
   signature: z.boolean().optional(),
   /** Send the cover email from the sender's own Gmail (default: iCapOS mail). */
   via: z.enum(["gmail", "icapos"]).optional(),
+  /** Send as iCFO Capital Global or iCapOS (signature, logo, From name). */
+  brand: z.enum(["icfo", "icapos"]).optional(),
+  /** Plain email like Gmail (default) or the branded card. */
+  style: z.enum(["plain", "branded"]).optional(),
 });
 
 /** POST — send the selected drafts with one cover email, for signature or (signature: false) for review only. */
