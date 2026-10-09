@@ -5,6 +5,13 @@ import { isInternalAccount } from "@/lib/notifications/internal-accounts";
 import { sendEmail } from "@/lib/email/send-email";
 import { absoluteUrl, button, escapeHtml } from "@/lib/activity/email-templates";
 import { PLAN_LABELS, type PlanType } from "@/lib/subscriptions/plans";
+import {
+  loadPaymentAlertDetails,
+  paymentBellMessage,
+  paymentSubjectSuffix,
+  renderPaymentAlertEmail,
+  type PaymentAlertDetails,
+} from "@/lib/notifications/payment-alert-details";
 
 /**
  * Staff alerts for new customers. Every admin and analyst gets one in-app
@@ -100,8 +107,15 @@ export async function alertStaffNewCustomer(raw: NewCustomerAlertInput): Promise
     input = await fillCompany(input);
 
     const type = NEW_CUSTOMER_TYPES[input.event];
-    const { title, message } = buildNewCustomerAlert(input);
+    const built = buildNewCustomerAlert(input);
+    const title = built.title;
     const link = newCustomerLink(input.companyId);
+    // Payments get the detailed email (payment, founder, company, onboarding,
+    // next steps). If the details can't be read, the short email still goes out.
+    const details: PaymentAlertDetails | null =
+      input.event === "payment" ? await loadPaymentAlertDetails(input.founderId, input.companyId ?? null) : null;
+    const who = input.companyName?.trim() || input.founderName?.trim() || input.founderEmail?.trim() || "A new founder";
+    const message = details ? paymentBellMessage(who, planName(input.plan), details) + "." : built.message;
     const entityId = input.companyId ?? input.founderId;
     const staff = await staffRecipients();
 
@@ -124,11 +138,27 @@ export async function alertStaffNewCustomer(raw: NewCustomerAlertInput): Promise
         });
 
         if (!person.email) return;
-        if (!(await shouldSendEmail(person.id, type))) return;
+        // A payment is critical: it emails even during quiet hours (critical
+        // override is on by default). Signup and onboarding still respect them.
+        const severity = input.event === "payment" ? "critical" : null;
+        if (!(await shouldSendEmail(person.id, type, severity))) return;
         const url = absoluteUrl(link);
+        const subjectWho = input.companyName || input.founderName || input.founderEmail || "new founder";
+        if (details) {
+          const rendered = renderPaymentAlertEmail({ companyName: who, plan: planName(input.plan), details, url });
+          await sendEmail({
+            to: person.email,
+            subject: `${title}: ${subjectWho}${paymentSubjectSuffix(planName(input.plan), details)}`,
+            html: rendered.html,
+            text: rendered.text,
+            source: `staff_alert:${input.event}`,
+            audience: "staff",
+          });
+          return;
+        }
         await sendEmail({
           to: person.email,
-          subject: `${title}: ${input.companyName || input.founderName || input.founderEmail || "new founder"}`,
+          subject: `${title}: ${subjectWho}`,
           html: `<div style="font-family:Arial,sans-serif;font-size:14px;color:#111;"><p><strong>${escapeHtml(title)}</strong></p><p>${escapeHtml(message)}</p>${input.founderEmail ? `<p style="color:#555;">Founder: ${escapeHtml(input.founderEmail)}</p>` : ""}<p>${button("Open company", url, true)}</p><p style="color:#888;font-size:12px;">Turn these off under Notifications, "New founder signup".</p></div>`,
           text: `${title}\n${message}\n${url}`,
           source: `staff_alert:${input.event}`,
