@@ -50,29 +50,30 @@ export default async function PricingPage() {
             </p>
           ) : null}
         </div>
-        <div className={`mx-auto mt-10 grid gap-5 sm:grid-cols-2 ${plans.length > 3 ? "max-w-6xl xl:grid-cols-4" : "max-w-5xl xl:grid-cols-3"}`}>
+        <div className={`mx-auto mt-10 grid gap-5 sm:grid-cols-2 ${plans.length > 3 ? "max-w-[1500px] lg:grid-cols-4 lg:gap-4 xl:gap-5" : "max-w-5xl xl:grid-cols-3"}`}>
           {plans.map((t) => {
             const promo = "promo" in t && t.promo ? t.promo : null;
             return (
-            <div key={t.name} className={`relative rounded-2xl p-6 ${t.featured ? "border-2 border-site-blue-lt bg-white/[0.07] ring-1 ring-site-blue-lt/25" : promo ? "border-2 border-site-amber bg-white/[0.04]" : "border border-white/12 bg-white/[0.03]"}`}>
-              {/* Premium primacy tag (Oct 9, 2026: moved from Professional). */}
+            <div key={t.name} className={`relative flex flex-col rounded-2xl p-6 lg:p-[1.6em] lg:text-[clamp(12px,calc(0.5rem_+_0.4vw),15px)] ${t.featured ? "border-2 border-site-blue-lt bg-white/[0.07] ring-1 ring-site-blue-lt/25" : promo ? "border-2 border-site-amber bg-white/[0.04]" : "border border-white/12 bg-white/[0.03]"}`}>
+              {/* Premium primacy tag (Oct 9, 2026: moved from Professional). From lg up the card text
+                  scales with the window (12px floor, 15px cap) so four columns fit a laptop. */}
               {t.featured ? (
-                <div className="absolute -top-3 left-6 rounded-full bg-site-blue px-3 py-1 font-site-mono text-[10px] font-semibold uppercase tracking-wider text-white">Most founders start here</div>
+                <div className="absolute -top-3 left-6 rounded-full bg-site-blue px-3 py-1 font-site-mono text-[10px] lg:text-[0.7em] font-semibold uppercase tracking-wider text-white">Most founders start here</div>
               ) : promo ? (
-                <div className="absolute -top-3 left-6 rounded-full bg-site-amber px-3 py-1 font-site-mono text-[10px] font-semibold uppercase tracking-wider text-site-ink">{promo.tag}</div>
+                <div className="absolute -top-3 left-6 rounded-full bg-site-amber px-3 py-1 font-site-mono text-[10px] lg:text-[0.7em] font-semibold uppercase tracking-wider text-site-ink">{promo.tag}</div>
               ) : null}
-              <div className="flex items-center justify-between">
-                <h2 className="font-site-display text-xl font-bold">{t.name}</h2>
-                {"badge" in t && t.badge ? <span className="rounded-full bg-site-blue/25 px-2.5 py-0.5 font-site-mono text-[10px] font-medium text-site-blue-lt">{t.badge}</span> : null}
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="font-site-display text-xl lg:text-[1.45em] font-bold">{t.name}</h2>
+                {"badge" in t && t.badge ? <span className="whitespace-nowrap rounded-full bg-site-blue/25 px-2.5 py-0.5 font-site-mono text-[10px] lg:text-[0.7em] font-medium text-site-blue-lt">{t.badge}</span> : null}
               </div>
-              <div className="mt-3 flex items-baseline gap-1"><span className={`font-site-display font-extrabold ${t.per ? "text-4xl" : "text-2xl"}`}>{t.price}</span>{t.per ? <span className="text-sm text-white/50">{t.per}</span> : null}{promo ? <span className="text-sm text-white/50">{promo.priceNote}</span> : null}</div>
-              <p className="mt-2 text-sm text-white/65">{t.desc}</p>
+              <div className="mt-3 flex items-baseline gap-1"><span className={`font-site-display font-extrabold ${t.per ? "text-4xl lg:text-[2.4em]" : "text-2xl lg:text-[1.7em]"}`}>{t.price}</span>{t.per ? <span className="text-sm lg:text-[0.93em] text-white/50">{t.per}</span> : null}{promo ? <span className="text-sm lg:text-[0.93em] text-white/50">{promo.priceNote}</span> : null}</div>
+              <p className="mt-2 text-sm lg:text-[0.93em] text-white/65">{t.desc}</p>
               {promo ? (
-                <p className="mt-4 flex items-center gap-2 rounded-lg border border-site-amber/40 bg-site-amber/10 px-3 py-2 text-[13px] font-medium text-site-amber" role="note"><i className="ti ti-clock" aria-hidden="true" />{promo.note}</p>
+                <p className="mt-4 flex items-center gap-2 rounded-lg border border-site-amber/40 bg-site-amber/10 px-3 py-2 text-[13px] lg:text-[0.93em] font-medium text-site-amber" role="note"><i className="ti ti-clock" aria-hidden="true" />{promo.note}</p>
               ) : null}
               {"features" in t && t.features ? (
                 <ul className="mt-5 space-y-2.5">
-                  {t.features.map((f) => (<li key={f} className="flex gap-2.5 text-[13.5px] text-white/85"><span className="text-site-blue-lt"><i className="ti ti-check" aria-hidden="true" /></span>{f}</li>))}
+                  {t.features.map((f) => (<li key={f} className="flex gap-2.5 text-[13.5px] lg:text-[1em] text-white/85"><span className="text-site-blue-lt"><i className="ti ti-check" aria-hidden="true" /></span>{f}</li>))}
                 </ul>
               ) : null}
               {"advisory" in t && t.advisory ? (
@@ -82,7 +83,9 @@ export default async function PricingPage() {
                   <p className="mt-1.5 text-[13px] leading-relaxed text-white/70">{t.advisory.body}</p>
                 </div>
               ) : null}
-              <Link href={t.cta.href} {...("contactSales" in t && t.contactSales ? { target: "_blank", rel: "noopener noreferrer" } : {})} className={`mt-6 block rounded-lg px-5 py-3 text-center text-sm font-semibold transition-colors ${t.featured ? "bg-site-blue text-white hover:bg-site-blue-hi" : promo ? "bg-site-amber text-site-ink hover:bg-site-amber/90" : "border border-white/20 text-white hover:border-site-blue-lt hover:text-site-blue-lt"}`}>{t.cta.label}</Link>
+              {/* Pins every plan button to the card bottom so they line up across the row. */}
+              <div className="flex-1" />
+              <Link href={t.cta.href} {...("contactSales" in t && t.contactSales ? { target: "_blank", rel: "noopener noreferrer" } : {})} className={`mt-6 block rounded-lg px-5 py-3 text-center text-sm lg:text-[0.93em] font-semibold transition-colors ${t.featured ? "bg-site-blue text-white hover:bg-site-blue-hi" : promo ? "bg-site-amber text-site-ink hover:bg-site-amber/90" : "border border-white/20 text-white hover:border-site-blue-lt hover:text-site-blue-lt"}`}>{t.cta.label}</Link>
             </div>
             );
           })}

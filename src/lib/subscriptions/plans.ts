@@ -150,12 +150,12 @@ export type SignupPlanOption = {
 export const PREMIUM_TAGLINE = "Your raise, run by our team.";
 export const PREMIUM_FEATURES: string[] = [
   "Everything in Professional",
-  "An iCFO team member manages your investor outreach",
+  "A dedicated team member manages your investor outreach",
   "We find your best fits in our 7,000+ investor network",
   "We make the introductions and follow up",
   "You take the meetings and close",
   "Up to 20,000 public directory investors as the directory grows",
-  "40,000 Manual outreach emails a month",
+  "Up to 40,000 Manual outreach emails a month",
 ];
 
 /**
