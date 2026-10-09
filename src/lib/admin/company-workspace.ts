@@ -379,7 +379,7 @@ export async function getAdminCompanyWorkspace(companyId: string): Promise<Admin
   // Outreach = automated AND manual, read by the same loader the founder's
   // Outreach page uses, so the admin row, the drawer and the Overview tile can
   // never disagree with what the founder sees.
-  const [outreachStatus, manualReminderRes, welcomeRow] = await Promise.all([
+  const [outreachStatus, manualReminderRes, welcomeRow, paidSubRes] = await Promise.all([
     loadOutreachStatus(companyId),
     admin
       .from("stage_gate_reminders")
@@ -388,7 +388,15 @@ export async function getAdminCompanyWorkspace(companyId: string): Promise<Admin
       .eq("gate_key", MANUAL_OUTREACH_GATE_KEY)
       .maybeSingle(),
     founderId ? latestWelcomeLetter(founderId) : Promise.resolve(null),
+    founderId
+      ? admin.from("subscriptions").select("plan_type, subscription_status, monthly_price_cents").eq("profile_id", founderId).maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
+  const paidSub = (paidSubRes.data ?? null) as { plan_type: string | null; subscription_status: string | null; monthly_price_cents: number | null } | null;
+  const payingFounder =
+    Boolean(paidSub) &&
+    ["active", "past_due"].includes(String(paidSub?.subscription_status)) &&
+    ["founder_basic", "founder_professional", "founder_managed_ir"].includes(String(paidSub?.plan_type));
   const manualReminderRow = (manualReminderRes.data ?? null) as {
     sends_count: number | null;
     last_sent_at: string | null;
@@ -439,6 +447,7 @@ export async function getAdminCompanyWorkspace(companyId: string): Promise<Admin
           bouncedAt: welcomeRow.bouncedAt,
         }
       : null,
+    welcomeLetterSendable: payingFounder && !(welcomeRow && welcomeRow.status === "sent"),
     // Per-stage diagnosis resolved server-side: the workspace shell is a client
     // component, so it cannot await this itself.
     stageDiagnosis: await diagnoseAllStages(companyId, journey, outreach),

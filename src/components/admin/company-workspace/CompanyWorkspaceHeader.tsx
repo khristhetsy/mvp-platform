@@ -10,6 +10,7 @@ import {
 } from "@/lib/admin/company-workspace-types";
 import { PLATFORM_TZ, PLATFORM_TZ_LABEL } from "@/lib/time/platform-tz";
 import { welcomeLetterChip } from "@/lib/admin/welcome-letter-chip";
+import { WelcomeLetterSendButton } from "@/components/admin/company-workspace/WelcomeLetterSendButton";
 
 function reviewStatusToBadge(status: string | null): "neutral" | "info" | "success" | "warning" | "danger" | "pending" {
   switch (status) {
@@ -73,11 +74,12 @@ export function CompanyWorkspaceHeader({
           <StatusBadge label={`Readiness ${readiness.latestScore}`} status="info" />
         ) : null}
         <StatusBadge label={`Onboarding ${readiness.onboardingPercent}%`} status="neutral" />
-        {welcome ? (
+        {welcome && !data.welcomeLetterSendable ? (
           <a href="#tools" title="Open Analytics & Tools, Emails sent">
             <StatusBadge label={`✉ ${welcome.label}`} status={welcome.tone} />
           </a>
         ) : null}
+        {data.welcomeLetterSendable && founder ? <WelcomeLetterSendButton founderId={founder.id} /> : null}
       </div>
 
       {founder ? (
