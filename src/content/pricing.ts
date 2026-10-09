@@ -29,9 +29,15 @@ export const pricing = {
       price: "$0",
       per: "",
       badge: "No credit card",
+      // Promotional Free plan (Oct 9, 2026): amber card, top tag, urgency strip.
+      promo: {
+        tag: "Promotional",
+        priceNote: "promotional offer",
+        note: "Get your free report today. Promo will not last.",
+      },
       desc: "Due diligence report, CRR, share with any investor, Private Market listing",
       features: FREE_FEATURES,
-      cta: { label: "Get my free report", href: FREE_SIGNUP },
+      cta: { label: "Get my free report today", href: FREE_SIGNUP },
       featured: false,
     },
     {
