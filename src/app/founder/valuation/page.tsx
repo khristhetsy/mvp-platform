@@ -41,7 +41,7 @@ export default async function FounderValuationPage() {
 
   // Plan gate — Basic + Professional (not trial). Route enforces this too.
   const plan = await getUserPlan(profile.id);
-  const planEligible = plan === "founder_basic" || plan === "founder_professional";
+  const planEligible = plan === "founder_basic" || plan === "founder_professional" || plan === "founder_premium";
 
   const active = await getActiveCompanyForUser(profile);
   const company = acting ? acting.company : active.company;

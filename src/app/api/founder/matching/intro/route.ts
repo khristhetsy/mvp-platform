@@ -82,7 +82,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const isPro = plan === "founder_professional";
+  // Premium uses Professional's limits.
+  const isPro = plan === "founder_professional" || plan === "founder_premium";
   const cap = isPro ? cfg.monthlyByPlan.professional : cfg.monthlyByPlan.basic;
   const weeklyCap = cfg.weeklyByPlan ? (isPro ? cfg.weeklyByPlan.professional : cfg.weeklyByPlan.basic) : null;
   const period = await founderCapPeriod(admin, founderId);

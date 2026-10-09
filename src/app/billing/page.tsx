@@ -19,6 +19,7 @@ import { ensureSubscriptionForProfile, getSubscriptionForProfile } from "@/lib/s
 import { priceShort } from "@/lib/subscriptions/pricing-catalog";
 import { loadPricing } from "@/lib/subscriptions/pricing-server";
 import { PLATFORM_TZ } from "@/lib/time/platform-tz";
+import { premiumCheckoutReady } from "@/lib/billing/buy-links";
 
 function formatDate(value: string | null) {
   if (!value) return "—";
@@ -126,6 +127,9 @@ export default async function BillingPage() {
             <div className="mt-4 flex flex-wrap gap-3">
               <CheckoutButton planType="founder_basic" label={`Founder Basic — ${priceShort(pricing, "founder_basic")}`} pricing={pricing} />
               <CheckoutButton planType="founder_professional" label={`Founder Professional — ${priceShort(pricing, "founder_professional")}`} pricing={pricing} recommended />
+              {premiumCheckoutReady() ? (
+                <CheckoutButton planType="founder_premium" label={`Founder Premium — ${priceShort(pricing, "founder_premium")}`} pricing={pricing} />
+              ) : null}
             </div>
           </div>
         ) : null}

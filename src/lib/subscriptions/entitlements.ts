@@ -62,6 +62,9 @@ export function founderEntitlements(plan: PlanType | null | undefined): FounderE
     case "founder_basic":
       return BASIC;
     case "founder_professional":
+    // Premium is done for you: same distribution limits as Professional, the
+    // iCFO team runs the outreach.
+    case "founder_premium":
       return PROFESSIONAL;
     case "founder_managed_ir":
     case "admin_internal":

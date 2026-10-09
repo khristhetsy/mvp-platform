@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { SignUpForm } from "@/components/SignUpForm";
 import { isPrivateBetaMode } from "@/lib/env/private-beta";
 import { loadPricing } from "@/lib/subscriptions/pricing-server";
+import { premiumCheckoutReady } from "@/lib/billing/buy-links";
 
 const trustPoints = [
   "Role-based workspaces for founders and investors",
@@ -75,7 +76,7 @@ export default async function SignUpPage() {
 
       <main className="flex min-h-screen flex-col justify-center px-6 py-10 sm:px-10 lg:px-12 xl:px-16">
         <Suspense fallback={<p className="text-sm text-slate-500">{t("loading_signup")}</p>}>
-          <SignUpForm privateBetaMode={privateBetaMode} pricing={await loadPricing()} />
+          <SignUpForm privateBetaMode={privateBetaMode} pricing={await loadPricing()} showPremium={premiumCheckoutReady()} />
         </Suspense>
       </main>
     </div>

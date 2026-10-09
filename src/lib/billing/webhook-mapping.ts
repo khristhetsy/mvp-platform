@@ -73,10 +73,13 @@ export function variantToPlan(
 ): PlanResolution {
   const basic = process.env.LEMONSQUEEZY_VARIANT_ID_BASIC;
   const pro = process.env.LEMONSQUEEZY_VARIANT_ID_PROFESSIONAL;
+  const premium = process.env.LEMONSQUEEZY_VARIANT_ID_PREMIUM;
   if (basic && String(variantId) === basic) return { plan: "founder_basic", source: "variant_id" };
   if (pro && String(variantId) === pro) return { plan: "founder_professional", source: "variant_id" };
+  if (premium && String(variantId) === premium) return { plan: "founder_premium", source: "variant_id" };
 
   const name = `${productName ?? ""} ${variantName ?? ""}`.toLowerCase();
+  if (name.includes("premium")) return { plan: "founder_premium", source: "name" };
   if (name.includes("professional")) return { plan: "founder_professional", source: "name" };
   if (name.includes("basic")) return { plan: "founder_basic", source: "name" };
   return { plan: null, source: "none" };

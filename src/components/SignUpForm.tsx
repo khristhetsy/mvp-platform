@@ -99,8 +99,11 @@ const BASE_INPUT =
 
 export function SignUpForm({
   privateBetaMode = false,
+  showPremium = false,
 }: Readonly<{
   privateBetaMode?: boolean;
+  /** Premium is listed only once its Lemon Squeezy checkout is set up. */
+  showPremium?: boolean;
   /** Active pricing, passed by the server page. Defaults to the code constants. */
   pricing?: PricingCatalog;
 }>) {
@@ -126,13 +129,13 @@ export function SignUpForm({
     }
     // /start passes the plan the founder chose; only paid founder plans are honored.
     const requestedPlan = searchParams.get("plan");
-    if (requestedRole !== "investor" && (requestedPlan === "founder_basic" || requestedPlan === "founder_professional")) {
+    if (requestedRole !== "investor" && (requestedPlan === "founder_basic" || requestedPlan === "founder_professional" || (showPremium && requestedPlan === "founder_premium"))) {
       setSelectedPlan(requestedPlan);
     }
     const prefillEmail = searchParams.get("email");
     if (prefillEmail) setEmail(prefillEmail);
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, [searchParams]);
+  }, [searchParams, showPremium]);
 
   function handleRoleChange(nextRole: SignupRole) {
     setRole(nextRole);
@@ -230,7 +233,7 @@ export function SignUpForm({
         </p>
         <div className={`mt-3 grid gap-3 ${role === "founder" ? "md:grid-cols-1" : ""}`}>
           {role === "founder" ? (
-            SIGNUP_FOUNDER_PLANS.map((plan) => (
+            SIGNUP_FOUNDER_PLANS.filter((plan) => showPremium || plan.planType !== "founder_premium").map((plan) => (
               <PlanCard
                 key={plan.planType}
                 plan={plan}

@@ -10,6 +10,7 @@ type CampaignAction = "approve" | "pause" | "resume" | "cap";
 
 function planLabel(plan: string): string {
   if (plan === "founder_professional") return "Professional";
+  if (plan === "founder_premium") return "Premium";
   if (plan === "founder_basic") return "Basic";
   if (plan === "founder_trial") return "Trial";
   return plan.replace("founder_", "");

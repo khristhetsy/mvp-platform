@@ -78,6 +78,7 @@ export function PlanComparisonSection({
   founderCtaHref = "/auth/sign-up",
   founderCtaLabel = "Get started",
   pricing = CODE_DEFAULT_PRICING,
+  showPremium = false,
 }: Readonly<{
   currentPlan?: PlanType | null;
   showInvestor?: boolean;
@@ -86,8 +87,10 @@ export function PlanComparisonSection({
   founderCtaLabel?: string;
   /** Active pricing, passed by the server page. Defaults to the code constants. */
   pricing?: PricingCatalog;
+  /** Premium is listed only once its Lemon Squeezy checkout is set up. */
+  showPremium?: boolean;
 }>) {
-  const founderPlans = founderPricingPlans(pricing);
+  const founderPlans = founderPricingPlans(pricing).filter((p) => showPremium || p.planType !== "founder_premium");
   const comparisonRows = featureComparison(pricing);
   const t = useTranslations("sharedCmp");
   return (
@@ -97,7 +100,7 @@ export function PlanComparisonSection({
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-indigo-600">{t("founder_plans")}</p>
           <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">{t("choose_the_right_founder_workspace")}</h2>
         </div>
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className={`grid gap-5 sm:grid-cols-2 ${founderPlans.length > 3 ? "xl:grid-cols-4" : "lg:grid-cols-3"}`}>
           {founderPlans.map((plan) => (
             <PlanCard
               key={plan.planType}

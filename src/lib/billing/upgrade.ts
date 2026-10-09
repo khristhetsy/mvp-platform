@@ -82,6 +82,7 @@ export function parseUpgradePlan(value: string | null | undefined): PlanType | n
     value === "founder_trial" ||
     value === "founder_basic" ||
     value === "founder_professional" ||
+    value === "founder_premium" ||
     value === "investor_free"
   ) {
     return value;

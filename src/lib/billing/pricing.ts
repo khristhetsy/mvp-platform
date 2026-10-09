@@ -1,5 +1,5 @@
 import type { FeatureKey, PlanType } from "@/lib/subscriptions/plans";
-import { FOUNDER_PROFESSIONAL_FEATURES, PLAN_PRICES } from "@/lib/subscriptions/plans";
+import { FOUNDER_PROFESSIONAL_FEATURES, PLAN_PRICES, PREMIUM_FEATURES } from "@/lib/subscriptions/plans";
 import {
   addCompanyLabel, centsFor, isPriced, priceLabel, priceSublabel, type PricingCatalog,
 } from "@/lib/subscriptions/pricing-catalog";
@@ -8,6 +8,7 @@ import {
 export const LS_VARIANT_IDS = {
   founder_basic:        process.env.LEMONSQUEEZY_VARIANT_ID_BASIC        ?? "",
   founder_professional: process.env.LEMONSQUEEZY_VARIANT_ID_PROFESSIONAL ?? "",
+  founder_premium:      process.env.LEMONSQUEEZY_VARIANT_ID_PREMIUM      ?? "",
 } as const;
 
 export type PricingPlanCard = {
@@ -58,6 +59,15 @@ export const FOUNDER_PRICING_PLANS: PricingPlanCard[] = [
       "Up to 20 intro requests a month",
       "Self-serve, with a call available",
     ],
+    paidPlan: true,
+  },
+  {
+    planType: "founder_premium",
+    title: "Premium",
+    priceLabel: "$1,000",
+    priceSubtext: "/month",
+    monthlyPriceCents: PLAN_PRICES.founder_premium,
+    features: PREMIUM_FEATURES,
     paidPlan: true,
   },
   {
@@ -130,6 +140,7 @@ export function planIncludesFeature(planType: PlanType, featureKey: FeatureKey) 
     planType === "founder_free" ||
     planType === "founder_basic" ||
     planType === "founder_professional" ||
+    planType === "founder_premium" ||
     planType === "founder_managed_ir" ||
     planType === "founder_trial" ||
     planType === "admin_internal"

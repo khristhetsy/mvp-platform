@@ -5,6 +5,7 @@
  * (done-for-you, price on request, contact sales).
  */
 import { money, priceLabel, priceSublabel, type PricingCatalog } from "@/lib/subscriptions/pricing-catalog";
+import { PREMIUM_FEATURES, PREMIUM_TAGLINE } from "@/lib/subscriptions/plans";
 
 export const pricing = {
   eyebrow: "Pricing",
@@ -100,12 +101,28 @@ export const pricing = {
  * the fallback (and as the copy), but every figure a visitor reads comes from
  * the pricing catalogue, so the page can't drift from what we charge.
  */
-export function pricingFor(catalog: PricingCatalog) {
+export function pricingFor(catalog: PricingCatalog, opts: { showPremium?: boolean } = {}) {
   const basic = priceLabel(catalog, "founder_basic");
   const pro = priceLabel(catalog, "founder_professional");
+  // Premium sits between Professional and the SPV Program, listed only once its
+  // Lemon Squeezy checkout is set up (premiumCheckoutReady).
+  const premiumTier = {
+    name: "Premium",
+    price: priceLabel(catalog, "founder_premium"),
+    per: priceSublabel(catalog, "founder_premium"),
+    badge: "Done for you",
+    desc: PREMIUM_TAGLINE,
+    features: PREMIUM_FEATURES,
+    cta: { label: "Start on Premium", href: "/auth/sign-up?role=founder&plan=founder_premium" },
+    featured: false,
+  };
+  type Tier = (typeof pricing.tiers)[number] | typeof premiumTier;
+  const baseTiers: Tier[] = opts.showPremium
+    ? pricing.tiers.flatMap((t): Tier[] => (t.name === "Professional" ? [t, premiumTier] : [t]))
+    : [...pricing.tiers];
   return {
     ...pricing,
-    tiers: pricing.tiers.map((t) => {
+    tiers: baseTiers.map((t) => {
       if (t.name === "Basic") return { ...t, price: basic, per: priceSublabel(catalog, "founder_basic") };
       if (t.name === "Professional") return { ...t, price: pro, per: priceSublabel(catalog, "founder_professional") };
       if (t.name === "SPV Program") return { ...t, price: priceLabel(catalog, "founder_managed_ir"), per: "" };

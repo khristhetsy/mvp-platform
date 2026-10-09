@@ -15,6 +15,7 @@ import { loadPricing } from "@/lib/subscriptions/pricing-server";
 import { getSupportSettings } from "@/lib/support/settings";
 import { submitSupportRequest } from "@/lib/support/submit";
 import { logSupportEvent, type AiCost } from "@/lib/support/events";
+import { premiumCheckoutReady } from "@/lib/billing/buy-links";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,7 @@ const HANDOFF_TAG = "[HANDOFF]";
 
 // Grounds the assistant in what iCapOS actually is, so it doesn't invent
 // features. Kept short and honest; account-specific facts come from context.
-const productBrief = (catalog: PricingCatalog) => `iCapOS is a capital-readiness and investor-distribution platform for founders. A founder's raise moves through four stages, in order: Stage 1 Onboarding, Stage 2 Preparation, Stage 3 Marketing, Stage 4 Closing. The tools — Capital Readiness Rating (CRR), valuation, data room/documents, and e-learning — are included on every paid plan. What the paid plans add is distribution: your matched investors are revealed and your materials are sent to them. Plans are Basic (${priceLabel(catalog, "founder_basic")}/mo, up to 5 matched investors, Investor Conference Virtual Event access, DIY outreach), Professional (${priceLabel(catalog, "founder_professional")}/mo, up to 50, monthly live presentation slot, investor intro requests), and the SPV Program (done-for-you, 3-month minimum, pricing discussed on a call — never quote a figure). Investor accounts are free. There are no success fees, no carry, and no commission on an introduction. Investor interest shown on the platform is a non-binding indication of interest, not a commitment.
+const productBrief = (catalog: PricingCatalog) => `iCapOS is a capital-readiness and investor-distribution platform for founders. A founder's raise moves through four stages, in order: Stage 1 Onboarding, Stage 2 Preparation, Stage 3 Marketing, Stage 4 Closing. The tools — Capital Readiness Rating (CRR), valuation, data room/documents, and e-learning — are included on every paid plan. What the paid plans add is distribution: your matched investors are revealed and your materials are sent to them. Plans are Basic (${priceLabel(catalog, "founder_basic")}/mo, up to 5 matched investors, Investor Conference Virtual Event access, DIY outreach), Professional (${priceLabel(catalog, "founder_professional")}/mo, up to 50, monthly live presentation slot, investor intro requests), ${premiumCheckoutReady() ? `Premium (${priceLabel(catalog, "founder_premium")}/mo, everything in Professional with the iCFO team running the investor outreach for the founder), ` : ""}and the SPV Program (done-for-you, 3-month minimum, pricing discussed on a call — never quote a figure). Investor accounts are free. There are no success fees, no carry, and no commission on an introduction. Investor interest shown on the platform is a non-binding indication of interest, not a commitment.
 
 The Market Claim Grader IS the platform's market research tool. If a founder asks where to find "market research", "market analysis", "market sizing", "TAM/SAM/SOM", or anything similar, point them to the Market Claim Grader, located under Stage 2 — Preparation in the left menu (Market claim grader). It grades the market claims in their materials and shows where to tighten them.`;
 

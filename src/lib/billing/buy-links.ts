@@ -19,11 +19,22 @@ const DEFAULTS: Partial<Record<PlanType, string>> = {
 export const BUY_LINKS: Partial<Record<PlanType, string>> = {
   founder_basic: process.env.LEMONSQUEEZY_CHECKOUT_URL_BASIC || DEFAULTS.founder_basic,
   founder_professional: process.env.LEMONSQUEEZY_CHECKOUT_URL_PROFESSIONAL || DEFAULTS.founder_professional,
+  // No default: Premium has no Lemon Squeezy product until one is created there.
+  founder_premium: process.env.LEMONSQUEEZY_CHECKOUT_URL_PREMIUM || undefined,
 };
 
 /** A specific plan has a usable buy link. */
 export function hasBuyLink(planType: PlanType): boolean {
   return Boolean(BUY_LINKS[planType]);
+}
+
+/**
+ * Premium can be bought: a buy link or a variant ID is set for it. Until then
+ * Premium stays off every founder and public plan list, so nobody is shown a
+ * checkout that would fail. Server only (reads env).
+ */
+export function premiumCheckoutReady(): boolean {
+  return hasBuyLink("founder_premium") || Boolean(process.env.LEMONSQUEEZY_VARIANT_ID_PREMIUM?.trim());
 }
 
 /** At least one founder plan has a usable buy link (used to enable checkout). */

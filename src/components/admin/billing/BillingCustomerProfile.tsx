@@ -13,6 +13,7 @@ const PLAN_OPTIONS: Array<{ value: string; label: string }> = [
   { value: "founder_free", label: "Free" },
   { value: "founder_basic", label: "Basic" },
   { value: "founder_professional", label: "Professional" },
+  { value: "founder_premium", label: "Premium" },
   { value: "founder_managed_ir", label: "SPV Program" },
   { value: "investor_free", label: "Investor Free" },
   { value: "investor_pro", label: "Investor Pro" },

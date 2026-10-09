@@ -25,6 +25,7 @@ import { loadPricing } from "@/lib/subscriptions/pricing-server";
 import { formatShortDay } from "@/lib/outreach/outreach-schedule";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import type { Database, Profile } from "@/lib/supabase/types";
+import { premiumCheckoutReady } from "@/lib/billing/buy-links";
 import {
   getAdminWorkspaceNavSections,
   getFounderWorkspaceNavSections,
@@ -49,7 +50,7 @@ async function founderUsesNavV2(flags: FeatureFlagMap, profileId: string): Promi
   return pct > 0 ? navBucket(profileId) < pct : process.env.NEXT_PUBLIC_FOUNDER_NAV_V2 === "on";
 }
 
-const SELF_SERVE: PlanType[] = ["founder_basic", "founder_professional"];
+const SELF_SERVE_BASE: PlanType[] = ["founder_basic", "founder_professional"];
 
 function planPrice(catalog: PricingCatalog, plan: PlanType): string {
   const label = priceLabel(catalog, plan);
@@ -68,6 +69,8 @@ function capText(cap: number | null): string {
 async function founderPlanKnowledge(profileId: string, companyId: string | null): Promise<string> {
   const lines: string[] = [];
   const catalog = await loadPricing();
+  // Premium is only on sale once its Lemon Squeezy checkout is set up.
+  const SELF_SERVE: PlanType[] = premiumCheckoutReady() ? [...SELF_SERVE_BASE, "founder_premium"] : SELF_SERVE_BASE;
   const offered = [...SELF_SERVE, "founder_managed_ir" as PlanType]
     .map((p) => `${PLAN_LABELS[p]} ${planPrice(catalog, p)}`)
     .join("; ");

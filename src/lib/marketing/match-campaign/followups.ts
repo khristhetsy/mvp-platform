@@ -30,7 +30,7 @@ import {
 } from "./sequence";
 
 const DAY = 24 * 60 * 60 * 1000;
-const PAID_PLANS = ["founder_basic", "founder_professional", "founder_managed_ir"];
+const PAID_PLANS = ["founder_basic", "founder_professional", "founder_premium", "founder_managed_ir"];
 /** Founders handled per cron pass, across campaigns. */
 const RUN_LIMIT = 200;
 

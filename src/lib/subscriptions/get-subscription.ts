@@ -42,7 +42,8 @@ function defaultPlanForRole(role: UserRole, _requestedPlan?: PlanType | null): {
   // exists yet, so it can never downgrade someone.
   const requested = _requestedPlan;
   const plan: PlanType =
-    requested === "founder_professional" || requested === "founder_managed_ir" ? requested : "founder_basic";
+    requested === "founder_professional" || requested === "founder_premium" || requested === "founder_managed_ir"
+      ? requested : "founder_basic";
 
   return {
     plan_type: plan,

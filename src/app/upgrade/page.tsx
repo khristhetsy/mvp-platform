@@ -25,6 +25,7 @@ import { ensureSubscriptionForProfile, getSubscriptionForProfile } from "@/lib/s
 import { subscriptionStatusLabel } from "@/lib/subscriptions/access";
 import { priceShort } from "@/lib/subscriptions/pricing-catalog";
 import { loadPricing } from "@/lib/subscriptions/pricing-server";
+import { premiumCheckoutReady } from "@/lib/billing/buy-links";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -134,6 +135,9 @@ async function UpgradePageContent({ searchParams }: Readonly<{ searchParams: Sea
             <div className="mt-6 flex flex-wrap gap-3">
               <CheckoutButton planType="founder_basic" label={`Founder Basic — ${priceShort(pricing, "founder_basic")}`} pricing={pricing} />
               <CheckoutButton planType="founder_professional" label={`Founder Professional — ${priceShort(pricing, "founder_professional")}`} pricing={pricing} recommended />
+              {premiumCheckoutReady() ? (
+                <CheckoutButton planType="founder_premium" label={`Founder Premium — ${priceShort(pricing, "founder_premium")}`} pricing={pricing} />
+              ) : null}
             </div>
           </div>
         ) : profile ? (
@@ -154,6 +158,7 @@ async function UpgradePageContent({ searchParams }: Readonly<{ searchParams: Sea
         <div className="mt-14">
           <PlanComparisonSection
             pricing={pricing}
+            showPremium={premiumCheckoutReady()}
             currentPlan={subscription?.plan_type ?? null}
             showInvestor={!profile || profile.role !== "founder"}
             founderCtaHref={

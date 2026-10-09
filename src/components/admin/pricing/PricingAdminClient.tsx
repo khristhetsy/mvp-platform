@@ -349,7 +349,7 @@ function SaveDialog({ current, candidate, counts, busy, onCancel, onSave }: {
   const [later, setLater] = useState(false);
   const [when, setWhen] = useState("");
 
-  const moved = (["founder_basic", "founder_professional", "founder_managed_ir"] as PricedPlanKey[])
+  const moved = (["founder_basic", "founder_professional", "founder_premium", "founder_managed_ir"] as PricedPlanKey[])
     .filter((k) => current.plans[k]?.cents !== candidate.plans[k]?.cents);
   const affected = moved.reduce((n, k) => n + (counts[k] ?? 0), 0);
 

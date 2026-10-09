@@ -135,6 +135,7 @@ function PlanReachTable({ gate, basic, professional }: { gate: number; basic: Pl
 const PLAN_LABEL: Record<string, string> = {
   founder_basic: "Basic",
   founder_professional: "Professional",
+  founder_premium: "Premium",
   founder_managed_ir: "Managed IR",
   admin_internal: "Internal",
 };

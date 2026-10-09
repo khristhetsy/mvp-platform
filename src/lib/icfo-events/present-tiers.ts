@@ -51,6 +51,6 @@ const FULL: PresentTier = {
 /** The presenting tier a plan unlocks, or null when the plan can't present yet. */
 export function presentTierForPlan(plan: PlanType): PresentTier | null {
   if (plan === "founder_basic") return SPOTLIGHT;
-  if (plan === "founder_professional" || plan === "founder_managed_ir" || plan === "admin_internal") return FULL;
+  if (plan === "founder_professional" || plan === "founder_premium" || plan === "founder_managed_ir" || plan === "admin_internal") return FULL;
   return null;
 }
