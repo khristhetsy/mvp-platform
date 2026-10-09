@@ -43,6 +43,8 @@ export function InvoiceForm({ customers: initialCustomers, initial, presetCustom
   const [customers, setCustomers] = useState(initialCustomers);
   const [customerId, setCustomerId] = useState(initial?.customer_id ?? presetCustomerId ?? "");
   const [entity, setEntity] = useState<EntityId>(initial?.entity ?? customers.find((c) => c.id === presetCustomerId)?.entity ?? "icfo_capital_global");
+  // Once "Billed by" is picked by hand, choosing a customer no longer resets it.
+  const [entityPicked, setEntityPicked] = useState(false);
   const [issue, setIssue] = useState(initial?.issue_date ?? todayPT());
   const [dueDays, setDueDays] = useState(initial ? daysBetween(initial.issue_date, initial.due_date) : 15);
   const [memo, setMemo] = useState(initial?.memo ?? "");
@@ -106,7 +108,7 @@ export function InvoiceForm({ customers: initialCustomers, initial, presetCustom
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <Field label="Customer">
             <div className="flex gap-2">
-              <select className={inputCls} value={customerId} onChange={(e) => { setCustomerId(e.target.value); const c = customers.find((x) => x.id === e.target.value); if (c && !initial) setEntity(c.entity); }}>
+              <select className={inputCls} value={customerId} onChange={(e) => { setCustomerId(e.target.value); const c = customers.find((x) => x.id === e.target.value); if (c && !initial && !entityPicked) setEntity(c.entity); }}>
                 <option value="">Choose a customer</option>
                 {customers.map((c) => <option key={c.id} value={c.id}>{[c.company, c.contact_name].filter(Boolean).join(" · ")}</option>)}
               </select>
@@ -115,7 +117,7 @@ export function InvoiceForm({ customers: initialCustomers, initial, presetCustom
             {customer ? <span className="mt-1 block text-[11.5px] text-slate-500">{customer.email ?? "No email on file"}</span> : null}
           </Field>
           <Field label="Billed by">
-            <select className={inputCls} value={entity} disabled={Boolean(initial)} onChange={(e) => setEntity(e.target.value as EntityId)}>
+            <select className={inputCls} value={entity} disabled={Boolean(initial)} onChange={(e) => { setEntity(e.target.value as EntityId); setEntityPicked(true); }}>
               {ENTITIES.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
             </select>
           </Field>
@@ -205,7 +207,7 @@ export function InvoiceForm({ customers: initialCustomers, initial, presetCustom
       {newCustomer ? (
         <CustomerEditor
           onClose={() => setNewCustomer(false)}
-          onSaved={(c) => { setCustomers((cs) => [...cs, c]); setCustomerId(c.id); setEntity(c.entity); setNewCustomer(false); }}
+          onSaved={(c) => { setCustomers((cs) => [...cs, c]); setCustomerId(c.id); if (!entityPicked) setEntity(c.entity); setNewCustomer(false); }}
         />
       ) : null}
     </div>
