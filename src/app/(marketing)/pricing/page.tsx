@@ -55,7 +55,7 @@ export default async function PricingPage() {
             const promo = "promo" in t && t.promo ? t.promo : null;
             return (
             <div key={t.name} className={`relative rounded-2xl p-6 ${t.featured ? "border-2 border-site-blue-lt bg-white/[0.07] ring-1 ring-site-blue-lt/25" : promo ? "border-2 border-site-amber bg-white/[0.04]" : "border border-white/12 bg-white/[0.03]"}`}>
-              {/* Professional primacy tag; Professional is order-first on mobile (brief Step 6). */}
+              {/* Premium primacy tag (Oct 9, 2026: moved from Professional). */}
               {t.featured ? (
                 <div className="absolute -top-3 left-6 rounded-full bg-site-blue px-3 py-1 font-site-mono text-[10px] font-semibold uppercase tracking-wider text-white">Most founders start here</div>
               ) : promo ? (

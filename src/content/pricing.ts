@@ -70,7 +70,7 @@ export const pricing = {
         "Up to 20 intro requests a month",
       ],
       cta: { label: "Start on Professional", href: "/start?plan=professional" },
-      featured: true,
+      featured: false,
     },
     {
       name: "Premium",
@@ -80,7 +80,7 @@ export const pricing = {
       desc: "Done for you. We do the heavy lifting so you can close the deal. Paid by wire.",
       features: PREMIUM_FEATURES,
       cta: { label: "Start on Premium", href: "/auth/sign-up?role=founder&plan=founder_premium" },
-      featured: false,
+      featured: true,
     },
     {
       name: "SPV Program",
