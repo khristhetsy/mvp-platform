@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { AdminBillingClient, type UpgradeRequest } from "@/components/admin/billing/AdminBillingClient";
 import { OrgBillingProfileCard } from "@/components/admin/billing/OrgBillingProfileCard";
+import { BillingTabs } from "@/components/admin/billing/BillingTabs";
 import { listUpgradeRequestsForAdmin } from "@/lib/billing/upgrade-requests";
 import { listBillingCustomers, getBillingStats, getWebhookHealth } from "@/lib/billing/admin-billing";
 import { PLAN_LABELS } from "@/lib/subscriptions/plans";
@@ -38,11 +39,12 @@ export default async function AdminBillingPage() {
       profileSubtitle="Billing"
       profileEmail={profile.email ?? undefined}
     >
-      <div className="mb-6 border-b border-slate-200 px-1 pb-4">
+      <div className="mb-4 px-1">
         <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">Admin workspace</p>
         <h1 className="mt-0.5 text-[22px] font-medium tracking-tight text-slate-950">Billing &amp; upgrades</h1>
-        <p className="mt-0.5 text-sm text-slate-600">Plans, invoices, and statements for every client. Charging runs in Lemon Squeezy — this view is read-only.</p>
+        <p className="mt-0.5 text-sm text-slate-600">Plans, invoices, and statements for every client. Basic and Professional are charged in Lemon Squeezy; this view is read-only. Premium wires are confirmed under Wire payments.</p>
       </div>
+      <BillingTabs active="customers" />
 
       <OrgBillingProfileCard />
 

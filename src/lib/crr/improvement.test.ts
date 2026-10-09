@@ -2,7 +2,7 @@
  * Steps worth what they say they are worth.
  */
 import { describe, it, expect } from "vitest";
-import { improvementSteps, moveFor, reachesGate, type FactorGap } from "@/lib/crr/improvement";
+import { gapText, improvementSteps, moveFor, projectedScore, reachesGate, toolFor, type FactorGap } from "@/lib/crr/improvement";
 
 const gap = (key: FactorGap["key"], label: string, pts: number, max: number, dimension: string): FactorGap =>
   ({ key, label, pts, max, dimension });
@@ -94,5 +94,40 @@ describe("the move behind a factor", () => {
       expect(moveFor(k).action.length).toBeGreaterThan(0);
       expect(moveFor(k).href.startsWith("/founder/")).toBe(true);
     }
+  });
+});
+
+describe("projected score", () => {
+  it("adds the listed gaps' recoverable points to the current score", () => {
+    const steps = improvementSteps(GAPS);
+    // 11 + 8 + 7 + 1 = 27 recoverable points across the four listed gaps.
+    expect(projectedScore(40, steps)).toBe(67);
+  });
+
+  it("caps at 100", () => {
+    expect(projectedScore(90, [{ upTo: 8 }, { upTo: 7 }])).toBe(100);
+  });
+
+  it("is the current score when nothing is listed", () => {
+    expect(projectedScore(52, [])).toBe(52);
+  });
+
+  it("rounds like the rating does", () => {
+    expect(projectedScore(50, [{ upTo: 2.4 }, { upTo: 0.7 }])).toBe(53);
+  });
+});
+
+describe("gap tools", () => {
+  it("names a tool for factors a founder tool fixes", () => {
+    expect(toolFor("revenue_cashflow")).toEqual({ tool: "Financial model", href: "/founder/financial-model" });
+    expect(toolFor("pitch_quality")?.href).toBe("/founder/pitch-deck-analyzer");
+  });
+
+  it("falls back to documents when no tool fixes the factor", () => {
+    expect(toolFor("customer_traction")).toBeNull();
+  });
+
+  it("describes every gap in plain language", () => {
+    for (const g of GAPS) expect(gapText(g.key).length).toBeGreaterThan(10);
   });
 });

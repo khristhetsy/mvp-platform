@@ -25,7 +25,8 @@ import { ensureSubscriptionForProfile, getSubscriptionForProfile } from "@/lib/s
 import { subscriptionStatusLabel } from "@/lib/subscriptions/access";
 import { priceShort } from "@/lib/subscriptions/pricing-catalog";
 import { loadPricing } from "@/lib/subscriptions/pricing-server";
-import { premiumCheckoutReady } from "@/lib/billing/buy-links";
+import { loadFounderWireState, type FounderWireState } from "@/lib/billing/wire";
+import { PremiumWireButton } from "@/components/billing/WireCheckoutPanel";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -55,6 +56,18 @@ async function UpgradePageContent({ searchParams }: Readonly<{ searchParams: Sea
   const featureLock = featureKey ? getFeatureLockCopy(featureKey) : null;
   const paymentsEnabled = isPaymentsEnabled();
   const founderCanCheckout = paymentsEnabled && profile?.role === "founder";
+  // Premium is paid by bank wire only, so founders can choose it whether or not
+  // card checkout is enabled.
+  const wire: FounderWireState | null = profile?.role === "founder" ? await loadFounderWireState(profile.id) : null;
+  const premiumButton = wire ? (
+    <PremiumWireButton
+      label={`Founder Premium, ${wire.monthlyLabel}/mo by wire`}
+      monthlyLabel={wire.monthlyLabel}
+      quarterlyLabel={wire.quarterlyLabel}
+      instructions={wire.instructions}
+      openInvoice={wire.openInvoice}
+    />
+  ) : null;
 
   return (
     <>
@@ -130,14 +143,12 @@ async function UpgradePageContent({ searchParams }: Readonly<{ searchParams: Sea
           <div className="mt-10 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-slate-950">{t("upgrade_your_plan")}</h2>
             <p className="mt-2 text-sm text-slate-600">
-              Pick a plan and check out securely with Lemon Squeezy. Your access updates immediately after payment.
+              Basic and Professional check out securely with Lemon Squeezy and update immediately after payment. Premium is paid by bank wire and activates as soon as your wire is received.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <CheckoutButton planType="founder_basic" label={`Founder Basic — ${priceShort(pricing, "founder_basic")}`} pricing={pricing} />
-              <CheckoutButton planType="founder_professional" label={`Founder Professional — ${priceShort(pricing, "founder_professional")}`} pricing={pricing} recommended />
-              {premiumCheckoutReady() ? (
-                <CheckoutButton planType="founder_premium" label={`Founder Premium — ${priceShort(pricing, "founder_premium")}`} pricing={pricing} />
-              ) : null}
+              <CheckoutButton planType="founder_basic" label={`Founder Basic, ${priceShort(pricing, "founder_basic")}`} pricing={pricing} />
+              <CheckoutButton planType="founder_professional" label={`Founder Professional, ${priceShort(pricing, "founder_professional")}`} pricing={pricing} recommended />
+              {premiumButton}
             </div>
           </div>
         ) : profile ? (
@@ -152,13 +163,18 @@ async function UpgradePageContent({ searchParams }: Readonly<{ searchParams: Sea
                 featureKey={featureKey}
               />
             </div>
+            {premiumButton ? (
+              <div className="mt-6 border-t border-slate-100 pt-5">
+                <p className="text-sm text-slate-600">Premium is paid by bank wire and is available now.</p>
+                <div className="mt-3">{premiumButton}</div>
+              </div>
+            ) : null}
           </div>
         ) : null}
 
         <div className="mt-14">
           <PlanComparisonSection
             pricing={pricing}
-            showPremium={premiumCheckoutReady()}
             currentPlan={subscription?.plan_type ?? null}
             showInvestor={!profile || profile.role !== "founder"}
             founderCtaHref={

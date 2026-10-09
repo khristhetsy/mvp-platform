@@ -3,6 +3,9 @@ import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import { PRICED_PLANS, CODE_DEFAULT_PRICING, pricingFromRow } from "@/lib/subscriptions/pricing-catalog";
 import { parseRequestedPlan, PLAN_PRICES } from "@/lib/subscriptions/plans";
 import { variantToPlan } from "@/lib/billing/webhook-mapping";
+import { BUY_LINKS, premiumCheckoutReady } from "@/lib/billing/buy-links";
+import { founderPricingPlans } from "@/lib/billing/pricing";
+import { pricingFor } from "@/content/pricing";
 
 describe("Premium founder plan", () => {
   afterEach(() => vi.unstubAllEnvs());
@@ -33,5 +36,18 @@ describe("Premium founder plan", () => {
     vi.stubEnv("LEMONSQUEEZY_VARIANT_ID_PREMIUM", "999");
     expect(variantToPlan(999)).toEqual({ plan: "founder_premium", source: "variant_id" });
     expect(variantToPlan(1, "Founder Premium", "iCapOS")).toEqual({ plan: "founder_premium", source: "name" });
+  });
+
+  it("is paid by bank wire only and always listed (Oct 9, 2026)", () => {
+    expect(premiumCheckoutReady()).toBe(true);
+    expect(BUY_LINKS.founder_premium).toBeUndefined();
+    expect(founderPricingPlans(CODE_DEFAULT_PRICING).map((p) => p.planType)).toContain("founder_premium");
+  });
+
+  it("shows on the public pricing page at the catalogue price, paid by wire", () => {
+    const premium = pricingFor(CODE_DEFAULT_PRICING).tiers.find((t) => t.name === "Premium");
+    expect(premium?.price).toBe("$1,000");
+    expect(premium?.desc).toContain("Paid by wire");
+    expect(premium?.cta.href).toBe("/auth/sign-up?role=founder&plan=founder_premium");
   });
 });

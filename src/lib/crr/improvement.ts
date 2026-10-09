@@ -107,3 +107,64 @@ export function reachesGate(steps: ImprovementStep[], pointsToGate: number): {
     shortfall: round1(Math.max(0, pointsToGate - available)),
   };
 }
+
+/**
+ * The score the listed gaps lead to, computed from the CRR formula itself.
+ *
+ * Each step's `upTo` is already in CRR points at the company's own stage (the
+ * factor's stage maximum less what it earned), so closing every listed gap adds
+ * exactly that many points. Capped at 100. Rounded like totalWith rounds the
+ * score, so the projection never claims a decimal the rating cannot show.
+ */
+export function projectedScore(score: number, steps: ReadonlyArray<Pick<ImprovementStep, "upTo">>): number {
+  const gain = steps.reduce((sum, s) => sum + Math.max(0, s.upTo), 0);
+  return Math.min(100, Math.round(score + gain));
+}
+
+/** A founder tool that fixes a factor. `null` tool = the founder's documents. */
+export type GapTool = { tool: string; href: string } | null;
+
+/**
+ * Which paid founder tool closes each factor. Factors no tool addresses are
+ * fixed by uploading better documents, so they point at Documents instead.
+ */
+const GAP_TOOLS: Record<FactorKey, GapTool> = {
+  revenue_cashflow:   { tool: "Financial model", href: "/founder/financial-model" },
+  unit_economics:     { tool: "Financial model", href: "/founder/financial-model" },
+  burn_runway:        { tool: "Financial model", href: "/founder/financial-model" },
+  deal_structure:     { tool: "Valuation Studio", href: "/founder/valuation" },
+  exit_strategy:      { tool: "Valuation Studio", href: "/founder/valuation" },
+  governance_legal:   { tool: "Cap table", href: "/founder/cap-table" },
+  pitch_quality:      { tool: "Pitch deck analyzer", href: "/founder/pitch-deck-analyzer" },
+  market_evidence:    { tool: "Market claim grader", href: "/founder/market-claim" },
+  customer_traction:  null,
+  founder_team:       null,
+  ip_moat:            null,
+  industry_alignment: null,
+  impact_esg:         null,
+};
+
+export function toolFor(key: FactorKey): GapTool {
+  return GAP_TOOLS[key];
+}
+
+/** The gap in plain language, as a founder would say it. */
+const GAP_TEXT: Record<FactorKey, string> = {
+  revenue_cashflow:   "Revenue and cash flow are not yet shown clearly",
+  customer_traction:  "Customer traction (contracts, LOIs, pilots) is thin",
+  founder_team:       "The team's depth and track record are not yet documented",
+  market_evidence:    "Market size and competition claims need evidence",
+  unit_economics:     "Unit economics and how the business scales are unclear",
+  governance_legal:   "Ownership, governance and legal records are incomplete",
+  ip_moat:            "IP protection and competitive moat are not documented",
+  burn_runway:        "Burn rate and runway are not stated",
+  exit_strategy:      "The exit path and investor returns are not set out",
+  pitch_quality:      "The pitch deck and business plan can be stronger",
+  deal_structure:     "Deal terms and use of funds are not clear",
+  industry_alignment: "Industry and stage details are incomplete",
+  impact_esg:         "Impact or ESG position is not stated",
+};
+
+export function gapText(key: FactorKey): string {
+  return GAP_TEXT[key];
+}

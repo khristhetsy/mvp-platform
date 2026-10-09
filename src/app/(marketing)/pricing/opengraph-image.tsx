@@ -7,7 +7,7 @@ export const contentType = OG_CONTENT_TYPE;
 
 export default function Image() {
   return new ImageResponse(
-    BrandOg({ eyebrow: "Plans & pricing", title: "Two self-serve plans. No sales call.", tagline: "Basic $49 and Professional $199, both self-serve" }),
+    BrandOg({ eyebrow: "Plans & pricing", title: "Start free. Upgrade when investors are interested.", tagline: "Free due diligence report. Basic $49, Professional $199, Premium $1,000 by wire." }),
     { ...size },
   );
 }

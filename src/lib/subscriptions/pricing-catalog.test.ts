@@ -155,3 +155,26 @@ describe("priceSurfaces", () => {
     expect(rows.some((r) => r.status === "provider")).toBe(true);
   });
 });
+
+describe("public pricing page (Oct 9, 2026)", () => {
+  // Imported lazily so the catalogue tests above don't depend on page copy.
+  it("lists Free, Basic, Professional and Premium, keeps the SPV Program, and reads the catalogue", async () => {
+    const { pricingFor } = await import("@/content/pricing");
+    const p = pricingFor(withPro(24900));
+    expect(p.tiers.map((t) => t.name)).toEqual(["Free", "Basic", "Professional", "Premium", "SPV Program"]);
+    expect(p.title).toBe("Start free. Upgrade when investors are interested.");
+    expect(p.mainCta.label).toBe("Get my free report");
+    const free = p.tiers.find((t) => t.name === "Free");
+    expect(free?.price).toBe("$0");
+    expect(free?.cta.href).toBe("/auth/sign-up?role=founder&plan=founder_free");
+    expect(p.tiers.find((t) => t.name === "Professional")?.price).toBe("$249");
+    expect(p.comparison.cols).toContain("Professional · $249");
+    expect(p.disclaimer).toContain("Fees are flat and never tied to funding outcomes.");
+  });
+
+  it("uses no dashes as sentence punctuation in the page copy", async () => {
+    const { pricing } = await import("@/content/pricing");
+    expect(JSON.stringify(pricing)).not.toMatch(/—|–| - /);
+  });
+});
+

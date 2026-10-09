@@ -23,6 +23,7 @@ import { getUploadLimits } from "@/lib/settings/platform-settings";
 import { validateFile, PDF_ONLY } from "@/lib/uploads/policy";
 import { emitActivity } from "@/lib/activity/emit";
 import { sendFounderUploadConfirmation } from "@/lib/activity/founder-upload-email";
+import { markListingCompleteIfReady } from "@/lib/listing/listing-server";
 
 const uploadErrorMessages: Record<number, string> = {
   400: "Upload failed due to invalid input. Please check the file and try again.",
@@ -512,6 +513,18 @@ export async function POST(request: Request) {
         await rescoreCompanyReadiness(admin, companyId);
       } catch (err) {
         console.error("[upload] post-upload summarize/rescore failed", err);
+      }
+    });
+  }
+
+  // An upload can complete the documents check of the Private Market listing.
+  // After the response, and never fails the upload.
+  if (documentId && companyId) {
+    after(async () => {
+      try {
+        await markListingCompleteIfReady(companyId);
+      } catch (err) {
+        console.error("[upload] markListingCompleteIfReady failed", err);
       }
     });
   }

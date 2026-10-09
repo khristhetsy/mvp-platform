@@ -6,6 +6,8 @@ import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { enforceRateLimit } from "@/lib/api/rate-limit";
 import { writeAuditLog } from "@/lib/data/audit";
 import { generateAndSaveDiligenceReport } from "@/lib/reports/generate-and-save";
+import { getSubscriptionForProfile } from "@/lib/subscriptions/get-subscription";
+import { FREE_REPORT_LIMIT_MESSAGE, UPGRADE_BASIC_HREF, freeReportLimitReached, isRestrictedFreeFounder } from "@/lib/founder-plan/tier";
 
 /**
  * Founder self-serve diligence report generation.
@@ -38,6 +40,23 @@ export async function POST(): Promise<NextResponse> {
     }
 
     const admin = createServiceRoleClient();
+
+    // One free report: a non grandfathered Free founder who already has a
+    // diligence report upgrades to run it again. Grandfathered and paid
+    // founders are unchanged.
+    const subscription = await getSubscriptionForProfile(profile.id).catch(() => null);
+    if (isRestrictedFreeFounder(subscription)) {
+      const { count } = await admin
+        .from("diligence_reports")
+        .select("id", { count: "exact", head: true })
+        .eq("company_id", company.id);
+      if (freeReportLimitReached(subscription, count ?? 0)) {
+        return NextResponse.json(
+          { error: FREE_REPORT_LIMIT_MESSAGE, code: "free_report_used", upgradeHref: UPGRADE_BASIC_HREF },
+          { status: 403 },
+        );
+      }
+    }
 
     // No 24h cooldown — founders may regenerate within the day (still guarded by
     // the per-hour burst limit above) so they can iterate on their materials.

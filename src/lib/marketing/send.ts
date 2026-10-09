@@ -47,6 +47,7 @@ export function interpolate(text: string, vars: Record<string, string>): string 
   if (vars.testimonial_url != null) add(["testimonial_url"], vars.testimonial_url);
   if (vars.unsubscribe_url != null) add(["unsubscribe_url", "unsubscribe_link", "preferences_url"], vars.unsubscribe_url);
   if (vars.logo_url != null) add(["logo_url"], vars.logo_url);
+  if (vars.claim_url != null) add(["claim_url"], vars.claim_url);
   return text.replace(/\{\{?\s*([A-Za-z][\w ]*?)\s*\}?\}/g, (m, tok: string) => {
     const key = tok.trim().toLowerCase().replace(/\s+/g, "_");
     return key in known ? known[key] : m;
@@ -163,6 +164,11 @@ export async function sendMarketingEmail(
   vars.unsubscribe_url = unsubscribeUrl;
   const logoUrl = process.env.EMAIL_LOGO_URL ?? `${appUrl}/email-logo.png`;
   vars.logo_url = logoUrl;
+  // Personal signed link to the free due diligence claim page (icapos.com/claim).
+  if (/\{\{?\s*claim[ _]url\s*\}?\}/i.test(`${input.html_body}\n${input.text_body ?? ""}`)) {
+    const { claimUrl } = await import("@/lib/listing/claim");
+    vars.claim_url = claimUrl(to);
+  }
 
   const subject = interpolate(input.subject, vars);
   // Strip HTML comments so template authoring notes (e.g. "<!-- to add more; delete to

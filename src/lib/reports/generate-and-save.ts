@@ -3,6 +3,7 @@ import type { Database } from "@/lib/supabase/types";
 import { generateDiligenceReport } from "@/lib/ai";
 import { loadNotApplicableTypes } from "@/lib/documents/not-applicable";
 import { ensureCompanyDocumentSummaries } from "@/lib/documents/summarize";
+import { markListingCompleteIfReady } from "@/lib/listing/listing-server";
 
 // Shared diligence-report generation used by both the staff route
 // (POST /api/ai/reports) and the founder self-serve route
@@ -133,6 +134,14 @@ export async function generateAndSaveDiligenceReport(
 
   if (reportError) {
     throw new Error(reportError.message);
+  }
+
+  // A saved report can be the last of the four Private Market checks. Never
+  // fails the report: listing is a follow on, not part of generation.
+  try {
+    await markListingCompleteIfReady(companyId);
+  } catch (err) {
+    console.error("[report] markListingCompleteIfReady failed", err);
   }
 
   return {

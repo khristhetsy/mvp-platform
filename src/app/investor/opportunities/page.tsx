@@ -19,20 +19,26 @@ import {
 import { trackInvestorOpportunityView } from "@/lib/beta/track-investor-activation";
 import { loadInvestorRecommendedMatches } from "@/lib/matching/load-investor-recommendations";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
+import { DiligenceCompleteMarket } from "@/components/investor/listing/DiligenceCompleteMarket";
+import { listDiligenceCompleteCompanies, listingFacets, type ListedCompany } from "@/lib/listing/private-market";
 
 export const dynamic = "force-dynamic";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
-export default async function InvestorOpportunitiesPage() {
+export default async function InvestorOpportunitiesPage({
+  searchParams,
+}: Readonly<{ searchParams: Promise<{ company?: string | string[] }> }>) {
   const { profile, supabase, investorId } = await requireInvestorWorkspaceSession();
+  const { company: companyParam } = await searchParams;
+  const highlightId = typeof companyParam === "string" && /^[0-9a-f-]{36}$/i.test(companyParam) ? companyParam : null;
   const t = await getTranslations("appPages");
   void trackInvestorOpportunityView(investorId);
 
   // eslint-disable-next-line react-hooks/purity -- server component; time window is intentional
   const thirtyDaysAgo = new Date(Date.now() - THIRTY_DAYS_MS).toISOString();
 
-  const [{ matches }, my30dRes] = await Promise.all([
+  const [{ matches }, my30dRes, listed, myIntrosRes] = await Promise.all([
     loadInvestorRecommendedMatches(supabase, investorId, 24),
     supabase
       .from("investor_interests")
@@ -40,7 +46,18 @@ export default async function InvestorOpportunitiesPage() {
       .eq("investor_id", investorId)
       .not("pledge_amount", "is", null)
       .gte("pledge_amount_updated_at", thirtyDaysAgo),
+    // Diligence complete companies (any CRR). A failed read hides the section's
+    // rows rather than the whole page.
+    listDiligenceCompleteCompanies().catch((err): ListedCompany[] => {
+      console.error("[investor/opportunities] private market listing failed", err);
+      return [];
+    }),
+    supabase.from("intro_requests").select("company_id").eq("investor_id", investorId),
   ]);
+  const listingFacetValues = listingFacets(listed);
+  const requestedIds = [
+    ...new Set(((myIntrosRes.data ?? []) as Array<{ company_id: string | null }>).map((r) => r.company_id).filter((id): id is string => !!id)),
+  ];
 
   const rankedMatches = matches ?? [];
   const companyIds = rankedMatches.map((row) => row.company.id);
@@ -137,6 +154,14 @@ export default async function InvestorOpportunitiesPage() {
             investment advice or a recommendation.
           </span>
         </div>
+
+        <DiligenceCompleteMarket
+          companies={listed}
+          sectors={listingFacetValues.sectors}
+          stages={listingFacetValues.stages}
+          requestedIds={requestedIds}
+          highlightId={highlightId}
+        />
 
         <InvestorPrivateMarketBoard deals={deals} />
       </WorkspacePageContainer>
