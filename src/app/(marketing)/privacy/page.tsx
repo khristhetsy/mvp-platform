@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { CounselReviewBanner } from "@/components/legal/CounselReviewBanner";
 
 /**
- * Privacy Policy (upgrade brief Step 2). Ported into the marketing route group
- * so it carries the site nav + footer. Clause TEXT is verbatim from the prior
- * top-level /privacy page (effective June 1, 2025) — reskinned to marketing
- * tokens only. Legal content is load-bearing: do not reword.
+ * Privacy Policy. Carries the site nav + footer via the marketing route group.
+ * Updated October 9, 2026 for the Plaid security review: added the connected
+ * bank account section (Plaid), specific retention and deletion timelines that
+ * match the iCFO Information Security Policy, and removed the counsel-review
+ * draft banner at the owner's direction. Legal content is load-bearing: change
+ * only with owner approval.
  */
 
 export const metadata: Metadata = {
@@ -14,7 +15,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/privacy" },
 };
 
-const EFFECTIVE = "June 1, 2025";
+const EFFECTIVE = "October 9, 2026";
 
 export default function PrivacyPage() {
   return (
@@ -29,9 +30,8 @@ export default function PrivacyPage() {
 
       <section className="px-6 py-16">
         <div className="mx-auto max-w-3xl">
-          <CounselReviewBanner />
-          <p className="mt-8 text-[15px] leading-7 text-site-muted">
-            iCapOS (“we”, “us”, or “our”) is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard your information when you use our platform.
+          <p className="text-[15px] leading-7 text-site-muted">
+            iCapOS, a product of iCFO Capital Global, Inc. (“we”, “us”, or “our”), is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard your information when you use our platform.
           </p>
 
           <div className="mt-8 space-y-8">
@@ -49,6 +49,16 @@ export default function PrivacyPage() {
                 <li>Improve and personalize your experience</li>
                 <li>Comply with legal obligations</li>
               </ul>
+            </div>
+            <div className="border-t border-site-line pt-8">
+              <h2 className="font-site-display text-xl font-bold text-site-navy">3. Connected Bank Accounts (Plaid)</h2>
+              <p className="mt-3 text-[15px] leading-7 text-site-muted">If you choose to connect a bank account, we use Plaid Inc. (“Plaid”) to establish the connection. Plaid collects your login details directly; we never see or store your bank username or password. You give your consent in Plaid Link before any data is shared with us.</p>
+              <p className="mt-3 text-[15px] leading-7 text-site-muted">Through Plaid we may receive account names, account types, balances, and transaction history. We use this data only to provide the features you requested, such as financial reporting and bank reconciliation. We do not sell it and do not use it for advertising.</p>
+              <p className="mt-3 text-[15px] leading-7 text-site-muted">This data is encrypted in transit and at rest, and access is limited to authorized personnel. You can disconnect a bank account at any time. When you do, or when you close your account, we revoke the connection through Plaid and delete the associated financial data within 30 days, unless the law requires us to keep it longer.</p>
+              <p className="mt-3 text-[15px] leading-7 text-site-muted">
+                Plaid’s handling of your data is governed by the{" "}
+                <a href="https://plaid.com/legal/#end-user-privacy-policy" target="_blank" rel="noopener noreferrer" className="text-site-blue underline underline-offset-2 hover:text-site-blue-hi">Plaid End User Privacy Policy</a>.
+              </p>
             </div>
             <div className="border-t border-site-line pt-8">
               <h2 className="font-site-display text-xl font-bold text-site-navy">3. Sharing of Information</h2>
