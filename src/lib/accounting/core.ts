@@ -47,6 +47,46 @@ export function letterheadLines(l: Letterhead): string[] {
   return contact ? [...lines, contact] : lines;
 }
 
+/** A saved service for invoice lines (Accounting › Settings › Services). */
+export type Service = {
+  id: string;
+  /** Prints on the invoice line. */
+  name: string;
+  /** Default price in cents, or null to type it each time. */
+  unit_cents: number | null;
+  /** Which company offers it; "both" shows for either. */
+  entity: EntityId | "both";
+};
+
+/** A stored or submitted services list, cleaned: named, unique by name, at most 200. */
+export function normalizeServices(value: unknown): Service[] {
+  const list = Array.isArray(value) ? value : [];
+  const seen = new Set<string>();
+  const out: Service[] = [];
+  for (const raw of list) {
+    const v = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+    const name = typeof v.name === "string" ? v.name.trim().slice(0, 300) : "";
+    if (!name || seen.has(name.toLowerCase())) continue;
+    seen.add(name.toLowerCase());
+    const cents = typeof v.unit_cents === "number" && Number.isFinite(v.unit_cents) && v.unit_cents >= 0 ? Math.round(v.unit_cents) : null;
+    const entity = v.entity === "both" || isEntity(v.entity) ? (v.entity as EntityId | "both") : "both";
+    const id = typeof v.id === "string" && /^[a-z0-9-]{6,40}$/.test(v.id) ? v.id : `svc-${Math.random().toString(36).slice(2, 10)}`;
+    out.push({ id, name, unit_cents: cents, entity });
+    if (out.length >= 200) break;
+  }
+  return out.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** Services offered by a company, best match first for what is typed. */
+export function servicesFor(services: Service[], entity: string, query = ""): Service[] {
+  const q = query.trim().toLowerCase();
+  const mine = services.filter((s) => s.entity === "both" || s.entity === entity);
+  if (!q) return mine;
+  return mine
+    .filter((s) => s.name.toLowerCase().includes(q))
+    .sort((a, b) => Number(b.name.toLowerCase().startsWith(q)) - Number(a.name.toLowerCase().startsWith(q)) || a.name.localeCompare(b.name));
+}
+
 /** The disclaimer line, naming the company that issued the invoice. */
 export function entityDisclaimer(entity: string): string {
   const who = entity === "icfo_venture_group" ? "iCFO Venture Group" : "iCFO Capital";

@@ -132,3 +132,28 @@ describe("letterhead", () => {
     expect(entityDisclaimer("icfo_capital_global")).toMatch(/^iCFO Capital does not/);
   });
 });
+
+describe("services", () => {
+  it("cleans the list and drops blanks and duplicate names", async () => {
+    const { normalizeServices } = await import("@/lib/accounting/core");
+    const list = normalizeServices([
+      { id: "svc-a1b2c3", name: " Advisory services ", unit_cents: 200000, entity: "icfo_capital_global" },
+      { name: "advisory services", unit_cents: 1 },
+      { name: "" },
+      { name: "Due diligence report", unit_cents: "x", entity: "nope" },
+    ]);
+    expect(list.map((s) => s.name)).toEqual(["Advisory services", "Due diligence report"]);
+    expect(list[0]).toMatchObject({ id: "svc-a1b2c3", unit_cents: 200000, entity: "icfo_capital_global" });
+    expect(list[1]).toMatchObject({ unit_cents: null, entity: "both" });
+  });
+  it("shows a company's services, best match first", async () => {
+    const { servicesFor } = await import("@/lib/accounting/core");
+    const s = [
+      { id: "svc-111111", name: "Advisory services", unit_cents: null, entity: "icfo_capital_global" as const },
+      { id: "svc-222222", name: "Due diligence and advisory services", unit_cents: 100000, entity: "both" as const },
+      { id: "svc-333333", name: "Due diligence report", unit_cents: null, entity: "icfo_venture_group" as const },
+    ];
+    expect(servicesFor(s, "icfo_venture_group").map((x) => x.id)).toEqual(["svc-222222", "svc-333333"]);
+    expect(servicesFor(s, "icfo_capital_global", "adv").map((x) => x.id)).toEqual(["svc-111111", "svc-222222"]);
+  });
+});

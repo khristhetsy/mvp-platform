@@ -3,11 +3,12 @@
 /** Accounting › Settings: each company's letterhead and the bank transfer details printed on its invoices. */
 import { useState } from "react";
 import { WIRE_INSTRUCTION_FIELDS, wireInstructionsComplete, type WireInstructions } from "@/lib/billing/wire-core";
-import { ENTITIES, type EntityId, type Letterhead } from "@/lib/accounting/core";
+import { ENTITIES, type EntityId, type Letterhead, type Service } from "@/lib/accounting/core";
+import { ServicesCard } from "@/components/admin/accounting/ServicesCard";
 import { LetterheadCard } from "@/components/admin/accounting/LetterheadCard";
 import { ErrorLine, Field, Section, Tag, api, inputCls, primaryCls } from "@/components/admin/accounting/ui";
 
-export function SettingsClient({ initial, letterheads, plaidReady, plaidEnv }: Readonly<{ initial: Record<EntityId, WireInstructions>; letterheads: Record<EntityId, Letterhead>; plaidReady: boolean; plaidEnv: string | null }>) {
+export function SettingsClient({ initial, letterheads, services, plaidReady, plaidEnv }: Readonly<{ initial: Record<EntityId, WireInstructions>; letterheads: Record<EntityId, Letterhead>; services: Service[]; plaidReady: boolean; plaidEnv: string | null }>) {
   const [values, setValues] = useState(initial);
   const [busy, setBusy] = useState<EntityId | null>(null);
   const [saved, setSaved] = useState<EntityId | null>(null);
@@ -27,6 +28,7 @@ export function SettingsClient({ initial, letterheads, plaidReady, plaidEnv }: R
   return (
     <div className="space-y-3">
       {ENTITIES.map((e) => <LetterheadCard key={`lh-${e.id}`} entity={e.id} name={e.name} initial={letterheads[e.id]} />)}
+      <ServicesCard initial={services} />
       {ENTITIES.map((e) => (
         <Section key={e.id} title={`Bank details on ${e.name} invoices`} icon="ti-building-bank"
           action={wireInstructionsComplete(values[e.id]) ? <Tag tone="ok">Complete</Tag> : <Tag tone="warn">Missing details</Tag>}>

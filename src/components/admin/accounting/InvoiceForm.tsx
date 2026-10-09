@@ -10,8 +10,9 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ENTITIES, addDays, daysBetween, entityName, fmtDate, lineAmount, money, parseMoneyToCents, seriesDates,
-  seriesLineLabel, todayPT, type Customer, type EntityId,
+  seriesLineLabel, todayPT, type Customer, type EntityId, type Service,
 } from "@/lib/accounting/core";
+import { ServiceCombobox } from "@/components/admin/accounting/ServiceCombobox";
 import { CustomerEditor } from "@/components/admin/accounting/CustomerEditor";
 import { ErrorLine, Field, api, btnCls, inputCls, primaryCls } from "@/components/admin/accounting/ui";
 
@@ -38,8 +39,9 @@ const TERMS = [
 let seq = 1;
 const blankLine = (): LineDraft => ({ key: seq++, description: "", quantity: "1", price: "" });
 
-export function InvoiceForm({ customers: initialCustomers, initial, presetCustomerId }: Readonly<{ customers: Customer[]; initial?: InvoiceFormInitial; presetCustomerId?: string | null }>) {
+export function InvoiceForm({ customers: initialCustomers, initial, presetCustomerId, services: initialServices = [] }: Readonly<{ customers: Customer[]; initial?: InvoiceFormInitial; presetCustomerId?: string | null; services?: Service[] }>) {
   const router = useRouter();
+  const [services, setServices] = useState<Service[]>(initialServices);
   const [customers, setCustomers] = useState(initialCustomers);
   const [customerId, setCustomerId] = useState(initial?.customer_id ?? presetCustomerId ?? "");
   const [entity, setEntity] = useState<EntityId>(initial?.entity ?? customers.find((c) => c.id === presetCustomerId)?.entity ?? "icfo_capital_global");
@@ -147,7 +149,24 @@ export function InvoiceForm({ customers: initialCustomers, initial, presetCustom
             <tbody>
               {parsed.map((l) => (
                 <tr key={l.key}>
-                  <td className="py-1 pr-2"><input className={inputCls} value={l.description} onChange={(e) => setLine(l.key, { description: e.target.value })} placeholder="Advisory services" /></td>
+                  <td className="py-1 pr-2">
+                    <ServiceCombobox
+                      value={l.description}
+                      entity={entity}
+                      services={services}
+                      onChange={(description) => setLine(l.key, { description })}
+                      onPick={(s) => setLine(l.key, { description: s.name, ...(s.unit_cents != null ? { price: (s.unit_cents / 100).toFixed(2) } : {}) })}
+                      onSaveNew={async (name) => {
+                        const r = await api<{ service: Service; services: Service[] }>("/api/admin/accounting/services", "POST", {
+                          name, entity, unit_cents: l.unit > 0 ? l.unit : null,
+                        });
+                        if (!r.ok) return r.error;
+                        setServices(r.data.services);
+                        setLine(l.key, { description: r.data.service.name });
+                        return null;
+                      }}
+                    />
+                  </td>
                   <td className="py-1 pr-2"><input className={`${inputCls} text-right`} inputMode="decimal" value={l.quantity} onChange={(e) => setLine(l.key, { quantity: e.target.value })} /></td>
                   <td className="py-1 pr-2"><input className={`${inputCls} text-right`} inputMode="decimal" value={l.price} onChange={(e) => setLine(l.key, { price: e.target.value })} placeholder="2,000.00" /></td>
                   <td className="py-1 text-right tabular-nums text-slate-900">{money(l.amount)}</td>
