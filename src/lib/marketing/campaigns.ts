@@ -234,6 +234,7 @@ export async function sendCampaign(campaignId: string, opts?: {
     const result = await sendMarketingEmail({
       to: contact.email,
       first_name: contact.first_name,
+      last_name: contact.last_name,
       company: contact.company,
       from_name: campaign.from_name,
       from_email: campaign.from_email,

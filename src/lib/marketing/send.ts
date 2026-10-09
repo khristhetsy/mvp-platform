@@ -97,9 +97,26 @@ export function htmlToText(html: string): string {
     .trim();
 }
 
+/**
+ * What {{company}} reads as. Many CRM contacts carry the person's own name, or
+ * nothing, in the company field ("investors fit Ted Stanley"), so those read
+ * "your company" instead.
+ */
+export function companyForMerge(company: string | null | undefined, firstName?: string | null, lastName?: string | null): string {
+  const norm = (v: string | null | undefined) => (v ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const c = norm(company);
+  if (!c) return "your company";
+  const first = norm(firstName);
+  const full = norm(`${firstName ?? ""} ${lastName ?? ""}`);
+  if ((full && c === full) || (first && c === first)) return "your company";
+  return (company ?? "").trim();
+}
+
 export type SendMarketingEmailInput = {
   to: string;
   first_name?: string | null;
+  /** Used only to tell a person's name apart from a real company name. */
+  last_name?: string | null;
   company?: string | null;
   from_name: string;
   from_email: string;
@@ -131,7 +148,7 @@ export async function sendMarketingEmail(
 
   const vars: Record<string, string> = {
     first_name: input.first_name ?? "there",
-    company: input.company ?? "",
+    company: companyForMerge(input.company, input.first_name, input.last_name),
     email: to,
     sender_name: input.from_name ?? "",
   };

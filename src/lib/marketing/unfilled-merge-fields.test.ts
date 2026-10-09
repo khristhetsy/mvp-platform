@@ -54,3 +54,19 @@ describe("sendMarketingEmail refuses unfilled merge fields", () => {
     expect(body.html).not.toContain("{{unsubscribe_url}}");
   });
 });
+
+describe("companyForMerge", () => {
+  it("reads 'your company' when the company is the person's own name or empty", async () => {
+    const { companyForMerge } = await import("./send");
+    expect(companyForMerge("Ted Stanley", "Ted", "Stanley")).toBe("your company");
+    expect(companyForMerge("ted  stanley", "Ted", "Stanley")).toBe("your company");
+    expect(companyForMerge("Anji", "Anji", null)).toBe("your company");
+    expect(companyForMerge("", "Ted", "Stanley")).toBe("your company");
+    expect(companyForMerge(null)).toBe("your company");
+  });
+  it("keeps a real company name", async () => {
+    const { companyForMerge } = await import("./send");
+    expect(companyForMerge("Save Our Oceans Initiative Inc.", "Theodore", "Staley")).toBe("Save Our Oceans Initiative Inc.");
+    expect(companyForMerge("RhizeBio", "Dan", "Toal")).toBe("RhizeBio");
+  });
+});
