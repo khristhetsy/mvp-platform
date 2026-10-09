@@ -568,7 +568,7 @@ function AdminCompaniesModuleViewsInner({
                         <span className="text-slate-400">—</span>
                       )}
                     </td>}
-                    <AllowanceCells allowance={allowances[company.id]} show={show} />
+                    <AllowanceCells allowance={allowances[company.id]} show={show} companyId={company.id} />
                     {show("review") && <td className="px-3 py-2.5 whitespace-nowrap">
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                         company.review_status === "approved"
@@ -662,7 +662,10 @@ const OUTREACH_STYLE: Record<CompanyAllowance["status"], { label: string; cls: s
 const shortUtc = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: PLATFORM_TZ });
 
 /** Current window, reached / limit, outreach status and intro requests for one company (paid founders only). */
-function AllowanceCells({ allowance: a, show }: { allowance: CompanyAllowance | undefined; show: (key: ColKey) => boolean }) {
+function AllowanceCells({ allowance: a, show, companyId }: { allowance: CompanyAllowance | undefined; show: (key: ColKey) => boolean; companyId: string }) {
+  // Outreach status and intro requests open the company's Investor reach tab.
+  const reach = `/admin/companies/${companyId}#reach`;
+  const stop = (e: React.MouseEvent) => e.stopPropagation();
   const dash = <span className="text-slate-400">—</span>;
   if (!a) {
     return (
@@ -689,11 +692,11 @@ function AllowanceCells({ allowance: a, show }: { allowance: CompanyAllowance | 
         ) : null}
       </td>}
       {show("outreach") && <td className="px-3 py-2.5 whitespace-nowrap">
-        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap ${st.cls}`}>{st.label}</span>
+        <a href={reach} onClick={stop} title="Open Investor reach" className={`rounded-full px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap hover:underline ${st.cls}`}>{st.label}</a>
         <div className="mt-1 text-[10px] text-slate-400">{a.note}</div>
       </td>}
       {show("intros") && <td className="px-3 py-2.5 whitespace-nowrap text-right">
-        {a.intros ? <div className="text-xs tabular-nums text-slate-700">{a.intros.used} / {a.intros.cap}</div> : dash}
+        {a.intros ? <a href={reach} onClick={stop} title="Open Investor reach" className="text-xs tabular-nums text-slate-700 hover:text-indigo-600 hover:underline">{a.intros.used} / {a.intros.cap}</a> : dash}
       </td>}
     </>
   );

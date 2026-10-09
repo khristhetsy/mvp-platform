@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useTranslations } from "next-intl";
 import { Suspense, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -540,6 +542,9 @@ function AdminInvestorsModuleViewsInner({
                           {investor.full_name ?? investor.email ?? "Investor"}
                         </p>
                         {investor.email ? <p className="text-slate-500">{investor.email}</p> : null}
+                        <Link href={`/admin/investors/${investor.id}/reach`} className="text-xs font-semibold text-indigo-600 hover:underline">
+                          Investor reach
+                        </Link>
                       </div>
                       <AdminSubscriptionSummary
                         subscription={subscriptionMap.get(investor.id) ?? null}
