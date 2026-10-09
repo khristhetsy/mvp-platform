@@ -70,6 +70,15 @@ function money(cents: number): string {
   return `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+const RECENT_START_MS = 2 * 86_400_000;
+
+/** The period start when it is a recent payment, else null (row left out). */
+export function startedIfRecent(periodStart: string | null, now: Date = new Date()): string | null {
+  if (!periodStart) return null;
+  const t = Date.parse(periodStart);
+  return Number.isFinite(t) && now.getTime() - t <= RECENT_START_MS ? periodStart : null;
+}
+
 function firstNameOf(fullName: string | null | undefined): string | null {
   const first = fullName?.trim().split(/\s+/)[0];
   return first ? first : null;
@@ -262,7 +271,10 @@ export async function loadWelcomeLetterData(founderId: string, planHint?: PlanTy
     companyName: c?.company_name ?? null,
     plan,
     priceCents,
-    startedAt: s.current_period_start ?? null,
+    // "Started" only for a payment in the last 2 days. A letter sent later to an
+    // existing client (Send welcome letter) would otherwise show a renewal date
+    // as the start.
+    startedAt: startedIfRecent(s.current_period_start ?? null),
     renewsAt: s.current_period_end ?? null,
     onboardingPercent: c?.onboarding_progress_percent ?? null,
     steps: STEP_ORDER.map((key) => {

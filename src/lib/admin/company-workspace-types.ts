@@ -80,6 +80,8 @@ export type AdminCompanyWorkspaceData = {
   outreach: AdminOutreachSummary;
   /** Welcome letter sent on the founder's first payment, with its tracking. */
   welcomeLetter: AdminWelcomeLetterStatus | null;
+  /** A paying founder (active paid plan) with no welcome letter yet: show Send. */
+  welcomeLetterSendable: boolean;
   investorActivity: {
     savedDeals: number;
     interests: number;

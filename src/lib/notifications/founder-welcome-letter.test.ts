@@ -100,3 +100,20 @@ describe("welcome letter", () => {
     expect(welcomeReplyTo()).toBe("team@icapos.com");
   });
 });
+
+describe("Started row on a late letter", () => {
+  it("shows the start only for a payment in the last 2 days", async () => {
+    const { startedIfRecent } = await import("./founder-welcome-letter");
+    const now = new Date("2026-10-09T14:00:00Z");
+    expect(startedIfRecent("2026-10-09T01:06:33Z", now)).toBe("2026-10-09T01:06:33Z");
+    // Cynthia: current period started Sep 30 (a renewal), not her real start.
+    expect(startedIfRecent("2026-09-30T22:16:32Z", now)).toBeNull();
+    expect(startedIfRecent(null, now)).toBeNull();
+  });
+
+  it("leaves the Started row out when there is no recent start", () => {
+    const late = renderWelcomeLetter({ ...TED, startedAt: null }, CONN);
+    expect(late.text).not.toContain("Started:");
+    expect(late.text).toContain("Next renewal: Nov 8, 2026");
+  });
+});
