@@ -31,6 +31,8 @@ export function renderInvoiceEmail(input: {
   customer: Customer;
   instructions: WireInstructions;
   pdfUrl: string;
+  /** The customer's pay page (bank details with copy buttons). Omitted for a paid invoice. */
+  payUrl?: string | null;
   series?: SeriesRow[];
   reminder?: boolean;
 }): RenderedEmail {
@@ -68,7 +70,7 @@ export function renderInvoiceEmail(input: {
     `<p style="margin:14px 0 4px;font-weight:bold;">How to pay</p>`,
     payKnown ? table(pay) : `<p style="color:${MUTED};">${escapeHtml(ACCOUNTING_COPY.noInstructions)}</p>`,
     `<p style="color:${MUTED};font-size:13px;">${escapeHtml(ACCOUNTING_COPY.payNote)}</p>`,
-    `<p>${button("Download invoice", input.pdfUrl, true)}</p>`,
+    `<p>${input.payUrl ? button("Pay invoice", input.payUrl, true) : ""}${button("Download invoice", input.pdfUrl, !input.payUrl)}</p>`,
     `<p>${escapeHtml(ACCOUNTING_COPY.footer)}</p>`,
   ].join(""), {
     audience: "shared",
@@ -85,6 +87,7 @@ export function renderInvoiceEmail(input: {
     "", "How to pay",
     ...(payKnown ? pay.map((r) => `${r.label}: ${r.value}`) : [ACCOUNTING_COPY.noInstructions]),
     ACCOUNTING_COPY.payNote, "",
+    ...(input.payUrl ? [`Pay invoice: ${input.payUrl}`] : []),
     `Download invoice: ${input.pdfUrl}`, "",
     ACCOUNTING_COPY.footer, ACCOUNTING_COPY.disclaimer,
   ].join("\n");

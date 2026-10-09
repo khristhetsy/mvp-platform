@@ -9,12 +9,12 @@ import {
   PAYMENT_METHODS, balanceDue, displayStatus, entityName, ENTITY_ADDRESS, fmtDate, fmtStampPT, money, todayPT,
   type BankTransaction, type Customer, type Invoice, type InvoiceLine, type Payment,
 } from "@/lib/accounting/core";
-import { ErrorLine, Field, Modal, Section, StatusTag, api, btnCls, dangerCls, inputCls, primaryCls } from "@/components/admin/accounting/ui";
+import { ErrorLine, Field, Modal, Section, StatusTag, Tag, api, btnCls, dangerCls, inputCls, primaryCls } from "@/components/admin/accounting/ui";
 
 type SeriesItem = Pick<Invoice, "id" | "invoice_number" | "issue_date" | "due_date" | "total_cents" | "amount_paid_cents" | "status" | "series_index">;
 
 export function InvoiceRecordClient({
-  invoice, lines, customer, payments, series, bankCandidates, prevId, nextId, position, total, emailError,
+  invoice, lines, customer, payments, series, bankCandidates, payUrl, clientReportedAt, prevId, nextId, position, total, emailError,
 }: Readonly<{
   invoice: Invoice;
   lines: InvoiceLine[];
@@ -22,6 +22,8 @@ export function InvoiceRecordClient({
   payments: Payment[];
   series: SeriesItem[];
   bankCandidates: BankTransaction[];
+  payUrl: string | null;
+  clientReportedAt: string | null;
   prevId: string | null;
   nextId: string | null;
   position: number;
@@ -37,6 +39,7 @@ export function InvoiceRecordClient({
   const [sendOpen, setSendOpen] = useState<null | "send" | "remind">(null);
   const [to, setTo] = useState(customer?.email ?? "");
   const [payOpen, setPayOpen] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [pay, setPay] = useState({ amount: (due / 100).toFixed(2), paid_on: todayPT(), method: "ach", reference: "", send_receipt: false });
 
   async function act(key: string, run: () => Promise<{ ok: boolean; error?: string }>, done?: string) {
@@ -172,6 +175,27 @@ export function InvoiceRecordClient({
         </div>
 
         <div className="space-y-3">
+          {payUrl ? (
+            <Section title="Payment link" icon="ti-link">
+              <div className="space-y-2 px-4 py-3 text-[12.5px]">
+                {invoice.status === "paid"
+                  ? <Tag tone="ok">Paid</Tag>
+                  : clientReportedAt ? <Tag tone="warn">Client says sent · {fmtDate(clientReportedAt.slice(0, 10))}</Tag> : null}
+                <div className="flex gap-2">
+                  <input className={`${inputCls} text-[12px]`} value={payUrl} readOnly onFocus={(e) => e.currentTarget.select()} aria-label="Payment link" />
+                  <button
+                    type="button"
+                    className={btnCls}
+                    onClick={() => {
+                      navigator.clipboard.writeText(payUrl).then(() => { setLinkCopied(true); setTimeout(() => setLinkCopied(false), 1500); }).catch(() => setError("Couldn't copy. Select the link and copy it instead."));
+                    }}
+                  ><i className={`ti ${linkCopied ? "ti-check" : "ti-copy"}`} aria-hidden="true" />{linkCopied ? "Copied" : "Copy"}</button>
+                </div>
+                <p className="text-slate-500"><i className="ti ti-mail align-[-2px]" aria-hidden="true" /> The invoice email has a blue &quot;Pay invoice&quot; button with this link.</p>
+                <p className="text-slate-500"><i className="ti ti-building-bank align-[-2px]" aria-hidden="true" /> When the deposit shows up in the Bank of America feed with this amount and {invoice.invoice_number} as the reference, the invoice turns Paid and the client gets a receipt.</p>
+              </div>
+            </Section>
+          ) : null}
           {canPay ? (
             <Section title="Bank match" icon="ti-building-bank">
               {bankCandidates.length === 0 ? (
