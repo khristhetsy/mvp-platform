@@ -3,7 +3,13 @@
 /** Customer pay page: bank details with copy buttons and "I've sent the payment". */
 import { useState } from "react";
 
-type Row = { label: string; value: string; copy: boolean; mono?: boolean; strong?: boolean };
+type Row = { label: string; value: string; copy: boolean; mono?: boolean; strong?: boolean; mask?: boolean };
+
+/** Last four digits only, e.g. "•••• 2522". The copy button still copies the full number. */
+export function maskTail(value: string): string {
+  const v = value.trim();
+  return v.length > 4 ? `•••• ${v.slice(-4)}` : v;
+}
 
 export function PayInvoiceClient({
   number, token, rows, note, amount, pdfUrl, reportedAt,
@@ -12,6 +18,7 @@ export function PayInvoiceClient({
   const [sent, setSent] = useState<boolean>(Boolean(reportedAt));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [shown, setShown] = useState<string | null>(null);
 
   async function copy(label: string, value: string) {
     try {
@@ -44,7 +51,13 @@ export function PayInvoiceClient({
           {rows.map((r) => (
             <tr key={r.label} className="border-b border-slate-100 last:border-b-0">
               <td className="py-1.5 pr-2 text-slate-500">{r.label}</td>
-              <td className={`py-1.5 text-right text-slate-900 ${r.mono ? "font-mono" : ""} ${r.strong ? "font-semibold" : ""}`}>{r.value}</td>
+              <td className={`py-1.5 text-right text-slate-900 ${r.mono ? "font-mono" : ""} ${r.strong ? "font-semibold" : ""}`}>{r.mask && shown !== r.label ? maskTail(r.value) : r.value}
+                {r.mask ? (
+                  <button type="button" onClick={() => setShown((s) => (s === r.label ? null : r.label))} className="ml-2 font-sans text-[12px] font-medium text-[#185FA5] hover:text-[#1A6CE4]">
+                    {shown === r.label ? "Hide" : "Show"}
+                  </button>
+                ) : null}
+              </td>
               <td className="w-8 py-1.5 text-right">
                 {r.copy ? (
                   <button type="button" aria-label={`Copy ${r.label}`} onClick={() => copy(r.label, r.value)} className="text-[#185FA5] hover:text-[#1A6CE4]">
@@ -66,7 +79,7 @@ export function PayInvoiceClient({
           <i className="ti ti-clock mt-0.5 text-[20px] text-[#854F0B]" aria-hidden="true" />
           <div>
             <div className="font-medium text-slate-900">Payment on its way</div>
-            <div className="text-[12px] text-slate-500">ACH usually lands in 1 to 3 business days. You&apos;ll get a receipt by email once it arrives.</div>
+            <div className="text-[12px] text-slate-500">Wires usually land the same business day. You&apos;ll get a receipt by email once it arrives.</div>
           </div>
         </div>
       ) : null}

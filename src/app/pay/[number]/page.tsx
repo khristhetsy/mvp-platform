@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Pay invoice", robots: { index: false
 
 /**
  * The customer's pay page from the "Pay invoice" button (approved Oct 9, 2026).
- * ACH push only: the customer sends from their own bank with the invoice
+ * Wire transfer only: the customer sends from their own bank with the invoice
  * number as the reference; the Bank of America feed confirms the deposit.
  * No money moves through iCapOS.
  */
@@ -27,8 +27,8 @@ export default async function PayInvoicePage({ params, searchParams }: Readonly<
   const rows = [
     { label: "Beneficiary", value: ins.beneficiary, copy: true },
     { label: "Bank", value: ins.bank_name, copy: false },
-    { label: "Routing number (ACH)", value: ins.routing_number, copy: true, mono: true },
-    { label: "Account number", value: ins.account_number, copy: true, mono: true },
+    { label: "Routing number (wire)", value: ins.routing_number, copy: true, mono: true },
+    { label: "Account number", value: ins.account_number, copy: true, mono: true, mask: true },
     { label: "Reference (required)", value: inv.invoice_number, copy: true, strong: true },
   ].filter((r) => r.value.trim().length > 0);
 
@@ -56,7 +56,7 @@ export default async function PayInvoicePage({ params, searchParams }: Readonly<
       ) : (
         <>
           <div className="mt-4 border-t border-slate-200 pt-3 text-[13px] font-medium text-slate-900">
-            <i className="ti ti-building-bank mr-1.5 align-[-2px] text-[16px] text-[#185FA5]" aria-hidden="true" />Pay by ACH transfer from your bank
+            <i className="ti ti-building-bank mr-1.5 align-[-2px] text-[16px] text-[#185FA5]" aria-hidden="true" />Pay by wire transfer from your bank
           </div>
           {ready ? (
             <PayInvoiceClient
