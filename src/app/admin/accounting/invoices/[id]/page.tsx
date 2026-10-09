@@ -21,6 +21,8 @@ export default async function InvoiceRecordPage({ params, searchParams }: Readon
         payments={detail.payments}
         series={detail.series}
         bankCandidates={detail.bankCandidates}
+        payUrl={detail.payUrl}
+        clientReportedAt={detail.clientReportedAt}
         prevId={idx > 0 ? all[idx - 1].id : null}
         nextId={idx >= 0 && idx < all.length - 1 ? all[idx + 1].id : null}
         position={idx + 1}

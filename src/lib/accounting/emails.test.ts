@@ -25,6 +25,12 @@ describe("accounting emails", () => {
     expect(e.text).toContain("Bank name: Bank of America");
     expect(e.text).toContain("Reference: INV-2026-0007");
     expect(e.html).not.toContain(" — ");
+    expect(e.text).not.toContain("Pay invoice:");
+  });
+  it("puts a Pay invoice button first when there is a pay link", () => {
+    const e = renderInvoiceEmail({ invoice, lines: [], customer, instructions, pdfUrl: "https://icapos.com/pdf", payUrl: "https://icapos.com/pay/inv-2026-0007?t=t" });
+    expect(e.text).toContain("Pay invoice: https://icapos.com/pay/inv-2026-0007?t=t");
+    expect(e.html.indexOf("Pay invoice")).toBeLessThan(e.html.indexOf("Download invoice"));
   });
   it("says details are coming when no bank details are saved", () => {
     const e = renderInvoiceEmail({ invoice, lines: [], customer, instructions: EMPTY_WIRE_INSTRUCTIONS, pdfUrl: "https://icapos.com/x" });

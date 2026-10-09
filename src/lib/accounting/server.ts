@@ -8,15 +8,16 @@
  *
  * Pure helpers: core.ts (tested). PDF: invoice-pdf.ts. Emails: emails.ts.
  */
-import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from "node:crypto";
+import { createCipheriv, createDecipheriv, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/send-email";
+import { notifyStaff } from "@/lib/notifications/notifications";
 import { absoluteUrl } from "@/lib/activity/email-templates";
 import { EMPTY_WIRE_INSTRUCTIONS, normalizeWireInstructions, type WireInstructions } from "@/lib/billing/wire-core";
 import { getWireInstructions, saveWireInstructions } from "@/lib/billing/wire";
 import {
   DEFAULT_ENTITY, addDays, balanceDue, displayStatus, invoiceTotal, isEntity, isIsoDate, isPaymentMethod,
-  lineAmount, parseBankFile, plaidAmountToCents, seriesDates, seriesLineLabel, suggestMatch, todayPT,
+  autoMatch, lineAmount, money, parseBankFile, payPagePath, plaidAmountToCents, seriesDates, seriesLineLabel, suggestMatch, todayPT,
   type BankTransaction, type Customer, type EntityId, type Invoice, type InvoiceLine, type MatchCandidate,
   type Payment, type PaymentMethod,
 } from "@/lib/accounting/core";
@@ -165,6 +166,9 @@ export type InvoiceDetail = {
   series: Array<Pick<Invoice, "id" | "invoice_number" | "issue_date" | "due_date" | "total_cents" | "amount_paid_cents" | "status" | "series_index">>;
   /** Deposits waiting for review whose amount equals this invoice's balance. */
   bankCandidates: BankTransaction[];
+  /** The customer's pay page, absolute. Null while the invoice is a draft, scheduled or void. */
+  payUrl: string | null;
+  clientReportedAt: string | null;
 };
 
 export async function getInvoiceDetail(id: string, client: Db = db()): Promise<InvoiceDetail | null> {
@@ -189,7 +193,82 @@ export async function getInvoiceDetail(id: string, client: Db = db()): Promise<I
     payments: (pay.data ?? []) as Payment[],
     series: (series.data ?? []) as InvoiceDetail["series"],
     bankCandidates: (cands.data ?? []) as BankTransaction[],
+    payUrl: invoice.status === "sent" || invoice.status === "paid" ? absoluteUrl(payPagePath(invoice)) : null,
+    clientReportedAt: await clientReportedAt(id, client),
   };
+}
+
+/**
+ * Read separately from INVOICE_COLS so invoices keep loading if migration
+ * 20261010120000 has not been run yet (the column is then simply absent).
+ */
+async function clientReportedAt(id: string, client: Db): Promise<string | null> {
+  const { data, error } = await client.from("acct_invoices").select("client_reported_paid_at").eq("id", id).maybeSingle();
+  if (error) return null;
+  return ((data as { client_reported_paid_at?: string | null } | null)?.client_reported_paid_at) ?? null;
+}
+
+// ── Customer pay page (public, token in the link) ───────────────────────────
+
+/**
+ * The invoice behind a pay link, or null for a wrong token, a draft or a
+ * scheduled invoice (all answer the same, so a link reveals nothing).
+ */
+export async function getInvoiceForPayPage(number: string, token: string, client: Db = db()): Promise<Invoice | null> {
+  const num = number.trim().toUpperCase().slice(0, 40);
+  if (!num || !token) return null;
+  const { data } = await client.from("acct_invoices").select(INVOICE_COLS).eq("invoice_number", num).maybeSingle();
+  const inv = data as Invoice | null;
+  if (!inv) return null;
+  const ok = token.length === inv.public_token.length && timingSafeEqual(Buffer.from(token), Buffer.from(inv.public_token));
+  if (!ok || inv.status === "draft" || inv.status === "scheduled") return null;
+  return { ...inv, client_reported_paid_at: await clientReportedAt(inv.id, client) };
+}
+
+export type PayPageData = {
+  invoice: Invoice;
+  lines: InvoiceLine[];
+  customerLabel: string;
+  instructions: WireInstructions;
+  series: SeriesRow[];
+  pdfUrl: string;
+};
+
+export async function payPageData(inv: Invoice, client: Db = db()): Promise<PayPageData> {
+  const [lines, customer, instructions, series] = await Promise.all([
+    getInvoiceLines(inv.id, client),
+    getCustomer(inv.customer_id, client),
+    getPaymentInstructions(inv.entity, client),
+    seriesOf(inv, client),
+  ]);
+  return { invoice: inv, lines, customerLabel: customer ? customerLabel(customer) : "", instructions, series, pdfUrl: publicPdfPath(inv) };
+}
+
+/**
+ * The customer pressed "I've sent the payment". Stamped once; staff get an
+ * in-app alert the first time only, so pressing again changes nothing.
+ */
+export async function reportClientPayment(number: string, token: string, client: Db = db()): Promise<{ reportedAt: string }> {
+  const inv = await getInvoiceForPayPage(number, token, client);
+  if (!inv) throw new Error("Invoice not found.");
+  if (inv.status === "void") throw new Error("This invoice was cancelled.");
+  if (inv.client_reported_paid_at) return { reportedAt: inv.client_reported_paid_at };
+  const now = new Date().toISOString();
+  const { error } = await client.from("acct_invoices").update({ client_reported_paid_at: now }).eq("id", inv.id).is("client_reported_paid_at", null);
+  if (error) throw new Error("Couldn't save that right now. Try again in a minute.");
+  if (inv.status !== "paid") {
+    const customer = await getCustomer(inv.customer_id, client);
+    await notifyStaff({
+      type: "accounting_client_reported_payment",
+      title: `${inv.invoice_number}: client says payment sent`,
+      message: `${customer ? customerLabel(customer) : "The customer"} says they sent ${money(balanceDue(inv))} by bank transfer. It matches automatically when the deposit reaches the Bank of America feed.`,
+      entityType: "acct_invoice",
+      entityId: inv.id,
+      deepLink: `/admin/accounting/invoices/${inv.id}`,
+      dedupeKey: `acct-client-paid-${inv.id}`,
+    }).catch(() => undefined);
+  }
+  return { reportedAt: now };
 }
 
 // ── Invoices: create, edit, send ─────────────────────────────────────────────
@@ -353,7 +432,11 @@ export async function sendInvoice(id: string, staffId: string | null, opts: { to
   const pdf = await renderInvoicePdf({ invoice: inv, lines, customer, instructions, series });
   // The full schedule goes on the first invoice of a series only.
   const showSeries = inv.series_index === 1 ? series : undefined;
-  const rendered = renderInvoiceEmail({ invoice: inv, lines, customer, instructions, pdfUrl: absoluteUrl(publicPdfPath(inv)), series: showSeries, reminder: opts.reminder });
+  const rendered = renderInvoiceEmail({
+    invoice: inv, lines, customer, instructions, pdfUrl: absoluteUrl(publicPdfPath(inv)),
+    payUrl: inv.status === "sent" ? absoluteUrl(payPagePath(inv)) : null,
+    series: showSeries, reminder: opts.reminder,
+  });
   const emailed = await sendEmail({
     to,
     subject: rendered.subject,
@@ -392,7 +475,8 @@ export async function deleteDraft(id: string, client: Db = db()): Promise<void> 
 export async function recordPayment(
   invoiceId: string,
   input: { amount_cents: number; paid_on?: string; method?: PaymentMethod; reference?: string | null; bank_transaction_id?: string | null; send_receipt?: boolean },
-  staffId: string,
+  /** Null when the bank feed matched the deposit on its own. */
+  staffId: string | null,
   client: Db = db(),
 ): Promise<{ invoice: Invoice; receiptSent: boolean }> {
   const inv = await getInvoice(invoiceId, client);
@@ -543,7 +627,7 @@ async function refreshAccounts(item: BankItemRow, accessToken: string, client: D
   return accounts.length;
 }
 
-export type SyncResult = { added: number; updated: number; removed: number; suggested: number; errors: string[] };
+export type SyncResult = { added: number; updated: number; removed: number; suggested: number; autoMatched?: number; errors: string[] };
 
 async function syncItem(item: BankItemRow, client: Db): Promise<SyncResult> {
   const result: SyncResult = { added: 0, updated: 0, removed: 0, suggested: 0, errors: [] };
@@ -578,6 +662,7 @@ async function syncItem(item: BankItemRow, client: Db): Promise<SyncResult> {
       result.removed = s.removed.length;
     }
     await client.from("acct_bank_items").update({ sync_cursor: s.nextCursor, last_synced_at: new Date().toISOString(), status: "active", last_error: null }).eq("id", item.id);
+    result.autoMatched = await autoMatchDeposits([...acctMap.values()], client, result.errors);
   } catch (e) {
     const needsLogin = e instanceof plaid.PlaidError && e.needsLogin;
     const msg = e instanceof Error ? e.message : "Sync failed.";
@@ -587,6 +672,32 @@ async function syncItem(item: BankItemRow, client: Db): Promise<SyncResult> {
   return result;
 }
 
+/**
+ * Posted deposits still waiting for review that name exactly one open invoice
+ * and equal its balance: record the payment, mark the invoice paid and email
+ * the receipt. Everything else stays for staff to decide in Bank.
+ */
+async function autoMatchDeposits(accountIds: string[], client: Db, errors: string[]): Promise<number> {
+  if (accountIds.length === 0) return 0;
+  const { data } = await client.from("acct_bank_transactions").select(TX_COLS).in("account_id", accountIds).eq("status", "review").eq("pending", false).gt("amount_cents", 0).order("posted_on").limit(200);
+  const deposits = (data ?? []) as BankTransaction[];
+  if (deposits.length === 0) return 0;
+  let open = await openInvoiceCandidates(client);
+  let matched = 0;
+  for (const tx of deposits) {
+    const hit = autoMatch({ ...tx, amount_cents: Number(tx.amount_cents) }, open);
+    if (!hit) continue;
+    try {
+      await decideTransaction(tx.id, { action: "match", invoice_id: hit.id, send_receipt: true }, null, client);
+      open = open.filter((i) => i.id !== hit.id);
+      matched++;
+    } catch (e) {
+      errors.push(`Auto match ${hit.invoice_number}: ${e instanceof Error ? e.message : "failed"}`);
+    }
+  }
+  return matched;
+}
+
 export async function syncAllBanks(client: Db = db()): Promise<SyncResult> {
   const total: SyncResult = { added: 0, updated: 0, removed: 0, suggested: 0, errors: [] };
   if (!plaid.plaidConfigured()) return total;
@@ -594,6 +705,7 @@ export async function syncAllBanks(client: Db = db()): Promise<SyncResult> {
   for (const item of (data ?? []) as BankItemRow[]) {
     const r = await syncItem(item, client);
     total.added += r.added; total.updated += r.updated; total.removed += r.removed; total.errors.push(...r.errors);
+    total.autoMatched = (total.autoMatched ?? 0) + (r.autoMatched ?? 0);
   }
   return total;
 }
@@ -700,7 +812,7 @@ export type BankDecision =
   | { action: "ignore" }
   | { action: "reset" };
 
-export async function decideTransaction(txId: string, d: BankDecision, staffId: string, client: Db = db()): Promise<{ ok: true; invoice?: Invoice }> {
+export async function decideTransaction(txId: string, d: BankDecision, staffId: string | null, client: Db = db()): Promise<{ ok: true; invoice?: Invoice }> {
   const { data } = await client.from("acct_bank_transactions").select(TX_COLS).eq("id", txId).maybeSingle();
   const tx = data as BankTransaction | null;
   if (!tx) throw new Error("Transaction not found.");

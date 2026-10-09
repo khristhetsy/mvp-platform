@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   addMonthsDate, agingBucket, agingReport, balanceDue, displayStatus, parseBankCsv, parseMoneyToCents,
-  parseOfx, plaidAmountToCents, seriesDates, seriesLineLabel, suggestMatch, todayPT, type MatchCandidate,
+  autoMatch, parseOfx, payPagePath, plaidAmountToCents, seriesDates, seriesLineLabel, suggestMatch, todayPT, type MatchCandidate,
 } from "@/lib/accounting/core";
 
 const inv = (over: Partial<MatchCandidate> = {}): MatchCandidate => ({
@@ -69,6 +69,16 @@ describe("bank matching", () => {
     expect(suggestMatch({ amount_cents: 200000, description: "WIRE IN", merchant: null }, list)).toBeNull();
     expect(suggestMatch({ amount_cents: -200000, description: "INV-2026-0002", merchant: null }, list)).toBeNull();
     expect(suggestMatch({ amount_cents: 199999, description: "INV-2026-0002", merchant: null }, list)).toBeNull();
+  });
+  it("auto matches only on exact balance plus the invoice number", () => {
+    const list = [inv({ id: "x", invoice_number: "INV-2026-0003" }), inv()];
+    expect(autoMatch({ amount_cents: 200000, description: "ACH CREDIT CENNA INV 2026 0002", merchant: null }, list)?.id).toBe("a");
+    expect(autoMatch({ amount_cents: 200000, description: "ACH CREDIT CENNA BIOSCIENCES", merchant: null }, list)).toBeNull();
+    expect(autoMatch({ amount_cents: 150000, description: "INV-2026-0002", merchant: null }, list)).toBeNull();
+    expect(autoMatch({ amount_cents: 200000, description: "INV-2026-0002", merchant: null }, [inv({ status: "paid" })])).toBeNull();
+  });
+  it("builds the pay page link from the number and token", () => {
+    expect(payPagePath({ invoice_number: "INV-2026-0001", public_token: "abc" })).toBe("/pay/inv-2026-0001?t=abc");
   });
 });
 

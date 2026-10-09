@@ -69,6 +69,8 @@ export type Invoice = {
   paid_at: string | null;
   voided_at: string | null;
   created_at: string;
+  /** When the customer pressed "I've sent the payment" on the pay page (migration 20261010120000). */
+  client_reported_paid_at?: string | null;
 };
 
 export type Payment = {
@@ -321,6 +323,26 @@ export function suggestMatch(
   });
   if (byName.length >= 1) return [...byName].sort((a, b) => a.due_date.localeCompare(b.due_date))[0];
   return open.length === 1 ? open[0] : null;
+}
+
+/**
+ * A deposit the bank feed can mark paid without a person: money in, exactly
+ * the balance due, and the invoice number in the description. Anything less
+ * certain stays a suggestion for staff to confirm.
+ */
+export function autoMatch(
+  tx: Pick<BankTransaction, "amount_cents" | "description" | "merchant">,
+  invoices: MatchCandidate[],
+): MatchCandidate | null {
+  if (tx.amount_cents <= 0) return null;
+  const text = compact(`${tx.description} ${tx.merchant ?? ""}`);
+  const hits = invoices.filter((i) => isOpen(i) && balanceDue(i) === tx.amount_cents && text.includes(compact(i.invoice_number)));
+  return hits.length === 1 ? hits[0] : null;
+}
+
+/** The customer's pay page for an invoice (no account needed; the token is the key). */
+export function payPagePath(inv: Pick<Invoice, "invoice_number" | "public_token">): string {
+  return `/pay/${encodeURIComponent(inv.invoice_number.toLowerCase())}?t=${inv.public_token}`;
 }
 
 // ── Bank file imports (Bank of America CSV and QFX / OFX) ────────────────────
