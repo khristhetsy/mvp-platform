@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { accountingGuard, body, fail } from "@/lib/accounting/api";
 import { parseMoneyToCents, type PaymentMethod } from "@/lib/accounting/core";
-import { deleteDraft, getInvoiceDetail, recordPayment, sendInvoice, updateInvoice, voidInvoice } from "@/lib/accounting/server";
+import { deleteInvoice, getInvoiceDetail, recordPayment, sendInvoice, updateInvoice, voidInvoice } from "@/lib/accounting/server";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -27,12 +27,12 @@ export async function PATCH(req: Request, { params }: Ctx): Promise<Response> {
   }
 }
 
-/** DELETE: remove a draft or scheduled invoice. */
+/** DELETE: remove an invoice with no payments recorded (drafts from the record page, any from the list). */
 export async function DELETE(_req: Request, { params }: Ctx): Promise<Response> {
   const g = await accountingGuard();
   if ("error" in g) return g.error;
   try {
-    await deleteDraft((await params).id);
+    await deleteInvoice((await params).id);
     return NextResponse.json({ ok: true });
   } catch (e) {
     return fail(e);

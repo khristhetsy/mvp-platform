@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { getInvoiceForPayPage, payPageData } from "@/lib/accounting/server";
-import { ACCOUNTING_COPY, balanceDue, entityDisclaimer, entityName, fmtDate, money } from "@/lib/accounting/core";
+import { getInvoiceForPayPage, getLetterhead, payPageData } from "@/lib/accounting/server";
+import { ACCOUNTING_COPY, balanceDue, entityDisclaimer, entityInitials, entityName, fmtDate, money } from "@/lib/accounting/core";
 import { wireInstructionsComplete } from "@/lib/billing/wire-core";
 import { PayInvoiceClient } from "@/components/accounting/PayInvoiceClient";
 
@@ -19,7 +19,7 @@ export default async function PayInvoicePage({ params, searchParams }: Readonly<
   if (!inv) return <Shell><Terminal icon="ti-link-off" title="Link not found" message="This payment link is not valid. Use the link in your invoice email, or reply to that email for help." /></Shell>;
   if (inv.status === "void") return <Shell entity={inv.entity}><Terminal icon="ti-ban" title="Invoice cancelled" message={`Invoice ${inv.invoice_number} was cancelled, so there is nothing to pay.`} /></Shell>;
 
-  const d = await payPageData(inv);
+  const [d, letterhead] = await Promise.all([payPageData(inv), getLetterhead(inv.entity)]);
   const due = balanceDue(inv);
   const paid = inv.status === "paid" || due === 0;
   const ins = d.instructions;
@@ -35,9 +35,15 @@ export default async function PayInvoicePage({ params, searchParams }: Readonly<
   return (
     <Shell entity={inv.entity}>
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="text-[15px] font-semibold text-[#0A1A40]">{entityName(inv.entity)}</div>
-          <div className="text-[12.5px] text-slate-500">Invoice {inv.invoice_number}{d.customerLabel ? ` · ${d.customerLabel}` : ""}</div>
+        <div className="flex min-w-0 items-center gap-3">
+          {letterhead.logo
+            // eslint-disable-next-line @next/next/no-img-element -- the saved data: URL logo from Accounting › Settings, same as the PDF
+            ? <img src={letterhead.logo} alt={`${entityName(inv.entity)} logo`} className="max-h-12 max-w-[120px] shrink-0 object-contain" />
+            : <div aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#E6F1FB] text-[12px] font-semibold text-[#0C447C]">{entityInitials(inv.entity)}</div>}
+          <div className="min-w-0">
+            <div className="text-[15px] font-semibold text-[#0A1A40]">{entityName(inv.entity)}</div>
+            <div className="text-[12.5px] text-slate-500">Invoice {inv.invoice_number}{d.customerLabel ? ` · ${d.customerLabel}` : ""}</div>
+          </div>
         </div>
         {paid
           ? <span className="shrink-0 rounded-md bg-[#EAF3DE] px-2.5 py-1 text-[12px] font-medium text-[#27500A]">Paid</span>

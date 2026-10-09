@@ -16,7 +16,7 @@ import { absoluteUrl } from "@/lib/activity/email-templates";
 import { EMPTY_WIRE_INSTRUCTIONS, normalizeWireInstructions, type WireInstructions } from "@/lib/billing/wire-core";
 import { getWireInstructions, saveWireInstructions } from "@/lib/billing/wire";
 import {
-  DEFAULT_ENTITY, addDays, balanceDue, displayStatus, invoiceTotal, isEntity, isIsoDate, isPaymentMethod,
+  DEFAULT_ENTITY, addDays, canDeleteInvoice, balanceDue, displayStatus, invoiceTotal, isEntity, isIsoDate, isPaymentMethod,
   autoMatch, lineAmount, money, parseBankFile, payPagePath, plaidAmountToCents, seriesDates, seriesLineLabel, suggestMatch, todayPT,
   type BankTransaction, type Customer, type EntityId, type Invoice, type InvoiceLine, type MatchCandidate,
   type Payment, type PaymentMethod, EMPTY_LETTERHEAD, normalizeLetterhead, type Letterhead,
@@ -541,6 +541,20 @@ export async function deleteDraft(id: string, client: Db = db()): Promise<void> 
   const inv = await getInvoice(id, client);
   if (!inv) throw new Error("Invoice not found.");
   if (inv.status !== "draft" && inv.status !== "scheduled") throw new Error("Only draft or scheduled invoices can be deleted. Void a sent invoice instead.");
+  const { error } = await client.from("acct_invoices").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Delete from the Invoices list (approved Oct 9, 2026): any invoice with no
+ * payment recorded. Lines go with it (cascade); a matched bank deposit is
+ * unlinked by the foreign key. The pay link then shows "Link not found" and
+ * the PDF is no longer served. Numbers are never reused.
+ */
+export async function deleteInvoice(id: string, client: Db = db()): Promise<void> {
+  const inv = await getInvoice(id, client);
+  if (!inv) throw new Error("Invoice not found.");
+  if (!canDeleteInvoice(inv)) throw new Error(`${inv.invoice_number} has payments recorded. Remove them on the invoice first, then delete it.`);
   const { error } = await client.from("acct_invoices").delete().eq("id", id);
   if (error) throw new Error(error.message);
 }

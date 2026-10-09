@@ -2,14 +2,14 @@
 
 /** New or edit customer, with a lookup in the shared Contacts list to fill it in. */
 import { useEffect, useState } from "react";
-import { ENTITIES, type Customer, type EntityId } from "@/lib/accounting/core";
+import { DEFAULT_BILLED_BY, ENTITIES, type Customer, type EntityId } from "@/lib/accounting/core";
 import { ErrorLine, Field, Modal, api, btnCls, inputCls, primaryCls } from "@/components/admin/accounting/ui";
 
 type Contact = { id: string; name: string | null; email: string | null; company: string | null; phone: string | null };
 
 export function CustomerEditor({ initial, onClose, onSaved }: Readonly<{ initial?: Customer | null; onClose: () => void; onSaved: (c: Customer) => void }>) {
   const [f, setF] = useState({
-    entity: (initial?.entity ?? "icfo_capital_global") as EntityId,
+    entity: (initial?.entity ?? DEFAULT_BILLED_BY) as EntityId,
     company: initial?.company ?? "",
     contact_name: initial?.contact_name ?? "",
     email: initial?.email ?? "",

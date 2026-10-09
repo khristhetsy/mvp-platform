@@ -14,8 +14,8 @@ import { NewButton, ToolbarGear, downloadCsv } from "@/components/admin/ToolbarG
 import { SelectionBar, ActionResult } from "@/components/admin/sales/SelectionBar";
 import { Highlight, NoSearchMatches, SearchCount } from "@/components/ui/SearchStatus";
 import { matchRows, type SearchField } from "@/lib/ui/live-search";
-import { balanceDue, displayStatus, entityName, fmtDate, money, todayPT, type DisplayStatus, type Invoice } from "@/lib/accounting/core";
-import { StatusTag, api } from "@/components/admin/accounting/ui";
+import { balanceDue, canDeleteInvoice, displayStatus, entityName, fmtDate, money, todayPT, type DisplayStatus, type Invoice } from "@/lib/accounting/core";
+import { Modal, StatusTag, api, btnCls, dangerCls } from "@/components/admin/accounting/ui";
 
 export type InvoiceRow = Invoice & { customerName: string; customerEmail: string | null };
 
@@ -38,6 +38,8 @@ export function InvoicesListClient({ rows }: Readonly<{ rows: InvoiceRow[] }>) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  /** Invoices waiting on the delete confirmation. */
+  const [confirmIds, setConfirmIds] = useState<string[] | null>(null);
 
   const withStatus = useMemo(() => rows.map((r) => ({ ...r, shown: displayStatus(r, today) })), [rows, today]);
   const fields: SearchField<(typeof withStatus)[number]>[] = [
@@ -83,10 +85,35 @@ export function InvoicesListClient({ rows }: Readonly<{ rows: InvoiceRow[] }>) {
     router.refresh();
   }
 
+  const confirmRows = confirmIds ? withStatus.filter((r) => confirmIds.includes(r.id)) : [];
+  const deletable = confirmRows.filter((r) => canDeleteInvoice(r));
+  const blocked = confirmRows.filter((r) => !canDeleteInvoice(r));
+
+  async function deleteConfirmed() {
+    setBusy(true);
+    let ok = 0;
+    const errors: string[] = [];
+    for (const d of deletable) {
+      const r = await api(`/api/admin/accounting/invoices/${d.id}`, "DELETE");
+      if (r.ok) ok++; else errors.push(`${d.invoice_number}: ${r.error}`);
+    }
+    setBusy(false);
+    setConfirmIds(null);
+    setSelected(new Set());
+    const skipped = blocked.length ? `${blocked.length} skipped because payments are recorded.` : "";
+    setResult([`${ok} invoice${ok === 1 ? "" : "s"} deleted.`, skipped, ...errors].filter(Boolean).join(" "));
+    router.refresh();
+  }
+
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-3 py-2.5">
         <NewButton href="/admin/accounting/invoices/new" />
+        {selected.size > 0 ? (
+          <button type="button" className={dangerCls} disabled={busy} onClick={() => setConfirmIds([...selected])}>
+            <i className="ti ti-trash" aria-hidden="true" />Delete ({selected.size})
+          </button>
+        ) : null}
         <ToolbarGear
           items={[
             {
@@ -134,7 +161,10 @@ export function InvoicesListClient({ rows }: Readonly<{ rows: InvoiceRow[] }>) {
         onSelectAll={() => setSelected(new Set(visible.map((r) => r.id)))}
         onClear={() => setSelected(new Set())}
         busy={busy}
-        actions={[{ key: "send", icon: "ti-send", label: "Send drafts", run: () => void sendSelected() }]}
+        actions={[
+          { key: "send", icon: "ti-send", label: "Send drafts", run: () => void sendSelected() },
+          { key: "delete", icon: "ti-trash", label: "Delete", danger: true, run: () => setConfirmIds([...selected]) },
+        ]}
       />
       <ActionResult text={result} onClose={() => setResult(null)} />
       <div className="px-3 pb-1"><SearchCount result={found} noun="invoices" /></div>
@@ -161,6 +191,7 @@ export function InvoicesListClient({ rows }: Readonly<{ rows: InvoiceRow[] }>) {
               <th className="px-2 py-2 text-right">Amount</th>
               <th className="hidden px-2 py-2 text-right lg:table-cell">Balance</th>
               <th className="px-2 py-2 text-right">Status</th>
+              <th className="w-10 px-2 py-2"><span className="sr-only">Delete</span></th>
             </tr>
           </thead>
           <tbody>
@@ -177,11 +208,45 @@ export function InvoicesListClient({ rows }: Readonly<{ rows: InvoiceRow[] }>) {
                 <td className="px-2 py-2 text-right tabular-nums text-slate-900"><Highlight text={money(r.total_cents)} query={search.q} /></td>
                 <td className="hidden px-2 py-2 text-right tabular-nums text-slate-600 lg:table-cell">{money(balanceDue(r))}</td>
                 <td className="px-2 py-2 text-right"><StatusTag status={r.shown} /></td>
+                <td className="px-2 py-2 text-center" onClick={(e) => e.stopPropagation()}>
+                  {canDeleteInvoice(r) ? (
+                    <button type="button" aria-label={`Delete ${r.invoice_number}`} title="Delete" disabled={busy} onClick={() => setConfirmIds([r.id])} className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-700 disabled:opacity-50">
+                      <i className="ti ti-trash text-[16px]" aria-hidden="true" />
+                    </button>
+                  ) : null}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       )}
+
+      {confirmIds ? (
+        <Modal
+          title={confirmRows.length === 1 ? `Delete ${confirmRows[0].invoice_number}?` : `Delete ${confirmRows.length} invoices?`}
+          onClose={() => { if (!busy) setConfirmIds(null); }}
+          width={440}
+          footer={<>
+            <button type="button" className={btnCls} disabled={busy} onClick={() => setConfirmIds(null)}>Cancel</button>
+            {deletable.length ? (
+              <button type="button" disabled={busy} onClick={() => void deleteConfirmed()} className="inline-flex items-center gap-1.5 rounded-lg bg-red-700 px-3 py-1.5 text-[12.5px] font-medium text-white hover:bg-red-800 disabled:opacity-50">
+                <i className="ti ti-trash" aria-hidden="true" />{busy ? "Deleting…" : deletable.length === 1 ? "Delete" : `Delete ${deletable.length}`}
+              </button>
+            ) : null}
+          </>}
+        >
+          {deletable.length ? (
+            <p className="text-[13px] text-slate-600">
+              This removes {deletable.length === 1 ? "the invoice, its pay link, and its PDF" : "these invoices, their pay links, and their PDFs"}. It can&apos;t be undone.
+            </p>
+          ) : null}
+          {blocked.length ? (
+            <p className="rounded-lg bg-amber-50 px-3 py-2 text-[12.5px] text-amber-800">
+              {blocked.map((r) => r.invoice_number).join(", ")} {blocked.length === 1 ? "has" : "have"} payments recorded and won&apos;t be deleted. Remove the payments on the invoice first.
+            </p>
+          ) : null}
+        </Modal>
+      ) : null}
     </div>
   );
 }
