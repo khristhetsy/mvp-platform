@@ -170,7 +170,7 @@ export const FREE_FEATURES: string[] = [
   "Full AI due diligence report",
   "Capital Readiness Rating with steps to raise it",
   "Share your report with any investor",
-  "Listed in our Private Market for 7,000+ investors once complete",
+  "Listed in our Private Market for investors once complete",
 ];
 
 export const SIGNUP_FOUNDER_PLANS: SignupPlanOption[] = [
