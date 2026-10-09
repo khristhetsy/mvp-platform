@@ -154,7 +154,7 @@ export const PREMIUM_FEATURES: string[] = [
   "We find your best fits in our 7,000+ investor network",
   "We make the introductions and follow up",
   "You take the meetings and close",
-  "Up to 20,000 public directory investors as the directory grows, not the iCFO Capital investor network",
+  "Up to 20,000 public directory investors as the directory grows",
   "40,000 Manual outreach emails a month",
 ];
 
