@@ -203,7 +203,6 @@ export const SIGNUP_FOUNDER_PLANS: SignupPlanOption[] = [
     title: "Professional",
     priceLabel: "$199",
     priceSubtext: "/month",
-    badge: "Most popular",
     paidPlan: true,
     features: [
       "Everything in Basic",
@@ -220,6 +219,7 @@ export const SIGNUP_FOUNDER_PLANS: SignupPlanOption[] = [
     title: "Premium",
     priceLabel: "$1,000",
     priceSubtext: "/month",
+    badge: "Most popular",
     paidPlan: true,
     features: PREMIUM_FEATURES,
   },
