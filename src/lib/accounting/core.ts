@@ -14,6 +14,45 @@ export const ENTITIES: Array<{ id: EntityId; name: string; short: string }> = [
 export const DEFAULT_ENTITY: EntityId = "icfo_capital_global";
 export const ENTITY_ADDRESS = "La Jolla, CA";
 
+/** Logo and contact lines printed at the top of a company's invoices (Accounting › Settings). */
+export type Letterhead = {
+  /** PNG or JPEG as a data: URL, or null for no logo. */
+  logo: string | null;
+  address: string;
+  phone: string;
+  email: string;
+};
+export const EMPTY_LETTERHEAD: Letterhead = { logo: null, address: "", phone: "", email: "" };
+/** Raw logo file size cap (the data: URL is about a third larger). */
+export const LOGO_MAX_BYTES = 1_000_000;
+
+/** A stored or submitted letterhead, cleaned. Throws on a logo that isn't a PNG or JPEG under 1 MB. */
+export function normalizeLetterhead(value: unknown): Letterhead {
+  const v = (value && typeof value === "object" ? value : {}) as Record<string, unknown>;
+  const s = (k: string, max: number) => (typeof v[k] === "string" ? (v[k] as string).trim().slice(0, max) : "");
+  let logo: string | null = null;
+  if (typeof v.logo === "string" && v.logo) {
+    const m = v.logo.match(/^data:image\/(png|jpeg|jpg);base64,([A-Za-z0-9+/=]+)$/);
+    if (!m) throw new Error("The logo must be a PNG or JPG image.");
+    if (Math.floor((m[2].length * 3) / 4) > LOGO_MAX_BYTES) throw new Error("The logo is over 1 MB. Use a smaller image.");
+    logo = v.logo;
+  }
+  return { logo, address: s("address", 400), phone: s("phone", 60), email: s("email", 254) };
+}
+
+/** Address, phone and email as printed lines; falls back to the city when nothing is saved. */
+export function letterheadLines(l: Letterhead): string[] {
+  const lines = l.address ? l.address.split(/\r?\n/).map((x) => x.trim()).filter(Boolean) : [ENTITY_ADDRESS];
+  const contact = [l.phone, l.email].filter(Boolean).join(" · ");
+  return contact ? [...lines, contact] : lines;
+}
+
+/** The disclaimer line, naming the company that issued the invoice. */
+export function entityDisclaimer(entity: string): string {
+  const who = entity === "icfo_venture_group" ? "iCFO Venture Group" : "iCFO Capital";
+  return `${who} does not solicit securities and is not an investment adviser.`;
+}
+
 export function isEntity(v: unknown): v is EntityId {
   return v === "icfo_capital_global" || v === "icfo_venture_group";
 }

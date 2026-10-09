@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getInvoiceForPayPage, payPageData } from "@/lib/accounting/server";
-import { ACCOUNTING_COPY, balanceDue, entityName, fmtDate, money } from "@/lib/accounting/core";
+import { ACCOUNTING_COPY, balanceDue, entityDisclaimer, entityName, fmtDate, money } from "@/lib/accounting/core";
 import { wireInstructionsComplete } from "@/lib/billing/wire-core";
 import { PayInvoiceClient } from "@/components/accounting/PayInvoiceClient";
 
@@ -17,7 +17,7 @@ export default async function PayInvoicePage({ params, searchParams }: Readonly<
   const [{ number }, sp] = await Promise.all([params, searchParams]);
   const inv = await getInvoiceForPayPage(decodeURIComponent(number), typeof sp.t === "string" ? sp.t : "").catch(() => null);
   if (!inv) return <Shell><Terminal icon="ti-link-off" title="Link not found" message="This payment link is not valid. Use the link in your invoice email, or reply to that email for help." /></Shell>;
-  if (inv.status === "void") return <Shell><Terminal icon="ti-ban" title="Invoice cancelled" message={`Invoice ${inv.invoice_number} was cancelled, so there is nothing to pay.`} /></Shell>;
+  if (inv.status === "void") return <Shell entity={inv.entity}><Terminal icon="ti-ban" title="Invoice cancelled" message={`Invoice ${inv.invoice_number} was cancelled, so there is nothing to pay.`} /></Shell>;
 
   const d = await payPageData(inv);
   const due = balanceDue(inv);
@@ -33,7 +33,7 @@ export default async function PayInvoicePage({ params, searchParams }: Readonly<
   ].filter((r) => r.value.trim().length > 0);
 
   return (
-    <Shell>
+    <Shell entity={inv.entity}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-[15px] font-semibold text-[#0A1A40]">{entityName(inv.entity)}</div>
@@ -85,11 +85,11 @@ export default async function PayInvoicePage({ params, searchParams }: Readonly<
   );
 }
 
-function Shell({ children }: Readonly<{ children: React.ReactNode }>) {
+function Shell({ children, entity }: Readonly<{ children: React.ReactNode; entity?: string }>) {
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-10">
       <div className="mx-auto max-w-[520px] rounded-xl border border-slate-200 bg-white p-5">{children}</div>
-      <p className="mx-auto mt-3 max-w-[520px] text-center text-[11px] text-slate-400">{ACCOUNTING_COPY.disclaimer}</p>
+      <p className="mx-auto mt-3 max-w-[520px] text-center text-[11px] text-slate-400">{entity ? entityDisclaimer(entity) : ACCOUNTING_COPY.disclaimer}</p>
     </main>
   );
 }

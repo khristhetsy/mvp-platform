@@ -6,7 +6,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { OdooPager } from "@/components/admin/OdooPager";
 import {
-  PAYMENT_METHODS, balanceDue, displayStatus, entityName, ENTITY_ADDRESS, fmtDate, fmtStampPT, money, todayPT,
+  PAYMENT_METHODS, balanceDue, displayStatus, entityName, fmtDate, fmtStampPT, letterheadLines, money, todayPT, type Letterhead,
   type BankTransaction, type Customer, type Invoice, type InvoiceLine, type Payment,
 } from "@/lib/accounting/core";
 import { ErrorLine, Field, Modal, Section, StatusTag, Tag, api, btnCls, dangerCls, inputCls, primaryCls } from "@/components/admin/accounting/ui";
@@ -14,7 +14,7 @@ import { ErrorLine, Field, Modal, Section, StatusTag, Tag, api, btnCls, dangerCl
 type SeriesItem = Pick<Invoice, "id" | "invoice_number" | "issue_date" | "due_date" | "total_cents" | "amount_paid_cents" | "status" | "series_index">;
 
 export function InvoiceRecordClient({
-  invoice, lines, customer, payments, series, bankCandidates, payUrl, clientReportedAt, prevId, nextId, position, total, emailError,
+  invoice, lines, customer, payments, series, bankCandidates, payUrl, clientReportedAt, letterhead, prevId, nextId, position, total, emailError,
 }: Readonly<{
   invoice: Invoice;
   lines: InvoiceLine[];
@@ -24,6 +24,7 @@ export function InvoiceRecordClient({
   bankCandidates: BankTransaction[];
   payUrl: string | null;
   clientReportedAt: string | null;
+  letterhead: Letterhead;
   prevId: string | null;
   nextId: string | null;
   position: number;
@@ -130,8 +131,12 @@ export function InvoiceRecordClient({
         <div className="rounded-xl border border-slate-200 bg-white p-5 text-[13px]">
           <div className="flex flex-wrap justify-between gap-3">
             <div>
+              {letterhead.logo
+                // eslint-disable-next-line @next/next/no-img-element -- the saved data: URL logo, same as the PDF
+                ? <img src={letterhead.logo} alt={`${entityName(invoice.entity)} logo`} className="mb-2 max-h-12 max-w-[160px] object-contain" />
+                : null}
               <div className="text-[15px] font-semibold text-[#0A1A40]">{entityName(invoice.entity)}</div>
-              <div className="text-slate-500">{ENTITY_ADDRESS}</div>
+              <div className="whitespace-pre-line text-slate-500">{letterheadLines(letterhead).join("\n")}</div>
             </div>
             <div className="text-right">
               <div className="text-[11px] font-semibold uppercase tracking-wider text-[#1A6CE4]">{invoice.status === "paid" ? "Receipt" : "Invoice"}</div>
