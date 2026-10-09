@@ -188,6 +188,10 @@ export default async function FounderDashboardPage() {
         crr: crrSummary,
       }).catch(() => null)
     : null;
+  // Same check that ticks Onboarding on the journey bar: once that stage is
+  // complete, "Continue onboarding" is hidden. No journey data → keep showing it.
+  const onboardingTicked =
+    journeyOverview?.stages.find((s) => s.slug === "onboarding")?.relation === "complete";
   const matchedInvestorCount = investorFit?.approvedInvestorCount ?? investorFit?.strongMatchCount ?? 0;
   const glanceTiles: GlanceTile[] = company
     ? [
@@ -234,12 +238,14 @@ export default async function FounderDashboardPage() {
               >
                 Company settings
               </Link>
-              <Link
-                href="/founder/onboarding"
-                className="cap-btn-secondary inline-flex w-full justify-center rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-[var(--navy)] sm:w-auto"
-              >
-                Continue onboarding
-              </Link>
+              {onboardingTicked ? null : (
+                <Link
+                  href="/founder/onboarding"
+                  className="cap-btn-secondary inline-flex w-full justify-center rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-[var(--navy)] sm:w-auto"
+                >
+                  Continue onboarding
+                </Link>
+              )}
             </div>
           }
         />
