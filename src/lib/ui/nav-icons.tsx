@@ -140,6 +140,13 @@ import {
   Wallet,
   Waypoints,
   Zap,
+  Globe,
+  Telescope,
+  FolderInput,
+  Rows3,
+  BadgeCheck,
+  KeyRound,
+  ChartNoAxesColumn,
   type LucideIcon,
 } from "lucide-react";
 
@@ -288,6 +295,13 @@ export const workspaceNavIconByHref: Record<string, LucideIcon> = {
   "/admin/events/email": Mail,
   "/admin/events/brochure": FileText,
   "/admin/voice": Mic, // Voice
+  "/admin/investor-directory": Telescope,
+  "/admin/investor-directory/records": Rows3,
+  "/admin/investor-directory/imports": FolderInput,
+  "/admin/investor-directory/verification": BadgeCheck,
+  "/admin/investor-directory/access": KeyRound,
+  "/admin/investor-directory/usage": ChartNoAxesColumn,
+  "/founder/investor-directory": Globe,
   "/admin/actions": ListTodo,
   "/admin/tasks": CheckSquare,
   "/admin/portfolio": PieChart,

@@ -58,6 +58,7 @@ describe("toApps: admin", () => {
       "Sales",
       "Marketing",
       "Investor Relations",
+      "Investor Directory",
       "Social Media",
       "Events",
       "Voice",

@@ -39,11 +39,12 @@ const DEFAULT_SEQUENCE: SeqStep[] = [
   { label: "Follow up", dayOffset: 3 },
   { label: "Closing the loop", dayOffset: 7 },
 ];
-const SOURCE_ORDER = ["Imported", "Added by you", "Introduced"];
+const SOURCE_ORDER = ["Imported", "Added by you", "Introduced", "From investor directory"];
 const SOURCE_STYLE: Record<string, string> = {
   Introduced: "bg-emerald-50 text-emerald-700",
   Imported: "bg-indigo-50 text-indigo-700",
   "Added by you": "bg-slate-100 text-slate-600",
+  "From investor directory": "bg-violet-50 text-violet-700",
 };
 
 function stageOf(r: RecipientStatus): { label: string; cls: string } {
@@ -542,6 +543,10 @@ export function ManualOutreachBuilder({
                       <i className="ti ti-brand-linkedin mt-0.5 text-base text-slate-500" aria-hidden="true" />
                       <span>Import LinkedIn connections<span className="block text-[11px] text-slate-400">Connections.csv export</span></span>
                     </button>
+                    <a href="/founder/investor-directory" className={menuItem} onClick={() => setGearOpen(false)}>
+                      <i className="ti ti-world-search mt-0.5 text-base text-slate-500" aria-hidden="true" />
+                      <span>Investor directory<span className="block text-[11px] text-slate-400">Public investors outside the iCFO network</span></span>
+                    </a>
                     <button type="button" className={menuItem} onClick={() => { setGearOpen(false); downloadTemplateCsv(); }}>
                       <i className="ti ti-download mt-0.5 text-base text-slate-500" aria-hidden="true" />
                       <span>Download CSV template</span>

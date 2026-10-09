@@ -16,8 +16,9 @@ import { ContactImportDialog } from "@/components/founder/outreach/ContactImport
  * hand-added investors read as three piles.
  */
 
-const SOURCE_ORDER = ["Introduced", "Imported", "Added by you"];
+const SOURCE_ORDER = ["Introduced", "Imported", "Added by you", "From investor directory"];
 const SOURCE_STYLE: Record<string, string> = {
+  "From investor directory": "bg-violet-50 text-violet-700",
   Introduced: "bg-emerald-50 text-emerald-700",
   Imported: "bg-indigo-50 text-indigo-700",
   "Added by you": "bg-slate-100 text-slate-600",

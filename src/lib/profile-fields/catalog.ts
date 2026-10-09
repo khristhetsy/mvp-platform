@@ -94,6 +94,9 @@ const ADM_CONTACT = "src/app/admin/sales/contacts/[id]/CompanyLinkedRecordEditor
 const ADM_BASICS = "src/components/admin/company-workspace/CompanyBasicsEditor.tsx";
 const PIPE = "src/app/founder/investor-pipeline/InvestorPipelineClient.tsx";
 const INV_ONB = "src/components/InvestorOnboardingWizard.tsx";
+// Investor directory (public investor data outside the iCFO network): founder search filters and the admin record editor.
+const DIR = "src/components/founder/investor-directory/InvestorDirectoryClient.tsx";
+const DIR_ADMIN = "src/components/admin/investor-directory/RecordEditor.tsx";
 const ROUTES_COMPANY = ["PATCH /api/founder/onboarding", "PATCH /api/companies/[id]", "PATCH /api/admin/companies/[id]/basics"];
 
 export const FIELD_USAGE: FieldUsage[] = [
@@ -111,7 +114,7 @@ export const FIELD_USAGE: FieldUsage[] = [
     read: ["investor-company-matching.ts · sector", "preference-match.ts · CRM scorer", "icfo-events/matching-rule.ts · networking pairing", "icfo-events/match-reason.ts · introduction reason"],
     optionList: ["vocabulary_options (list: industry)", "src/lib/icfo-events/sectors.ts (code fallback)"],
     codeRefs: [
-      ONB, SET, ADM_CONTACT, ADM_BASICS, PIPE, INV_ONB,
+      ONB, SET, ADM_CONTACT, ADM_BASICS, PIPE, INV_ONB, DIR, DIR_ADMIN,
       "src/components/events/EventRegistrationForm.tsx",
       "src/components/events/NetworkingOptIn.tsx",
       "src/components/admin-events/EventsManager.tsx",
@@ -133,7 +136,7 @@ export const FIELD_USAGE: FieldUsage[] = [
     screens: ["/founder/onboarding step 7", "/founder/settings", "/admin/sales/contacts/[id]", "/investor/onboarding preferred stages", "/founder/investor-pipeline (filter)"],
     stored: ["companies.funding_stage", "investor_profiles.preferred_stages"],
     saved: [...ROUTES_COMPANY, "PATCH /api/investor/onboarding"], read: ["investor-company-matching.ts · stage", "contact-match.ts · stage"],
-    optionList: ["FUNDING_STAGE_OPTIONS in profile/options.ts", "funding_stage list on this page (investor onboarding)"], codeRefs: [ONB, SET, PIPE, INV_ONB],
+    optionList: ["FUNDING_STAGE_OPTIONS in profile/options.ts", "funding_stage list on this page (investor onboarding)"], codeRefs: [ONB, SET, PIPE, INV_ONB, DIR, DIR_ADMIN],
   },
   {
     name: "Operating stage", list: "operating_stage", summary: "companies.operating_stage",
@@ -194,7 +197,7 @@ export const FIELD_USAGE: FieldUsage[] = [
     screens: ["/founder/onboarding step 7", "/founder/settings", "/admin/sales/contacts/[id]", "/investor/onboarding", "/founder/investor-pipeline (filter)"],
     stored: ["companies.seeking_investor_types", "investor_profiles.investor_type"], saved: [...ROUTES_COMPANY, "POST /api/investor/onboarding"],
     read: ["investor-company-matching.ts · investor type", "preference-match.ts"],
-    optionList: ["INVESTOR_TYPE_OPTIONS in profile/options.ts", "INVESTOR_TYPES in investor/types.ts (second list)"], codeRefs: [ONB, SET, PIPE],
+    optionList: ["INVESTOR_TYPE_OPTIONS in profile/options.ts", "INVESTOR_TYPES in investor/types.ts (second list)"], codeRefs: [ONB, SET, PIPE, DIR, DIR_ADMIN],
   },
   {
     name: "Capital type", list: "capital_type", summary: "companies.seeking_capital_types",
@@ -202,7 +205,7 @@ export const FIELD_USAGE: FieldUsage[] = [
     screens: ["/founder/onboarding step 7", "/founder/settings", "/admin/sales/contacts/[id]", "/investor/onboarding"],
     stored: ["companies.seeking_capital_types", "investor_profiles.capital_types"], saved: [...ROUTES_COMPANY, "PATCH /api/investor/onboarding"],
     read: ["investor-company-matching.ts · capital type", "matching/engine.ts · loads investor capital types"],
-    optionList: ["CAPITAL_TYPE_OPTIONS in profile/options.ts", "capital_type list on this page (investor onboarding)"], codeRefs: [ONB, SET, INV_ONB],
+    optionList: ["CAPITAL_TYPE_OPTIONS in profile/options.ts", "capital_type list on this page (investor onboarding)"], codeRefs: [ONB, SET, INV_ONB, DIR, DIR_ADMIN],
   },
   {
     name: "Geography", list: "geography", summary: "companies.country, state · investor preferred geographies",

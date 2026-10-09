@@ -71,6 +71,18 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/ir/import",   label: "Odoo import" },
         ],
       },
+      {
+        // Public investor data outside the iCFO network, which founders import into Manual outreach.
+        href: "/admin/investor-directory", label: "Investor Directory", requiredPermission: "view_admin_dashboard",
+        children: [
+          { href: "/admin/investor-directory",              label: "Overview"     },
+          { href: "/admin/investor-directory/records",      label: "Records"      },
+          { href: "/admin/investor-directory/imports",      label: "Imports"      },
+          { href: "/admin/investor-directory/verification", label: "Verification" },
+          { href: "/admin/investor-directory/access",       label: "Access"       },
+          { href: "/admin/investor-directory/usage",        label: "Usage"        },
+        ],
+      },
       { href: "/admin/social", label: "Social Media", requiredPermission: "view_admin_dashboard" },
       {
         href: "/admin/events",
@@ -316,6 +328,7 @@ export const founderWorkspaceNavSections: WorkspaceNavSection[] = [
         ],
       },
       // Outreach & planning relocated into Deploy → Outreach → Manual (single entry point).
+      { href: "/founder/investor-directory", label: "Investor directory", minStage: "deploy" },
       { href: "/events", label: "Events", minStage: "qualify" },
     ],
   },
@@ -449,6 +462,7 @@ export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
           { href: "/founder/contacts", label: "My contacts", minStage: "deploy" },
           { href: "/founder/matches", label: "Investor matches", minStage: "deploy" },
           { href: "/founder/deploy", label: "Outreach", minStage: "deploy" },
+          { href: "/founder/investor-directory", label: "Investor directory", minStage: "deploy" },
           { href: "/founder/investor-pipeline", label: "Investor CRM", minStage: "deploy" },
           { href: "/founder/events/present", label: "Present at event", minStage: "deploy" },
           { href: "/founder/private-market", label: "Marketplace", minStage: "deploy", requiresRegCf: true },

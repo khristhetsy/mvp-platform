@@ -11,7 +11,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
-  BookOpen, CalendarDays, ChevronDown, Contact, Crown, GraduationCap, Grip, Headset, Landmark, LayoutDashboard,
+  BookOpen, BookUser, CalendarDays, ChevronDown, Contact, Crown, GraduationCap, Grip, Headset, Landmark, LayoutDashboard,
   LifeBuoy, Lock, Mail, Megaphone, MessagesSquare, Settings, Share2, ShieldCheck, TrendingUp, Wrench, type LucideIcon,
 } from "lucide-react";
 import type { WorkspaceId } from "@/lib/workspace-nav";
@@ -45,6 +45,7 @@ export const TILE_ICONS: Record<string, LucideIcon> = {
   "/admin/manual": BookOpen,
   "/admin/users/manage": ShieldCheck,
   "/admin/integrations": Settings,
+  "/admin/investor-directory": BookUser,
 };
 
 /** A tile's colors, fixed per admin hub so they don't shift when someone can't see every hub. */

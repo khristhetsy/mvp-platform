@@ -14,6 +14,7 @@ const SOURCE_STYLE: Record<string, string> = {
   Introduced: "bg-emerald-50 text-emerald-700",
   Imported: "bg-indigo-50 text-indigo-700",
   "Added by you": "bg-slate-100 text-slate-600",
+  "From investor directory": "bg-violet-50 text-violet-700",
 };
 
 export function MyContactsPicker({
