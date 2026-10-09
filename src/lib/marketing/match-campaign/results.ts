@@ -7,7 +7,7 @@ import { marketingDb } from "@/lib/marketing/db";
 import { getMatchCampaign, listCampaignFounders, type CampaignFounderRow } from "./store";
 import type { FounderType } from "./types";
 
-const PAID_PLANS = ["founder_basic", "founder_professional", "founder_managed_ir"];
+const PAID_PLANS = ["founder_basic", "founder_professional", "founder_premium", "founder_managed_ir"];
 const DAY = 24 * 60 * 60 * 1000;
 
 function chunk<T>(items: readonly T[], size: number): T[][] {

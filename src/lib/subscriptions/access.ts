@@ -102,6 +102,7 @@ function featuresForPlan(planType: PlanType, subscription: SubscriptionRecord, _
   // difference is distribution, gated separately by founderEntitlements().
   if (
     planType === "founder_professional" ||
+    planType === "founder_premium" ||
     planType === "founder_managed_ir" ||
     planType === "founder_basic"
   ) {

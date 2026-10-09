@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   const { supabase, profile } = auth;
 
   const plan = await getUserPlan(profile.id);
-  if (plan !== "founder_basic" && plan !== "founder_professional") {
+  if (plan !== "founder_basic" && plan !== "founder_professional" && plan !== "founder_premium") {
     return NextResponse.json({ error: "The Valuation Studio is available on Basic and Professional plans." }, { status: 403 });
   }
 

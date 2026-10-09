@@ -3,6 +3,7 @@ export type PlanType =
   | "founder_trial"
   | "founder_basic"
   | "founder_professional"
+  | "founder_premium"
   | "founder_managed_ir"
   | "investor_free"
   | "investor_pro"
@@ -72,6 +73,7 @@ export const PLAN_LABELS: Record<PlanType, string> = {
   founder_trial: "Free (legacy)",
   founder_basic: "Basic",
   founder_professional: "Professional",
+  founder_premium: "Premium",
   founder_managed_ir: "SPV Program",
   investor_free: "Investor Free",
   investor_pro: "Investor Pro",
@@ -84,6 +86,7 @@ export const PLAN_PRICES: Record<PlanType, number> = {
   founder_trial: 0,
   founder_basic: 4900,
   founder_professional: 19900,
+  founder_premium: 100000,
   founder_managed_ir: 350000,
   investor_free: 0,
   investor_pro: 50000,
@@ -127,6 +130,19 @@ export type SignupPlanOption = {
   contactSales?: boolean;
 };
 
+/**
+ * Premium: done for you. Distribution limits match Professional (see
+ * founderEntitlements); what Premium adds is the iCFO team running the outreach.
+ */
+export const PREMIUM_TAGLINE = "Your raise, run by our team.";
+export const PREMIUM_FEATURES: string[] = [
+  "Everything in Professional",
+  "An iCFO team member manages your investor outreach",
+  "We find your best fits in our 7,000+ investor network",
+  "We make the introductions and follow up",
+  "You take the meetings and close",
+];
+
 // Free is NOT here. It was discontinued for new signups when Basic launched at
 // $49 (16 Sep 2026); existing accounts keep it via subscriptions.is_grandfathered.
 // Re-adding it here would auto-grant free accounts again — see isAutoGrantSignupPlan.
@@ -160,6 +176,14 @@ export const SIGNUP_FOUNDER_PLANS: SignupPlanOption[] = [
       "Up to 20 intro requests a month",
       "Self-serve, with a call available",
     ],
+  },
+  {
+    planType: "founder_premium",
+    title: "Premium",
+    priceLabel: "$1,000",
+    priceSubtext: "/month",
+    paidPlan: true,
+    features: PREMIUM_FEATURES,
   },
   {
     planType: "founder_managed_ir",
@@ -197,6 +221,7 @@ const SIGNUP_PLAN_TYPES = new Set<PlanType>([
   // re-open the discontinued tier.
   "founder_basic",
   "founder_professional",
+  "founder_premium",
   "investor_free",
 ]);
 

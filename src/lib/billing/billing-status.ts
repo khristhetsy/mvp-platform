@@ -36,14 +36,14 @@ export function getBillingLifecycleStatus(
     return "trial_active";
   }
 
-  if (subscription.plan_type === "founder_basic" || subscription.plan_type === "founder_professional") {
+  if (subscription.plan_type === "founder_basic" || subscription.plan_type === "founder_professional" || subscription.plan_type === "founder_premium") {
     if (subscription.subscription_status === "active") {
       return "paid_active";
     }
 
     if (
       requestedPlan &&
-      (requestedPlan === "founder_basic" || requestedPlan === "founder_professional") &&
+      (requestedPlan === "founder_basic" || requestedPlan === "founder_professional" || requestedPlan === "founder_premium") &&
       !isPaymentsEnabled()
     ) {
       return "paid_pending_activation";

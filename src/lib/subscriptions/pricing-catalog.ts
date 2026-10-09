@@ -18,7 +18,7 @@ import {
 } from "@/lib/subscriptions/plans";
 
 /** Plans that carry a price a human ever reads. */
-export const PRICED_PLANS = ["founder_free", "founder_basic", "founder_professional", "founder_managed_ir"] as const;
+export const PRICED_PLANS = ["founder_free", "founder_basic", "founder_professional", "founder_premium", "founder_managed_ir"] as const;
 export type PricedPlanKey = (typeof PRICED_PLANS)[number];
 
 export type PricedPlan = {
@@ -51,6 +51,7 @@ export const CODE_DEFAULT_PRICING: PricingCatalog = {
     founder_free: { cents: PLAN_PRICES.founder_free, label: "$0", sublabel: "Readiness" },
     founder_basic: { cents: PLAN_PRICES.founder_basic, sublabel: "/month" },
     founder_professional: { cents: PLAN_PRICES.founder_professional, sublabel: "/month" },
+    founder_premium: { cents: PLAN_PRICES.founder_premium, sublabel: "/month" },
     founder_managed_ir: { cents: PLAN_PRICES.founder_managed_ir, label: "Pricing on request", sublabel: "3-month minimum", contactSales: true },
   },
   addCompanyCents: ADDITIONAL_COMPANY_PRICE,
@@ -139,6 +140,7 @@ export const PLAN_SHORT: Record<string, string> = {
   founder_free: "Free",
   founder_basic: "Basic",
   founder_professional: "Professional",
+  founder_premium: "Premium",
   founder_managed_ir: "SPV Program",
   additional_company: "Additional company",
 };

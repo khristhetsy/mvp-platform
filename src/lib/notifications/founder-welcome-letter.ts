@@ -97,7 +97,7 @@ export function planFeatures(plan: PlanType, conn: FounderConnectionConfig): str
     );
   }
   if (ent.canBrokerIntros) {
-    const tier = plan === "founder_basic" ? "basic" : plan === "founder_professional" ? "professional" : null;
+    const tier = plan === "founder_basic" ? "basic" : plan === "founder_professional" || plan === "founder_premium" ? "professional" : null;
     if (tier) {
       const monthly = conn.monthlyByPlan[tier];
       const weekly = conn.weeklyByPlan?.[tier] ?? null;

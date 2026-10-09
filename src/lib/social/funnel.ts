@@ -33,7 +33,7 @@ export const STAGE_LABELS: Record<StageKey, string> = {
 };
 
 /** Paid plans that count toward attributed revenue (mirrors campaigns.ts). */
-const PAID_PLANS = new Set<PlanType>(["founder_basic", "founder_professional", "founder_managed_ir", "investor_pro", "investor_premium"]);
+const PAID_PLANS = new Set<PlanType>(["founder_basic", "founder_professional", "founder_premium", "founder_managed_ir", "investor_pro", "investor_premium"]);
 
 // ── Period math (pure) ───────────────────────────────────────────────────────────
 

@@ -50,6 +50,7 @@ export async function providerPrices(catalog: PricingCatalog): Promise<ProviderP
   const variants: Partial<Record<PricedPlanKey, string | undefined>> = {
     founder_basic: process.env.LEMONSQUEEZY_VARIANT_ID_BASIC,
     founder_professional: process.env.LEMONSQUEEZY_VARIANT_ID_PROFESSIONAL,
+    founder_premium: process.env.LEMONSQUEEZY_VARIANT_ID_PREMIUM,
   };
   return Promise.all(
     PRICED_PLANS.map(async (plan) => {

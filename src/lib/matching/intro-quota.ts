@@ -67,7 +67,8 @@ export async function loadIntroQuota(
   input: { companyId: string; founderId: string; plan: PlanType | null | undefined },
 ): Promise<IntroQuota> {
   const cfg = await getFounderConnectionConfig();
-  const isProfessional = input.plan === "founder_professional";
+  // Premium uses Professional's limits.
+  const isProfessional = input.plan === "founder_professional" || input.plan === "founder_premium";
   const monthCap = isProfessional ? cfg.monthlyByPlan.professional : cfg.monthlyByPlan.basic;
   const weekCap = cfg.weeklyByPlan ? (isProfessional ? cfg.weeklyByPlan.professional : cfg.weeklyByPlan.basic) : null;
   const period = await founderCapPeriod(admin, input.founderId);

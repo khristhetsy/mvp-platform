@@ -64,7 +64,7 @@ async function trialConversion(): Promise<IrMetric> {
   const { data } = await db().from("subscriptions").select("plan_type, subscription_status, trial_started_at, current_period_start");
   const rows = (data ?? []) as Array<{ plan_type: string | null; subscription_status: string | null; trial_started_at: string | null; current_period_start: string | null }>;
   const trials = rows.filter((r) => r.trial_started_at);
-  const paidPlans = new Set(["founder_basic", "founder_professional"]);
+  const paidPlans = new Set(["founder_basic", "founder_professional", "founder_premium"]);
   const converted = trials.filter((r) => r.plan_type && paidPlans.has(r.plan_type));
   const rate = pct(converted.length, trials.length);
   const days = converted.map((r) => (r.current_period_start && r.trial_started_at ? (Date.parse(r.current_period_start) - Date.parse(r.trial_started_at)) / 86400000 : NaN)).filter((n) => Number.isFinite(n) && n >= 0).sort((a, b) => a - b);

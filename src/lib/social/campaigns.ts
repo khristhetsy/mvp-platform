@@ -25,7 +25,7 @@ export type CampaignReport = Campaign & {
 };
 
 /** Paid plans that count toward attributed revenue (exclude free/trial/internal). */
-const PAID_PLANS = new Set<PlanType>(["founder_basic", "founder_professional", "founder_managed_ir", "investor_pro", "investor_premium"]);
+const PAID_PLANS = new Set<PlanType>(["founder_basic", "founder_professional", "founder_premium", "founder_managed_ir", "investor_pro", "investor_premium"]);
 
 /** Short, URL-safe attribution tag derived from a fresh id. `prefix` marks the channel
  *  for attribution ("rd" for Reddit campaigns); everything else stays "camp". */

@@ -57,7 +57,8 @@ function db(): any {
 
 /** The plan-derived monthly cap before any per-founder override. */
 export function planMonthlyCap(plan: PlanType | null, automation: AutomationConfig): number {
-  if (plan === "founder_professional") return automation.monthlyByPlan.professional;
+  // Premium uses Professional's cap.
+  if (plan === "founder_professional" || plan === "founder_premium") return automation.monthlyByPlan.professional;
   // basic, trial, and anything else fall to the basic tier cap.
   return automation.monthlyByPlan.basic;
 }

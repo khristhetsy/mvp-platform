@@ -11,6 +11,7 @@ import type { PlanType } from "@/lib/subscriptions/plans";
 const PLAN_TO_VARIANT: Partial<Record<PlanType, string>> = {
   founder_basic: LS_VARIANT_IDS.founder_basic,
   founder_professional: LS_VARIANT_IDS.founder_professional,
+  founder_premium: LS_VARIANT_IDS.founder_premium,
 };
 
 export async function POST(req: NextRequest): Promise<NextResponse> {

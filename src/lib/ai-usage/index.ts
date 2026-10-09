@@ -52,6 +52,7 @@ export function planBucket(plan: PlanType | null | undefined): LimitPlan {
     case "founder_basic":
       return "founder_basic";
     case "founder_professional":
+    case "founder_premium": // Premium uses Professional's caps
       return "founder_professional";
     case "founder_managed_ir":
     case "admin_internal":
