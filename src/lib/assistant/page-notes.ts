@@ -35,7 +35,7 @@ export const PAGE_NOTES: Record<string, string> = {
   "/founder/reg-cf": "Reg CF materials: materials for founders running a Reg CF offering.",
   "/founder/matching": "Matching Center: investor contacts across the iCapOS network ranked by fit. Identities stay private until an introduction is made.",
   "/founder/contacts": "My contacts: the founder's own investors, imported, introduced by iCapOS, or added by hand.",
-  "/founder/investor-directory": "Investor directory: public investor data outside the iCFO network. Search, select and import investors into Manual outreach; plans set how many directory contacts the founder can hold.",
+  "/founder/investor-directory": "Investor directory: public investor data, not the iCFO Capital investor network. Search, select and import investors into Manual outreach. Each plan includes directory contacts and Manual outreach emails per 30 days (Basic 500 and 1,000, Professional 10,000 and 20,000, Premium 20,000 and 40,000); top ups add more.",
   "/founder/investors": "Investors: the founder's investor overview.",
   "/founder/investors/matches": "Matches: investors matched to the company.",
   "/founder/investors/outreach": "Outreach (CRM): the founder's investor outreach records.",

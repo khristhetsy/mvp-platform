@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Founder › Investor directory. Search public investor data (outside the iCFO
+ * Founder › Investor directory. Search public investor data (not the iCFO Capital
  * network), select rows, import them into Manual outreach. Same toolbar as the
  * other founder lists (FounderToolbar over the Odoo search bar), the Odoo pager,
  * and the selection bar. The search runs on the server.
@@ -15,7 +15,7 @@ import { FounderToolbar } from "@/components/founder/FounderToolbar";
 import { EMPTY_SEARCH, type SearchState } from "@/components/admin/OdooSearchBar";
 import { OdooPager } from "@/components/admin/OdooPager";
 import { useVocabulary } from "@/lib/vocabulary/provider";
-import { DIRECTORY_DISCLAIMER, type DirectoryTier, type FounderDirectoryAccess } from "@/lib/investor-directory/types";
+import { DIRECTORY_DISCLAIMER, NOT_NETWORK_NOTE, type DirectoryTier, type FounderDirectoryAccess } from "@/lib/investor-directory/types";
 import { fmtPT, money } from "@/lib/investor-directory/format";
 
 type Row = {
@@ -119,7 +119,9 @@ export function InvestorDirectoryClient() {
 
   const access = data?.access;
   const tier = access?.tier;
-  const browseOnly = !tier || tier.hold_limit <= 0;
+  const limits = access?.limits;
+  const contactLimit = limits?.contacts ?? 0;
+  const browseOnly = !access || contactLimit <= 0;
   const selectable = useMemo(() => (data?.rows ?? []).filter((r) => !r.held), [data]);
 
   async function doImport(termsJustAccepted = false) {
@@ -140,7 +142,7 @@ export function InvestorDirectoryClient() {
         return;
       }
       const parts = [`${body.imported} investor${body.imported === 1 ? "" : "s"} added to Manual outreach under "From investor directory".`];
-      if (body.trimmedBy === "hold_limit") parts.push("The rest didn't fit your plan's contact space.");
+      if (body.trimmedBy === "hold_limit") parts.push("The rest didn't fit your contact limit.");
       if (body.trimmedBy === "daily_cap") parts.push(`The rest are over today's limit of ${data.settings.daily_cap.toLocaleString("en-US")}.`);
       if (body.alreadyHeld) parts.push(`${body.alreadyHeld} were already in your list.`);
       setNotice({ text: parts.join(" ") });
@@ -177,7 +179,13 @@ export function InvestorDirectoryClient() {
   const pageSize = data?.pageSize ?? 80;
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(total, page * pageSize);
-  const heldPct = tier && tier.hold_limit > 0 ? Math.min(100, Math.round(((access?.held ?? 0) / tier.hold_limit) * 100)) : 0;
+  const n = (v: number) => v.toLocaleString("en-US");
+  const pct = (used: number, of: number) => (of > 0 ? Math.min(100, Math.round((used / of) * 100)) : 0);
+  const heldPct = pct(access?.held ?? 0, contactLimit);
+  const emailPct = limits ? pct(limits.emailsUsed, limits.emails) : 0;
+  const emailsLeft = limits ? Math.max(0, limits.emails - limits.emailsUsed) : 0;
+  const resets = limits ? new Date(limits.periodEnd).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "America/Los_Angeles" }) : "";
+  const planLine = limits ? `${limits.planLabel} plan${tier && tier.key !== "free" ? ` + ${tier.label.replace(/^Directory /, "")}` : ""}` : "";
 
   return (
     <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
@@ -219,29 +227,48 @@ export function InvestorDirectoryClient() {
         />
       </div>
 
-      {access ? (
-        <div className="mx-3 mt-3 rounded-lg bg-slate-50 px-3 py-2.5">
-          {browseOnly ? (
-            <div className="flex flex-wrap items-center gap-2 text-[12.5px]">
-              <span className="text-slate-600">Your plan lets you browse the directory. Holding directory contacts needs a directory plan.</span>
-              <button type="button" onClick={() => setUpgrade(true)} className="ml-auto rounded-lg bg-[#1A6CE4] px-3 py-1 text-[12px] font-semibold text-white hover:bg-[#2E78F5]">See plans</button>
-            </div>
-          ) : (
-            <>
+      <div className="mx-3 mt-3 rounded-lg border border-[#F3DDB3] bg-[#FFF8EC] px-3 py-2 text-[12px] text-[#633806]">
+        <b>Not the iCFO Capital investor network.</b> These investors come from public records. iCFO Capital has no relationship with them and does not introduce you. For warm introductions from our network, use Match.
+      </div>
+
+      {access && limits ? (
+        browseOnly ? (
+          <div className="mx-3 mt-3 flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 px-3 py-2.5 text-[12.5px]">
+            <span className="text-slate-600">Your plan lets you browse the directory. Basic and up include directory contacts and Manual outreach emails.</span>
+            <Link href="/upgrade" className="ml-auto rounded-lg bg-[#1A6CE4] px-3 py-1 text-[12px] font-semibold text-white hover:bg-[#2E78F5]">See plans</Link>
+          </div>
+        ) : (
+          <div className="mx-3 mt-3 grid gap-2 sm:grid-cols-3">
+            <div className="rounded-lg bg-slate-50 px-3 py-2.5">
               <div className="flex justify-between text-[12px]">
-                <span className="text-slate-500">Contacts held</span>
-                <span className="text-slate-800">{access.held.toLocaleString("en-US")} of {tier!.hold_limit.toLocaleString("en-US")}</span>
+                <span className="text-slate-500">Directory contacts</span>
+                <span className="text-slate-800">{n(access.held)} of {n(contactLimit)}</span>
+              </div>
+              <div className="mt-1.5 h-1.5 rounded-full bg-white"><div className="h-1.5 rounded-full bg-[#1A6CE4]" style={{ width: `${heldPct}%` }} /></div>
+              <div className="mt-1 text-[11.5px] text-slate-500">
+                {planLine} · {n(Math.max(0, contactLimit - access.held))} left
+                {access.status !== "active" ? ` · ${access.status === "paused" ? "Imports paused" : "Access suspended"}` : ""}
+              </div>
+            </div>
+            <div className="rounded-lg bg-slate-50 px-3 py-2.5">
+              <div className="flex justify-between text-[12px]">
+                <span className="text-slate-500">Manual outreach emails</span>
+                <span className="text-slate-800">{n(limits.emailsUsed)} of {n(limits.emails)}</span>
               </div>
               <div className="mt-1.5 h-1.5 rounded-full bg-white">
-                <div className="h-1.5 rounded-full bg-[#1A6CE4]" style={{ width: `${heldPct}%` }} />
+                <div className={`h-1.5 rounded-full ${emailPct >= 100 ? "bg-[#A32D2D]" : emailPct >= 80 ? "bg-[#B7791F]" : "bg-[#1A6CE4]"}`} style={{ width: `${emailPct}%` }} />
               </div>
-              <div className="mt-1 flex items-center text-[11.5px] text-slate-500">
-                <span>{tier!.label}{access.status !== "active" ? ` · ${access.status === "paused" ? "Imports paused" : "Access suspended"}` : ""}</span>
-                <button type="button" onClick={() => setUpgrade(true)} className="ml-auto text-[#1A6CE4]">More space</button>
+              <div className={`mt-1 text-[11.5px] ${emailPct >= 80 ? "text-[#8A5300]" : "text-slate-500"}`}>{n(emailsLeft)} left · resets {resets} PT</div>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2.5">
+              <div className="min-w-0 flex-1">
+                <div className="text-[12.5px] font-medium text-slate-800">Need more?</div>
+                <div className="text-[11.5px] text-slate-500">A top up adds contacts and emails</div>
               </div>
-            </>
-          )}
-        </div>
+              <button type="button" onClick={() => setUpgrade(true)} className="rounded-lg bg-[#1A6CE4] px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-[#2E78F5]">Top ups</button>
+            </div>
+          </div>
+        )
       ) : null}
 
       {selected.size > 0 ? (
@@ -361,8 +388,8 @@ function TermsDialog({ onClose, onAccept, onAccepted }: Readonly<{ onClose: () =
         <p className="mb-2 text-slate-600">You may not sell, share, publish, or transfer directory data, in whole or in part, to anyone outside your account. That includes exporting it into lists, databases, or tools used by others.</p>
         <p className="font-semibold">Respectful outreach</p>
         <p className="mb-2 text-slate-600">Contact investors one to one about your raise. Honor every request to stop. Bulk or automated mailing outside iCapOS isn&apos;t allowed.</p>
-        <p className="font-semibold">Outside the iCFO network</p>
-        <p className="mb-2 text-slate-600">This data comes from public sources. iCFO has no relationship with these investors and doesn&apos;t guarantee accuracy. iCFO does not solicit securities and is not an investment adviser. Content is for educational purposes only.</p>
+        <p className="font-semibold">Not the iCFO Capital investor network</p>
+        <p className="mb-2 text-slate-600">This data comes from public sources. iCFO Capital has no relationship with these investors, does not introduce you to them, and doesn&apos;t guarantee accuracy. iCFO Capital does not solicit securities and is not an investment adviser. Content is for educational purposes only.</p>
         <p className="font-semibold">Monitoring and enforcement</p>
         <p className="mb-3 text-slate-600">iCFO monitors imports and sends. Misuse can lead to paused imports, suspended access, or account termination without refund.</p>
         <label className="flex items-start gap-2">
@@ -389,16 +416,17 @@ function UpgradeDialog({ tiers, current, onClose }: Readonly<{ tiers: DirectoryT
     setSent(key);
   }
   return (
-    <div role="dialog" aria-modal="true" aria-label="Directory plans" className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4" onClick={onClose}>
+    <div role="dialog" aria-modal="true" aria-label="Directory top ups" className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4" onClick={onClose}>
       <div className="w-full max-w-md rounded-xl bg-white p-5 text-[13px]" onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-[16px] font-semibold text-slate-900">Directory contact space</h2>
-        <p className="mt-1 text-slate-600">Plans set how many directory contacts you can hold in your outreach at once. Browsing stays free.</p>
+        <h2 className="text-[16px] font-semibold text-slate-900">Top ups</h2>
+        <p className="mt-1 text-slate-600">Your plan includes directory contacts and Manual outreach emails. A top up adds more on top of the plan.</p>
+        <p className="mt-1 text-[12px] text-[#8A5300]">{NOT_NETWORK_NOTE}.</p>
         <div className="mt-3 space-y-2">
-          {tiers.map((t) => (
+          {tiers.filter((t) => t.key !== "free").map((t) => (
             <div key={t.key} className={`flex items-center gap-3 rounded-lg border px-3 py-2 ${t.key === current ? "border-[#378ADD] bg-[#E6F1FB]" : "border-slate-200"}`}>
               <div className="min-w-0 flex-1">
                 <div className="font-medium text-slate-900">{t.label}</div>
-                <div className="text-[12px] text-slate-500">Hold up to {t.hold_limit.toLocaleString("en-US")} contacts{t.can_export ? " · export included" : ""}</div>
+                <div className="text-[12px] text-slate-500">+{t.hold_limit.toLocaleString("en-US")} public directory contacts and +{(t.email_limit ?? 0).toLocaleString("en-US")} emails{t.can_export ? " · export included" : ""}</div>
               </div>
               {t.price_cents !== null ? <span className="text-[12.5px] text-slate-700">${(t.price_cents / 100).toLocaleString("en-US")}/mo</span> : null}
               {t.key === current ? <span className="text-[12px] text-[#0C447C]">Current</span>
@@ -407,7 +435,8 @@ function UpgradeDialog({ tiers, current, onClose }: Readonly<{ tiers: DirectoryT
             </div>
           ))}
         </div>
-        {sent ? <p className="mt-3 text-[#27500A]">Request sent. iCFO will confirm your plan by email.</p> : null}
+        {sent ? <p className="mt-3 text-[#27500A]">Request sent. iCFO Capital will confirm your top up by email.</p> : null}
+        <p className="mt-3 text-[12px] text-slate-500">Need more than a top up? <Link href="/upgrade" className="text-[#1A6CE4]">Compare plans</Link>.</p>
         {error ? <p className="mt-3 text-[#A32D2D]">{error}</p> : null}
         <div className="mt-4 flex justify-end"><button type="button" onClick={onClose} className="rounded-lg border border-slate-300 px-3 py-1.5 text-[12.5px]">Close</button></div>
       </div>

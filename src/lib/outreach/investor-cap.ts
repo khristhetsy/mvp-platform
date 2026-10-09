@@ -8,6 +8,9 @@
  * One allowance is shared by DIY outreach (counted when an investor is first
  * enrolled) and automated outreach (counted when the one-pager is sent), keyed
  * by investor email, so the same investor reached both ways counts once.
+ *
+ * Contacts imported from the public investor directory (directory_id set) are
+ * exempt: the plan's Manual outreach email cap limits them instead.
  */
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
@@ -62,7 +65,23 @@ function investorKey(email: string | null | undefined, fallback: string): string
   return e ? `e:${e}` : `r:${fallback}`;
 }
 
-/** Investors this company reached since `start`, across DIY and automated outreach. */
+/** Of these contact ids, the ones imported from the investor directory. */
+export async function directoryContactIds(db: Db, companyId: string, contactIds: readonly string[]): Promise<Set<string>> {
+  const out = new Set<string>();
+  const ids = [...new Set(contactIds)];
+  for (let i = 0; i < ids.length; i += 300) {
+    const { data } = await db
+      .from("founder_investor_contacts")
+      .select("id")
+      .eq("company_id", companyId)
+      .in("id", ids.slice(i, i + 300))
+      .not("directory_id", "is", null);
+    for (const r of (data ?? []) as Array<{ id: string }>) out.add(r.id);
+  }
+  return out;
+}
+
+/** Investors this company reached since `start`, across DIY and automated outreach. Directory contacts excluded. */
 export async function reachedInPeriod(db: Db, companyId: string, start: Date): Promise<Set<string>> {
   const since = start.toISOString();
   const [{ data: diy }, { data: campaigns }] = await Promise.all([
@@ -70,7 +89,12 @@ export async function reachedInPeriod(db: Db, companyId: string, start: Date): P
     db.from("investor_outreach_campaigns").select("id").eq("company_id", companyId),
   ]);
   const keys = new Set<string>();
-  for (const r of (diy ?? []) as Array<{ contact_id: string; email: string | null }>) keys.add(investorKey(r.email, `diy:${r.contact_id}`));
+  const diyRows = (diy ?? []) as Array<{ contact_id: string; email: string | null }>;
+  const exempt = await directoryContactIds(db, companyId, diyRows.map((r) => r.contact_id));
+  for (const r of diyRows) {
+    if (exempt.has(r.contact_id)) continue;
+    keys.add(investorKey(r.email, `diy:${r.contact_id}`));
+  }
   const ids = ((campaigns ?? []) as Array<{ id: string }>).map((c) => c.id);
   if (ids.length) {
     const { data: sent } = await db
@@ -129,11 +153,11 @@ export async function checkManualOutreachCap(input: {
   if (selected.length) {
     const [{ data: enrolled }, { data: contacts }] = await Promise.all([
       db.from("founder_manual_outreach_recipients").select("contact_id").eq("company_id", input.companyId).in("contact_id", selected),
-      db.from("founder_investor_contacts").select("id, email").eq("company_id", input.companyId).in("id", selected),
+      db.from("founder_investor_contacts").select("id, email, directory_id").eq("company_id", input.companyId).in("id", selected),
     ]);
     const already = new Set(((enrolled ?? []) as Array<{ contact_id: string }>).map((r) => r.contact_id));
-    adding = ((contacts ?? []) as Array<{ id: string; email: string | null }>).filter(
-      (c) => !already.has(c.id) && c.email && c.email.trim() && !reached.has(investorKey(c.email, "")),
+    adding = ((contacts ?? []) as Array<{ id: string; email: string | null; directory_id: string | null }>).filter(
+      (c) => !c.directory_id && !already.has(c.id) && c.email && c.email.trim() && !reached.has(investorKey(c.email, "")),
     ).length;
   }
   return decideCap(cap, used, adding, period.end);

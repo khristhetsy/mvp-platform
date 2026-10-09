@@ -141,6 +141,8 @@ export const PREMIUM_FEATURES: string[] = [
   "We find your best fits in our 7,000+ investor network",
   "We make the introductions and follow up",
   "You take the meetings and close",
+  "Up to 20,000 public directory investors as the directory grows, not the iCFO Capital investor network",
+  "40,000 Manual outreach emails a month",
 ];
 
 // Free is NOT here. It was discontinued for new signups when Basic launched at
@@ -159,6 +161,8 @@ export const SIGNUP_FOUNDER_PLANS: SignupPlanOption[] = [
       "Attend the Investor Conference Virtual Event",
       "DIY outreach unlocked — you can now reach investors",
       "Up to 5 intro requests a month, through iCFO",
+      "500 investors from the public investor directory, not the iCFO Capital investor network",
+      "1,000 Manual outreach emails a month",
       "Fully self-serve",
     ],
   },
@@ -174,6 +178,8 @@ export const SIGNUP_FOUNDER_PLANS: SignupPlanOption[] = [
       "Up to 50 investors",
       "Monthly live presentation slot",
       "Up to 20 intro requests a month",
+      "Up to 10,000 public directory investors as the directory grows, not the iCFO Capital investor network",
+      "20,000 Manual outreach emails a month",
       "Self-serve, with a call available",
     ],
   },

@@ -17,3 +17,8 @@ export function money(n: number | null | undefined): string {
 }
 
 export type Tone = "ok" | "warn" | "bad" | "info" | "pro" | "mute";
+
+/** "Basic +1k" from the plan label and the top up label. */
+export function planLabel(plan: string, topUp: string): string {
+  return topUp && topUp !== "No top up" && topUp !== "Free" ? `${plan} ${topUp.replace(/^Directory /, "")}` : plan;
+}

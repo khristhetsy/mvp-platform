@@ -7,6 +7,9 @@ import { renderManualEmail } from "@/lib/outreach/manual-template";
 import { notifyManualOutreachSent, type ManualSend } from "@/lib/outreach/outreach-notify";
 import { normalizeAttachments, withOnePagerLink, type ManualAttachments } from "@/lib/outreach/manual-attachments";
 import { buildManualAttachments, type BuiltAttachment } from "@/lib/outreach/manual-attachments.server";
+import { recordManualSend } from "@/lib/outreach/email-cap";
+import { founderLimits } from "@/lib/investor-directory/db";
+import { sendBudget } from "@/lib/investor-directory/allowance";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -279,10 +282,11 @@ export async function processManualOutreach(): Promise<{ sent: number; liveSend:
 
     const { data: companyRow } = await db
       .from("companies")
-      .select("company_name, industry, slug, is_published")
+      .select("company_name, industry, slug, is_published, founder_id")
       .eq("id", campaign.company_id)
       .maybeSingle();
     const comp = (companyRow ?? {}) as {
+      founder_id?: string | null;
       company_name?: string;
       industry?: string | null;
       slug?: string | null;
@@ -306,6 +310,19 @@ export async function processManualOutreach(): Promise<{ sent: number; liveSend:
     const bodyTemplate = withOnePagerLink(campaign.email_body ?? "", att);
     let built: BuiltAttachment[] | null = null;
 
+    // Plan email cap: how many emails this founder may still send this period.
+    // At 0 the remaining due steps stay queued and go out after the reset.
+    // Only live sends count; null = couldn't load the limits, so don't block.
+    let budget: number | null = null;
+    if (live && comp.founder_id) {
+      try {
+        const limits = await founderLimits(comp.founder_id);
+        budget = sendBudget(limits.emails, limits.emailsUsed);
+      } catch {
+        budget = null;
+      }
+    }
+
     // Suppression check (CAN-SPAM): never email an unsubscribed address.
     const suppressed = await filterUnsubscribed(batch.map((r) => r.email));
     const now = Date.now();
@@ -313,6 +330,7 @@ export async function processManualOutreach(): Promise<{ sent: number; liveSend:
     const sentForFounder: ManualSend[] = [];
 
     for (const r of batch) {
+      if (budget !== null && budget <= 0) break;
       const stepIndex = r.next_step_index;
       if (stepIndex >= steps.length) {
         await db.from("founder_manual_outreach_recipients").update({ status: "completed" }).eq("id", r.id);
@@ -378,6 +396,8 @@ export async function processManualOutreach(): Promise<{ sent: number; liveSend:
       });
       if (ok) {
         sent += 1;
+        if (budget !== null) budget -= 1;
+        await recordManualSend({ founderId: comp.founder_id ?? null, companyId: campaign.company_id, recipientId: r.id, email: r.email, stepIndex });
         sentForFounder.push({ name: r.name?.trim() || r.email, stepLabel: step.label, stepIndex });
       } else {
         // Revert the claim so the step retries on the next pass.
