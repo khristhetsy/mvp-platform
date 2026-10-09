@@ -206,7 +206,7 @@ export async function getInvoiceDetail(id: string, client: Db = db()): Promise<I
       ? client.from("acct_invoices").select("id, invoice_number, issue_date, due_date, total_cents, amount_paid_cents, status, series_index").eq("series_id", invoice.series_id).order("series_index")
       : Promise.resolve({ data: [] }),
     invoice.status === "sent" && due > 0
-      ? client.from("acct_bank_transactions").select(TX_COLS).eq("status", "review").eq("amount_cents", due).order("posted_on", { ascending: false }).limit(5)
+      ? bankCandidatesFor(invoice, due, client)
       : Promise.resolve({ data: [] }),
   ]);
   return {
@@ -219,6 +219,21 @@ export async function getInvoiceDetail(id: string, client: Db = db()): Promise<I
     payUrl: invoice.status === "sent" || invoice.status === "paid" ? absoluteUrl(payPagePath(invoice)) : null,
     clientReportedAt: await clientReportedAt(id, client),
   };
+}
+
+/**
+ * Deposits that could pay this invoice: waiting for review, exactly the
+ * balance due, into an account of the company that billed it, and dated on or
+ * after the issue date (so older transfers between iCFO accounts never show).
+ */
+async function bankCandidatesFor(invoice: Invoice, due: number, client: Db): Promise<{ data: BankTransaction[] }> {
+  const { data: accts } = await client.from("acct_bank_accounts").select("id").eq("entity", invoice.entity);
+  const ids = ((accts ?? []) as Array<{ id: string }>).map((a) => a.id);
+  if (ids.length === 0) return { data: [] };
+  const { data } = await client.from("acct_bank_transactions").select(TX_COLS)
+    .in("account_id", ids).eq("status", "review").eq("amount_cents", due).gte("posted_on", invoice.issue_date)
+    .order("posted_on", { ascending: false }).limit(5);
+  return { data: (data ?? []) as BankTransaction[] };
 }
 
 /**
@@ -707,9 +722,10 @@ async function autoMatchDeposits(accountIds: string[], client: Db, errors: strin
   const deposits = (data ?? []) as BankTransaction[];
   if (deposits.length === 0) return 0;
   let open = await openInvoiceCandidates(client);
+  const acctEntity = await accountEntities(client);
   let matched = 0;
   for (const tx of deposits) {
-    const hit = autoMatch({ ...tx, amount_cents: Number(tx.amount_cents) }, open);
+    const hit = autoMatch({ ...tx, amount_cents: Number(tx.amount_cents), entity: acctEntity.get(tx.account_id) ?? null }, open);
     if (!hit) continue;
     try {
       await decideTransaction(tx.id, { action: "match", invoice_id: hit.id, send_receipt: true }, null, client);
@@ -804,7 +820,8 @@ export async function listBank(opts: { status?: string } = {}, client: Db = db()
   const matchedMap = new Map(((matched ?? []) as Array<{ id: string; invoice_number: string }>).map((m) => [m.id, m.invoice_number]));
 
   const transactions = txs.map((t) => {
-    const s = t.status === "review" ? suggestMatch(t, open) : null;
+    const entity = accounts.find((a) => a.id === t.account_id)?.entity ?? null;
+    const s = t.status === "review" ? suggestMatch({ ...t, amount_cents: Number(t.amount_cents), entity }, open) : null;
     return {
       ...t,
       amount_cents: Number(t.amount_cents),
@@ -816,8 +833,14 @@ export async function listBank(opts: { status?: string } = {}, client: Db = db()
   return { items: (itemsRes.data ?? []) as BankItemRow[], accounts, transactions, counts };
 }
 
+/** Which company each bank account belongs to (account id to entity). */
+async function accountEntities(client: Db): Promise<Map<string, EntityId>> {
+  const { data } = await client.from("acct_bank_accounts").select("id, entity");
+  return new Map(((data ?? []) as Array<{ id: string; entity: EntityId }>).map((a) => [a.id, a.entity]));
+}
+
 async function openInvoiceCandidates(client: Db): Promise<MatchCandidate[]> {
-  const { data } = await client.from("acct_invoices").select("id, invoice_number, customer_id, status, due_date, total_cents, amount_paid_cents").eq("status", "sent").limit(1000);
+  const { data } = await client.from("acct_invoices").select("id, entity, invoice_number, customer_id, status, issue_date, due_date, total_cents, amount_paid_cents").eq("status", "sent").limit(1000);
   const rows = (data ?? []) as MatchCandidate[];
   const ids = [...new Set(rows.map((r) => r.customer_id))];
   const { data: cs } = ids.length ? await client.from("acct_customers").select("id, company, contact_name").in("id", ids) : { data: [] };

@@ -204,7 +204,7 @@ export function InvoiceRecordClient({
           {canPay ? (
             <Section title="Bank match" icon="ti-building-bank">
               {bankCandidates.length === 0 ? (
-                <p className="px-4 py-3 text-[12.5px] text-slate-500">No deposit of {money(due)} waiting in Bank yet. New Bank of America transactions arrive daily.</p>
+                <p className="px-4 py-3 text-[12.5px] text-slate-500">No deposit of {money(due)} into an {entityName(invoice.entity)} account since {fmtDate(invoice.issue_date)} yet. New Bank of America transactions arrive daily.</p>
               ) : bankCandidates.map((t) => (
                 <div key={t.id} className="border-t border-slate-100 px-4 py-2.5 text-[12.5px] first:border-t-0">
                   <div className="text-slate-800">Deposit {fmtDate(t.posted_on)} · {money(Number(t.amount_cents))}</div>

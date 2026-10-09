@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   addMonthsDate, agingBucket, agingReport, balanceDue, displayStatus, parseBankCsv, parseMoneyToCents,
-  autoMatch, parseOfx, payPagePath, plaidAmountToCents, seriesDates, seriesLineLabel, suggestMatch, todayPT, type MatchCandidate,
+  autoMatch, canPay, parseOfx, payPagePath, plaidAmountToCents, seriesDates, seriesLineLabel, suggestMatch, todayPT, type MatchCandidate,
 } from "@/lib/accounting/core";
 
 const inv = (over: Partial<MatchCandidate> = {}): MatchCandidate => ({
@@ -76,6 +76,16 @@ describe("bank matching", () => {
     expect(autoMatch({ amount_cents: 200000, description: "ACH CREDIT CENNA BIOSCIENCES", merchant: null }, list)).toBeNull();
     expect(autoMatch({ amount_cents: 150000, description: "INV-2026-0002", merchant: null }, list)).toBeNull();
     expect(autoMatch({ amount_cents: 200000, description: "INV-2026-0002", merchant: null }, [inv({ status: "paid" })])).toBeNull();
+  });
+  it("only offers deposits into the billing company's account, on or after the issue date", () => {
+    const ivg = inv({ entity: "icfo_venture_group", issue_date: "2026-10-09", invoice_number: "IVG-2026-0002" });
+    const transfer = { amount_cents: 200000, description: "Online Banking transfer from CHK 2522", merchant: null };
+    expect(canPay({ ...transfer, posted_on: "2026-07-27", entity: "icfo_venture_group" }, ivg)).toBe(false);
+    expect(canPay({ ...transfer, posted_on: "2026-10-12", entity: "icfo_capital_global" }, ivg)).toBe(false);
+    expect(canPay({ ...transfer, posted_on: "2026-10-12", entity: "icfo_venture_group" }, ivg)).toBe(true);
+    expect(suggestMatch({ ...transfer, posted_on: "2026-07-27", entity: "icfo_capital_global" }, [ivg])).toBeNull();
+    expect(autoMatch({ amount_cents: 200000, description: "ACH IVG-2026-0002", merchant: null, posted_on: "2026-10-12", entity: "icfo_capital_global" }, [ivg])).toBeNull();
+    expect(autoMatch({ amount_cents: 200000, description: "ACH IVG-2026-0002", merchant: null, posted_on: "2026-10-12", entity: "icfo_venture_group" }, [ivg])?.id).toBe("a");
   });
   it("builds the pay page link from the number and token", () => {
     expect(payPagePath({ invoice_number: "INV-2026-0001", public_token: "abc" })).toBe("/pay/inv-2026-0001?t=abc");
