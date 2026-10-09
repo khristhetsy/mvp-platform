@@ -338,7 +338,22 @@ function compact(s: string): string {
   return s.toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
 
-export type MatchCandidate = Pick<Invoice, "id" | "invoice_number" | "customer_id" | "status" | "due_date" | "total_cents" | "amount_paid_cents"> & { customerLabel?: string | null };
+export type MatchCandidate = Pick<Invoice, "id" | "invoice_number" | "customer_id" | "status" | "due_date" | "total_cents" | "amount_paid_cents">
+  & Partial<Pick<Invoice, "entity" | "issue_date">> & { customerLabel?: string | null };
+
+/** The deposit side of a match. posted_on and entity (the receiving account's company) narrow the candidates when known. */
+export type MatchDeposit = Pick<BankTransaction, "amount_cents" | "description" | "merchant"> & { posted_on?: string; entity?: EntityId | null };
+
+/**
+ * An invoice can only be paid by a deposit into an account of the company that
+ * billed it, dated on or after the invoice was issued. Older deposits and
+ * transfers into another company's account are never offered.
+ */
+export function canPay(tx: MatchDeposit, inv: MatchCandidate): boolean {
+  if (tx.entity && inv.entity && tx.entity !== inv.entity) return false;
+  if (tx.posted_on && inv.issue_date && tx.posted_on < inv.issue_date) return false;
+  return true;
+}
 
 /**
  * The open invoice a deposit most likely pays. Only money in is matched, and
@@ -347,12 +362,12 @@ export type MatchCandidate = Pick<Invoice, "id" | "invoice_number" | "customer_i
  * Returns null when the choice is not clear, so a person decides.
  */
 export function suggestMatch(
-  tx: Pick<BankTransaction, "amount_cents" | "description" | "merchant">,
+  tx: MatchDeposit,
   invoices: MatchCandidate[],
 ): MatchCandidate | null {
   if (tx.amount_cents <= 0) return null;
   const text = compact(`${tx.description} ${tx.merchant ?? ""}`);
-  const open = invoices.filter((i) => isOpen(i) && balanceDue(i) === tx.amount_cents);
+  const open = invoices.filter((i) => isOpen(i) && balanceDue(i) === tx.amount_cents && canPay(tx, i));
   if (open.length === 0) return null;
   const byNumber = open.filter((i) => text.includes(compact(i.invoice_number)));
   if (byNumber.length === 1) return byNumber[0];
@@ -370,12 +385,12 @@ export function suggestMatch(
  * certain stays a suggestion for staff to confirm.
  */
 export function autoMatch(
-  tx: Pick<BankTransaction, "amount_cents" | "description" | "merchant">,
+  tx: MatchDeposit,
   invoices: MatchCandidate[],
 ): MatchCandidate | null {
   if (tx.amount_cents <= 0) return null;
   const text = compact(`${tx.description} ${tx.merchant ?? ""}`);
-  const hits = invoices.filter((i) => isOpen(i) && balanceDue(i) === tx.amount_cents && text.includes(compact(i.invoice_number)));
+  const hits = invoices.filter((i) => isOpen(i) && balanceDue(i) === tx.amount_cents && canPay(tx, i) && text.includes(compact(i.invoice_number)));
   return hits.length === 1 ? hits[0] : null;
 }
 
