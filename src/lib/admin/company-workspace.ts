@@ -35,6 +35,7 @@ import { crrFor } from "@/lib/crr/crr-for";
 import { diagnoseAllStages } from "@/lib/admin/stage-diagnosis";
 import { loadOutreachStatus } from "@/lib/founder/outreach-status";
 import { MANUAL_OUTREACH_GATE_KEY } from "@/lib/notifications/manual-outreach-reminders";
+import { latestWelcomeLetter } from "@/lib/notifications/founder-welcome-letter";
 
 const TIMELINE_LIMIT = 25;
 const COMPLIANCE_LIMIT = 10;
@@ -378,7 +379,7 @@ export async function getAdminCompanyWorkspace(companyId: string): Promise<Admin
   // Outreach = automated AND manual, read by the same loader the founder's
   // Outreach page uses, so the admin row, the drawer and the Overview tile can
   // never disagree with what the founder sees.
-  const [outreachStatus, manualReminderRes] = await Promise.all([
+  const [outreachStatus, manualReminderRes, welcomeRow] = await Promise.all([
     loadOutreachStatus(companyId),
     admin
       .from("stage_gate_reminders")
@@ -386,6 +387,7 @@ export async function getAdminCompanyWorkspace(companyId: string): Promise<Admin
       .eq("company_id", companyId)
       .eq("gate_key", MANUAL_OUTREACH_GATE_KEY)
       .maybeSingle(),
+    founderId ? latestWelcomeLetter(founderId) : Promise.resolve(null),
   ]);
   const manualReminderRow = (manualReminderRes.data ?? null) as {
     sends_count: number | null;
@@ -427,6 +429,16 @@ export async function getAdminCompanyWorkspace(companyId: string): Promise<Admin
     investable,
     journey,
     outreach,
+    welcomeLetter: welcomeRow
+      ? {
+          sentAt: welcomeRow.createdAt,
+          status: welcomeRow.status,
+          deliveredAt: welcomeRow.deliveredAt,
+          openedAt: welcomeRow.openedAt,
+          clickedAt: welcomeRow.clickedAt,
+          bouncedAt: welcomeRow.bouncedAt,
+        }
+      : null,
     // Per-stage diagnosis resolved server-side: the workspace shell is a client
     // component, so it cannot await this itself.
     stageDiagnosis: await diagnoseAllStages(companyId, journey, outreach),

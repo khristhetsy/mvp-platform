@@ -6,6 +6,7 @@ import { PLAN_PRICES } from "@/lib/subscriptions/plans";
 import { reportServerFailure } from "@/lib/monitoring/operational-events";
 import { recordFunnelEvent } from "@/lib/analytics/funnel";
 import { alertStaffNewCustomer } from "@/lib/notifications/new-customer-alerts";
+import { sendFounderWelcomeLetter } from "@/lib/notifications/founder-welcome-letter";
 
 // Map a LemonSqueezy event to a funnel step (§8). New paid subscription →
 // checkout_complete; a recurring payment → renewal. Others aren't funnel steps.
@@ -119,6 +120,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     if (step && mapped.status === "active") {
       await recordFunnelEvent({ sessionId: `webhook_${existing.profile_id}`, eventName: step, properties: { plan, event: event_name } });
       if (step === "checkout_complete") {
+        // Welcome letter first, so the staff alert can say it went out.
+        await sendFounderWelcomeLetter({ founderId: existing.profile_id, plan });
         await alertStaffNewCustomer({ event: "payment", founderId: existing.profile_id, plan });
       }
     }
@@ -167,6 +170,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     if (step && mapped.status === "active") {
       await recordFunnelEvent({ sessionId: `webhook_${profileId}`, eventName: step, properties: { plan, event: event_name } });
       if (step === "checkout_complete") {
+        // Welcome letter first, so the staff alert can say it went out.
+        await sendFounderWelcomeLetter({ founderId: profileId, plan });
         await alertStaffNewCustomer({ event: "payment", founderId: profileId, plan });
       }
     }
