@@ -45,10 +45,26 @@ export function interpolate(text: string, vars: Record<string, string>): string 
   if (vars.starting_crr != null) add(["starting_crr", "start_crr"], vars.starting_crr);
   if (vars.current_crr != null) add(["current_crr"], vars.current_crr);
   if (vars.testimonial_url != null) add(["testimonial_url"], vars.testimonial_url);
+  if (vars.unsubscribe_url != null) add(["unsubscribe_url", "unsubscribe_link", "preferences_url"], vars.unsubscribe_url);
+  if (vars.logo_url != null) add(["logo_url"], vars.logo_url);
   return text.replace(/\{\{?\s*([A-Za-z][\w ]*?)\s*\}?\}/g, (m, tok: string) => {
     const key = tok.trim().toLowerCase().replace(/\s+/g, "_");
     return key in known ? known[key] : m;
   });
+}
+
+/**
+ * Merge fields still written as {{token}} after interpolation: tokens the sender
+ * has no value for (for example {{match_count}} in a sequence template). Double
+ * braces only, so ordinary text and CSS are never matched.
+ */
+export function unfilledMergeFields(...parts: Array<string | null | undefined>): string[] {
+  const found = new Set<string>();
+  for (const part of parts) {
+    if (!part) continue;
+    for (const m of part.matchAll(/\{\{\s*([A-Za-z][\w ]*?)\s*\}\}/g)) found.add(m[1].trim());
+  }
+  return [...found];
 }
 
 /** Minimal HTML→text so every email carries a real plain-text part (deliverability). */
@@ -140,6 +156,14 @@ export async function sendMarketingEmail(
     vars.testimonial_url = testimonialUrl(to);
   }
 
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com";
+  const unsubscribeUrl = `${appUrl}/unsubscribe?token=${input.unsubscribe_token}`;
+  // {{unsubscribe_url}} / {{preferences_url}} in a template get the real link,
+  // {{logo_url}} the hosted email logo (the same one the branded header uses).
+  vars.unsubscribe_url = unsubscribeUrl;
+  const logoUrl = process.env.EMAIL_LOGO_URL ?? `${appUrl}/email-logo.png`;
+  vars.logo_url = logoUrl;
+
   const subject = interpolate(input.subject, vars);
   // Strip HTML comments so template authoring notes (e.g. "<!-- to add more; delete to
   // remove … -->") never leak into the delivered email, then rewrite any relative
@@ -147,15 +171,26 @@ export async function sendMarketingEmail(
   // renders as a broken image in the inbox.
   const htmlBody = absolutizeEmailHtml(stripHtmlComments(interpolate(input.html_body, vars)));
   // Always send a plain-text alternative — derive one from the HTML if none was
-  // authored. Missing text parts are a real spam signal.
-  const textBody = input.text_body ? interpolate(input.text_body, vars) : htmlToText(htmlBody);
+  // authored, or if the authored text still has a field the HTML doesn't need
+  // (a plain-text {{cta_url}} beside a real link in the HTML). Missing text
+  // parts are a real spam signal.
+  const authoredText = input.text_body ? interpolate(input.text_body, vars) : null;
+  const textBody = authoredText && unfilledMergeFields(authoredText).length === 0 ? authoredText : htmlToText(htmlBody);
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com";
-  const unsubscribeUrl = `${appUrl}/unsubscribe?token=${input.unsubscribe_token}`;
+  // Never send an email with a merge field left as written ("{{match_count}}
+  // investors fit ..."). The send is refused with the field named, so it shows
+  // as failed in the campaign or sequence log and the template can be fixed.
+  const unfilled = unfilledMergeFields(subject, htmlBody, textBody);
+  if (unfilled.length) {
+    return {
+      resend_id: null,
+      ok: false,
+      error: `Not sent: no value for ${unfilled.map((t) => `{{${t}}}`).join(", ")}. Fix the template or remove the field.`,
+    };
+  }
 
   // Branded header with an ABSOLUTE, hosted logo so it renders in delivered mail (not just
   // the editor). Point EMAIL_LOGO_URL at the CDN asset; falls back to an app-hosted path.
-  const logoUrl = process.env.EMAIL_LOGO_URL ?? `${appUrl}/email-logo.png`;
   const brandHeader = `<div style="text-align:center;padding:20px 0 12px;">
   <a href="${appUrl}" style="text-decoration:none;">
     <img src="${logoUrl}" alt="iCapOS" width="132" style="display:inline-block;max-width:132px;height:auto;border:0;" />
