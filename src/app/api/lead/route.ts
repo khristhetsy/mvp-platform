@@ -20,8 +20,8 @@ const leadSchema = z.object({
   stage: z.string().max(60).optional(),
   raise_target: z.string().max(60).optional(),
   capital_structure: z.enum(["reg_d", "reg_cf", "reg_a_plus", "not_sure"]).optional(),
-  // Founders pick a paid plan (free was discontinued 16 Sep 2026); investors sign up free.
-  start_choice: z.enum(["founder_basic", "founder_professional", "investor"]).optional(),
+  // Founders pick Free (due diligence only), Basic or Professional; investors sign up free.
+  start_choice: z.enum(["founder_free", "founder_basic", "founder_professional", "investor"]).optional(),
   role: z.enum(["founder", "investor"]).optional(),
   details: z.record(z.string(), z.union([z.string().max(200), z.array(z.string().max(80)).max(20)])).optional(),
   source_page: z.string().max(200).optional(),
@@ -71,7 +71,10 @@ export async function POST(req: NextRequest): Promise<Response> {
   const email = encodeURIComponent(parsed.data.email);
   const isInvestor = parsed.data.role === "investor" || parsed.data.start_choice === "investor";
   // The account form opens on the right role, and for founders on the plan they picked.
-  const plan = parsed.data.start_choice === "founder_professional" ? "founder_professional" : "founder_basic";
+  const plan =
+    parsed.data.start_choice === "founder_professional" ? "founder_professional"
+    : parsed.data.start_choice === "founder_free" ? "founder_free"
+    : "founder_basic";
   const redirect = isInvestor
     ? `/auth/sign-up?email=${email}&role=investor`
     : `/auth/sign-up?email=${email}&role=founder&plan=${plan}`;

@@ -21,9 +21,11 @@ const GROUPS: NavGroup[] = [
   },
   {
     label: "Campaigns", href: "/admin/marketing/campaigns",
-    routes: ["/admin/marketing/campaigns", "/admin/marketing/sequences", "/admin/marketing/templates", "/admin/marketing/testimonials"],
+    routes: ["/admin/marketing/campaigns", "/admin/marketing/deal-notices", "/admin/marketing/partner-codes", "/admin/marketing/sequences", "/admin/marketing/templates", "/admin/marketing/testimonials"],
     children: [
       { label: "Campaigns", href: "/admin/marketing/campaigns" },
+      { label: "Deal notices", href: "/admin/marketing/deal-notices" },
+      { label: "Partner codes", href: "/admin/marketing/partner-codes" },
       { label: "Sequences", href: "/admin/marketing/sequences" },
       { label: "Templates", href: "/admin/marketing/templates" },
       { label: "Testimonials", href: "/admin/marketing/testimonials" },

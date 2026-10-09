@@ -44,6 +44,7 @@ export const PAGE_NOTES: Record<string, string> = {
   "/founder/marketplace/new": "List on marketplace: create a listing that links to the founder's registered funding portal (Reg CF only), reviewed before it goes live.",
   "/founder/capital-raise": "Capital Raise: plan and track the capital raise.",
   "/founder/events": "Events: iCFO investor events the founder can attend.",
+  "/founder/investor-interest": "Investor interest: matched investors who viewed the deal or requested an introduction. Names show on Basic and up.",
   "/founder/inbox": "Inbox: the founder's email inbox inside iCapOS.",
   "/founder/messages": "Messages: conversations with investors on the platform.",
   "/founder/updates": "Investor Updates: updates sent to investors.",

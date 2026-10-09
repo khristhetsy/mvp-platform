@@ -19,7 +19,9 @@ import { ensureSubscriptionForProfile, getSubscriptionForProfile } from "@/lib/s
 import { priceShort } from "@/lib/subscriptions/pricing-catalog";
 import { loadPricing } from "@/lib/subscriptions/pricing-server";
 import { PLATFORM_TZ } from "@/lib/time/platform-tz";
-import { premiumCheckoutReady } from "@/lib/billing/buy-links";
+import { loadFounderWireState } from "@/lib/billing/wire";
+import { wireDatePT } from "@/lib/billing/wire-core";
+import { WireCheckoutPanel, WireInvoiceList } from "@/components/billing/WireCheckoutPanel";
 
 function formatDate(value: string | null) {
   if (!value) return "—";
@@ -37,7 +39,9 @@ function trialDaysRemaining(trialEndsAt: string | null) {
   return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
 }
 
-export default async function BillingPage() {
+export default async function BillingPage({
+  searchParams,
+}: Readonly<{ searchParams?: Promise<Record<string, string | string[] | undefined>> }>) {
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
   const pricing = await loadPricing();
@@ -64,13 +68,45 @@ export default async function BillingPage() {
     .single();
   const hasLsCustomer = Boolean((subRaw as Record<string, unknown> | null)?.ls_customer_id);
 
+  // Premium is paid by bank wire only (Oct 9, 2026), so its panel shows
+  // whether or not Lemon Squeezy checkout is enabled.
+  const wire = await loadFounderWireState(profile.id);
+  const params = (await searchParams) ?? {};
+  const premiumActive = subscription.plan_type === "founder_premium" && subscription.subscription_status === "active";
+  const premiumFirst =
+    params.plan === "founder_premium" ||
+    (subscription.plan_type === "founder_premium" && subscription.subscription_status !== "active") ||
+    Boolean(wire.openInvoice);
+  const premiumSection = (
+    <div className="mt-8 space-y-4" id="premium">
+      {premiumActive && !wire.openInvoice ? (
+        <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          Premium is active until {wireDatePT(subscription.current_period_end)}. We email your next invoice 7 days before then.
+        </p>
+      ) : (
+        <WireCheckoutPanel
+          monthlyLabel={wire.monthlyLabel}
+          quarterlyLabel={wire.quarterlyLabel}
+          instructions={wire.instructions}
+          openInvoice={wire.openInvoice}
+        />
+      )}
+      {wire.invoices.length ? (
+        <div>
+          <h2 className="text-base font-semibold text-slate-950">Wire invoices</h2>
+          <div className="mt-3"><WireInvoiceList invoices={wire.invoices} /></div>
+        </div>
+      ) : null}
+    </div>
+  );
+
   return (
     <FounderAppShell profileName={profile.full_name ?? profile.email ?? "Founder"}>
       <section className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">{t("billing")}</p>
         <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">{t("billing_overview")}</h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-          iCapOS billing is powered by Lemon Squeezy. Choose a plan below to start your subscription.
+          Basic and Professional are billed by card through Lemon Squeezy. Premium is paid by bank wire, monthly or quarterly.
         </p>
 
         <dl className="mt-8 grid gap-4 text-sm text-slate-700 md:grid-cols-2 lg:grid-cols-3">
@@ -120,19 +156,20 @@ export default async function BillingPage() {
           {getBillingStatusMessage(subscription, lifecycle, requestedPlan)}
         </p>
 
-        {isPaymentsEnabled() && !hasLsCustomer ? (
+        {premiumFirst ? premiumSection : null}
+
+        {isPaymentsEnabled() && !hasLsCustomer && !premiumActive ? (
           <div className="mt-8">
             <h2 className="text-base font-semibold text-slate-950">{t("choose_a_plan")}</h2>
             <p className="mt-1 text-sm text-slate-600">{t("select_a_plan_to_activate_your_subscription")}</p>
             <div className="mt-4 flex flex-wrap gap-3">
-              <CheckoutButton planType="founder_basic" label={`Founder Basic — ${priceShort(pricing, "founder_basic")}`} pricing={pricing} />
-              <CheckoutButton planType="founder_professional" label={`Founder Professional — ${priceShort(pricing, "founder_professional")}`} pricing={pricing} recommended />
-              {premiumCheckoutReady() ? (
-                <CheckoutButton planType="founder_premium" label={`Founder Premium — ${priceShort(pricing, "founder_premium")}`} pricing={pricing} />
-              ) : null}
+              <CheckoutButton planType="founder_basic" label={`Founder Basic, ${priceShort(pricing, "founder_basic")}`} pricing={pricing} />
+              <CheckoutButton planType="founder_professional" label={`Founder Professional, ${priceShort(pricing, "founder_professional")}`} pricing={pricing} recommended />
             </div>
           </div>
         ) : null}
+
+        {premiumFirst ? null : premiumSection}
 
         {isPaymentsEnabled() && hasLsCustomer ? (
           <div className="mt-8 flex flex-wrap gap-3">

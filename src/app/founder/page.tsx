@@ -48,6 +48,8 @@ import { FirstRunModal } from "@/components/founder/FirstRunModal";
 import { RoundCloseTracker } from "@/components/founder/RoundCloseTracker";
 import { FounderInvestorEngagementTimeline } from "@/components/founder/FounderInvestorEngagementTimeline";
 import { DealCompanyEmptyState } from "@/components/founder/DealCompanyEmptyState";
+import { ListingChecklistCard } from "@/components/founder/listing/ListingChecklistCard";
+import { loadListingChecklist } from "@/lib/listing/listing-server";
 
 export const dynamic = "force-dynamic";
 
@@ -215,6 +217,9 @@ export default async function FounderDashboardPage() {
       ]
     : [];
 
+  // Private Market listing checklist (every founder plan). Never blocks the page.
+  const listingState = company ? await loadListingChecklist(company.id).catch(() => null) : null;
+
   // Milestones achievable from dashboard data
   const achievedMilestones: MilestoneKey[] = [];
   if ((documents ?? []).length > 0) achievedMilestones.push("first_document_uploaded");
@@ -258,6 +263,21 @@ export default async function FounderDashboardPage() {
             {journeyOverview.nextAction ? <FounderNextActionHero action={journeyOverview.nextAction} /> : null}
             <FounderJourneyStrip overview={journeyOverview} />
             {glanceTiles.length ? <FounderRaiseAtAGlance tiles={glanceTiles} /> : null}
+          </div>
+        ) : null}
+
+        {listingState && company ? (
+          <div className="mb-8">
+            <ListingChecklistCard
+              initial={listingState}
+              figures={{
+                arr: company.arr ?? null,
+                mrr: company.mrr ?? null,
+                annualRevenue: company.annual_revenue_size ?? null,
+                capTableSummary: company.cap_table_summary ?? null,
+                fundingAmount: company.funding_amount != null ? Number(company.funding_amount) : null,
+              }}
+            />
           </div>
         ) : null}
 

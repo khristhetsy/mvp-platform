@@ -1,5 +1,7 @@
 import {
   Activity,
+  MailCheck,
+  TicketPercent,
   AlertTriangle,
   ArrowLeftRight,
   Award,
@@ -344,6 +346,8 @@ export const workspaceNavIconByHref: Record<string, LucideIcon> = {
   "/admin/marketing/contacts": BookUser,
   "/admin/marketing/lists": List,
   "/admin/marketing/campaigns": Send,
+  "/admin/marketing/deal-notices": MailCheck,
+  "/admin/marketing/partner-codes": TicketPercent,
   "/admin/marketing/sequences": ListOrdered,
   "/admin/marketing/templates": LayoutTemplate,
   "/admin/marketing/testimonials": Quote,

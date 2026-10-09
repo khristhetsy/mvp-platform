@@ -68,7 +68,7 @@ export function getBillingLifecycleLabel(status: BillingLifecycleStatus) {
     case "paid_active":
       return "Paid subscription active";
     case "paid_pending_activation":
-      return "Upgrade requested — billing pending";
+      return "Upgrade requested, billing pending";
     case "subscription_inactive":
       return "Subscription inactive";
     case "free_investor":
@@ -85,11 +85,21 @@ export function getBillingStatusMessage(
   lifecycle: BillingLifecycleStatus,
   requestedPlan?: PlanType | null,
 ) {
+  // Premium is paid by bank wire only (Oct 9, 2026).
+  if (subscription.plan_type === "founder_premium" && lifecycle === "paid_pending_activation") {
+    return "You selected Premium. Request a wire invoice below; Premium activates as soon as your wire is received, usually within 1 to 2 business days.";
+  }
+  if (subscription.plan_type === "founder_premium" && lifecycle === "subscription_inactive") {
+    return "Premium services are paused until your wire is received. Your invoice and wire instructions are below.";
+  }
+  if (subscription.plan_type === "founder_free" && subscription.is_grandfathered === false) {
+    return "Your free plan includes your AI due diligence report, your Capital Readiness Rating and a Private Market listing. Upgrade when investors are interested to see who they are and reach them.";
+  }
   switch (lifecycle) {
     case "trial_active":
       return "You have full access right now, including investor distribution. Every founder tool is free forever; billing isn't connected yet.";
     case "trial_expired":
-      return "Every founder tool stays free. To reach investors — reveal your matches and send your one-pager — choose a distribution plan.";
+      return "Every founder tool stays free. To reach investors, reveal your matches and send your one-pager, choose a distribution plan.";
     case "paid_pending_activation":
       return requestedPlan
         ? `You selected ${PLAN_LABELS[requestedPlan]}. Our team will activate billing when checkout goes live.`
@@ -99,7 +109,7 @@ export function getBillingStatusMessage(
     case "free_investor":
       return "Investor accounts are free with full workspace access.";
     case "internal":
-      return "Internal iCapOS access — no billing restrictions.";
+      return "Internal iCapOS access, no billing restrictions.";
     case "subscription_inactive":
       return "Every founder tool stays free. Choose a plan when you want to turn investor distribution back on.";
     default:

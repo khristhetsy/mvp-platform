@@ -19,8 +19,8 @@ const DEFAULTS: Partial<Record<PlanType, string>> = {
 export const BUY_LINKS: Partial<Record<PlanType, string>> = {
   founder_basic: process.env.LEMONSQUEEZY_CHECKOUT_URL_BASIC || DEFAULTS.founder_basic,
   founder_professional: process.env.LEMONSQUEEZY_CHECKOUT_URL_PROFESSIONAL || DEFAULTS.founder_professional,
-  // No default: Premium has no Lemon Squeezy product until one is created there.
-  founder_premium: process.env.LEMONSQUEEZY_CHECKOUT_URL_PREMIUM || undefined,
+  // Premium is never sold through Lemon Squeezy: it is paid by bank wire only
+  // (Oct 9, 2026). The checkout route refuses founder_premium.
 };
 
 /** A specific plan has a usable buy link. */
@@ -29,12 +29,13 @@ export function hasBuyLink(planType: PlanType): boolean {
 }
 
 /**
- * Premium can be bought: a buy link or a variant ID is set for it. Until then
- * Premium stays off every founder and public plan list, so nobody is shown a
- * checkout that would fail. Server only (reads env).
+ * Premium can be bought. Always true since Oct 9, 2026: Premium is paid by
+ * bank wire (src/lib/billing/wire.ts), which needs no Lemon Squeezy product, so
+ * it is listed on every founder and public plan list. Kept for the callers
+ * (support assistant, assistant knowledge) that still ask.
  */
 export function premiumCheckoutReady(): boolean {
-  return hasBuyLink("founder_premium") || Boolean(process.env.LEMONSQUEEZY_VARIANT_ID_PREMIUM?.trim());
+  return true;
 }
 
 /** At least one founder plan has a usable buy link (used to enable checkout). */

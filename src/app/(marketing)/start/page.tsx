@@ -5,9 +5,9 @@ import { loadPricing } from "@/lib/subscriptions/pricing-server";
 import { priceLabel } from "@/lib/subscriptions/pricing-catalog";
 
 export const metadata: Metadata = {
-  title: "Get started — iCapOS",
+  title: "Get started | iCapOS",
   description:
-    "Create your iCapOS account and choose a plan to unlock the tools and reach matched investors — readiness, valuation, data room, e-learning, and distribution.",
+    "Create your iCapOS account. Start with a free AI due diligence report and Private Market listing, or choose a plan to unlock the tools and reach matched investors.",
   alternates: { canonical: "/start" },
 };
 
@@ -19,7 +19,11 @@ export default async function StartPage() {
   const s = start;
   // Plan cards show the live prices, so an admin price change reaches this page.
   const pricing = await loadPricing();
-  const prices = { founder_basic: priceLabel(pricing, "founder_basic"), founder_professional: priceLabel(pricing, "founder_professional") };
+  const prices = {
+    founder_free: priceLabel(pricing, "founder_free"),
+    founder_basic: priceLabel(pricing, "founder_basic"),
+    founder_professional: priceLabel(pricing, "founder_professional"),
+  };
   return (
     <>
       <section className="bg-gradient-to-b from-site-navy to-site-navy-2 px-6 pb-16 pt-20 text-white">

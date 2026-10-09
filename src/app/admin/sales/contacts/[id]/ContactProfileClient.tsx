@@ -827,8 +827,8 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                     {/* Free access with no grandfather entitlement — the one state
                         that used to be indistinguishable from a legitimate one. */}
                     {memberPlan.discontinued ? (
-                      <span style={{ fontSize: 11, fontWeight: 600, color: "#B91C1C", background: "#FEF2F2", borderRadius: 20, padding: "1px 9px" }}>
-                        Discontinued tier
+                      <span style={{ fontSize: 11, fontWeight: 600, color: "#64748B", background: "#F1F5F9", borderRadius: 20, padding: "1px 9px" }}>
+                        Free, due diligence only
                       </span>
                     ) : null}
                   </span>

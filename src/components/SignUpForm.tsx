@@ -102,7 +102,7 @@ export function SignUpForm({
   showPremium = false,
 }: Readonly<{
   privateBetaMode?: boolean;
-  /** Premium is listed only once its Lemon Squeezy checkout is set up. */
+  /** Premium is paid by bank wire and always listed (the sign up page passes true). */
   showPremium?: boolean;
   /** Active pricing, passed by the server page. Defaults to the code constants. */
   pricing?: PricingCatalog;
@@ -127,9 +127,9 @@ export function SignUpForm({
       setRole(requestedRole);
       setSelectedPlan(defaultPlanForRole(requestedRole));
     }
-    // /start passes the plan the founder chose; only paid founder plans are honored.
+    // /start and the free report claim pass the plan the founder chose.
     const requestedPlan = searchParams.get("plan");
-    if (requestedRole !== "investor" && (requestedPlan === "founder_basic" || requestedPlan === "founder_professional" || (showPremium && requestedPlan === "founder_premium"))) {
+    if (requestedRole !== "investor" && (requestedPlan === "founder_free" || requestedPlan === "founder_basic" || requestedPlan === "founder_professional" || (showPremium && requestedPlan === "founder_premium"))) {
       setSelectedPlan(requestedPlan);
     }
     const prefillEmail = searchParams.get("email");
@@ -159,6 +159,10 @@ export function SignUpForm({
           full_name: fullName,
           role,
           requested_plan: selectedPlan,
+          // Partner code from a partner's link (?ref=CODE), attribution only.
+          ...(searchParams.get("ref") ? { partner_code: String(searchParams.get("ref")).trim().toUpperCase().slice(0, 20) } : {}),
+          // Signed free report claim from the lead email, verified server side.
+          ...(searchParams.get("claim") ? { claim_token: String(searchParams.get("claim")).slice(0, 400) } : {}),
         },
       },
     });

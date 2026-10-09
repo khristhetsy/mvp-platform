@@ -11,10 +11,22 @@ import type { PlanType } from "@/lib/subscriptions/plans";
 const PLAN_TO_VARIANT: Partial<Record<PlanType, string>> = {
   founder_basic: LS_VARIANT_IDS.founder_basic,
   founder_professional: LS_VARIANT_IDS.founder_professional,
-  founder_premium: LS_VARIANT_IDS.founder_premium,
+};
+
+/** Premium is paid by bank wire only (Oct 9, 2026): never sent to Lemon Squeezy. */
+const PREMIUM_WIRE_RESPONSE = {
+  wire: true,
+  url: "/billing?plan=founder_premium",
+  wireInvoiceEndpoint: "/api/billing/wire-invoice",
+  message: "Premium is paid by bank wire. Request a wire invoice from your billing page.",
 };
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  const peek = (await req.clone().json().catch(() => null)) as { planType?: string } | null;
+  if (peek?.planType === "founder_premium") {
+    return NextResponse.json(PREMIUM_WIRE_RESPONSE);
+  }
+
   if (!isPaymentsEnabled()) {
     return NextResponse.json(
       { error: "Online checkout is not available yet. Please contact us to upgrade your plan." },

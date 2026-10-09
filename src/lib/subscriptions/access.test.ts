@@ -47,10 +47,11 @@ describe("free-access retirement (grandfather gate)", () => {
     expect(canAccessFeature(free(true), "documents").allowed).toBe(true);
   });
 
-  it("new (non-grandfathered) free founder is paywalled off the tools", () => {
-    const r = canAccessFeature(free(false), "documents");
+  it("new (non-grandfathered) free founder gets due diligence only, not the other tools", () => {
+    expect(canAccessFeature(free(false), "documents").allowed).toBe(true);
+    const r = canAccessFeature(free(false), "premium_tools");
     expect(r.allowed).toBe(false);
-    expect(r.reason ?? "").toMatch(/choose a plan/i);
+    expect(r.reason ?? "").toMatch(/upgrade to basic/i);
   });
 
   it("free founder with an unknown flag fails open — keeps access", () => {

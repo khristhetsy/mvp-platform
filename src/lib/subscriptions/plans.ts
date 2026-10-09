@@ -107,6 +107,19 @@ export const FOUNDER_BASIC_FEATURES: FeatureKey[] = [
   "settings",
 ];
 
+/**
+ * Free founders (not grandfathered): the dashboard, documents (to feed the
+ * report), the AI due diligence report and the CRR. Everything else is an
+ * upgrade.
+ */
+export const FOUNDER_FREE_FEATURES: FeatureKey[] = [
+  "dashboard",
+  "ai_diligence",
+  "documents",
+  "readiness",
+  "settings",
+];
+
 export const FOUNDER_PROFESSIONAL_FEATURES: FeatureKey[] = [
   ...FOUNDER_BASIC_FEATURES,
   "investor_access",
@@ -145,10 +158,29 @@ export const PREMIUM_FEATURES: string[] = [
   "40,000 Manual outreach emails a month",
 ];
 
-// Free is NOT here. It was discontinued for new signups when Basic launched at
-// $49 (16 Sep 2026); existing accounts keep it via subscriptions.is_grandfathered.
-// Re-adding it here would auto-grant free accounts again — see isAutoGrantSignupPlan.
+/**
+ * Free (approved Oct 8, 2026): a one time AI due diligence report and the
+ * Capital Readiness Rating with its improvement plan, plus a Private Market
+ * listing once the listing checklist is complete. No other tools and no
+ * investor outreach: founders upgrade for those. New Free rows are written with
+ * is_grandfathered = false, which access.ts reads to grant only
+ * FOUNDER_FREE_FEATURES; the 11 grandfathered accounts keep every tool.
+ */
+export const FREE_FEATURES: string[] = [
+  "Full AI due diligence report",
+  "Capital Readiness Rating with steps to raise it",
+  "Share your report with any investor",
+  "Listed in our Private Market for 7,000+ investors once complete",
+];
+
 export const SIGNUP_FOUNDER_PLANS: SignupPlanOption[] = [
+  {
+    planType: "founder_free",
+    title: "Free",
+    priceLabel: "$0",
+    priceSubtext: "No credit card",
+    features: FREE_FEATURES,
+  },
   {
     planType: "founder_basic",
     title: "Basic",
@@ -223,8 +255,10 @@ export const SIGNUP_INVESTOR_PLAN: SignupPlanOption = {
 };
 
 const SIGNUP_PLAN_TYPES = new Set<PlanType>([
-  // founder_free deliberately absent — a crafted ?plan=founder_free must not
-  // re-open the discontinued tier.
+  // Free is back for due diligence only (Oct 8, 2026). It grants
+  // FOUNDER_FREE_FEATURES, never the full toolset, because new Free rows are
+  // written with is_grandfathered = false.
+  "founder_free",
   "founder_basic",
   "founder_professional",
   "founder_premium",
@@ -248,10 +282,9 @@ export function isAutoGrantSignupPlan(role: "founder" | "investor", planType: Pl
     return planType === "investor_free";
   }
 
-  // Founders have no free tier to auto-grant — every founder plan goes through
-  // checkout. This returning true for founder_free is what let new signups skip
-  // payment entirely.
-  return false;
+  // Free (due diligence only) needs no checkout. Paid founder plans always go
+  // through checkout, so they are never auto-granted.
+  return planType === "founder_free";
 }
 
 /**
@@ -263,7 +296,7 @@ export function isAutoGrantSignupPlan(role: "founder" | "investor", planType: Pl
  */
 export function planLabelFor(planType: PlanType, isGrandfathered = false): string {
   if (planType === "founder_free") {
-    return isGrandfathered ? "Free (grandfathered)" : "Free — discontinued tier";
+    return isGrandfathered ? "Free (grandfathered)" : "Free";
   }
   return PLAN_LABELS[planType];
 }

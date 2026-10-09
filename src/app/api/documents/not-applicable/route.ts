@@ -63,5 +63,16 @@ export async function POST(request: Request) {
     metadata: { documentType: type, ...(acting ? { actingForFounderId: acting.founderId } : {}) },
   });
 
+  // N/A counts as done, so marking one can complete the Private Market listing
+  // checklist. Never fails the request.
+  if (notApplicable) {
+    try {
+      const { markListingCompleteIfReady } = await import("@/lib/listing/listing-server");
+      await markListingCompleteIfReady(companyId);
+    } catch {
+      // Listing completion is retried by the next step the founder takes.
+    }
+  }
+
   return NextResponse.json({ ok: true });
 }
