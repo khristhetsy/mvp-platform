@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
 export type NotificationEventKey =
   | "new_founder_signup"
@@ -22,7 +23,7 @@ export type NotificationPrefs = {
   digest_frequency: "daily" | "weekly" | "off";
   quiet_start: string | null;
   quiet_end: string | null;
-  /** IANA time zone (e.g. 'America/New_York') for quiet-hours evaluation. Null → UTC. */
+  /** IANA time zone (e.g. 'America/New_York') for quiet-hours evaluation. Null means Pacific time (PLATFORM_TZ). */
   timezone: string | null;
   pause_all: boolean;
   critical_override: boolean;
@@ -91,9 +92,14 @@ function isCritical(severity?: string | null): boolean {
   return severity === "critical";
 }
 
-/** Minutes-since-midnight for `now` in the given IANA zone (falls back to UTC). */
+/**
+ * Minutes-since-midnight for `now` in the given IANA zone. No zone saved means
+ * Pacific time, the platform zone, which is also what Notification settings
+ * shows when no zone is saved. (It used to fall back to UTC, so 8 PM to 7 AM
+ * quiet hours silently muted every email sent between 1 PM and midnight PT.)
+ */
 function minutesInZone(now: Date, timeZone: string | null): number {
-  if (!timeZone) return now.getUTCHours() * 60 + now.getUTCMinutes();
+  timeZone = timeZone || PLATFORM_TZ;
   try {
     const parts = new Intl.DateTimeFormat("en-US", {
       timeZone,
