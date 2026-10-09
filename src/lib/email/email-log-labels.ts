@@ -22,6 +22,7 @@ export function emailResult(e: {
 }
 
 const SOURCES: Record<string, string> = {
+  welcome_letter: "Welcome letter",
   "investor-intro": "Investor intro",
   "investor-intro-made": "Investor intro made",
   "intro-request-digest": "Intro request digest",

@@ -31,6 +31,8 @@ export type PaymentAlertDetails = {
   onboardingPercent: number | null;
   steps: Array<{ label: string; done: boolean }>;
   crrScore: number | null;
+  /** When the founder's welcome letter went out, or null if it hasn't. */
+  welcomeLetterAt: string | null;
 };
 
 const STEP_LABELS: Array<[string, string]> = [
@@ -172,7 +174,10 @@ export function renderPaymentAlertEmail(input: {
         return n >= 1 ? ` (paid ${n} day${n === 1 ? "" : "s"} later)` : " (paid the same day)";
       })()}`
     : null;
-  const founder = table(row("Name", d.founderName) + row("Email", d.founderEmail) + row("Phone", d.phone) + row("Signed up", signedUp));
+  const welcome = d.welcomeLetterAt ? `Sent to founder ${formatPlatformDateTime(d.welcomeLetterAt, { hour: "numeric", minute: "2-digit" })}` : "Not sent";
+  const founder = table(
+    row("Name", d.founderName) + row("Email", d.founderEmail) + row("Phone", d.phone) + row("Signed up", signedUp) + row("Welcome letter", welcome),
+  );
 
   const capital = [d.capitalAmount, d.goal ? `goal: ${d.goal}` : null].filter(Boolean).join(" · ") || null;
   const seeking = d.seekingCapital || d.seekingInvestors
@@ -220,6 +225,7 @@ export function renderPaymentAlertEmail(input: {
     d.founderEmail ? `Email: ${d.founderEmail}` : null,
     d.phone ? `Phone: ${d.phone}` : null,
     signedUp ? `Signed up: ${signedUp}` : null,
+    `Welcome letter: ${welcome}`,
     "",
     "Company",
     d.industry ? `Industry: ${d.industry}` : null,
@@ -249,7 +255,7 @@ export async function loadPaymentAlertDetails(founderId: string, companyId: stri
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const admin = createServiceRoleClient() as any;
-    const [companyRes, subRes, profileRes, crrRes] = await Promise.all([
+    const [companyRes, subRes, profileRes, crrRes, welcomeRes] = await Promise.all([
       admin
         .from("companies")
         .select("industry, state, country, operating_stage, funding_stage, funding_amount_band, founder_goals, seeking_capital_types, seeking_investor_types, approved_at, is_published, onboarding_progress_percent, onboarding_step_state, contact_phone")
@@ -258,6 +264,15 @@ export async function loadPaymentAlertDetails(founderId: string, companyId: stri
       admin.from("subscriptions").select("monthly_price_cents, currency, current_period_start, current_period_end, ls_subscription_id, ls_customer_id").eq("profile_id", founderId).maybeSingle(),
       admin.from("profiles").select("full_name, email, created_at").eq("id", founderId).maybeSingle(),
       admin.from("company_readiness_scores").select("effective_score").eq("company_id", companyId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      admin
+        .from("email_log")
+        .select("created_at")
+        .eq("recipient_user_id", founderId)
+        .eq("source", "welcome_letter")
+        .eq("status", "sent")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
     ]);
     const c = companyRes.data as Record<string, unknown> | null;
     if (!c) return null;
@@ -295,6 +310,7 @@ export async function loadPaymentAlertDetails(founderId: string, companyId: stri
         return { label, done: typeof v === "object" && v !== null && Boolean(v.completed) };
       }),
       crrScore: crr?.effective_score ?? null,
+      welcomeLetterAt: (welcomeRes.data as { created_at: string } | null)?.created_at ?? null,
     };
   } catch (error) {
     console.warn("[payment-alert-details] failed", error);

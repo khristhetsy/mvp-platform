@@ -7,6 +7,9 @@ import type { EmailLogDetail, EmailLogItem, EmailRole } from "@/lib/email/email-
 import { PLATFORM_TZ, PLATFORM_TZ_LABEL } from "@/lib/time/platform-tz";
 
 type Filter = "all" | "failed" | "bounced" | "opened" | "unopened";
+
+/** Email log source of the founder welcome letter (see founder-welcome-letter.ts). */
+const WELCOME_LETTER = "welcome_letter";
 type Counts = Record<EmailRole | "all", number>;
 
 const WHEN = new Intl.DateTimeFormat("en-GB", { timeZone: PLATFORM_TZ, day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
@@ -69,6 +72,8 @@ export function SentEmailsClient({
   const [loadingMore, setLoadingMore] = useState(false);
   const [viewing, setViewing] = useState<EmailLogDetail | null>(null);
   const [viewingId, setViewingId] = useState<number | null>(null);
+  const [resend, setResend] = useState<{ state: "idle" | "sending" | "done" | "error"; message: string | null }>({ state: "idle", message: null });
+  const [reload, setReload] = useState(0);
   const seq = useRef(0);
 
   useEffect(() => {
@@ -99,7 +104,7 @@ export function SentEmailsClient({
       .catch((e: Error) => {
         if (mine === seq.current) setPage((cur) => ({ key, items: [], counts: cur?.counts ?? { all: 0, founder: 0, investor: 0, staff: 0, external: 0 }, nextBefore: null, error: e.message }));
       });
-  }, [key]);
+  }, [key, reload]);
 
   const current = page && page.key === key ? page : null;
   const items = current ? current.items : null;
@@ -126,7 +131,25 @@ export function SentEmailsClient({
   const closed = () => {
     setViewingId(null);
     setViewing(null);
+    setResend({ state: "idle", message: null });
   };
+
+  // Welcome letter only: send it again to the founder.
+  async function resendWelcome(founderId: string) {
+    setResend({ state: "sending", message: null });
+    const res = await fetch("/api/admin/welcome-letter/resend", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ founderId }),
+    }).catch(() => null);
+    const d = (await res?.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+    if (res?.ok && d?.ok) {
+      setResend({ state: "done", message: "Sent again. It appears at the top of the list." });
+      setReload((n) => n + 1);
+    } else {
+      setResend({ state: "error", message: d?.error ?? "Could not resend." });
+    }
+  }
 
   return (
     <div className={compact ? "space-y-3" : "rounded-xl border border-slate-200 bg-white"}>
@@ -213,6 +236,9 @@ export function SentEmailsClient({
                       )}
                       <td className={td}>
                         <span className="text-slate-900">{e.subject}</span>
+                        {e.source === WELCOME_LETTER ? (
+                          <span className="ml-1.5 inline-block rounded bg-blue-50 px-1.5 py-px text-[10.5px] font-semibold text-blue-700">Welcome letter</span>
+                        ) : null}
                         <span className="block text-slate-500">{sourceLabel(e.source)}</span>
                       </td>
                       <td className={td}>{trigger(e)}</td>
@@ -290,6 +316,21 @@ export function SentEmailsClient({
                       </div>
                     ))}
                 </dl>
+                {viewing.source === WELCOME_LETTER && viewing.recipientUserId ? (
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      disabled={resend.state === "sending"}
+                      onClick={() => void resendWelcome(viewing.recipientUserId as string)}
+                      className="rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-60"
+                    >
+                      {resend.state === "sending" ? "Sending…" : "Resend"}
+                    </button>
+                    {resend.message ? (
+                      <span className={`text-xs ${resend.state === "error" ? "text-rose-700" : "text-emerald-700"}`}>{resend.message}</span>
+                    ) : null}
+                  </div>
+                ) : null}
                 {viewing.html ? (
                   <iframe
                     title="Email message"

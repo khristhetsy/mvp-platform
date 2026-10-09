@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { recordEmailOpen, recordEmailClick } from "@/lib/outreach/email-events";
 import { recordEngagement } from "@/lib/ir/sequences";
 import { recordEmailLogEvent } from "@/lib/email/email-log";
+import { onWelcomeLetterBounce } from "@/lib/notifications/welcome-letter-watch";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +49,9 @@ export async function POST(request: Request) {
         to: collectEmails(data.to),
       })
     : 0;
+
+  // A bounced welcome letter alerts staff (no-op for every other email).
+  if (type === "email.bounced" && emailId && logged > 0) await onWelcomeLetterBounce(emailId);
 
   if (type !== "email.opened" && type !== "email.clicked") {
     return NextResponse.json({ ok: true, logged, ignored: type || "unknown" });

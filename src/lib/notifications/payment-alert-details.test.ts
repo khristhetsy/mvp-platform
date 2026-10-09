@@ -41,6 +41,7 @@ const SOS: PaymentAlertDetails = {
     { label: "Funding information", done: false },
   ],
   crrScore: null,
+  welcomeLetterAt: "2026-10-09T01:06:40Z",
 };
 
 describe("payment alert email", () => {
@@ -50,6 +51,7 @@ describe("payment alert email", () => {
     expect(out.text).toContain("Theodore J Staley paid for Basic on Oct 8, 2026 at 6:06 PM PT.");
     expect(out.text).toContain("$49.00 / month · First payment · Renews Nov 8, 5:05 PM PT");
     expect(out.text).toContain("Signed up: Oct 7, 10:16 AM PT (paid 1 day later)");
+    expect(out.text).toContain("Welcome letter: Sent to founder 6:06 PM PT");
   });
 
   it("shows founder, company and onboarding", () => {

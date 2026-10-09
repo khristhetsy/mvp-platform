@@ -8,6 +8,16 @@ import type { FounderJourneyState, JourneyStage } from "@/lib/founder-journey/ty
 import type { StageDiagnosis } from "@/lib/admin/stage-diagnosis";
 import type { OutreachStatus } from "@/lib/founder/outreach-status-lines";
 
+/** The founder's latest welcome letter from the email log (null: none sent). */
+export type AdminWelcomeLetterStatus = {
+  sentAt: string;
+  status: string;
+  deliveredAt: string | null;
+  openedAt: string | null;
+  clickedAt: string | null;
+  bouncedAt: string | null;
+};
+
 /**
  * Outreach for the admin workspace: the founder's own status (automated and
  * manual) plus where the manual outreach reminder cadence stands.
@@ -68,6 +78,8 @@ export type AdminCompanyWorkspaceData = {
   stageDiagnosis: Record<JourneyStage, StageDiagnosis>;
   /** Outreach status (automated and manual), the same one the founder page reads. */
   outreach: AdminOutreachSummary;
+  /** Welcome letter sent on the founder's first payment, with its tracking. */
+  welcomeLetter: AdminWelcomeLetterStatus | null;
   investorActivity: {
     savedDeals: number;
     interests: number;

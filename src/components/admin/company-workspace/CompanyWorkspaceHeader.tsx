@@ -9,6 +9,7 @@ import {
   type AdminCompanyWorkspaceData,
 } from "@/lib/admin/company-workspace-types";
 import { PLATFORM_TZ, PLATFORM_TZ_LABEL } from "@/lib/time/platform-tz";
+import { welcomeLetterChip } from "@/lib/admin/welcome-letter-chip";
 
 function reviewStatusToBadge(status: string | null): "neutral" | "info" | "success" | "warning" | "danger" | "pending" {
   switch (status) {
@@ -34,6 +35,7 @@ export function CompanyWorkspaceHeader({
   const { company, founder, readiness } = data;
   const companyId = company.id;
   const isLive = company.is_published && company.marketplace_visible;
+  const welcome = welcomeLetterChip(data.welcomeLetter);
 
   return (
     <div className="space-y-4">
@@ -71,6 +73,11 @@ export function CompanyWorkspaceHeader({
           <StatusBadge label={`Readiness ${readiness.latestScore}`} status="info" />
         ) : null}
         <StatusBadge label={`Onboarding ${readiness.onboardingPercent}%`} status="neutral" />
+        {welcome ? (
+          <a href="#tools" title="Open Analytics & Tools, Emails sent">
+            <StatusBadge label={`✉ ${welcome.label}`} status={welcome.tone} />
+          </a>
+        ) : null}
       </div>
 
       {founder ? (
