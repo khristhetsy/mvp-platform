@@ -85,6 +85,19 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/investor-directory/usage",        label: "Usage"        },
         ],
       },
+      {
+        // Invoicing, A/R and the Bank of America feed (Plaid, read only). Staff with Billing access.
+        href: "/admin/accounting", label: "Accounting", requiredPermission: "manage_billing",
+        children: [
+          { href: "/admin/accounting",           label: "Dashboard" },
+          { href: "/admin/accounting/customers", label: "Customers" },
+          { href: "/admin/accounting/invoices",  label: "Invoices"  },
+          { href: "/admin/accounting/payments",  label: "Payments"  },
+          { href: "/admin/accounting/bank",      label: "Bank"      },
+          { href: "/admin/accounting/reports",   label: "Reports"   },
+          { href: "/admin/accounting/settings",  label: "Settings"  },
+        ],
+      },
       { href: "/admin/social", label: "Social Media", requiredPermission: "view_admin_dashboard" },
       {
         href: "/admin/events",
