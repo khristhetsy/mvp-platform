@@ -19,7 +19,7 @@ import {
   DEFAULT_ENTITY, addDays, balanceDue, displayStatus, invoiceTotal, isEntity, isIsoDate, isPaymentMethod,
   autoMatch, lineAmount, money, parseBankFile, payPagePath, plaidAmountToCents, seriesDates, seriesLineLabel, suggestMatch, todayPT,
   type BankTransaction, type Customer, type EntityId, type Invoice, type InvoiceLine, type MatchCandidate,
-  type Payment, type PaymentMethod,
+  type Payment, type PaymentMethod, EMPTY_LETTERHEAD, normalizeLetterhead, type Letterhead,
 } from "@/lib/accounting/core";
 import { renderInvoicePdf, type SeriesRow } from "@/lib/accounting/invoice-pdf";
 import { renderInvoiceEmail, renderReceiptEmail } from "@/lib/accounting/emails";
@@ -70,6 +70,29 @@ export async function savePaymentInstructions(entity: EntityId, input: unknown, 
   const clean = normalizeWireInstructions(input);
   const { error } = await client.from("platform_settings").upsert({ key, value: clean, updated_by: staffId, updated_at: new Date().toISOString() }, { onConflict: "key" });
   if (error) throw new Error(`Could not save bank details: ${error.message}`);
+  return clean;
+}
+
+// ── Letterhead (logo, address, phone, email per entity) ──────────────────────
+
+function letterheadKey(entity: EntityId): string {
+  return `accounting_letterhead_${entity}`;
+}
+
+export async function getLetterhead(entity: EntityId, client: Db = db()): Promise<Letterhead> {
+  try {
+    const { data } = await client.from("platform_settings").select("value").eq("key", letterheadKey(entity)).maybeSingle();
+    const v = (data as { value?: unknown } | null)?.value;
+    return v ? normalizeLetterhead(v) : { ...EMPTY_LETTERHEAD };
+  } catch {
+    return { ...EMPTY_LETTERHEAD };
+  }
+}
+
+export async function saveLetterhead(entity: EntityId, input: unknown, staffId: string, client: Db = db()): Promise<Letterhead> {
+  const clean = normalizeLetterhead(input);
+  const { error } = await client.from("platform_settings").upsert({ key: letterheadKey(entity), value: clean, updated_by: staffId, updated_at: new Date().toISOString() }, { onConflict: "key" });
+  if (error) throw new Error(`Could not save the letterhead: ${error.message}`);
   return clean;
 }
 
@@ -395,14 +418,15 @@ export function publicPdfPath(inv: Pick<Invoice, "id" | "public_token">): string
 }
 
 export async function invoicePdf(inv: Invoice, client: Db = db()): Promise<{ pdf: Buffer; fileName: string }> {
-  const [lines, customer, instructions, series] = await Promise.all([
+  const [lines, customer, instructions, series, letterhead] = await Promise.all([
     getInvoiceLines(inv.id, client),
     getCustomer(inv.customer_id, client),
     getPaymentInstructions(inv.entity, client),
     seriesOf(inv, client),
+    getLetterhead(inv.entity, client),
   ]);
   if (!customer) throw new Error("Customer not found.");
-  const pdf = await renderInvoicePdf({ invoice: inv, lines, customer, instructions, series });
+  const pdf = await renderInvoicePdf({ invoice: inv, lines, customer, instructions, series, letterhead });
   return { pdf, fileName: `${inv.invoice_number.replace(/[^a-zA-Z0-9]+/g, "-")}.pdf` };
 }
 
@@ -428,8 +452,8 @@ export async function sendInvoice(id: string, staffId: string | null, opts: { to
       .single();
     if (data) inv = data as Invoice;
   }
-  const [lines, instructions, series] = await Promise.all([getInvoiceLines(id, client), getPaymentInstructions(inv.entity, client), seriesOf(inv, client)]);
-  const pdf = await renderInvoicePdf({ invoice: inv, lines, customer, instructions, series });
+  const [lines, instructions, series, letterhead] = await Promise.all([getInvoiceLines(id, client), getPaymentInstructions(inv.entity, client), seriesOf(inv, client), getLetterhead(inv.entity, client)]);
+  const pdf = await renderInvoicePdf({ invoice: inv, lines, customer, instructions, series, letterhead });
   // The full schedule goes on the first invoice of a series only.
   const showSeries = inv.series_index === 1 ? series : undefined;
   const rendered = renderInvoiceEmail({

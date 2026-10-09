@@ -103,3 +103,22 @@ describe("bank file imports", () => {
     expect(parseOfx(qfx)).toEqual([{ external_id: "ofx-abc123", posted_on: "2026-12-09", description: "CENNA BIOSCIENCES", amount_cents: 200000 }]);
   });
 });
+
+describe("letterhead", () => {
+  it("keeps a PNG logo and the address lines", async () => {
+    const { normalizeLetterhead, letterheadLines } = await import("@/lib/accounting/core");
+    const lh = normalizeLetterhead({ logo: "data:image/png;base64,iVBORw0KGgo=", address: " 4225 Executive Sq, Ste 600\nLa Jolla, CA 92037 ", phone: "", email: "billing@icfo.com" });
+    expect(lh.logo).toBe("data:image/png;base64,iVBORw0KGgo=");
+    expect(letterheadLines(lh)).toEqual(["4225 Executive Sq, Ste 600", "La Jolla, CA 92037", "billing@icfo.com"]);
+  });
+  it("falls back to the city and rejects other image types", async () => {
+    const { normalizeLetterhead, letterheadLines, EMPTY_LETTERHEAD } = await import("@/lib/accounting/core");
+    expect(letterheadLines(EMPTY_LETTERHEAD)).toEqual(["La Jolla, CA"]);
+    expect(() => normalizeLetterhead({ logo: "data:image/svg+xml;base64,PHN2Zz4=" })).toThrow("PNG or JPG");
+  });
+  it("names the issuing company in the disclaimer", async () => {
+    const { entityDisclaimer } = await import("@/lib/accounting/core");
+    expect(entityDisclaimer("icfo_venture_group")).toBe("iCFO Venture Group does not solicit securities and is not an investment adviser.");
+    expect(entityDisclaimer("icfo_capital_global")).toMatch(/^iCFO Capital does not/);
+  });
+});

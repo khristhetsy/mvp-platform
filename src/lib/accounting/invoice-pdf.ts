@@ -4,8 +4,8 @@
 import PDFDocument from "pdfkit";
 import { wireInstructionRows, type WireInstructions } from "@/lib/billing/wire-core";
 import {
-  ACCOUNTING_COPY, ENTITY_ADDRESS, STATUS_LABEL, balanceDue, displayStatus, entityName, fmtDate, money,
-  type Customer, type Invoice, type InvoiceLine,
+  ACCOUNTING_COPY, EMPTY_LETTERHEAD, STATUS_LABEL, balanceDue, displayStatus, entityDisclaimer, entityName, fmtDate,
+  letterheadLines, money, type Customer, type Invoice, type InvoiceLine, type Letterhead,
 } from "@/lib/accounting/core";
 
 const NAVY = "#0A1A40";
@@ -22,6 +22,7 @@ export function renderInvoicePdf(input: {
   customer: Customer;
   instructions: WireInstructions;
   series?: SeriesRow[];
+  letterhead?: Letterhead;
 }): Promise<Buffer> {
   const { invoice, lines, customer, instructions } = input;
   return new Promise<Buffer>((resolve, reject) => {
@@ -44,12 +45,24 @@ export function renderInvoicePdf(input: {
 
       const paid = invoice.status === "paid";
       const top = doc.y;
-      doc.font("Helvetica-Bold").fontSize(14).fillColor(NAVY).text(entityName(invoice.entity), L, top, { width: 260 });
-      doc.font("Helvetica").fontSize(10).fillColor(MUTED).text(ENTITY_ADDRESS, L, doc.y, { width: 260 });
+      const lh = input.letterhead ?? EMPTY_LETTERHEAD;
+      let leftY = top;
+      if (lh.logo) {
+        try {
+          const img = Buffer.from(lh.logo.slice(lh.logo.indexOf(",") + 1), "base64");
+          doc.image(img, L, top, { fit: [150, 48] });
+          leftY = top + 56;
+        } catch (e) {
+          console.warn("[accounting/pdf] logo could not be drawn", e);
+        }
+      }
+      doc.font("Helvetica-Bold").fontSize(14).fillColor(NAVY).text(entityName(invoice.entity), L, leftY, { width: 260 });
+      doc.font("Helvetica").fontSize(10).fillColor(MUTED).text(letterheadLines(lh).join("\n"), L, doc.y, { width: 260 });
+      const leftBottom = doc.y;
       doc.font("Helvetica-Bold").fontSize(9).fillColor(BLUE).text(paid ? "RECEIPT" : "INVOICE", L + 280, top, { width: W - 280, align: "right", characterSpacing: 1 });
       doc.font("Helvetica-Bold").fontSize(18).fillColor(NAVY).text(invoice.invoice_number, L + 280, doc.y, { width: W - 280, align: "right" });
       doc.font("Helvetica").fontSize(10).fillColor(MUTED).text(`Issued ${fmtDate(invoice.issue_date)} · Due ${fmtDate(invoice.due_date)}`, L + 280, doc.y, { width: W - 280, align: "right" });
-      doc.y = Math.max(doc.y, top + 60);
+      doc.y = Math.max(doc.y, leftBottom, top + 60);
 
       h2("Bill to");
       const billTo = [customer.contact_name, customer.company, customer.email, customer.address].filter((s): s is string => Boolean(s && s.trim()));
@@ -111,7 +124,7 @@ export function renderInvoicePdf(input: {
       }
 
       doc.moveDown(1.2).font("Helvetica").fontSize(9).fillColor(MUTED).text(ACCOUNTING_COPY.footer, L, doc.y, { width: W });
-      doc.moveDown(0.3).text(ACCOUNTING_COPY.disclaimer, L, doc.y, { width: W });
+      doc.moveDown(0.3).text(entityDisclaimer(invoice.entity), L, doc.y, { width: W });
       doc.end();
     } catch (e) {
       reject(e);

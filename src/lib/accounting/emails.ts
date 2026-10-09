@@ -6,7 +6,7 @@
 import { button, escapeHtml, shell } from "@/lib/activity/email-templates";
 import { wireInstructionRows, type WireInstructions } from "@/lib/billing/wire-core";
 import {
-  ACCOUNTING_COPY, balanceDue, entityName, fmtDate, money, type Customer, type Invoice, type InvoiceLine,
+  ACCOUNTING_COPY, balanceDue, entityDisclaimer, entityName, fmtDate, money, type Customer, type Invoice, type InvoiceLine,
 } from "@/lib/accounting/core";
 import type { SeriesRow } from "@/lib/accounting/invoice-pdf";
 
@@ -77,7 +77,7 @@ export function renderInvoiceEmail(input: {
     subject,
     preheader: `${money(due)} due ${fmtDate(invoice.due_date)}`,
     reason: `You are receiving this because ${from} sent you an invoice.`,
-    lines: [ACCOUNTING_COPY.disclaimer],
+    lines: [entityDisclaimer(invoice.entity)],
   });
 
   const text = [
@@ -89,7 +89,7 @@ export function renderInvoiceEmail(input: {
     ACCOUNTING_COPY.payNote, "",
     ...(input.payUrl ? [`Pay invoice: ${input.payUrl}`] : []),
     `Download invoice: ${input.pdfUrl}`, "",
-    ACCOUNTING_COPY.footer, ACCOUNTING_COPY.disclaimer,
+    ACCOUNTING_COPY.footer, entityDisclaimer(invoice.entity),
   ].join("\n");
   return { subject, html, text };
 }
@@ -116,8 +116,8 @@ export function renderReceiptEmail(input: { invoice: Invoice; customer: Customer
     subject,
     preheader: `${money(input.amountCents)} received`,
     reason: `You are receiving this because you paid an invoice from ${from}.`,
-    lines: [ACCOUNTING_COPY.disclaimer],
+    lines: [entityDisclaimer(invoice.entity)],
   });
-  const text = [hello, "", lead, "", ...rows.map((r) => `${r.label}: ${r.value}`), "", `Download receipt: ${input.pdfUrl}`, "", ACCOUNTING_COPY.disclaimer].join("\n");
+  const text = [hello, "", lead, "", ...rows.map((r) => `${r.label}: ${r.value}`), "", `Download receipt: ${input.pdfUrl}`, "", entityDisclaimer(invoice.entity)].join("\n");
   return { subject, html, text };
 }
