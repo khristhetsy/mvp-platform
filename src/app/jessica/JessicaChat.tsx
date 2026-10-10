@@ -33,7 +33,11 @@ import {
 
 type Msg = { id: number; from: "jessica" | "you"; text: string; href?: string; hrefLabel?: string };
 type LinkExtra = Pick<Msg, "href" | "hrefLabel">;
+<<<<<<< HEAD
 type Replies = { options: string[]; main: boolean; pick: (option: string) => void };
+=======
+type Replies = { options: string[]; main: boolean; pick: (option: string) => void; resume?: string };
+>>>>>>> bfeae68 (Jessica: resume qualifying after a side question, not now objection, neutral fallback)
 type BookResult = { ok: true; meetUrl: string | null } | { ok: false; retry: boolean; message: string };
 type Turn = { role: "user" | "assistant"; content: string };
 
@@ -90,14 +94,27 @@ export function JessicaChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
     };
 
     const show = (next: Replies | null) => {
+<<<<<<< HEAD
       setReplies(next);
     };
 
     const ask = (options: string[], main = false) =>
+=======
+      current = next;
+      setReplies(next);
+    };
+
+    let current: Replies | null = null;
+    const ask = (options: string[], main = false, resume?: string) =>
+>>>>>>> bfeae68 (Jessica: resume qualifying after a side question, not now objection, neutral fallback)
       new Promise<string>((resolve) => {
         show({
           options,
           main,
+<<<<<<< HEAD
+=======
+          resume,
+>>>>>>> bfeae68 (Jessica: resume qualifying after a side question, not now objection, neutral fallback)
           pick: (option) => {
             show(null);
             push("you", option);
@@ -302,9 +319,26 @@ export function JessicaChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
 
     const sideConversation = async (value: string) => {
       push("you", value);
+<<<<<<< HEAD
       show(null);
       const scripted = matchReply(value);
 
+=======
+      const pending = current?.resume ? current : null;
+      show(null);
+      const scripted = matchReply(value);
+
+      // A question in the middle of qualifying: answer it, then pick the thread back up.
+      // Cost and objections still take their own path, since the visitor just opened a door.
+      if (pending && !booked && scripted.kind !== "cost" && scripted.kind !== "objection") {
+        await answerAside(value);
+        if (cancelled) return;
+        await say([pending.resume!]);
+        show(pending);
+        return;
+      }
+
+>>>>>>> bfeae68 (Jessica: resume qualifying after a side question, not now objection, neutral fallback)
       if (booked) {
         const reply = scripted.kind === "unknown" || scripted.kind === "fact" ? await askAi(value) : null;
         if (cancelled) return;
@@ -389,34 +423,56 @@ export function JessicaChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
 
     const intro = async () => {
       await say(["Hey, I'm Jessica.", "What brings you here today?"]);
+<<<<<<< HEAD
       let role = await ask(["Raising capital", "Looking at deals", "What do you guys do?"]);
+=======
+      let role = await ask(["Raising capital", "Looking at deals", "What do you guys do?"], false, "So, what brings you here today?");
+>>>>>>> bfeae68 (Jessica: resume qualifying after a side question, not now objection, neutral fallback)
       if (/guys/.test(role)) {
         await say([
           "Fair question. We rate how ready your company is, match you with investors who fit, and get your materials in front of them.",
           "Are you raising or investing?",
         ]);
+<<<<<<< HEAD
         role = await ask(["Raising", "Investing"]);
+=======
+        role = await ask(["Raising", "Investing"], false, "Are you raising or investing?");
+>>>>>>> bfeae68 (Jessica: resume qualifying after a side question, not now objection, neutral fallback)
       }
       profile.role = normalizeRole(role);
 
       if (profile.role === "Investing") {
         await say(["Nice. We match investors with companies that fit their mandate.", "What size checks do you usually write?"]);
+<<<<<<< HEAD
         profile.checkSize = await ask(["Under $250K", "$250K to $1M", "$1M to $5M", "$5M plus"]);
+=======
+        profile.checkSize = await ask(["Under $250K", "$250K to $1M", "$1M to $5M", "$5M plus"], false, "Back to you: what size checks do you usually write?");
+>>>>>>> bfeae68 (Jessica: resume qualifying after a side question, not now objection, neutral fallback)
         await say(["Thanks, that gives me a clear picture. Checks in that range are a good match for the deals we bring to our investors."]);
         await offerTimes(`Next step is ${JESSICA_SLOT_MINUTES} minutes with the team to see the deal flow.`);
         return;
       }
 
       await say(["Cool, that's what we do.", "What stage is the company at?"]);
+<<<<<<< HEAD
       const stage = await ask(["Pre revenue", "Under $1M a year", "$1M to $5M", "Over $5M"]);
+=======
+      const stage = await ask(["Pre revenue", "Under $1M a year", "$1M to $5M", "Over $5M"], false, "Back to your company: what stage is it at?");
+>>>>>>> bfeae68 (Jessica: resume qualifying after a side question, not now objection, neutral fallback)
       profile.stage = stage;
       await say([
         /^Pre/.test(stage) ? "Early, got it." : /^Over/.test(stage) ? "Solid." : "Okay, that helps.",
         "Roughly how much are you looking to raise?",
       ]);
+<<<<<<< HEAD
       profile.raise = await ask(["Under $1M", "$1M to $5M", "$5M to $20M", "Over $20M"]);
       await say(["And how soon do you want to close?"]);
       profile.timing = await ask(["Within 30 days", "A few months", "Not sure yet"]);
+=======
+      profile.raise = await ask(["Under $1M", "$1M to $5M", "$5M to $20M", "Over $20M"], false, "Back to it: roughly how much are you looking to raise?");
+      await say(["And how soon do you want to close?"]);
+      profile.timing = await ask(["Within 30 days", "A few months", "Not sure yet"], false, "And how soon do you want to close?");
+>>>>>>> bfeae68 (Jessica: resume qualifying after a side question, not now objection, neutral fallback)
       await say([
         `Thanks, that gives me a clear picture. A raise like that${/30/.test(profile.timing) ? " on a tight timeline" : ""} is right in our lane.`,
       ]);

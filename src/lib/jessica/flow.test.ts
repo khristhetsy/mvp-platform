@@ -83,6 +83,14 @@ describe("matchReply", () => {
   it("answers a board stall with the specific next meeting", () => {
     expect(matchReply("I have to talk to my board first").kind).toBe("objection");
   });
+<<<<<<< HEAD
+=======
+  it("treats not now as an objection with a question back, not a push", () => {
+    const r = matchReply("i dont want to schedule anything yet");
+    expect(r.kind).toBe("objection");
+    expect(r.kind === "objection" && r.id).toBe("not-now");
+  });
+>>>>>>> bfeae68 (Jessica: resume qualifying after a side question, not now objection, neutral fallback)
   it("handles send me info and press for a number", () => {
     expect(matchReply("can you just send me some info").kind).toBe("objection");
     expect(matchReply("just give me a number").lines.join(" ")).toMatch(/would be a guess/);
