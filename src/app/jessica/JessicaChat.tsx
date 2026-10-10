@@ -472,7 +472,7 @@ export function JessicaChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
           return (
             <div
               key={m.id}
-              className={`relative pl-[52px] text-[15px] leading-snug text-slate-900 ${first ? "mt-4 min-h-[44px]" : ""} ${fromYou ? "ml-6" : ""}`}
+              className={`relative shrink-0 pl-[52px] text-[15px] leading-snug text-slate-900 ${first ? "mt-4 min-h-[44px]" : ""} ${fromYou ? "ml-6" : ""}`}
             >
               {first ? (
                 <>
@@ -512,7 +512,7 @@ export function JessicaChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
         })}
 
         {typing ? (
-          <div className="flex gap-1 py-2.5 pl-[52px]" aria-label="Jessica is typing">
+          <div className="flex shrink-0 gap-1 py-2.5 pl-[52px]" aria-label="Jessica is typing">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-slate-400" />
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-slate-400 [animation-delay:150ms]" />
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-slate-400 [animation-delay:300ms]" />
@@ -520,7 +520,7 @@ export function JessicaChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
         ) : null}
 
         {replies ? (
-          <div className="my-1.5 flex flex-wrap gap-2 pl-[52px]">
+          <div className="my-2.5 flex shrink-0 flex-wrap gap-2 pl-[52px]">
             {replies.options.map((option) => (
               <button
                 key={option}
