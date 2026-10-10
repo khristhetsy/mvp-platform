@@ -65,11 +65,7 @@ export const JESSICA_FACTS: JessicaFact[] = [
 ];
 
 /** Used when the AI reply is unavailable (no key, budget spent, rate limited, bad answer). */
-<<<<<<< HEAD
-export const JESSICA_FALLBACK_LINES = ["Good question, and the team can give you a proper answer on a quick call."];
-=======
 export const JESSICA_FALLBACK_LINES = ["That one is better answered by the team on a quick call."];
->>>>>>> bfeae68 (Jessica: resume qualifying after a side question, not now objection, neutral fallback)
 export const JESSICA_FALLBACK_BRIDGE = "Easiest way to see if it fits is a quick call with the team.";
 
 /** Said once the visitor has seen open times and typed another question instead of picking one. */
@@ -82,11 +78,7 @@ export const JESSICA_QUALIFY_FALLBACK = "Are you raising right now, or just look
  */
 export const JESSICA_SYSTEM_PROMPT = `You are Jessica, the chat assistant for iCFO Capital Global, Inc. (La Jolla, California; offices in the US, Paris and Singapore). iCFO has helped companies raise capital for over 16 years and built a network of 7,000+ investors (angels, family offices, VCs, private equity, institutions) over that time, so they are relationships, not a list.
 
-<<<<<<< HEAD
-What iCFO does: capital readiness support (materials, narrative, financial summary), rates how ready a company is, matches companies with investors whose mandate fits, puts materials in front of them and follows up on the founder's behalf. Introductions are best efforts. iCFO also structures SPVs for specific deals (one vehicle, one cap table line, one close) and works on alternative routes: revenue based, IP and asset backed, venture debt, acquisition loans. It runs monthly investor conferences. iCapOS is iCFO's software that does the readiness rating and investor matching. Investors use iCapOS free. Most industries except weapons and adult entertainment.
-=======
 What iCFO does: capital readiness support (materials, narrative, financial summary), rates how ready a company is, matches companies with investors whose mandate fits, puts materials in front of them and follows up on the founder's behalf. Introductions are best efforts. iCFO also structures SPVs for specific deals (one vehicle, one cap table line, one close) and works on alternative routes: revenue based, IP and asset backed, venture debt, acquisition loans. It runs monthly investor conferences. iCapOS is iCFO's software that does the readiness rating and investor matching. Investors use iCapOS free. Most industries except weapons and adult entertainment. The visitor is on icapos.com (iCFO's site), on the page icapos.com/jessica, whatever link brought them here; if they ask where they are or what site this is, say so plainly.
->>>>>>> bfeae68 (Jessica: resume qualifying after a side question, not now objection, neutral fallback)
 
 Your job: answer briefly, then move the visitor toward a call with the team.
 
@@ -254,8 +246,6 @@ export const JESSICA_OBJECTIONS: JessicaObjection[] = [
     bridge: "Let's find out what yours looks like.",
   },
   {
-<<<<<<< HEAD
-=======
     id: "not-now",
     match: /don'?t want to (schedule|book)|not (ready|yet)|no meeting|not now|maybe later|later\b|too soon|just (looking|browsing|curious)/i,
     lines: ["No problem, no pressure.", "So I'm useful anyway, what would you want to know first?"],
@@ -279,7 +269,6 @@ export const JESSICA_OBJECTIONS: JessicaObjection[] = [
     },
   },
   {
->>>>>>> bfeae68 (Jessica: resume qualifying after a side question, not now objection, neutral fallback)
     id: "not-interested",
     match: /not interested|no thanks|not for (me|us)|i'?ll pass/i,
     lines: ["No problem at all. One thing before you go, though: we have investors who are already active in your space."],
