@@ -7,10 +7,13 @@
  */
 
 export type EntityId = "icfo_capital_global" | "icfo_venture_group";
+/** Menu order: iCFO Venture Group first, and the default "Billed by" on new invoices and customers (Oct 9, 2026). */
 export const ENTITIES: Array<{ id: EntityId; name: string; short: string }> = [
-  { id: "icfo_capital_global", name: "iCFO Capital Global, Inc.", short: "iCFO Capital Global" },
   { id: "icfo_venture_group", name: "iCFO Venture Group", short: "iCFO Venture Group" },
+  { id: "icfo_capital_global", name: "iCFO Capital Global, Inc.", short: "iCFO Capital Global" },
 ];
+/** Preselected "Billed by" on a new invoice or customer. */
+export const DEFAULT_BILLED_BY: EntityId = "icfo_venture_group";
 export const DEFAULT_ENTITY: EntityId = "icfo_capital_global";
 export const ENTITY_ADDRESS = "La Jolla, CA";
 
@@ -93,11 +96,25 @@ export function entityDisclaimer(entity: string): string {
   return `${who} does not solicit securities and is not an investment adviser.`;
 }
 
+/**
+ * An invoice can be deleted from the list when no payment is recorded on it.
+ * Payments cascade with the invoice, so a paid or partly paid one must have
+ * its payments removed first and is never deleted silently.
+ */
+export function canDeleteInvoice(inv: Pick<Invoice, "amount_paid_cents" | "status">): boolean {
+  return inv.amount_paid_cents <= 0 && inv.status !== "paid";
+}
+
+/** Initials for the pay page when a company has no logo saved yet. */
+export function entityInitials(id: string): string {
+  return id === "icfo_venture_group" ? "IVG" : "iCFO";
+}
+
 export function isEntity(v: unknown): v is EntityId {
   return v === "icfo_capital_global" || v === "icfo_venture_group";
 }
 export function entityName(id: string): string {
-  return ENTITIES.find((e) => e.id === id)?.name ?? ENTITIES[0].name;
+  return ENTITIES.find((e) => e.id === id)?.name ?? "iCFO Capital Global, Inc.";
 }
 
 export type InvoiceStatus = "draft" | "scheduled" | "sent" | "paid" | "void";

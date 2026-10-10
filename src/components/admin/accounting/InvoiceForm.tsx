@@ -9,7 +9,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ENTITIES, addDays, daysBetween, entityName, fmtDate, lineAmount, money, parseMoneyToCents, seriesDates,
+  DEFAULT_BILLED_BY, ENTITIES, addDays, daysBetween, entityName, fmtDate, lineAmount, money, parseMoneyToCents, seriesDates,
   seriesLineLabel, todayPT, type Customer, type EntityId, type Service,
 } from "@/lib/accounting/core";
 import { ServiceCombobox } from "@/components/admin/accounting/ServiceCombobox";
@@ -44,7 +44,7 @@ export function InvoiceForm({ customers: initialCustomers, initial, presetCustom
   const [services, setServices] = useState<Service[]>(initialServices);
   const [customers, setCustomers] = useState(initialCustomers);
   const [customerId, setCustomerId] = useState(initial?.customer_id ?? presetCustomerId ?? "");
-  const [entity, setEntity] = useState<EntityId>(initial?.entity ?? customers.find((c) => c.id === presetCustomerId)?.entity ?? "icfo_capital_global");
+  const [entity, setEntity] = useState<EntityId>(initial?.entity ?? customers.find((c) => c.id === presetCustomerId)?.entity ?? DEFAULT_BILLED_BY);
   // Once "Billed by" is picked by hand, choosing a customer no longer resets it.
   const [entityPicked, setEntityPicked] = useState(false);
   const [issue, setIssue] = useState(initial?.issue_date ?? todayPT());

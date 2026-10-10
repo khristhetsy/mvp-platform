@@ -157,3 +157,20 @@ describe("services", () => {
     expect(servicesFor(s, "icfo_capital_global", "adv").map((x) => x.id)).toEqual(["svc-111111", "svc-222222"]);
   });
 });
+
+describe("billed by and delete (Oct 9, 2026)", () => {
+  it("lists iCFO Venture Group first and defaults to it", async () => {
+    const { ENTITIES, DEFAULT_BILLED_BY, entityName } = await import("@/lib/accounting/core");
+    expect(ENTITIES[0].id).toBe("icfo_venture_group");
+    expect(DEFAULT_BILLED_BY).toBe("icfo_venture_group");
+    expect(entityName("unknown")).toBe("iCFO Capital Global, Inc.");
+  });
+  it("deletes only invoices with no payment recorded", async () => {
+    const { canDeleteInvoice } = await import("@/lib/accounting/core");
+    expect(canDeleteInvoice({ status: "draft", amount_paid_cents: 0 })).toBe(true);
+    expect(canDeleteInvoice({ status: "void", amount_paid_cents: 0 })).toBe(true);
+    expect(canDeleteInvoice({ status: "sent", amount_paid_cents: 0 })).toBe(true);
+    expect(canDeleteInvoice({ status: "sent", amount_paid_cents: 5000 })).toBe(false);
+    expect(canDeleteInvoice({ status: "paid", amount_paid_cents: 100000 })).toBe(false);
+  });
+});
