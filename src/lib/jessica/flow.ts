@@ -106,11 +106,11 @@ export function bookingAnswers(profile: JessicaProfile): Array<{ label: string; 
 export type JessicaReply =
   | { kind: "cost"; id: "cost"; lines: string[]; variants: string[][] }
   | { kind: "ai"; lines: string[] }
-  | { kind: "objection"; id: string; lines: string[]; variants: string[][]; choices?: Record<string, JessicaChoice>; bridge?: string }
-  | { kind: "fact"; lines: string[] }
+  | { kind: "objection"; id: string; lines: string[]; variants: string[][]; choices?: Record<string, JessicaChoice>; bridge?: string; repeatBridge?: string }
+  | { kind: "fact"; id: string; lines: string[]; variants: string[][] }
   | { kind: "unknown"; lines: string[] };
 
-const COST = /\b(cost|price|pricing|fee|fees|how much)\b/i;
+const COST = /\b(cost|costs|price|pricing|fee|fees|charge|charges|how much|upfront|up front|retainer)\b/i;
 const AI = /\b(bot|robot|ai|a\.i\.|chatgpt|automated|human|real person|actual person|a person)\b/i;
 
 /**
@@ -129,12 +129,13 @@ export function matchReply(text: string): JessicaReply {
         variants: objection.variants ?? [],
         choices: objection.choices,
         bridge: objection.bridge,
+        repeatBridge: objection.repeatBridge,
       };
     }
   }
   if (COST.test(text)) return { kind: "cost", id: "cost", lines: JESSICA_COST_LINES, variants: JESSICA_COST_VARIANTS };
   for (const fact of JESSICA_FACTS) {
-    if (fact.match.test(text)) return { kind: "fact", lines: fact.lines };
+    if (fact.match.test(text)) return { kind: "fact", id: fact.id, lines: fact.lines, variants: fact.variants ?? [] };
   }
   return { kind: "unknown", lines: JESSICA_FALLBACK_LINES };
 }
@@ -161,8 +162,10 @@ export function timeOfferLine(dayLabels: string[], offered: number, zoneLabel: s
     `I have ${a} or ${b} open, ${zoneLabel}. Which works for you?`,
     `${a} and ${b} are still open, ${zoneLabel}. Which one?`,
     `${a} or ${b}, ${zoneLabel}?`,
+    `Still holding ${a} and ${b} for you, ${zoneLabel}. Pick one?`,
+    `Easy choice: ${a} or ${b}, ${zoneLabel}.`,
   ];
-  return variants[Math.min(offered, variants.length - 1)];
+  return variants[offered % variants.length];
 }
 
 export interface JessicaAiReply {

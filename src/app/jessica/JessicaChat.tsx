@@ -5,11 +5,16 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { PLATFORM_TZ, PLATFORM_TZ_LABEL } from "@/lib/time/platform-tz";
 import {
+  JESSICA_AI_CHOICES,
+  JESSICA_AI_NO_LINES,
+  JESSICA_AI_VARIANTS,
+  JESSICA_AI_YES_BRIDGE,
   JESSICA_BOOKING_NOTE,
   JESSICA_COST_CHOICES,
   JESSICA_DISCLAIMER,
   JESSICA_FALLBACK_BRIDGE,
   JESSICA_FALLBACK_LINES,
+  JESSICA_SPARE_BRIDGES,
   JESSICA_QUALIFY_FALLBACK,
   JESSICA_SLOT_MINUTES,
 } from "@/lib/jessica/config";
@@ -67,6 +72,7 @@ export function JessicaChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
     let nextId = 1;
     let waiter: ((value: string) => void) | null = null;
     const profile: JessicaProfile = {};
+    const said = new Set<string>();
 
     const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
@@ -77,6 +83,7 @@ export function JessicaChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
 
     const say = async (lines: string[], extra?: LinkExtra) => {
       busy = true;
+      lines.forEach((l) => said.add(questionKey(l)));
       for (let i = 0; i < lines.length; i++) {
         if (cancelled) return;
         setTyping(true);
@@ -203,7 +210,8 @@ export function JessicaChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
     };
 
     /** The assumptive close: a bridge that fits what was just said, then the real open days. */
-    const offerTimes = async (bridge: string) => {
+    const offerTimes = async (wanted: string) => {
+      const bridge = freshBridge(wanted);
       const slots = await loadSlots();
       if (cancelled) return;
       const days = slots ? groupSlotsByDay(slots, PLATFORM_TZ, 4) : [];
@@ -277,30 +285,50 @@ export function JessicaChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
       setTyping(true);
       const reply = await askAi(text, "(Mid booking. Answer in one line, no bridge and no question.)");
       setTyping(false);
-      await say(reply ? reply.lines : scripted.kind === "fact" ? scripted.lines : JESSICA_FALLBACK_LINES);
+      await say(reply ? reply.lines : scripted.kind === "fact" ? fresh([scripted.lines, ...scripted.variants]) : JESSICA_FALLBACK_LINES);
     };
 
+    const sameAsBefore = (reply: JessicaAiReply) => reply.lines.some((l) => said.has(questionKey(l)));
+    /** Never the same words twice: the first wording none of whose lines has been said, else the last one. */
+    const fresh = (wordings: string[][]): string[] => wordings.find((w) => !w.some((l) => said.has(questionKey(l)))) ?? wordings[wordings.length - 1];
+    const freshBridge = (bridge: string): string => fresh([[bridge], ...JESSICA_SPARE_BRIDGES.map((b) => [b])])[0];
+
     const askAi = async (text: string, note?: string): Promise<JessicaAiReply | null> => {
-      const mode = aiMode({ booked, offered, sinceNew });
       const key = questionKey(text);
       const repeats = askedBefore.get(key) ?? 0;
       askedBefore.set(key, repeats + 1);
-      const hint = note ?? (repeats > 0 ? "(The visitor already asked this. Say it a different way, shorter, with one new fact.)" : "");
+      // A repeat question gets a fresh answer and then goes straight back to the focus point: the call.
+      const mode = repeats > 0 && !booked ? "CLOSE" : aiMode({ booked, offered, sinceNew });
+      const hint = note ?? (repeats > 0 ? "(The visitor already asked this. Say it a different way, shorter, with one new fact, then bring it back to the call.)" : "");
       turns.push({ role: "user", content: `${text.slice(0, 600)}${hint ? `\n${hint}` : ""}` });
       if (turns.length > 12) turns.splice(0, turns.length - 12);
-      try {
-        const res = await fetch("/api/jessica/reply", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mode, turns, sessionId }),
-        });
-        if (!res.ok) return null;
-        const reply = parseAiReply(await res.json());
-        if (reply) turns.push({ role: "assistant", content: [...reply.lines, reply.bridge || reply.question].join(" ").trim() });
-        return reply;
-      } catch {
-        return null;
+      const known = bookingAnswers(profile).map((a) => `${a.label}: ${a.value}`).join("; ");
+      const sent = known ? [{ role: "user" as const, content: `KNOWN: ${known}` }, ...turns] : turns;
+      const call = async (): Promise<JessicaAiReply | null> => {
+        try {
+          const res = await fetch("/api/jessica/reply", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mode, turns: sent, sessionId }),
+          });
+          if (!res.ok) return null;
+          return parseAiReply(await res.json());
+        } catch {
+          return null;
+        }
+      };
+      let reply = await call();
+      // Never the same words twice. One retry with an explicit note, then give up on the AI for this turn.
+      if (reply && sameAsBefore(reply)) {
+        turns.push({ role: "user", content: "(You already said that word for word. Say it differently.)" });
+        reply = await call();
+        if (reply && sameAsBefore(reply)) reply = null;
       }
+      if (reply) {
+        turns.push({ role: "assistant", content: [...reply.lines, reply.bridge || reply.question].join(" ").trim() });
+        reply.lines.forEach((l) => said.add(questionKey(l)));
+      }
+      return reply;
     };
 
     const sideConversation = async (value: string) => {
@@ -343,6 +371,9 @@ export function JessicaChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
         return;
       }
       if (scripted.kind === "objection") {
+        const feeAlreadyGiven = (usedScript.get("cost") ?? 0) + (usedScript.get("commission") ?? 0) > 0;
+        const skipOpener = scripted.id === "upfront-fee" && feeAlreadyGiven && (usedScript.get(scripted.id) ?? 0) === 0;
+        if (skipOpener) usedScript.set(scripted.id, 1);
         const wording = pickWording(scripted.lines, scripted.variants, timesUsed(scripted.id));
         if (!wording) {
           // Every scripted wording is used up. Let the AI answer it fresh.
@@ -355,20 +386,29 @@ export function JessicaChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
           return;
         }
         await say(wording);
-        if (scripted.choices) {
+        const repeat = wording !== scripted.lines;
+        if (scripted.choices && !repeat) {
           const pick = await ask(Object.keys(scripted.choices));
           sinceNew = 0;
           const choice = scripted.choices[pick] ?? Object.values(scripted.choices)[0];
           await say(choice.lines);
           await offerTimes(choice.bridge);
         } else {
-          await offerTimes(scripted.bridge ?? JESSICA_FALLBACK_BRIDGE);
+          await offerTimes((repeat && scripted.repeatBridge) || scripted.bridge || JESSICA_FALLBACK_BRIDGE);
         }
         return;
       }
       if (scripted.kind === "ai") {
-        await say(scripted.lines);
-        await offerTimes("Let's get you on their calendar.");
+        // The one place she asks whether, not when: after saying she is an AI.
+        await say(fresh([scripted.lines, ...JESSICA_AI_VARIANTS]));
+        const pick = await ask([JESSICA_AI_CHOICES.yes, JESSICA_AI_CHOICES.no], true);
+        if (pick === JESSICA_AI_CHOICES.yes) {
+          sinceNew = 0;
+          await offerTimes(JESSICA_AI_YES_BRIDGE);
+        } else {
+          sinceNew = 2;
+          await say(JESSICA_AI_NO_LINES);
+        }
         return;
       }
 
@@ -378,7 +418,7 @@ export function JessicaChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
       const reply = await askAi(value);
       setTyping(false);
       if (cancelled) return;
-      const lines = reply ? reply.lines : scripted.kind === "fact" ? scripted.lines : JESSICA_FALLBACK_LINES;
+      const lines = reply ? reply.lines : scripted.kind === "fact" ? fresh([scripted.lines, ...scripted.variants]) : JESSICA_FALLBACK_LINES;
       if (mode === "QUALIFY") {
         sinceNew = 2;
         await say([...lines, reply?.question || JESSICA_QUALIFY_FALLBACK]);
