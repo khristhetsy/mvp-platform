@@ -65,7 +65,7 @@ export const JESSICA_FACTS: JessicaFact[] = [
 ];
 
 /** Used when the AI reply is unavailable (no key, budget spent, rate limited, bad answer). */
-export const JESSICA_FALLBACK_LINES = ["Good question, and the team can give you a proper answer on a quick call."];
+export const JESSICA_FALLBACK_LINES = ["That one is better answered by the team on a quick call."];
 export const JESSICA_FALLBACK_BRIDGE = "Easiest way to see if it fits is a quick call with the team.";
 
 /** Said once the visitor has seen open times and typed another question instead of picking one. */
@@ -78,7 +78,7 @@ export const JESSICA_QUALIFY_FALLBACK = "Are you raising right now, or just look
  */
 export const JESSICA_SYSTEM_PROMPT = `You are Jessica, the chat assistant for iCFO Capital Global, Inc. (La Jolla, California; offices in the US, Paris and Singapore). iCFO has helped companies raise capital for over 16 years and built a network of 7,000+ investors (angels, family offices, VCs, private equity, institutions) over that time, so they are relationships, not a list.
 
-What iCFO does: capital readiness support (materials, narrative, financial summary), rates how ready a company is, matches companies with investors whose mandate fits, puts materials in front of them and follows up on the founder's behalf. Introductions are best efforts. iCFO also structures SPVs for specific deals (one vehicle, one cap table line, one close) and works on alternative routes: revenue based, IP and asset backed, venture debt, acquisition loans. It runs monthly investor conferences. iCapOS is iCFO's software that does the readiness rating and investor matching. Investors use iCapOS free. Most industries except weapons and adult entertainment.
+What iCFO does: capital readiness support (materials, narrative, financial summary), rates how ready a company is, matches companies with investors whose mandate fits, puts materials in front of them and follows up on the founder's behalf. Introductions are best efforts. iCFO also structures SPVs for specific deals (one vehicle, one cap table line, one close) and works on alternative routes: revenue based, IP and asset backed, venture debt, acquisition loans. It runs monthly investor conferences. iCapOS is iCFO's software that does the readiness rating and investor matching. Investors use iCapOS free. Most industries except weapons and adult entertainment. The visitor is on icapos.com (iCFO's site), on the page icapos.com/jessica, whatever link brought them here; if they ask where they are or what site this is, say so plainly.
 
 Your job: answer briefly, then move the visitor toward a call with the team.
 
@@ -244,6 +244,29 @@ export const JESSICA_OBJECTIONS: JessicaObjection[] = [
       ["Understood. That's exactly why we don't quote blind, the starting point depends on your raise."],
     ],
     bridge: "Let's find out what yours looks like.",
+  },
+  {
+    id: "not-now",
+    match: /don'?t want to (schedule|book)|not (ready|yet)|no meeting|not now|maybe later|later\b|too soon|just (looking|browsing|curious)/i,
+    lines: ["No problem, no pressure.", "So I'm useful anyway, what would you want to know first?"],
+    variants: [
+      ["Fair enough, no rush.", "What's the one thing you'd want clear before you ever book anything?"],
+      ["Understood.", "Tell me what you're weighing and I'll give you a straight answer."],
+    ],
+    choices: {
+      "What it costs": {
+        lines: ["It depends on the type of capital, and how much work we have to do."],
+        bridge: "The team puts a real number on it once they know your raise, no commitment needed.",
+      },
+      "Who the investors are": {
+        lines: ["Angels, family offices, VCs and institutions in a network built over 16 years. We match on mandate, not a mass list."],
+        bridge: "The team can show you who fits your company on a short call.",
+      },
+      "How it works": {
+        lines: ["We rate how ready you are, match you with the right investors, get your materials in front of them and follow up."],
+        bridge: "Easier to show than explain, and 20 minutes is enough.",
+      },
+    },
   },
   {
     id: "not-interested",
