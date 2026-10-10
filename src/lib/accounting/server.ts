@@ -20,6 +20,7 @@ import {
   autoMatch, lineAmount, money, parseBankFile, payPagePath, plaidAmountToCents, seriesDates, seriesLineLabel, suggestMatch, todayPT,
   type BankTransaction, type Customer, type EntityId, type Invoice, type InvoiceLine, type MatchCandidate,
   type Payment, type PaymentMethod, EMPTY_LETTERHEAD, normalizeLetterhead, type Letterhead,
+  normalizeServices, type Service,
 } from "@/lib/accounting/core";
 import { renderInvoicePdf, type SeriesRow } from "@/lib/accounting/invoice-pdf";
 import { renderInvoiceEmail, renderReceiptEmail } from "@/lib/accounting/emails";
@@ -94,6 +95,41 @@ export async function saveLetterhead(entity: EntityId, input: unknown, staffId: 
   const { error } = await client.from("platform_settings").upsert({ key: letterheadKey(entity), value: clean, updated_by: staffId, updated_at: new Date().toISOString() }, { onConflict: "key" });
   if (error) throw new Error(`Could not save the letterhead: ${error.message}`);
   return clean;
+}
+
+// ── Services (the invoice line dropdown) ─────────────────────────────────────
+
+const SERVICES_KEY = "accounting_services";
+
+export async function getServices(client: Db = db()): Promise<Service[]> {
+  try {
+    const { data } = await client.from("platform_settings").select("value").eq("key", SERVICES_KEY).maybeSingle();
+    return normalizeServices((data as { value?: unknown } | null)?.value);
+  } catch {
+    return [];
+  }
+}
+
+export async function saveServices(input: unknown, staffId: string, client: Db = db()): Promise<Service[]> {
+  const clean = normalizeServices(input);
+  const { error } = await client.from("platform_settings").upsert({ key: SERVICES_KEY, value: clean, updated_by: staffId, updated_at: new Date().toISOString() }, { onConflict: "key" });
+  if (error) throw new Error(`Could not save services: ${error.message}`);
+  return clean;
+}
+
+/** Adds one service (from "Save as a new service" on an invoice line). An existing name is updated, not duplicated. */
+export async function addService(input: { name?: unknown; unit_cents?: unknown; entity?: unknown }, staffId: string, client: Db = db()): Promise<{ service: Service; services: Service[] }> {
+  const name = typeof input.name === "string" ? input.name.trim() : "";
+  if (!name) throw new Error("Enter a service name.");
+  const current = await getServices(client);
+  const existing = current.find((s) => s.name.toLowerCase() === name.toLowerCase());
+  const next = existing
+    ? current.map((s) => (s.id === existing.id ? { ...s, unit_cents: typeof input.unit_cents === "number" ? input.unit_cents : s.unit_cents } : s))
+    : [...current, { id: `svc-${crypto.randomUUID().slice(0, 8)}`, name, unit_cents: typeof input.unit_cents === "number" ? input.unit_cents : null, entity: input.entity as Service["entity"] }];
+  const services = await saveServices(next, staffId, client);
+  const service = services.find((s) => s.name.toLowerCase() === name.toLowerCase());
+  if (!service) throw new Error("Could not save the service.");
+  return { service, services };
 }
 
 // ── Customers ────────────────────────────────────────────────────────────────

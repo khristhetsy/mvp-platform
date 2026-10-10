@@ -1,5 +1,5 @@
 import { requirePermissionPage } from "@/lib/api/permissions";
-import { getLetterhead, getPaymentInstructions } from "@/lib/accounting/server";
+import { getLetterhead, getPaymentInstructions, getServices } from "@/lib/accounting/server";
 import { plaidConfig } from "@/lib/accounting/plaid";
 import { SettingsClient } from "@/components/admin/accounting/SettingsClient";
 
@@ -8,17 +8,18 @@ export const metadata = { title: "Accounting settings" };
 
 export default async function AccountingSettingsPage() {
   await requirePermissionPage("manage_billing");
-  const [icg, ivg, icgLh, ivgLh] = await Promise.all([
+  const [icg, ivg, icgLh, ivgLh, services] = await Promise.all([
     getPaymentInstructions("icfo_capital_global"),
     getPaymentInstructions("icfo_venture_group"),
     getLetterhead("icfo_capital_global"),
     getLetterhead("icfo_venture_group"),
+    getServices(),
   ]);
   const cfg = plaidConfig();
   return (
     <div className="space-y-3 p-4 md:p-6">
       <h1 className="text-xl font-semibold text-slate-900">Settings</h1>
-      <SettingsClient initial={{ icfo_capital_global: icg, icfo_venture_group: ivg }} letterheads={{ icfo_capital_global: icgLh, icfo_venture_group: ivgLh }} plaidReady={Boolean(cfg)} plaidEnv={cfg?.env ?? null} />
+      <SettingsClient initial={{ icfo_capital_global: icg, icfo_venture_group: ivg }} letterheads={{ icfo_capital_global: icgLh, icfo_venture_group: ivgLh }} services={services} plaidReady={Boolean(cfg)} plaidEnv={cfg?.env ?? null} />
     </div>
   );
 }
