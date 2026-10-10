@@ -13,6 +13,7 @@
  * attachments. The selection is the campaign audience, as before.
  */
 
+import Link from "next/link";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { FounderToolbar, applySearch, groupRows } from "@/components/founder/FounderToolbar";
 import { EMPTY_SEARCH, type SearchState } from "@/components/admin/OdooSearchBar";
@@ -171,6 +172,9 @@ export function ManualOutreachBuilder({
   const [drafting, setDrafting] = useState(false);
   const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
   const [composeMessage, setComposeMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
+  // Plan email cap for this 30 day period (null until loaded or if it can't load).
+  const [emailCap, setEmailCap] = useState<{ cap: number; used: number; resetsLabel: string } | null>(null);
+  const capReached = emailCap !== null && emailCap.cap > 0 && emailCap.used >= emailCap.cap;
 
   const closeGear = useCallback(() => setGearOpen(false), []);
   const closeActions = useCallback(() => setActionsOpen(false), []);
@@ -197,6 +201,14 @@ export function ManualOutreachBuilder({
     void fetchLists().then((lists) => {
       if (active && lists) setSavedLists(lists);
     });
+    void fetch("/api/founder/outreach/email-cap")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { cap?: number; used?: number; resetsLabel?: string } | null) => {
+        if (active && d && typeof d.cap === "number" && typeof d.used === "number") {
+          setEmailCap({ cap: d.cap, used: d.used, resetsLabel: d.resetsLabel ?? "" });
+        }
+      })
+      .catch(() => {});
     void fetch("/api/founder/outreach/attachments")
       .then((r) => (r.ok ? r.json() : null))
       .then((d: AttachmentOptions | null) => {
@@ -545,7 +557,7 @@ export function ManualOutreachBuilder({
                     </button>
                     <a href="/founder/investor-directory" className={menuItem} onClick={() => setGearOpen(false)}>
                       <i className="ti ti-world-search mt-0.5 text-base text-slate-500" aria-hidden="true" />
-                      <span>Investor directory<span className="block text-[11px] text-slate-400">Public investors outside the iCFO network</span></span>
+                      <span>Investor directory<span className="block text-[11px] text-slate-400">Public investors, not the iCFO Capital network</span></span>
                     </a>
                     <button type="button" className={menuItem} onClick={() => { setGearOpen(false); downloadTemplateCsv(); }}>
                       <i className="ti ti-download mt-0.5 text-base text-slate-500" aria-hidden="true" />
@@ -644,7 +656,9 @@ export function ManualOutreachBuilder({
             <button
               type="button"
               onClick={() => { setComposeMessage(null); setDialog("compose"); }}
-              className="cap-btn-primary rounded-lg px-3 py-1.5 text-[12.5px] font-semibold"
+              disabled={capReached}
+              title={capReached ? `Email limit reached. Sending resumes ${emailCap?.resetsLabel}.` : undefined}
+              className="cap-btn-primary rounded-lg px-3 py-1.5 text-[12.5px] font-semibold disabled:cursor-not-allowed disabled:opacity-50"
             >
               <i className="ti ti-mail" aria-hidden="true" /> Send email
             </button>
@@ -682,6 +696,18 @@ export function ManualOutreachBuilder({
             </button>
             <button type="button" onClick={() => setPanel("none")} className="text-[12.5px] text-slate-500 hover:text-slate-700">Cancel</button>
             <span className="text-[11.5px] text-slate-400">{selected.size} investors</span>
+          </div>
+        ) : null}
+
+        {capReached && emailCap ? (
+          <div className="flex flex-wrap items-start gap-3 border-b border-red-100 bg-red-50 px-4 py-3 text-[12.5px] text-[#791F1F]" role="status">
+            <i className="ti ti-mail-off mt-0.5 text-base" aria-hidden="true" />
+            <div className="min-w-[220px] flex-1">
+              <p className="font-semibold">You&apos;ve sent {emailCap.used.toLocaleString("en-US")} of {emailCap.cap.toLocaleString("en-US")} emails this period.</p>
+              <p className="mt-0.5">Sending resumes {emailCap.resetsLabel}. Drafts and queued follow ups stay saved and go out after the reset. A directory top up or a bigger plan adds more.</p>
+            </div>
+            <Link href="/upgrade" className={btn}>See plans</Link>
+            <Link href="/founder/investor-directory" className="cap-btn-primary rounded-lg px-3 py-1.5 text-[12.5px] font-semibold">Add a top up</Link>
           </div>
         ) : null}
 

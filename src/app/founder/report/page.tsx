@@ -12,6 +12,13 @@ import { ReportCompareToggle } from "@/components/founder/ReportCompareToggle";
 import type { DiligenceReportRow } from "@/components/founder/DiligenceReportCompare";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
+import { headers } from "next/headers";
+import { getAppUrl } from "@/lib/env";
+import { formatPlatformDateTime } from "@/lib/time/platform-tz";
+import { getSubscriptionForProfile } from "@/lib/subscriptions/get-subscription";
+import { FREE_REPORT_LIMIT_MESSAGE, UPGRADE_BASIC_HREF, isRestrictedFreeFounder } from "@/lib/founder-plan/tier";
+import { listShareSummaries } from "@/lib/reports/report-shares";
+import { ReportSharePanel } from "./ReportSharePanel";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +43,19 @@ export default async function DiligenceReportPage() {
   const previousReport = reportVersions.length > 1 ? reportVersions[1] : null;
 
   const companyName = company?.company_name ?? "Your company";
+
+  // One free report: a non grandfathered Free founder who already has a report
+  // sees the upgrade instead of Regenerate (the API enforces the same rule).
+  const subscription = diligenceReport ? await getSubscriptionForProfile(profile.id).catch(() => null) : null;
+  const regenerateLocked = Boolean(diligenceReport) && isRestrictedFreeFounder(subscription);
+
+  const shares = diligenceReport && company ? await listShareSummaries(company.id).catch(() => []) : [];
+  let appOrigin = getAppUrl() ?? "";
+  if (!appOrigin) {
+    const h = await headers();
+    const host = h.get("x-forwarded-host") ?? h.get("host");
+    appOrigin = host ? `${h.get("x-forwarded-proto") ?? "https"}://${host}` : "";
+  }
 
   if (diligenceReport) {
     track("report_viewed", { founderId: profile.id, companyId: company?.id });
@@ -83,11 +103,11 @@ export default async function DiligenceReportPage() {
                     for a sharper result.
                   </p>
                   <p className="mt-2 text-xs text-slate-500">
-                    Generated {new Date(diligenceReport.created_at).toLocaleString("en-US")}
+                    Generated {formatPlatformDateTime(diligenceReport.created_at)}
                   </p>
                   <div className="mt-4 flex flex-wrap items-start gap-3">
                     <ReportExportButtons />
-                    <GenerateMyReportButton variant="secondary" label="Regenerate" />
+                    {regenerateLocked ? null : <GenerateMyReportButton variant="secondary" label="Regenerate" />}
                     {previousReport ? (
                       <ReportCompareToggle
                         current={diligenceReport as unknown as DiligenceReportRow}
@@ -95,6 +115,14 @@ export default async function DiligenceReportPage() {
                       />
                     ) : null}
                   </div>
+                  {regenerateLocked ? (
+                    <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+                      <p className="min-w-0 flex-1 text-sm text-amber-900">{FREE_REPORT_LIMIT_MESSAGE}</p>
+                      <Link href={UPGRADE_BASIC_HREF} className="cap-btn-primary rounded-lg px-4 py-2 text-sm font-medium">
+                        Upgrade
+                      </Link>
+                    </div>
+                  ) : null}
                 </div>
                 {typeof diligenceReport.readiness_score === "number" ? (
                   <div className="rounded-xl border border-[var(--navy)] bg-[var(--navy)] p-5 text-white shadow-[var(--shadow-panel)]">
@@ -119,6 +147,14 @@ export default async function DiligenceReportPage() {
               recommendations={recommendations}
               riskFlags={riskFlags as string[]}
             />
+
+            <div className="mt-6">
+              <ReportSharePanel initialShares={shares} appOrigin={appOrigin} />
+            </div>
+
+            <p className="mt-6 text-[11px] leading-5 text-slate-500">
+              iCFO Capital does not solicit securities and is not an investment adviser. Content is for educational purposes only.
+            </p>
           </>
         )}
       </FounderFeatureGate>

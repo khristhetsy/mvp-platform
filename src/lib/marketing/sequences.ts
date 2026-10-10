@@ -469,7 +469,7 @@ export async function releaseSequenceBatch(batchId: string, releasedBy: string |
     const result = needsEmailReview(contact.tags)
       ? { resend_id: null, ok: false, error: `Invalid recipient address: ${contact.email} (flagged for review)` }
       : await sendMarketingEmail({
-          to: contact.email, first_name: contact.first_name, company: contact.company,
+          to: contact.email, first_name: contact.first_name, last_name: contact.last_name, company: contact.company,
           from_name: step.from_name, from_email: step.from_email,
           subject: step.template.subject, html_body: step.template.html_body, text_body: step.template.text_body,
           unsubscribe_token: token,

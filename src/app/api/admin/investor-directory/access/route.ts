@@ -1,4 +1,4 @@
-/** Plan tiers. PATCH { key, hold_limit?, show_email?, can_export?, price_cents? } → { ok } */
+/** Top ups. PATCH { key, hold_limit?, email_limit?, show_email?, can_export?, price_cents? } → { ok } */
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { directoryAdmin, failed } from "@/lib/investor-directory/admin-auth";
@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 const schema = z.object({
   key: z.string().min(1).max(40),
   hold_limit: z.number().int().min(0).max(1_000_000).optional(),
+  email_limit: z.number().int().min(0).max(10_000_000).optional(),
   show_email: z.boolean().optional(),
   can_export: z.boolean().optional(),
   price_cents: z.number().int().min(0).max(10_000_000).nullable().optional(),

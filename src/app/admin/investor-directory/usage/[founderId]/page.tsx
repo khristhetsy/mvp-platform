@@ -4,7 +4,7 @@ import { requireRole } from "@/lib/supabase/auth";
 import { MetricCard } from "@/components/MetricCard";
 import { FounderAccessActions } from "@/components/admin/investor-directory/FounderAccessActions";
 import { Section, Tag } from "@/components/admin/investor-directory/ui";
-import { fmtPT, type Tone } from "@/lib/investor-directory/format";
+import { fmtPT, planLabel, type Tone } from "@/lib/investor-directory/format";
 import { founderUsageDetail, loadSettings } from "@/lib/investor-directory/db";
 
 export const dynamic = "force-dynamic";
@@ -28,7 +28,8 @@ export default async function FounderUsagePage({ params }: Readonly<{ params: Pr
   if (!u) notFound();
   const pct = (a: number, b: number) => (b ? `${Math.round((a / b) * 100)}% of sent` : "No sends yet");
   const max = Math.max(1, ...d.perDay.map((x) => x.sent));
-  const heldPct = u.holdLimit ? Math.round((u.held / u.holdLimit) * 100) : null;
+  const heldPct = u.holdLimit ? Math.min(100, Math.round((u.held / u.holdLimit) * 100)) : null;
+  const emailPct = u.emailCap ? Math.min(100, Math.round((u.emailsUsed / u.emailCap) * 100)) : null;
 
   return (
     <div className="space-y-4 p-4 md:p-6">
@@ -38,11 +39,16 @@ export default async function FounderUsagePage({ params }: Readonly<{ params: Pr
         <Tag tone={FLAG[u.flag].tone}>{FLAG[u.flag].label}</Tag>
         <FounderAccessActions founderId={u.founderId} status={u.status} />
       </div>
-      <p className="text-[12.5px] text-slate-500">{u.name}{u.email ? ` · ${u.email}` : ""} · {u.tier} · last active {fmtPT(u.lastActive, true)}</p>
+      <p className="text-[12.5px] text-slate-500">{u.name}{u.email ? ` · ${u.email}` : ""} · {planLabel(u.plan, u.tier)} · last active {fmtPT(u.lastActive, true)}</p>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 [&>*]:h-full">
         <MetricCard audience="admin" label="Contacts held" value={u.held.toLocaleString("en-US")} unit={`of ${u.holdLimit.toLocaleString("en-US")}`} detail="Directory contacts in this founder's list"
           ring={heldPct === null ? { percent: null, pending: true } : { percent: heldPct, center: `${heldPct}%` }} />
+        <MetricCard audience="admin" label="Emails this period" value={u.emailsUsed.toLocaleString("en-US")} unit={`of ${u.emailCap.toLocaleString("en-US")}`}
+          detail="Every Manual outreach email in the founder's current 30 day period"
+          ring={emailPct === null ? { percent: null, pending: true } : { percent: emailPct, center: `${emailPct}%` }}
+          flag={u.emailCap > 0 && u.emailsUsed >= u.emailCap ? { text: "At the cap: sends are held until the period resets", tone: "bad" }
+            : u.emailCap > 0 && u.emailsUsed >= u.emailCap * 0.8 ? { text: `${(u.emailCap - u.emailsUsed).toLocaleString("en-US")} emails left this period`, tone: "warn" } : null} />
         <MetricCard audience="admin" label="Imported, 30 days" value={u.imports30d.toLocaleString("en-US")} detail={`${u.importsInWindow.toLocaleString("en-US")} in the last ${settings.spike_hours} hours`}
           flag={u.flag === "spike" ? { text: `Over ${settings.spike_imports.toLocaleString("en-US")} in ${settings.spike_hours} hours`, tone: "warn" } : null} />
         <MetricCard audience="admin" label="Emails sent" value={u.sent.toLocaleString("en-US")} detail={`${d.opened.toLocaleString("en-US")} opened · manual outreach`} />

@@ -2,9 +2,14 @@ import { describe, expect, it } from "vitest";
 import { bounceRate, decideImport, startOfTodayPT, usageFlag } from "@/lib/investor-directory/limits";
 import { DEFAULT_SETTINGS, type FounderDirectoryAccess } from "@/lib/investor-directory/types";
 
-const tier = (hold: number) => ({ key: "t", label: "T", hold_limit: hold, show_email: true, can_export: false, price_cents: null, sort: 1 });
+const tier = (hold: number) => ({ key: "t", label: "T", hold_limit: hold, email_limit: hold * 2, show_email: true, can_export: false, price_cents: null, sort: 1 });
+const lim = (contacts: number) => ({
+  plan: "founder_basic", planLabel: "Basic",
+  allowance: { plan_type: "founder_basic", label: "Basic", contacts, emails_per_month: contacts * 2, sort: 1 },
+  topUp: tier(0), contacts, emails: contacts * 2, emailsUsed: 0, periodStart: "x", periodEnd: "y",
+});
 const acc = (o: Partial<FounderDirectoryAccess> = {}): FounderDirectoryAccess => ({
-  tier: tier(1000), status: "active", statusReason: null, termsAccepted: true, termsAcceptedAt: "x", held: 0, importedToday: 0, ...o,
+  tier: tier(0), limits: lim(1000), status: "active", statusReason: null, termsAccepted: true, termsAcceptedAt: "x", held: 0, importedToday: 0, ...o,
 });
 
 describe("decideImport", () => {
@@ -15,7 +20,7 @@ describe("decideImport", () => {
     expect(decideImport(1, acc({ status: "suspended" }), DEFAULT_SETTINGS)).toMatchObject({ ok: false, reason: "suspended" });
     expect(decideImport(1, acc({ status: "paused" }), DEFAULT_SETTINGS)).toMatchObject({ ok: false, reason: "paused" });
     expect(decideImport(1, acc({ termsAccepted: false }), DEFAULT_SETTINGS)).toMatchObject({ ok: false, reason: "terms" });
-    expect(decideImport(1, acc({ tier: tier(0) }), DEFAULT_SETTINGS)).toMatchObject({ ok: false, reason: "free_plan" });
+    expect(decideImport(1, acc({ limits: lim(0) }), DEFAULT_SETTINGS)).toMatchObject({ ok: false, reason: "free_plan" });
   });
   it("skips the terms check when terms are not required", () => {
     expect(decideImport(1, acc({ termsAccepted: false }), { ...DEFAULT_SETTINGS, require_terms: false })).toMatchObject({ ok: true });

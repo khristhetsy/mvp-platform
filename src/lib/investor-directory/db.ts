@@ -10,10 +10,14 @@ import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
 import { startOfTodayPT, usageFlag, type UsageFlag } from "@/lib/investor-directory/limits";
 import type { CleanRow } from "@/lib/investor-directory/clean";
 import { loadVocabularies } from "@/lib/vocabulary/store";
+import { getUserPlan } from "@/lib/subscriptions/get-subscription";
+import { founderCapPeriod } from "@/lib/outreach/investor-cap";
+import { DEFAULT_ALLOWANCES, addUp, pickAllowance } from "@/lib/investor-directory/allowance";
 import { labelOf } from "@/lib/vocabulary/lists";
 import {
   DEFAULT_SETTINGS, DIRECTORY_CONTACT_SOURCE, FREE_TIER,
-  type AccessStatus, type DirectoryRecord, type DirectorySettings, type DirectoryTier, type FounderDirectoryAccess,
+  type AccessStatus, type DirectoryPlanAllowance, type DirectoryRecord, type DirectorySettings, type DirectoryTier,
+  type FounderDirectoryAccess, type FounderLimits,
 } from "@/lib/investor-directory/types";
 
 function db(): SupabaseClient {
@@ -21,6 +25,12 @@ function db(): SupabaseClient {
 }
 
 export const PAGE_SIZE = 80;
+
+/**
+ * email_log sources for founder outreach. Manual outreach sequence emails log
+ * as "manual-outreach"; single reach outs log as "founder_outreach".
+ */
+const OUTREACH_SOURCES = ["founder_outreach", "manual-outreach"];
 
 // ── Settings and tiers ────────────────────────────────────────────────────
 
@@ -39,9 +49,67 @@ export async function loadTiers(): Promise<DirectoryTier[]> {
   return (data as DirectoryTier[] | null) ?? [FREE_TIER];
 }
 
-export async function saveTier(key: string, patch: Partial<Pick<DirectoryTier, "hold_limit" | "show_email" | "can_export" | "price_cents">>): Promise<void> {
+export async function saveTier(key: string, patch: Partial<Pick<DirectoryTier, "hold_limit" | "email_limit" | "show_email" | "can_export" | "price_cents">>): Promise<void> {
   const { error } = await db().from("investor_directory_tiers").update(patch).eq("key", key);
   if (error) throw new Error(error.message);
+}
+
+/** What each plan includes. Falls back to the code defaults before the migration runs. */
+export async function loadPlanAllowances(): Promise<DirectoryPlanAllowance[]> {
+  const { data, error } = await db().from("investor_directory_plan_allowances").select("*").order("sort");
+  if (error || !data?.length) return DEFAULT_ALLOWANCES;
+  return data as DirectoryPlanAllowance[];
+}
+
+export async function savePlanAllowance(planType: string, patch: Partial<Pick<DirectoryPlanAllowance, "contacts" | "emails_per_month">>): Promise<void> {
+  const { error } = await db()
+    .from("investor_directory_plan_allowances")
+    .update({ ...patch, updated_at: new Date().toISOString() })
+    .eq("plan_type", planType);
+  if (error) throw new Error(error.message);
+}
+
+/** Manual outreach emails this founder sent since `since`. 0 before the send log exists. */
+export async function emailsSentSince(founderId: string, since: string): Promise<number> {
+  const { count, error } = await db()
+    .from("manual_outreach_sends")
+    .select("id", { count: "exact", head: true })
+    .eq("founder_id", founderId)
+    .gte("sent_at", since);
+  return error ? 0 : count ?? 0;
+}
+
+/**
+ * The founder's directory contact limit and Manual outreach email cap: plan
+ * allowance + top up, with emails used in the current 30 day period.
+ * Pass already loaded tiers or the top up key to save a query.
+ */
+export async function founderLimits(founderId: string, opts: { tiers?: DirectoryTier[]; topUpKey?: string | null } = {}): Promise<FounderLimits> {
+  const [plan, allowances, tiers, accessRow, period] = await Promise.all([
+    getUserPlan(founderId).catch(() => null),
+    loadPlanAllowances(),
+    opts.tiers ? Promise.resolve(opts.tiers) : loadTiers(),
+    opts.topUpKey !== undefined
+      ? Promise.resolve({ data: { tier: opts.topUpKey ?? "free" } })
+      : db().from("investor_directory_access").select("tier").eq("founder_id", founderId).maybeSingle(),
+    founderCapPeriod(db(), founderId),
+  ]);
+  const allowance = pickAllowance(allowances, plan);
+  const topKey = (accessRow.data as { tier?: string } | null)?.tier ?? "free";
+  const topUp = tiers.find((t) => t.key === topKey) ?? FREE_TIER;
+  const total = addUp(allowance, topUp);
+  const emailsUsed = await emailsSentSince(founderId, period.start.toISOString());
+  return {
+    plan: plan ?? null,
+    planLabel: allowance.label,
+    allowance,
+    topUp,
+    contacts: total.contacts,
+    emails: total.emails,
+    emailsUsed,
+    periodStart: period.start.toISOString(),
+    periodEnd: period.end.toISOString(),
+  };
 }
 
 // ── Founder access ────────────────────────────────────────────────────────
@@ -68,8 +136,10 @@ export async function loadFounderAccess(founderId: string, companyId: string | n
   const row = accessRow.data as { tier: string; status: AccessStatus; status_reason: string | null; terms_version: number | null; terms_accepted_at: string | null } | null;
   const tier = tiers.find((t) => t.key === (row?.tier ?? "free")) ?? FREE_TIER;
   const importedToday = ((today.data ?? []) as { count: number }[]).reduce((s, r) => s + (r.count ?? 0), 0);
+  const limits = await founderLimits(founderId, { tiers, topUpKey: row?.tier ?? "free" });
   return {
     tier,
+    limits,
     status: row?.status ?? "active",
     statusReason: row?.status_reason ?? null,
     termsAccepted: Boolean(row?.terms_accepted_at) && (row?.terms_version ?? 0) >= settings.terms_version,
@@ -219,7 +289,7 @@ export async function importIntoContacts(input: {
     geography: [r.city, r.state].filter(Boolean).join(", ") || null,
     source: DIRECTORY_CONTACT_SOURCE,
     tags: ["investor-directory"],
-    notes: `From the iCapOS investor directory (${r.source}). Outside the iCFO network.`,
+    notes: `From the iCapOS investor directory (${r.source}). Not the iCFO Capital investor network.`,
     status: "new",
     created_at: now,
     updated_at: now,
@@ -361,7 +431,7 @@ export async function syncBounces(): Promise<number> {
   const { data } = await db()
     .from("email_log")
     .select("to_email")
-    .eq("source", "founder_outreach")
+    .in("source", OUTREACH_SOURCES)
     .not("bounced_at", "is", null)
     .limit(5000);
   const emails = [...new Set(((data ?? []) as { to_email: string | null }[]).map((r) => r.to_email?.toLowerCase()).filter((e): e is string => Boolean(e)))];
@@ -487,7 +557,7 @@ export async function requestUpgrade(founderId: string, tierKey: string): Promis
   await logEvent(founderId, null, "upgrade_requested", 0, tierKey);
 }
 
-/** Bounced founder_outreach emails to any of these addresses (email_log is filled by Resend events). */
+/** Bounced founder outreach emails to any of these addresses (email_log is filled by Resend events). */
 async function bouncesTo(emails: string[]): Promise<{ to_email: string; bounced_at: string }[]> {
   const list = [...new Set(emails.flatMap((e) => [e, e.toLowerCase()]))];
   const out: { to_email: string; bounced_at: string }[] = [];
@@ -495,7 +565,7 @@ async function bouncesTo(emails: string[]): Promise<{ to_email: string; bounced_
     const { data } = await db()
       .from("email_log")
       .select("to_email, bounced_at")
-      .eq("source", "founder_outreach")
+      .in("source", OUTREACH_SOURCES)
       .not("bounced_at", "is", null)
       .in("to_email", list.slice(i, i + 300));
     out.push(...((data ?? []) as { to_email: string; bounced_at: string }[]));
@@ -539,8 +609,15 @@ export type UsageRow = {
   name: string;
   email: string | null;
   company: string | null;
+  /** Top up label ("No top up" when none). */
   tier: string;
+  /** Plan label, e.g. "Basic". */
+  plan: string;
+  /** Contact limit: plan + top up. */
   holdLimit: number;
+  /** Manual outreach emails this 30 day period, and the cap. */
+  emailsUsed: number;
+  emailCap: number;
   status: AccessStatus;
   held: number;
   imports30d: number;
@@ -592,14 +669,20 @@ export async function listUsage(settings: DirectorySettings): Promise<UsageRow[]
     const imports = ev.filter((e) => e.kind === "import");
     const p = ((profiles ?? []) as { id: string; full_name: string | null; email: string | null }[]).find((x) => x.id === id);
     const tier = tiers.find((t) => t.key === (a?.tier ?? "free")) ?? FREE_TIER;
-    const stats = await sendStats(id, companyOf.get(id) ?? null);
+    const [stats, limits] = await Promise.all([
+      sendStats(id, companyOf.get(id) ?? null),
+      founderLimits(id, { tiers, topUpKey: a?.tier ?? "free" }),
+    ]);
     const row: Omit<UsageRow, "flag"> = {
       founderId: id,
       name: p?.full_name ?? p?.email ?? "Founder",
       email: p?.email ?? null,
       company: companyName.get(companyOf.get(id) ?? "") ?? null,
       tier: tier.label,
-      holdLimit: tier.hold_limit,
+      plan: limits.planLabel,
+      holdLimit: limits.contacts,
+      emailsUsed: limits.emailsUsed,
+      emailCap: limits.emails,
       status: a?.status ?? "active",
       held: heldOf.get(id) ?? 0,
       imports30d: imports.reduce((s, e) => s + e.count, 0),

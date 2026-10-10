@@ -56,6 +56,14 @@ export async function POST(request: Request) {
     if (isNewSignup) {
       track("signup", { userId: user.id, role });
       if (role === "founder") {
+        // Partner code and free report claim attribution. Never throws.
+        const { recordSignupAttribution } = await import("@/lib/listing/claim");
+        await recordSignupAttribution({
+          userId: user.id,
+          email: user.email ?? null,
+          companyId: (company as { id?: string } | null)?.id ?? null,
+          metadata: user.user_metadata,
+        });
         // Never throws, so a failed alert can't fail the signup.
         await alertStaffNewCustomer({
           event: "signup",

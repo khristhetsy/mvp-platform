@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { pricingFor, pricingSummary } from "@/content/pricing";
 import { loadPricing } from "@/lib/subscriptions/pricing-server";
-import { premiumCheckoutReady } from "@/lib/billing/buy-links";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { BookDemoButton } from "@/components/marketing-site/BookDemoButton";
 import { loadPriceAnchor } from "@/lib/marketing-site/price-anchor";
@@ -10,8 +9,8 @@ import { loadPriceAnchor } from "@/lib/marketing-site/price-anchor";
 export async function generateMetadata(): Promise<Metadata> {
   const catalog = await loadPricing();
   return {
-    title: "Pricing — iCapOS",
-    description: `Choose a plan to unlock the tools and your investor distribution. ${pricingSummary(catalog)}`,
+    title: "Pricing | iCapOS",
+    description: `Start free with an AI due diligence report and a Private Market listing. Upgrade when investors are interested. ${pricingSummary(catalog)}`,
     alternates: { canonical: "/pricing" },
   };
 }
@@ -19,7 +18,10 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function PricingPage() {
   const catalog = await loadPricing();
-  const p = pricingFor(catalog, { showPremium: premiumCheckoutReady() });
+  const p = pricingFor(catalog);
+  // Four self-serve plans in the grid; the SPV Program (contact sales) sits below as its own band.
+  const plans = p.tiers.filter((t) => !("contactSales" in t && t.contactSales));
+  const spv = p.tiers.find((t) => "contactSales" in t && t.contactSales);
   const faqJsonLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
@@ -40,6 +42,7 @@ export default async function PricingPage() {
           <p className="font-site-mono text-xs font-semibold uppercase tracking-[0.16em] text-site-blue-lt">{p.eyebrow}</p>
           <h1 className="mt-3 font-site-display text-4xl font-extrabold tracking-tight sm:text-5xl">{p.title}</h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg leading-8 text-white/70">{p.sub}</p>
+          <Link href={p.mainCta.href} className="mt-7 inline-block rounded-lg bg-site-blue px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi">{p.mainCta.label}</Link>
           {/* Price anchor — the alternative cost of outreach (brief Step 5). Figures from data/price-anchor.json; omitted until populated; no competitor names. */}
           {anchor ? (
             <p className="mx-auto mt-6 max-w-2xl text-[13px] leading-6 text-white/55">
@@ -47,22 +50,30 @@ export default async function PricingPage() {
             </p>
           ) : null}
         </div>
-        <div className={`mx-auto mt-10 grid gap-5 sm:grid-cols-2 ${p.tiers.length > 3 ? "max-w-6xl xl:grid-cols-4" : "max-w-5xl xl:grid-cols-3"}`}>
-          {p.tiers.map((t) => (
-            <div key={t.name} className={`relative rounded-2xl p-6 ${t.featured ? "border-2 border-site-blue-lt bg-white/[0.07] ring-1 ring-site-blue-lt/25" : "border border-white/12 bg-white/[0.03]"}`}>
-              {/* Professional primacy tag; Professional is order-first on mobile (brief Step 6). */}
+        <div className={`mx-auto mt-10 grid gap-5 sm:grid-cols-2 ${plans.length > 3 ? "max-w-[1500px] lg:grid-cols-4 lg:gap-4 xl:gap-5" : "max-w-5xl xl:grid-cols-3"}`}>
+          {plans.map((t) => {
+            const promo = "promo" in t && t.promo ? t.promo : null;
+            return (
+            <div key={t.name} className={`relative flex flex-col rounded-2xl p-6 lg:p-[1.6em] lg:text-[clamp(12px,calc(0.5rem_+_0.4vw),15px)] ${t.featured ? "border-2 border-site-blue-lt bg-white/[0.07] ring-1 ring-site-blue-lt/25" : promo ? "border-2 border-site-amber bg-white/[0.04]" : "border border-white/12 bg-white/[0.03]"}`}>
+              {/* Premium primacy tag (Oct 9, 2026: moved from Professional). From lg up the card text
+                  scales with the window (12px floor, 15px cap) so four columns fit a laptop. */}
               {t.featured ? (
-                <div className="absolute -top-3 left-6 rounded-full bg-site-blue px-3 py-1 font-site-mono text-[10px] font-semibold uppercase tracking-wider text-white">Most founders start here</div>
+                <div className="absolute -top-3 left-6 rounded-full bg-site-blue px-3 py-1 font-site-mono text-[10px] lg:text-[0.7em] font-semibold uppercase tracking-wider text-white">Most founders start here</div>
+              ) : promo ? (
+                <div className="absolute -top-3 left-6 rounded-full bg-site-amber px-3 py-1 font-site-mono text-[10px] lg:text-[0.7em] font-semibold uppercase tracking-wider text-site-ink">{promo.tag}</div>
               ) : null}
-              <div className="flex items-center justify-between">
-                <h2 className="font-site-display text-xl font-bold">{t.name}</h2>
-                {"badge" in t && t.badge ? <span className="rounded-full bg-site-blue/25 px-2.5 py-0.5 font-site-mono text-[10px] font-medium text-site-blue-lt">{t.badge}</span> : null}
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="font-site-display text-xl lg:text-[1.45em] font-bold">{t.name}</h2>
+                {"badge" in t && t.badge ? <span className="whitespace-nowrap rounded-full bg-site-blue/25 px-2.5 py-0.5 font-site-mono text-[10px] lg:text-[0.7em] font-medium text-site-blue-lt">{t.badge}</span> : null}
               </div>
-              <div className="mt-3 flex items-baseline gap-1"><span className={`font-site-display font-extrabold ${t.per ? "text-4xl" : "text-2xl"}`}>{t.price}</span>{t.per ? <span className="text-sm text-white/50">{t.per}</span> : null}</div>
-              <p className="mt-2 text-sm text-white/65">{t.desc}</p>
+              <div className="mt-3 flex items-baseline gap-1"><span className={`font-site-display font-extrabold ${t.per ? "text-4xl lg:text-[2.4em]" : "text-2xl lg:text-[1.7em]"}`}>{t.price}</span>{t.per ? <span className="text-sm lg:text-[0.93em] text-white/50">{t.per}</span> : null}{promo ? <span className="text-sm lg:text-[0.93em] text-white/50">{promo.priceNote}</span> : null}</div>
+              <p className="mt-2 text-sm lg:text-[0.93em] text-white/65">{t.desc}</p>
+              {promo ? (
+                <p className="mt-4 flex items-center gap-2 rounded-lg border border-site-amber/40 bg-site-amber/10 px-3 py-2 text-[13px] lg:text-[0.93em] font-medium text-site-amber" role="note"><i className="ti ti-clock" aria-hidden="true" />{promo.note}</p>
+              ) : null}
               {"features" in t && t.features ? (
                 <ul className="mt-5 space-y-2.5">
-                  {t.features.map((f) => (<li key={f} className="flex gap-2.5 text-[13.5px] text-white/85"><span className="text-site-blue-lt"><i className="ti ti-check" aria-hidden="true" /></span>{f}</li>))}
+                  {t.features.map((f) => (<li key={f} className="flex gap-2.5 text-[13.5px] lg:text-[1em] text-white/85"><span className="text-site-blue-lt"><i className="ti ti-check" aria-hidden="true" /></span>{f}</li>))}
                 </ul>
               ) : null}
               {"advisory" in t && t.advisory ? (
@@ -72,22 +83,48 @@ export default async function PricingPage() {
                   <p className="mt-1.5 text-[13px] leading-relaxed text-white/70">{t.advisory.body}</p>
                 </div>
               ) : null}
-              <Link href={t.cta.href} {...("contactSales" in t && t.contactSales ? { target: "_blank", rel: "noopener noreferrer" } : {})} className={`mt-6 block rounded-lg px-5 py-3 text-center text-sm font-semibold transition-colors ${t.featured ? "bg-site-blue text-white hover:bg-site-blue-hi" : "border border-white/20 text-white hover:border-site-blue-lt hover:text-site-blue-lt"}`}>{t.cta.label}</Link>
+              {/* Pins every plan button to the card bottom so they line up across the row. */}
+              <div className="flex-1" />
+              <Link href={t.cta.href} {...("contactSales" in t && t.contactSales ? { target: "_blank", rel: "noopener noreferrer" } : {})} className={`mt-6 block rounded-lg px-5 py-3 text-center text-sm lg:text-[0.93em] font-semibold transition-colors ${t.featured ? "bg-site-blue text-white hover:bg-site-blue-hi" : promo ? "bg-site-amber text-site-ink hover:bg-site-amber/90" : "border border-white/20 text-white hover:border-site-blue-lt hover:text-site-blue-lt"}`}>{t.cta.label}</Link>
             </div>
-          ))}
+            );
+          })}
         </div>
-        <p className="mx-auto mt-8 max-w-2xl text-center font-site-mono text-[11px] leading-5 text-white/45">{p.investorNote}</p>
+        {spv ? (
+          <div className="mx-auto mt-5 grid max-w-6xl gap-5 rounded-2xl border border-white/12 bg-white/[0.03] p-6 md:grid-cols-[1fr_1.2fr_auto] md:items-center">
+            <div>
+              <div className="flex items-center gap-3">
+                <h2 className="font-site-display text-xl font-bold">{spv.name}</h2>
+                {"badge" in spv && spv.badge ? <span className="rounded-full bg-site-blue/25 px-2.5 py-0.5 font-site-mono text-[10px] font-medium text-site-blue-lt">{spv.badge}</span> : null}
+              </div>
+              <div className="mt-2 font-site-display text-2xl font-extrabold">{spv.price}</div>
+              <p className="mt-1 text-sm text-white/65">{spv.desc}</p>
+            </div>
+            {"advisory" in spv && spv.advisory ? (
+              <div className="rounded-xl border border-site-blue-lt/30 bg-site-blue/[0.07] p-4">
+                <div className="flex items-center gap-2 text-site-blue-lt"><i className="ti ti-building-bank" aria-hidden="true" /><span className="font-site-mono text-[10px] uppercase tracking-wider">{spv.advisory.brand}</span></div>
+                <p className="mt-2 text-[15px] font-semibold text-white">{spv.advisory.title}</p>
+                <p className="mt-1.5 text-[13px] leading-relaxed text-white/70">{spv.advisory.body}</p>
+              </div>
+            ) : <div />}
+            <Link href={spv.cta.href} target="_blank" rel="noopener noreferrer" className="block rounded-lg border border-white/20 px-5 py-3 text-center text-sm font-semibold text-white transition-colors hover:border-site-blue-lt hover:text-site-blue-lt">{spv.cta.label}</Link>
+          </div>
+        ) : null}
+        <p className="mx-auto mt-8 max-w-2xl text-center font-site-mono text-[11px] leading-5 text-white/45">
+          Investors join free at <Link href={p.investorLink.href} className="text-site-blue-lt hover:underline">{p.investorLink.label}</Link>. Investors are never charged, and iCapOS takes no fee from either side of an introduction.
+        </p>
         {/* Non-refundable policy, framed on services-rendered-immediately (§13). Binding terms live in /terms (counsel). */}
         <p className="mx-auto mt-4 max-w-3xl text-center font-site-mono text-[11px] leading-5 text-white/45">{p.billingNote}</p>
+        <p className="mx-auto mt-4 max-w-3xl text-center font-site-mono text-[11px] leading-5 text-white/60">{p.disclaimer}</p>
       </section>
 
       {/* Side-by-side comparison */}
       <section className="bg-white px-6 py-20">
-        <div className="mx-auto max-w-4xl">
+        <div className="mx-auto max-w-5xl">
           <h2 className="font-site-display text-2xl font-extrabold tracking-tight text-site-navy sm:text-3xl">{p.comparison.title}</h2>
           <p className="mt-2 text-site-muted">{p.comparison.sub}</p>
-          <div className="mt-8 overflow-hidden rounded-2xl border border-site-line">
-            <table className="w-full text-left text-sm">
+          <div className="mt-8 overflow-x-auto rounded-2xl border border-site-line">
+            <table className="w-full min-w-[640px] text-left text-sm">
               <thead className="bg-site-paper font-site-mono text-[11px] uppercase tracking-wide text-site-muted">
                 <tr><th className="px-5 py-3"> </th>{p.comparison.cols.map((c) => (<th key={c} className="px-5 py-3">{c}</th>))}</tr>
               </thead>
@@ -125,9 +162,11 @@ export default async function PricingPage() {
             ))}
           </div>
           <div className="mt-8 flex flex-wrap items-center gap-3">
+            <Link href={p.mainCta.href} className="rounded-lg bg-site-blue px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi">{p.mainCta.label}</Link>
             <span className="text-sm text-site-muted">Prefer a walkthrough first?</span>
             <BookDemoButton variant="outline" />
           </div>
+          <p className="mt-8 text-xs leading-5 text-site-muted">{p.disclaimer} Content is for educational purposes only.</p>
         </div>
       </section>
     </>

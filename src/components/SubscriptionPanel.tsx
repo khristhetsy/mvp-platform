@@ -47,6 +47,37 @@ export function SubscriptionLockedPanel({
   const trialExpired = subscription.plan_type === "founder_trial" && isTrialExpired(subscription);
   const upgradeHref = getUpgradeUrl(featureKey);
 
+  // Signed up on Premium, not yet paid: Premium is paid by bank wire only, so
+  // the prompt sends the founder to the wire panel, not to card checkout.
+  if (subscription.plan_type === "founder_premium" && subscription.subscription_status === "pending_payment") {
+    return (
+      <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Premium, paid by bank wire</p>
+        <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">Request your Premium wire invoice</h2>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
+          Choose monthly or quarterly billing and we email an invoice with wire instructions. Premium activates as soon as your wire is received, usually within 1 to 2 business days.
+        </p>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Link
+            href="/billing?plan=founder_premium#premium"
+            className="rounded-full bg-[#1A6CE4] px-5 py-3 text-sm font-semibold text-white hover:bg-[#2E78F5]"
+          >
+            Request wire invoice
+          </Link>
+          <Link
+            href={upgradeHref}
+            className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            Compare plans
+          </Link>
+        </div>
+        <p className="mt-4 text-xs text-slate-500">
+          Flat monthly fee. Fees are never tied to funding outcomes. iCFO Capital does not solicit securities and is not an investment adviser. Content is for educational purposes only.
+        </p>
+      </section>
+    );
+  }
+
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{t("plan_upgrade_required")}</p>

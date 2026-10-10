@@ -25,7 +25,7 @@ export default async function FounderInvestorDirectoryPage() {
           </div>
           <PageHeader
             title="Investor directory"
-            description="Public investor data, outside the iCFO network. Select investors and import them into your Manual outreach."
+            description="Public investor data, not the iCFO Capital investor network. Select investors and import them into your Manual outreach."
           />
           {company ? (
             <VocabularyProvider value={await loadVocabularies()}>

@@ -35,12 +35,19 @@ function defaultPlanForRole(role: UserRole, _requestedPlan?: PlanType | null): {
     };
   }
 
-  // Founders: the free tier was discontinued when Basic launched at $49
-  // (16 Sep 2026). A new founder lands on Basic awaiting payment rather than on
-  // a free plan they'd later have to be moved off. Existing free accounts keep
-  // theirs via subscriptions.is_grandfathered — this path only runs when no row
-  // exists yet, so it can never downgrade someone.
+  // Founders who asked for Free (due diligence only, Oct 8, 2026) get it with no
+  // checkout. Anyone else lands on Basic awaiting payment. This path only runs
+  // when no row exists yet, so it can never downgrade someone.
   const requested = _requestedPlan;
+  if (requested === "founder_free") {
+    return {
+      plan_type: "founder_free",
+      subscription_status: "free",
+      monthly_price_cents: 0,
+      trial_started_at: null,
+      trial_ends_at: null,
+    };
+  }
   const plan: PlanType =
     requested === "founder_professional" || requested === "founder_premium" || requested === "founder_managed_ir"
       ? requested : "founder_basic";
@@ -130,6 +137,9 @@ export async function ensureSubscriptionForProfile(input: {
       current_period_end: defaults.trial_ends_at,
       monthly_price_cents: defaults.monthly_price_cents,
       currency: "USD",
+      // New Free rows are never grandfathered: they get due diligence and the
+      // CRR only (access.ts reads this flag).
+      is_grandfathered: false,
     });
 
   // Duplicate key = race condition: another request already created it — just fetch it

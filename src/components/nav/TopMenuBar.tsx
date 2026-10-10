@@ -46,6 +46,7 @@ export const TILE_ICONS: Record<string, LucideIcon> = {
   "/admin/users/manage": ShieldCheck,
   "/admin/integrations": Settings,
   "/admin/investor-directory": BookUser,
+  "/admin/accounting": Landmark,
 };
 
 /** A tile's colors, fixed per admin hub so they don't shift when someone can't see every hub. */

@@ -28,6 +28,7 @@ const DESCRIPTIONS: Record<string, string> = {
   "/admin/marketing": "Campaigns and lists",
   "/admin/ir": "Projects and matching",
   "/admin/investor-directory": "Public investor data",
+  "/admin/accounting": "Invoices, A/R and bank",
   "/admin/social": "Posts and accounts",
   "/admin/events": "Events and sponsors",
   "/admin/voice": "AI calling",
@@ -44,7 +45,7 @@ const DESCRIPTIONS: Record<string, string> = {
 const GROUPS: Array<{ label: string; hrefs: string[] }> = [
   { label: "Raise", hrefs: ["/admin", "/admin/ceo", "/admin/ir", "/admin/investor-directory", "/admin/contacts"] },
   { label: "Grow", hrefs: ["/admin/sales", "/admin/marketing", "/admin/social", "/admin/events", "/admin/voice"] },
-  { label: "Operate", hrefs: ["/admin/inbox", "/admin/actions", "/admin/companies", "/admin/learning", "/admin/manual"] },
+  { label: "Operate", hrefs: ["/admin/accounting", "/admin/inbox", "/admin/actions", "/admin/companies", "/admin/learning", "/admin/manual"] },
   { label: "Admin", hrefs: ["/admin/users/manage", "/admin/integrations"] },
 ];
 

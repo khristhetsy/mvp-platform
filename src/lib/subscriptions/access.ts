@@ -1,4 +1,5 @@
 import {
+  FOUNDER_FREE_FEATURES,
   FOUNDER_PROFESSIONAL_FEATURES,
   type FeatureKey,
   type PlanType,
@@ -67,7 +68,7 @@ export function isSubscriptionActive(subscription: SubscriptionRecord, now = new
     return false;
   }
 
-  if (subscription.plan_type === "investor_free") {
+  if (subscription.plan_type === "investor_free" || subscription.plan_type === "founder_free") {
     return subscription.subscription_status === "free" || subscription.subscription_status === "active";
   }
 
@@ -109,13 +110,13 @@ function featuresForPlan(planType: PlanType, subscription: SubscriptionRecord, _
     return new Set<FeatureKey>(FOUNDER_PROFESSIONAL_FEATURES);
   }
 
-  // Free founders: grandfathered accounts keep the full toolset; any other free
-  // row is paywalled to "settings" until they pick a paid plan. Reads
+  // Free founders: grandfathered accounts keep the full toolset; every other
+  // Free row gets due diligence and the CRR only (approved Oct 8, 2026). Reads
   // is_grandfathered, the flag admin billing grants and revokes, so a staff
-  // change takes effect here. Fail-open: only an EXPLICIT false gates.
+  // change takes effect here. Fail-open: only an EXPLICIT false narrows.
   if (planType === "founder_free") {
     return subscription.is_grandfathered === false
-      ? new Set<FeatureKey>(["settings"])
+      ? new Set<FeatureKey>(FOUNDER_FREE_FEATURES)
       : new Set<FeatureKey>(FOUNDER_PROFESSIONAL_FEATURES);
   }
 
@@ -167,7 +168,7 @@ export function canAccessFeature(
   if (subscription.plan_type === "founder_free") {
     return {
       allowed: false,
-      reason: "Choose a plan to unlock the tools and reach your matched investors.",
+      reason: "Your free plan includes your due diligence report and Capital Readiness Rating. Upgrade to Basic to unlock every tool and reach your matched investors.",
     };
   }
 

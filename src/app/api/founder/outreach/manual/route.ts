@@ -6,6 +6,7 @@ import { emailDispatchAllowedForUser, EMAIL_DISABLED_MESSAGE } from "@/lib/organ
 import { getUserPlan } from "@/lib/subscriptions/get-subscription";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import { capMessage, checkManualOutreachCap } from "@/lib/outreach/investor-cap";
+import { checkManualEmailCap } from "@/lib/outreach/email-cap";
 import { normalizeAttachments } from "@/lib/outreach/manual-attachments";
 import {
   getManualOutreach,
@@ -87,6 +88,15 @@ export async function POST(request: Request) {
     if (!cap.ok) {
       return NextResponse.json(
         { error: capMessage(cap), code: "investor_cap_reached", cap: cap.cap, used: cap.used, remaining: cap.remaining, resets_at: cap.resetsAt.toISOString() },
+        { status: 403 },
+      );
+    }
+    // Email cap: the plan's Manual outreach emails per 30 days plus any
+    // directory top up. Each new recipient's first email must fit what is left.
+    const emailCap = await checkManualEmailCap({ founderId: auth.profile.id, companyId: company.id, selectedIds: recipientIds });
+    if (!emailCap.ok) {
+      return NextResponse.json(
+        { error: emailCap.message, code: "email_cap_reached", cap: emailCap.cap, used: emailCap.used, remaining: emailCap.remaining, resets_at: emailCap.resetsAt },
         { status: 403 },
       );
     }

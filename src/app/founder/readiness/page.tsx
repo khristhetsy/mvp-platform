@@ -19,7 +19,9 @@ import { FounderRemediationActionPlan } from "@/components/FounderRemediationAct
 import { FounderReadinessDonutCards } from "@/components/founder/FounderReadinessDonutCards";
 import { CrrImprovement } from "@/components/founder/CrrImprovement";
 import { crrFor } from "@/lib/crr/crr-for";
-import { improvementSteps, reachesGate } from "@/lib/crr/improvement";
+import { gapText, improvementSteps, projectedScore, reachesGate, toolFor, type ImprovementStep } from "@/lib/crr/improvement";
+import { getSubscriptionForProfile } from "@/lib/subscriptions/get-subscription";
+import { UPGRADE_BASIC_HREF, UPGRADE_PREMIUM_HREF, isRestrictedFreeFounder } from "@/lib/founder-plan/tier";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { loadNotApplicableTypes } from "@/lib/documents/not-applicable";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -31,6 +33,72 @@ import { ReadinessBenchmarkBanner } from "@/components/founder/ReadinessBenchmar
 import { resolveActingFounderScope } from "@/lib/admin/act-on-behalf";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * The free CRR gap list: what is holding the score down, worth what the CRR
+ * formula says it is worth, and the tool that fixes each gap. Free founders
+ * see the tool behind a Basic plan lock; paid founders get live links.
+ */
+function CrrGapList({
+  score,
+  steps,
+  locked,
+}: Readonly<{ score: number; steps: ImprovementStep[]; locked: boolean }>) {
+  const target = projectedScore(score, steps);
+  return (
+    <WorkspacePanel
+      title={`Fix the gaps below to reach ${target}`}
+      subtitle={`Your Capital Readiness Rating is ${score} today. Investors see this score on your listing. A higher score stands out.`}
+      action={
+        locked ? (
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href={UPGRADE_PREMIUM_HREF}
+              className="cap-btn-secondary rounded-lg border border-slate-200 bg-white px-3.5 py-1.5 text-sm font-medium text-[var(--navy)]"
+            >
+              Let us do it, Premium
+            </Link>
+            <Link href={UPGRADE_BASIC_HREF} className="cap-btn-primary rounded-lg px-3.5 py-1.5 text-sm font-medium">
+              Upgrade to Basic, $49/mo
+            </Link>
+          </div>
+        ) : undefined
+      }
+      provenance="Points from the CRR formula at your stage, capped at 100"
+    >
+      <ul className="divide-y divide-slate-100">
+        {steps.map((step) => {
+          const tool = toolFor(step.key);
+          return (
+            <li key={step.key} className="flex items-start gap-4 py-3">
+              <span className="w-12 shrink-0 font-mono text-sm font-semibold text-emerald-700">+{step.upTo}</span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-slate-900">{gapText(step.key)}</p>
+                <p className="mt-0.5 text-xs text-slate-500">{step.label}, {step.dimension.toLowerCase()}</p>
+                {tool === null ? (
+                  <Link href="/founder/documents" className="mt-1 inline-block text-xs font-medium text-[#1A6CE4] hover:text-[#2E78F5]">
+                    Fix with your documents
+                  </Link>
+                ) : locked ? (
+                  <Link href={UPGRADE_BASIC_HREF} className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-slate-600 hover:text-[#1A6CE4]">
+                    <i className="ti ti-lock" aria-hidden="true" /> Fix with {tool.tool}, Basic plan
+                  </Link>
+                ) : (
+                  <Link href={tool.href} className="mt-1 inline-block text-xs font-medium text-[#1A6CE4] hover:text-[#2E78F5]">
+                    Fix with {tool.tool}
+                  </Link>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      <p className="mt-3 text-[11px] leading-5 text-slate-500">
+        iCFO Capital does not solicit securities and is not an investment adviser. Content is for educational purposes only.
+      </p>
+    </WorkspacePanel>
+  );
+}
 
 export default async function FounderReadinessPage() {
   // Act-on-behalf: permissioned staff render as the founder; otherwise normal gate.
@@ -85,6 +153,9 @@ export default async function FounderReadinessPage() {
   const crr = company ? await crrFor(company.id) : null;
   const crrSteps = crr ? improvementSteps(crr.factorGaps) : [];
   const crrReach = crr ? reachesGate(crrSteps, crr.pointsToGate) : { enough: false, available: 0, shortfall: 0 };
+  // Gap list: the same ranked steps, with the plan deciding locks vs live links.
+  const gapSteps = crr && crr.score !== null ? improvementSteps(crr.factorGaps) : [];
+  const gapsLocked = gapSteps.length ? isRestrictedFreeFounder(await getSubscriptionForProfile(profile.id).catch(() => null)) : false;
   const benchmark = company ? await computeReadinessBenchmark(company.id, company.revenue_stage ?? null) : null;
 
   return (
@@ -132,6 +203,12 @@ export default async function FounderReadinessPage() {
                       diligence: `diligence ${formatReviewStatus(reviewStatus ? String(reviewStatus) : null).toLowerCase()}`,
                     }}
                   />
+                </section>
+              ) : null}
+
+              {crr && crr.score !== null && gapSteps.length ? (
+                <section className="mb-6">
+                  <CrrGapList score={crr.score} steps={gapSteps} locked={gapsLocked} />
                 </section>
               ) : null}
 

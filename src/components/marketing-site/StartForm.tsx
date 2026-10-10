@@ -10,13 +10,14 @@ import { start } from "@/content/start";
  * auth. Keyboard-operable; the whole thing degrades to a normal form.
  */
 /** Monthly price labels per plan, from the live pricing set (e.g. "$49"). */
-export type StartPlanPrices = { founder_basic: string; founder_professional: string };
+export type StartPlanPrices = { founder_free: string; founder_basic: string; founder_professional: string };
 
 export function StartForm({ prices }: Readonly<{ prices: StartPlanPrices }>) {
   const f = start.fields;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [choice, setChoice] = useState<string>("founder_basic");
+  // Free due diligence is the first option and the default (Oct 9, 2026).
+  const [choice, setChoice] = useState<string>("founder_free");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -33,7 +34,7 @@ export function StartForm({ prices }: Readonly<{ prices: StartPlanPrices }>) {
       raise_target: String(fd.get("raise_target") ?? "") || undefined,
       capital_structure: (String(fd.get("capital_structure") ?? "") || undefined) as
         | "reg_d" | "reg_cf" | "reg_a_plus" | "not_sure" | undefined,
-      start_choice: choice as "founder_basic" | "founder_professional",
+      start_choice: choice as "founder_free" | "founder_basic" | "founder_professional",
       source_page: "/start",
     };
     try {
@@ -74,14 +75,14 @@ export function StartForm({ prices }: Readonly<{ prices: StartPlanPrices }>) {
 
       <fieldset className="mt-5">
         <legend className="text-[13px] font-medium text-site-navy">{f.plan.label}</legend>
-        <div className="mt-2 grid gap-3 sm:grid-cols-2">
+        <div className="mt-2 grid gap-3 sm:grid-cols-3">
           {f.plan.options.map((o) => (
             <label key={o.value} className={`cursor-pointer rounded-xl border p-4 transition-colors ${choice === o.value ? "border-2 border-site-blue-hi bg-site-blue-pale/40" : "border-site-line bg-white"}`}>
               <input type="radio" name="start_choice" value={o.value} checked={choice === o.value} onChange={() => setChoice(o.value)} className="sr-only" />
               <div className="text-sm font-semibold text-site-navy">{o.label}</div>
               <div className="mt-0.5 font-site-display text-xl font-extrabold text-site-navy">
                 {prices[o.value as keyof typeof prices]}
-                <span className="ml-1 text-[12px] font-medium text-site-muted">/ month</span>
+                <span className="ml-1 text-[12px] font-medium text-site-muted">{o.value === "founder_free" ? "no card" : "/ month"}</span>
               </div>
               <ul className="mt-2 list-disc space-y-0.5 pl-4 text-[12px] text-site-muted">
                 {o.features.map((ft) => (<li key={ft}>{ft}</li>))}
@@ -94,7 +95,7 @@ export function StartForm({ prices }: Readonly<{ prices: StartPlanPrices }>) {
       {error ? <p className="mt-4 text-[13px] text-red-600" role="alert">{error}</p> : null}
 
       <button type="submit" disabled={busy} className="mt-6 w-full rounded-lg bg-site-blue px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi disabled:opacity-60">
-        {busy ? "Creating…" : `${start.submit} ${f.plan.options.find((o) => o.value === choice)?.label ?? "Basic"}`}
+        {busy ? "Creating…" : choice === "founder_free" ? "Get my free report" : `${start.submit} ${f.plan.options.find((o) => o.value === choice)?.label ?? "Basic"}`}
       </button>
       <p className="mt-3 text-center text-[13px] text-site-muted">{start.signinPrompt} <Link href={start.signinCta.href} className="font-medium text-site-blue hover:text-site-blue-hi">{start.signinCta.label}</Link></p>
       <p className="mt-4 text-[11px] leading-5 text-site-muted/80">{start.terms}</p>

@@ -1,4 +1,4 @@
-/** Investor directory: public investor data outside the iCFO network. */
+/** Investor directory: public investor data, not the iCFO Capital investor network. */
 
 export type DirectoryVerification = "unverified" | "needs_input" | "verified" | "bounced" | "opt_out";
 export type DirectoryStatus = "draft" | "published" | "suppressed";
@@ -37,10 +37,15 @@ export type DirectoryRecord = {
   updated_at: string;
 };
 
+/**
+ * A top up on top of the founder's plan. hold_limit is the contact space it
+ * adds and email_limit the Manual outreach emails per 30 days it adds.
+ */
 export type DirectoryTier = {
   key: string;
   label: string;
   hold_limit: number;
+  email_limit: number;
   show_email: boolean;
   can_export: boolean;
   price_cents: number | null;
@@ -77,11 +82,40 @@ export const DEFAULT_SETTINGS: DirectorySettings = {
   terms_version: 1,
 };
 
-export const FREE_TIER: DirectoryTier = { key: "free", label: "Free", hold_limit: 0, show_email: false, can_export: false, price_cents: null, sort: 0 };
+/** "No top up". The key stays "free" because the access table defaults to it. */
+export const FREE_TIER: DirectoryTier = { key: "free", label: "No top up", hold_limit: 0, email_limit: 0, show_email: false, can_export: false, price_cents: null, sort: 0 };
+
+/** What each founder plan includes: directory contacts and Manual outreach emails per 30 days. */
+export type DirectoryPlanAllowance = {
+  plan_type: string;
+  label: string;
+  contacts: number;
+  emails_per_month: number;
+  sort: number;
+};
+
+/** Plan, top up and the totals they add up to. */
+export type FounderLimits = {
+  plan: string | null;
+  planLabel: string;
+  allowance: DirectoryPlanAllowance;
+  topUp: DirectoryTier;
+  /** Directory contacts the founder may hold: plan + top up. */
+  contacts: number;
+  /** Manual outreach emails per 30 day period: plan + top up. */
+  emails: number;
+  /** Manual outreach emails sent in the current period. */
+  emailsUsed: number;
+  /** Start and end of the current 30 day period (counted from signup), ISO. */
+  periodStart: string;
+  periodEnd: string;
+};
 
 /** The founder's standing with the directory, as the import gate sees it. */
 export type FounderDirectoryAccess = {
+  /** The founder's top up (FREE_TIER when none). */
   tier: DirectoryTier;
+  limits: FounderLimits;
   status: AccessStatus;
   statusReason: string | null;
   termsAccepted: boolean;
@@ -95,4 +129,7 @@ export const DIRECTORY_CONTACT_SOURCE = "directory";
 
 /** Shown wherever directory data appears. */
 export const DIRECTORY_DISCLAIMER =
-  "Outside the iCFO network. Compiled from public sources; iCFO has no relationship with these investors. iCFO does not solicit securities and is not an investment adviser. Content is for educational purposes only.";
+  "Not the iCFO Capital investor network. Compiled from public sources; iCFO Capital has no relationship with these investors and does not introduce you to them. iCFO Capital does not solicit securities and is not an investment adviser. Content is for educational purposes only.";
+
+/** One line used beside every directory allowance (plan cards, tiles, dialogs). */
+export const NOT_NETWORK_NOTE = "Public data, not the iCFO Capital investor network";
