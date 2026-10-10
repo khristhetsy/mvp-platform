@@ -75,6 +75,13 @@ describe("matchReply", () => {
     expect(r.kind).toBe("cost");
     expect(r.lines).toContain("It depends on the type of capital, and how much work we have to do.");
   });
+  it("a question about upfront cost gets the fee answer, a refusal gets the objection", () => {
+    expect(matchReply("Do you have upfront cost").kind).toBe("cost");
+    expect(matchReply("is there an upfront fee?").kind).toBe("cost");
+    expect(matchReply("We don't pay upfront fee").kind).toBe("objection");
+    expect(matchReply("do you make commission").kind).toBe("objection");
+    expect(matchReply("do you make commission").lines.join(" ")).toMatch(/No commission/);
+  });
   it("treats no upfront fees as an objection, not a plain cost question", () => {
     const r = matchReply("I don't want to pay upfront fees");
     expect(r.kind).toBe("objection");
@@ -113,6 +120,11 @@ describe("matchReply", () => {
     }
     expect(all.join(" ")).not.toMatch(/\$\d|\d+\s?%|guarantee|contingent|if we (don'?t|cannot)/i);
   });
+  it("says she is an AI assistant for Jessica only when asked directly", () => {
+    expect(matchReply("are you a bot?").lines[0]).toBe("I'm an AI assistant for Jessica, and there's nothing here I can't help you with.");
+    expect(matchReply("are you a bot?").lines[1]).toMatch(/someone from our team/);
+    expect(matchReply("what is your name").kind).not.toBe("ai");
+  });
   it("admits being an AI when asked", () => {
     expect(matchReply("are you a bot?").kind).toBe("ai");
     expect(matchReply("Am I talking to a real person?").kind).toBe("ai");
@@ -143,7 +155,9 @@ describe("timeOfferLine", () => {
     expect(first).toContain("Wed, Oct 14");
     expect(first).not.toContain("Thu");
     expect(second).not.toBe(first);
-    expect(timeOfferLine(days, 9, "PT")).toBe("Tue, Oct 13 or Wed, Oct 14, PT?");
+    const five = [0, 1, 2, 3, 4].map((n) => timeOfferLine(days, n, "PT"));
+    expect(new Set(five).size).toBe(5);
+    expect(timeOfferLine(days, 5, "PT")).toBe(five[0]);
   });
   it("copes with one or no days", () => {
     expect(timeOfferLine(["Tue, Oct 13"], 0, "PT")).toContain("Tue, Oct 13");
