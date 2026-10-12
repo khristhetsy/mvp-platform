@@ -212,7 +212,7 @@ export function BankClient({
           />
           <div className="flex flex-wrap gap-1">
             {TABS.map((t) => (
-              <button key={t.key} type="button" onClick={() => router.replace(`/admin/accounting/bank${t.key === "review" ? "" : `?tab=${t.key}`}`)}
+              <button key={t.key} type="button" onClick={() => router.replace(t.key === "review" ? "/admin/accounting/bank" : `/admin/accounting/bank?tab=${t.key}`)}
                 className={`rounded-md px-2.5 py-1 text-[12px] ${tab === t.key ? "bg-[#E6F1FB] font-medium text-[#0C447C]" : "text-slate-600 hover:bg-slate-50"}`}>
                 {t.label}{t.key !== "all" ? ` ${counts[t.key] ?? 0}` : ""}
               </button>
