@@ -44,7 +44,7 @@ async function fetchDirectory(q: URLSearchParams): Promise<{ ok: true; body: Pay
 
 const shortSource = (s: string) => s.replace(/\s*\(.*\)\s*$/, "").replace(/^(SBA|USDA)\b.*$/, "$1");
 
-export function InvestorDirectoryClient() {
+export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pinnedSource?: string; onTotal?: (total: number) => void }> = {}) {
   const types = useVocabulary("investor_type");
   const stages = useVocabulary("funding_stage");
   const industries = useVocabulary("industry");
@@ -80,10 +80,12 @@ export function InvestorDirectoryClient() {
       const full = sources.find((f) => shortSource(f) === v || f === v);
       if (full) q.append("source", full);
     }
+    // A pinned source (the Form D tab) always wins over the Source chips.
+    if (pinnedSource) { q.delete("source"); q.append("source", pinnedSource); }
     if (p > 1) q.set("page", String(p));
     if (withFacets) q.set("facets", "1");
     return q;
-  }, [industries.all, slugOf, stages.all, types.all]);
+  }, [industries.all, pinnedSource, slugOf, stages.all, types.all]);
 
   const apply = useCallback((result: { ok: true; body: Payload } | { ok: false; error: string }) => {
     if (result.ok) {
@@ -123,6 +125,10 @@ export function InvestorDirectoryClient() {
   const contactLimit = limits?.contacts ?? 0;
   const browseOnly = !access || contactLimit <= 0;
   const selectable = useMemo(() => (data?.rows ?? []).filter((r) => !r.held), [data]);
+  const totalRows = data?.total;
+  useEffect(() => {
+    if (onTotal && totalRows !== undefined) onTotal(totalRows);
+  }, [onTotal, totalRows]);
 
   async function doImport(termsJustAccepted = false) {
     if (!data || !access) return;

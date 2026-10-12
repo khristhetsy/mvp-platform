@@ -38,6 +38,7 @@ export function FormDInvestorDesk({ canPromote }: Readonly<{ canPromote: boolean
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [publishBusy, setPublishBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [selectAllMatching, setSelectAllMatching] = useState(false);
@@ -139,6 +140,29 @@ export function FormDInvestorDesk({ canPromote }: Readonly<{ canPromote: boolean
     }
   }
 
+  // Copies the verified firms matching the search into the founder Investor directory
+  // (source "SEC Form D"). Held-for-review and OFAC-flagged firms stay out. Safe to repeat.
+  async function publishToDirectory() {
+    setPublishBusy(true);
+    setNote(null);
+    try {
+      const res = await fetch("/api/admin/crm/connectors/formd/publish-to-directory", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ all: true, q: q || undefined }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) { setNote(j.error ?? "Publish failed."); return; }
+      const parts: string[] = [];
+      if (j.alreadyPublished) parts.push(`${j.alreadyPublished.toLocaleString()} already there`);
+      if (j.review) parts.push(`${j.review.toLocaleString()} held for review`);
+      if (j.blocked) parts.push(`${j.blocked.toLocaleString()} blocked (OFAC)`);
+      setNote(`Published ${(j.published ?? 0).toLocaleString()} to the founder directory${parts.length ? `, ${parts.join(", ")}` : ""}.`);
+    } finally {
+      setPublishBusy(false);
+    }
+  }
+
   const flags = (f: Firm) => {
     const out: { t: string; c: string; b: string }[] = [];
     if (f.ofac === "hit") out.push({ t: "OFAC", c: "var(--text-danger)", b: "var(--bg-danger)" });
@@ -160,6 +184,17 @@ export function FormDInvestorDesk({ canPromote }: Readonly<{ canPromote: boolean
           Needs review · {counts.review.toLocaleString()}
         </button>
         <span className="text-xs text-slate-500">{counts.total.toLocaleString()} firms</span>
+        {canPromote ? (
+          <button
+            type="button"
+            disabled={publishBusy}
+            onClick={publishToDirectory}
+            title="Adds the verified firms matching this search to the founder Investor directory"
+            className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+          >
+            {publishBusy ? "Publishing…" : "Publish to founder directory"}
+          </button>
+        ) : null}
       </div>
 
       <div className="mb-3 rounded-lg bg-slate-50 px-3 py-2 text-[12px] leading-relaxed text-slate-600">

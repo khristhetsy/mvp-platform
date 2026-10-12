@@ -8,7 +8,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { VocabularyProvider } from "@/lib/vocabulary/provider";
 import { loadVocabularies } from "@/lib/vocabulary/store";
-import { InvestorDirectoryClient } from "@/components/founder/investor-directory/InvestorDirectoryClient";
+import { InvestorDirectoryTabs } from "@/components/founder/investor-directory/InvestorDirectoryTabs";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +29,7 @@ export default async function FounderInvestorDirectoryPage() {
           />
           {company ? (
             <VocabularyProvider value={await loadVocabularies()}>
-              <InvestorDirectoryClient />
+              <InvestorDirectoryTabs />
             </VocabularyProvider>
           ) : (
             <EmptyState
