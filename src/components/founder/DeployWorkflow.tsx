@@ -338,6 +338,16 @@ function SettingsPanel() {
   );
 }
 
+type NavTab = {
+  id: string;
+  step: Step;
+  mode: OutreachTab | undefined;
+  Icon: LucideIcon;
+  label: string;
+  going: boolean | undefined;
+  title: string | undefined;
+};
+
 export function DeployWorkflow({
   companyName,
   investableScore,
@@ -392,20 +402,22 @@ export function DeployWorkflow({
 
   const scoreReady = investableScore >= outreachThreshold;
 
+  const tabs: NavTab[] = STEPS.flatMap((s): NavTab[] =>
+    s.key === "outreach"
+      ? [
+          { id: "outreach-automated", step: s.key, mode: "automated", Icon: Bot, label: "Outreach: Automated", going: automatedGoing, title: automatedLine },
+          { id: "outreach-manual", step: s.key, mode: "manual", Icon: Mail, label: "Outreach: Manual", going: manualStarted, title: manualLine },
+        ]
+      : [{ id: s.key, step: s.key, mode: undefined, Icon: s.Icon, label: s.label, going: undefined, title: undefined }],
+  );
+
   return (
     <div className="pb-24">
       {/* Step menu */}
       <div className="sticky top-0 z-10 -mx-2 mb-6 border-b border-slate-200 bg-white/90 px-2 backdrop-blur">
         {/* No overflow scroller here: it showed a stray scrollbar beside the tabs. Tabs wrap on narrow screens. */}
         <nav className="flex flex-wrap gap-x-1">
-          {STEPS.flatMap((s) =>
-            s.key === "outreach"
-              ? [
-                  { id: "outreach-automated", step: s.key, mode: "automated" as const, Icon: Bot, label: "Outreach: Automated", going: automatedGoing, title: automatedLine },
-                  { id: "outreach-manual", step: s.key, mode: "manual" as const, Icon: Mail, label: "Outreach: Manual", going: manualStarted, title: manualLine },
-                ]
-              : [{ id: s.key, step: s.key, mode: undefined, Icon: s.Icon, label: s.label, going: undefined, title: undefined }],
-          ).map((t) => {
+          {tabs.map((t) => {
             const active = t.step === step && (t.mode === undefined || t.mode === otab);
             return (
               <button
