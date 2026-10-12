@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { AlertCircle, BarChart3, Bot, Check, ChevronDown, ChevronUp, IdCard, Mail, Send, Settings, type LucideIcon } from "lucide-react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { AlertCircle, BarChart3, Bot, IdCard, Mail, Send, Settings, type LucideIcon } from "lucide-react";
 import { ManualOutreachGuide } from "@/components/founder/ManualOutreachGuide";
 import {
   EMPTY_OUTREACH_STATUS,
@@ -377,138 +377,59 @@ export function DeployWorkflow({
   const [otab, setOtab] = useState<OutreachTab>(
     initialMode ?? (!manualStarted ? "manual" : rememberedMode ?? "automated"),
   );
-  const [menuOpen, setMenuOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
 
-  // Close the dropdown on an outside tap.
-  useEffect(() => {
-    if (!menuOpen) return;
-    const onDown = (e: MouseEvent | TouchEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
-    };
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("touchstart", onDown);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("touchstart", onDown);
-    };
-  }, [menuOpen]);
-
+  // Automated and Manual are two separate Outreach tabs, each opening its own page.
   const chooseMode = (mode: OutreachTab) => {
     setOtab(mode);
     setStep("outreach");
-    setMenuOpen(false);
     rememberOutreachMode(mode);
   };
 
-  // Dot on the Outreach tab: green when the shown mode is going, amber when it isn't.
-  const modeGoing = otab === "manual" ? manualStarted : outreachStatus.automated.state === "running";
   const automatedLine = automatedStatusLine(outreachStatus, { requiredNote: true });
   const manualLine = manualStatusLine(outreachStatus, { requiredNote: true });
+  const automatedGoing = outreachStatus.automated.state === "running";
 
   const scoreReady = investableScore >= outreachThreshold;
 
   return (
     <div className="pb-24">
       {/* Step menu */}
-      <div ref={menuRef} className="sticky top-0 z-10 -mx-2 mb-6 border-b border-slate-200 bg-white/90 px-2 backdrop-blur">
+      <div className="sticky top-0 z-10 -mx-2 mb-6 border-b border-slate-200 bg-white/90 px-2 backdrop-blur">
         {/* No overflow scroller here: it showed a stray scrollbar beside the tabs. Tabs wrap on narrow screens. */}
         <nav className="flex flex-wrap gap-x-1">
-          {STEPS.map((s) => {
-            const active = s.key === step;
-            const isOutreach = s.key === "outreach";
+          {STEPS.flatMap((s) =>
+            s.key === "outreach"
+              ? [
+                  { id: "outreach-automated", step: s.key, mode: "automated" as const, Icon: Bot, label: "Outreach: Automated", going: automatedGoing, title: automatedLine },
+                  { id: "outreach-manual", step: s.key, mode: "manual" as const, Icon: Mail, label: "Outreach: Manual", going: manualStarted, title: manualLine },
+                ]
+              : [{ id: s.key, step: s.key, mode: undefined, Icon: s.Icon, label: s.label, going: undefined, title: undefined }],
+          ).map((t) => {
+            const active = t.step === step && (t.mode === undefined || t.mode === otab);
             return (
               <button
-                key={s.key}
+                key={t.id}
                 type="button"
+                title={t.title}
                 onClick={() => {
-                  if (isOutreach) {
-                    setStep("outreach");
-                    setMenuOpen((v) => !v);
-                  } else {
-                    setStep(s.key);
-                    setMenuOpen(false);
-                  }
+                  if (t.mode) chooseMode(t.mode);
+                  else setStep(t.step);
                 }}
-                aria-haspopup={isOutreach ? "menu" : undefined}
-                aria-expanded={isOutreach ? menuOpen : undefined}
                 className={`relative flex items-center gap-2 whitespace-nowrap px-3.5 py-3 text-sm font-semibold transition ${
                   active ? "text-indigo-600" : "text-slate-500 hover:text-slate-800"
                 }`}
               >
-                <s.Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden="true" />
-                {isOutreach ? (
-                  <>
-                    {`Outreach: ${otab === "manual" ? "Manual" : "Automated"}`}
-                    <span
-                      className={`h-2 w-2 rounded-full ${modeGoing ? "bg-emerald-500" : "bg-amber-500"}`}
-                      aria-hidden="true"
-                    />
-                    {menuOpen ? (
-                      <ChevronUp className="h-4 w-4" aria-hidden="true" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4" aria-hidden="true" />
-                    )}
-                  </>
-                ) : (
-                  s.label
-                )}
+                <t.Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden="true" />
+                {t.label}
+                {t.going !== undefined ? (
+                  <span className={`h-2 w-2 rounded-full ${t.going ? "bg-emerald-500" : "bg-amber-500"}`} aria-hidden="true" />
+                ) : null}
                 {active ? <span className="absolute inset-x-2 bottom-0 h-0.5 rounded bg-indigo-600" /> : null}
               </button>
             );
           })}
         </nav>
-
-        {/* Outreach dropdown: the two modes with their live status. */}
-        {menuOpen ? (
-          <div
-            role="menu"
-            className="absolute left-2 right-2 top-full z-30 mt-1 max-w-sm overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg sm:left-24"
-          >
-            {(
-              [
-                {
-                  mode: "automated" as const,
-                  label: "Automated",
-                  line: automatedLine,
-                  going: outreachStatus.automated.state === "running",
-                  Icon: Bot,
-                },
-                { mode: "manual" as const, label: "Manual", line: manualLine, going: manualStarted, Icon: Mail },
-              ]
-            ).map(({ mode, label, line, going, Icon }) => {
-              const selected = otab === mode;
-              return (
-                <button
-                  key={mode}
-                  type="button"
-                  role="menuitemradio"
-                  aria-checked={selected}
-                  onClick={() => chooseMode(mode)}
-                  className={`flex w-full items-center gap-3 border-t border-slate-100 px-3 py-2.5 text-left first:border-t-0 ${
-                    selected ? "bg-indigo-50" : "hover:bg-slate-50"
-                  }`}
-                >
-                  <span
-                    className={`flex h-8 w-8 flex-none items-center justify-center rounded-lg ${
-                      going ? "bg-emerald-50 text-emerald-600" : selected ? "bg-white text-indigo-600" : "bg-slate-100 text-slate-500"
-                    }`}
-                  >
-                    <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className={`block text-sm font-semibold ${selected ? "text-indigo-700" : "text-slate-900"}`}>
-                      {label}
-                    </span>
-                    <span className={`block text-xs ${going ? "text-emerald-700" : "text-amber-700"}`}>{line}</span>
-                  </span>
-                  {selected ? <Check className="h-[18px] w-[18px] flex-none text-indigo-600" aria-hidden="true" /> : null}
-                </button>
-              );
-            })}
-          </div>
-        ) : null}
       </div>
 
       {/* ---------- STEP 1 · PUBLIC PROFILE ---------- */}
