@@ -12,6 +12,8 @@ export type ManualMergeFields = {
   company: string;
   sector: string | null;
   previewUrl: string | null;
+  /** The founder's live IR agent, tracked for email, or null when there is none. */
+  agentUrl?: string | null;
   unsubscribeUrl: string;
 };
 
@@ -33,7 +35,8 @@ function applyMerge(input: string, f: ManualMergeFields): string {
     .replaceAll("{{first_name}}", f.firstName ?? "there")
     .replaceAll("{{company}}", f.company)
     .replaceAll("{{sector}}", f.sector ?? "its sector")
-    .replaceAll("{{founder_preview}}", f.previewUrl ?? "");
+    .replaceAll("{{founder_preview}}", f.previewUrl ?? "")
+    .replaceAll("{{ir_agent}}", f.agentUrl ?? "");
 }
 
 export function renderManualEmail(

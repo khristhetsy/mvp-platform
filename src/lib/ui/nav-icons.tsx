@@ -1,5 +1,6 @@
 import {
   Activity,
+  BotMessageSquare,
   ContactRound,
   ReceiptText,
   HandCoins,
@@ -217,6 +218,7 @@ export const workspaceNavIconByHref: Record<string, LucideIcon> = {
   "/founder/stages/marketing": MapPinned,
   "/founder/stages/closing": Route,
   "/founder/deploy": Megaphone, // Outreach
+  "/founder/ir-agent": BotMessageSquare, // My IR Agent
   "/founder/investor-pipeline": SquareKanban, // Investor CRM
   "/founder/events/present": Projector, // Present at event
   "/founder/offering-type": Tag,

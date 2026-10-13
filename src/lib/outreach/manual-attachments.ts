@@ -11,10 +11,12 @@ export type ManualAttachments = {
   onePagerLink: boolean;
   /** Data room documents (PDF) to attach, by documents.id. */
   documentIds: string[];
+  /** Add the founder's IR agent link (icapos.com/<company>/<ending>?src=email) to the email. */
+  agentLink: boolean;
 };
 
 /** New campaigns attach the one pager PDF and nothing else. */
-export const DEFAULT_ATTACHMENTS: ManualAttachments = { onePagerPdf: true, onePagerLink: false, documentIds: [] };
+export const DEFAULT_ATTACHMENTS: ManualAttachments = { onePagerPdf: true, onePagerLink: false, documentIds: [], agentLink: false };
 
 /** Resend caps a message at 40 MB; stay well under so a batch never bounces. */
 export const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
@@ -28,6 +30,7 @@ export function normalizeAttachments(value: unknown): ManualAttachments {
     documentIds: Array.isArray(v.documentIds)
       ? [...new Set(v.documentIds.filter((id): id is string => typeof id === "string" && id.length > 0))].slice(0, 10)
       : [],
+    agentLink: v.agentLink === true,
   };
 }
 
@@ -38,4 +41,13 @@ export function normalizeAttachments(value: unknown): ManualAttachments {
 export function withOnePagerLink(body: string, att: ManualAttachments): string {
   if (!att.onePagerLink || body.includes("{{founder_preview}}")) return body;
   return `${body.replace(/\s+$/, "")}\n\nOne pager: {{founder_preview}}`;
+}
+
+/**
+ * With the agent link option on, make sure the email carries the IR agent link:
+ * when the body does not already use {{ir_agent}}, add a line for it.
+ */
+export function withAgentLink(body: string, att: ManualAttachments): string {
+  if (!att.agentLink || body.includes("{{ir_agent}}")) return body;
+  return `${body.replace(/\s+$/, "")}\n\nAsk our investor relations agent anything, any time: {{ir_agent}}`;
 }

@@ -26,4 +26,6 @@ export type RecipientStatus = {
 export type AttachmentOptions = {
   onePager: { companyName: string; industry: string | null; fileName: string; published: boolean; url: string | null } | null;
   documents: Array<{ id: string; name: string; fileName: string | null; type: string | null; sizeBytes: number | null }>;
+  /** The founder's live IR agent link, tracked for email. Null until the agent is live. */
+  agent?: { url: string } | null;
 };
