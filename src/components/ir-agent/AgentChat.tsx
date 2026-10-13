@@ -799,7 +799,8 @@ export function AgentChat({ config, sourceTag, preview = false }: { config: Agen
       const greet = h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
       const [first, ...rest] = config.welcome.length ? config.welcome : [`${config.displayName} here. I handle investor relations at ${config.companyName}.`];
       const open = openQuestions();
-      const lines = [`${greet}, ${first.charAt(0).toLowerCase()}${first.slice(1)}`, ...rest];
+      const joined = first.startsWith(config.displayName) || /^[A-Z][a-z]*\s[A-Z]/.test(first) ? first : `${first.charAt(0).toLowerCase()}${first.slice(1)}`;
+      const lines = [`${greet}, ${joined}`, ...rest];
       if (open.length) {
         asked = open[0];
         await say([...lines, asked.prompt]);
