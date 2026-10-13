@@ -9,6 +9,8 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { VocabularyProvider } from "@/lib/vocabulary/provider";
 import { loadVocabularies } from "@/lib/vocabulary/store";
 import { InvestorDirectoryTabs } from "@/components/founder/investor-directory/InvestorDirectoryTabs";
+import { InvestorDirectoryGuide } from "@/components/founder/investor-directory/InvestorDirectoryGuide";
+import { heldDirectoryIds, loadPlanAllowances } from "@/lib/investor-directory/db";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +18,12 @@ export const dynamic = "force-dynamic";
 export default async function FounderInvestorDirectoryPage() {
   const profile = await requireRole(["founder"]);
   const { company } = await getActiveCompanyForUser(profile);
+  // The guide stays open until the first directory import; its limits come from the live plan table.
+  const [held, allowances] = await Promise.all([
+    company ? heldDirectoryIds(company.id) : Promise.resolve(new Set<string>()),
+    loadPlanAllowances(),
+  ]);
+  const holds = (planType: string) => allowances.find((a) => a.plan_type === planType)?.contacts ?? 0;
   return (
     <FounderAppShell profileName={profile.full_name ?? profile.email ?? "Founder"} profileSubtitle={company?.company_name ?? "Your company"}>
       <FounderJourneyGate minStage="deploy">
@@ -29,6 +37,11 @@ export default async function FounderInvestorDirectoryPage() {
           />
           {company ? (
             <VocabularyProvider value={await loadVocabularies()}>
+              <InvestorDirectoryGuide
+                key={held.size > 0 ? "used" : "new"}
+                defaultOpen={held.size === 0}
+                limits={{ basic: holds("founder_basic"), professional: holds("founder_professional"), premium: holds("founder_premium") }}
+              />
               <InvestorDirectoryTabs />
             </VocabularyProvider>
           ) : (

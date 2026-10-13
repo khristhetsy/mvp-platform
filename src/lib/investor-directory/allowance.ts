@@ -4,15 +4,15 @@
  *
  * Each founder plan includes directory contact space and a number of Manual
  * outreach emails per 30 day period (the same window as the plan's investor
- * reach limit, counted from signup). A top up adds to both.
+ * reach limit, counted from signup). Top ups are retired: limits come from the plan.
  */
 import type { DirectoryPlanAllowance, DirectoryTier } from "@/lib/investor-directory/types";
 
 export const DEFAULT_ALLOWANCES: DirectoryPlanAllowance[] = [
   { plan_type: "founder_free", label: "Free", contacts: 0, emails_per_month: 0, sort: 0 },
-  { plan_type: "founder_basic", label: "Basic", contacts: 500, emails_per_month: 1000, sort: 1 },
-  { plan_type: "founder_professional", label: "Professional", contacts: 10000, emails_per_month: 20000, sort: 2 },
-  { plan_type: "founder_premium", label: "Premium", contacts: 20000, emails_per_month: 40000, sort: 3 },
+  { plan_type: "founder_basic", label: "Basic", contacts: 100, emails_per_month: 1000, sort: 1 },
+  { plan_type: "founder_professional", label: "Professional", contacts: 1000, emails_per_month: 20000, sort: 2 },
+  { plan_type: "founder_premium", label: "Premium", contacts: 10000, emails_per_month: 40000, sort: 3 },
 ];
 
 /**
@@ -75,10 +75,10 @@ function fmt(n: number): string {
 /** Founder facing message for a refused start. `resets` is already formatted (PT). */
 export function emailCapMessage(d: Extract<EmailCapDecision, { ok: false }>, resets: string): string {
   if (d.reason === "cap_reached") {
-    return `You've sent ${fmt(d.used)} of ${fmt(d.cap)} emails this period. Sending resumes ${resets}. Add a top up or move to a bigger plan for more.`;
+    return `You've sent ${fmt(d.used)} of ${fmt(d.cap)} emails this period. Sending resumes ${resets}. Move to a bigger plan for more.`;
   }
   const remove = d.adding - d.remaining;
-  return `${fmt(d.remaining)} emails left this period, and this would start ${fmt(d.adding)} new investors. Remove ${fmt(remove)} recipient${remove === 1 ? "" : "s"} or add a top up.`;
+  return `${fmt(d.remaining)} emails left this period, and this would start ${fmt(d.adding)} new investors. Remove ${fmt(remove)} recipient${remove === 1 ? "" : "s"} or move to a bigger plan.`;
 }
 
 /** How many sends the send pass may make for one founder this run. */

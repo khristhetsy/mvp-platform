@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { requireFounderInvestorCrmApi } from "@/lib/api/founder-crm";
 import { createFounderInvestorContact, listFounderInvestorContacts } from "@/lib/founder-crm/contacts";
 import { founderInvestorContactSchema } from "@/lib/validation";
+import { founderHoldStatus } from "@/lib/investor-directory/db";
+import { decideAdd } from "@/lib/investor-directory/limits";
 
 export async function GET(request: Request) {
   const auth = await requireFounderInvestorCrmApi();
@@ -24,7 +26,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unable to load contacts." }, { status: 400 });
   }
 
-  return NextResponse.json({ contacts: result.data });
+  // Where the founder stands against the one investor limit (null if it can't be read).
+  const hold = await founderHoldStatus(auth.profile.id, auth.company.id).catch(() => null);
+  return NextResponse.json({ contacts: result.data, hold });
 }
 
 export async function POST(request: Request) {
@@ -38,6 +42,13 @@ export async function POST(request: Request) {
 
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid contact data." }, { status: 400 });
+  }
+
+  // One investor limit for every source, added by hand included.
+  const hold = await founderHoldStatus(auth.profile.id, auth.company.id);
+  const decision = decideAdd(1, hold);
+  if (!decision.ok) {
+    return NextResponse.json({ error: decision.message, reason: "hold_limit", hold }, { status: 403 });
   }
 
   const result = await createFounderInvestorContact(auth.supabase, {
