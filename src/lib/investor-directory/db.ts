@@ -15,7 +15,7 @@ import { founderCapPeriod } from "@/lib/outreach/investor-cap";
 import { DEFAULT_ALLOWANCES, addUp, pickAllowance } from "@/lib/investor-directory/allowance";
 import { labelOf } from "@/lib/vocabulary/lists";
 import {
-  DEFAULT_SETTINGS, DIRECTORY_CONTACT_SOURCE, FREE_TIER,
+  DEFAULT_SETTINGS, DIRECTORY_CONTACT_SOURCE, FORM_D_SOURCE, FREE_TIER,
   type AccessStatus, type DirectoryPlanAllowance, type DirectoryRecord, type DirectorySettings, type DirectoryTier,
   type FounderDirectoryAccess, type FounderLimits,
 } from "@/lib/investor-directory/types";
@@ -115,13 +115,42 @@ export async function founderLimits(founderId: string, _opts: { tiers?: Director
  * not archived. One limit covers them all.
  */
 export async function heldContactCount(companyId: string): Promise<number> {
-  const { count } = await db()
+  const [{ count }, formd] = await Promise.all([
+    db()
+      .from("founder_investor_contacts")
+      .select("id", { count: "exact", head: true })
+      .eq("company_id", companyId)
+      .neq("status", "archived")
+      .or("source.is.null,source.not.in.(introduction,intro)"),
+    formdUncountedCount(companyId),
+  ]);
+  return Math.max(0, (count ?? 0) - formd);
+}
+
+/**
+ * Form D firms the company holds with no contact email yet. They don't count
+ * toward the plan's limit; once the founder adds an email, the firm counts.
+ */
+export async function formdUncountedCount(companyId: string): Promise<number> {
+  const { data } = await db()
     .from("founder_investor_contacts")
-    .select("id", { count: "exact", head: true })
+    .select("directory_id")
     .eq("company_id", companyId)
     .neq("status", "archived")
-    .or("source.is.null,source.not.in.(introduction,intro)");
-  return count ?? 0;
+    .not("directory_id", "is", null)
+    .is("email", null);
+  const ids = ((data ?? []) as { directory_id: string }[]).map((r) => r.directory_id);
+  return (await formdIdsAmong(ids)).size;
+}
+
+/** Which of these directory ids are Form D firms. */
+export async function formdIdsAmong(ids: string[]): Promise<Set<string>> {
+  const out = new Set<string>();
+  for (let i = 0; i < ids.length; i += 500) {
+    const { data } = await db().from("investor_directory").select("id").in("id", ids.slice(i, i + 500)).eq("source", FORM_D_SOURCE);
+    for (const r of (data ?? []) as { id: string }[]) out.add(r.id);
+  }
+  return out;
 }
 
 /** Where the founder stands against the one investor limit. */
@@ -153,10 +182,11 @@ export async function heldDirectoryIds(companyId: string): Promise<Set<string>> 
 }
 
 export async function loadFounderAccess(founderId: string, companyId: string | null): Promise<FounderDirectoryAccess> {
-  const [settings, accessRow, held, today] = await Promise.all([
+  const [settings, accessRow, held, formdUncounted, today] = await Promise.all([
     loadSettings(),
     db().from("investor_directory_access").select("*").eq("founder_id", founderId).maybeSingle(),
     companyId ? heldContactCount(companyId) : Promise.resolve(0),
+    companyId ? formdUncountedCount(companyId) : Promise.resolve(0),
     db().from("investor_directory_events").select("count").eq("founder_id", founderId).eq("kind", "import").gte("created_at", startOfTodayPT()),
   ]);
   const row = accessRow.data as { tier: string; status: AccessStatus; status_reason: string | null; terms_version: number | null; terms_accepted_at: string | null } | null;
@@ -172,6 +202,7 @@ export async function loadFounderAccess(founderId: string, companyId: string | n
     termsAccepted: Boolean(row?.terms_accepted_at) && (row?.terms_version ?? 0) >= settings.terms_version,
     termsAcceptedAt: row?.terms_accepted_at ?? null,
     held,
+    formdUncounted,
     importedToday,
   };
 }
@@ -667,6 +698,8 @@ export type UsageRow = {
   emailsUsed: number;
   emailCap: number;
   status: AccessStatus;
+  /** Investors that count toward the plan's limit, every source, as the founder sees it. */
+  heldAll: number;
   held: number;
   imports30d: number;
   importsInWindow: number;
@@ -717,9 +750,11 @@ export async function listUsage(settings: DirectorySettings): Promise<UsageRow[]
     const imports = ev.filter((e) => e.kind === "import");
     const p = ((profiles ?? []) as { id: string; full_name: string | null; email: string | null }[]).find((x) => x.id === id);
     const tier = tiers.find((t) => t.key === (a?.tier ?? "free")) ?? FREE_TIER;
-    const [stats, limits] = await Promise.all([
-      sendStats(id, companyOf.get(id) ?? null),
+    const company = companyOf.get(id) ?? null;
+    const [stats, limits, heldAll] = await Promise.all([
+      sendStats(id, company),
       founderLimits(id, { tiers, topUpKey: a?.tier ?? "free" }),
+      company ? heldContactCount(company) : Promise.resolve(0),
     ]);
     const row: Omit<UsageRow, "flag"> = {
       founderId: id,
@@ -733,6 +768,7 @@ export async function listUsage(settings: DirectorySettings): Promise<UsageRow[]
       emailCap: limits.emails,
       status: a?.status ?? "active",
       held: heldOf.get(id) ?? 0,
+      heldAll,
       imports30d: imports.reduce((s, e) => s + e.count, 0),
       importsInWindow: imports.filter((e) => e.created_at >= sinceWindow).reduce((s, e) => s + e.count, 0),
       sent: stats.sent,

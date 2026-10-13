@@ -13,6 +13,8 @@ import { NOT_NETWORK_NOTE, type DirectoryPlanAllowance, type DirectorySettings, 
 
 export type AccessFounder = {
   founderId: string; name: string; company: string | null; tierKey: string; status: "active" | "paused" | "suspended"; held: number;
+  /** Every source, as the founder sees it. `held` is the directory share. */
+  heldAll: number;
   plan: string; contactLimit: number; emailsUsed: number; emailCap: number;
 };
 export type AllowanceRow = DirectoryPlanAllowance & { priceCents: number };
@@ -117,7 +119,7 @@ export function AccessClient({ allowances, settings, founders }: Readonly<{
           <div key={f.founderId} className="flex flex-wrap items-center gap-2 border-t border-slate-100 px-4 py-2.5 text-[13px] first:border-t-0">
             <span className="min-w-0 flex-1">
               <Link href={`/admin/investor-directory/usage/${f.founderId}`} className="text-slate-800 hover:text-[#1A6CE4]">{f.name}</Link>
-              <span className="block text-[11.5px] text-slate-500">{f.company ?? "No company"} · {f.plan} · {n(f.held)} of {n(f.contactLimit)} contacts · {n(f.emailsUsed)} of {n(f.emailCap)} emails</span>
+              <span className="block text-[11.5px] text-slate-500">{f.company ?? "No company"} · {f.plan} · {n(f.heldAll)} of {n(f.contactLimit)} investors ({n(f.held)} from directory) · {n(f.emailsUsed)} of {n(f.emailCap)} emails</span>
             </span>
             {f.status !== "active" ? <Tag tone={f.status === "paused" ? "warn" : "bad"}>{f.status === "paused" ? "Paused" : "Suspended"}</Tag> : null}
           </div>

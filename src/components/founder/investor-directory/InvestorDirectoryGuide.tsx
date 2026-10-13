@@ -98,7 +98,7 @@ function steps(limits: GuideLimits): { title: string; desc: string; screens: Rea
     },
     {
       title: "Tick investors and import them",
-      desc: `Tick the ones you want, or Select all, then tap Import to outreach. Every investor you hold counts toward your plan's limit, from any source: Basic holds up to ${n(limits.basic)}, Professional up to ${n(limits.professional)}, Premium up to ${n(limits.premium)}.`,
+      desc: `Tick the ones you want, or Select all, then tap Import to outreach. Every investor you hold counts toward your plan's limit, from any source: Basic holds up to ${n(limits.basic)}, Professional up to ${n(limits.professional)}, Premium up to ${n(limits.premium)}. Form D firms don't count until you add a contact email.`,
       screens: (
         <Screens
           tap={

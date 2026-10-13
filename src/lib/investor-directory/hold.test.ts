@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { decideAdd, holdStatus } from "@/lib/investor-directory/limits";
+import { decideAdd, decideSplitImport, holdStatus } from "@/lib/investor-directory/limits";
+import { DEFAULT_SETTINGS, FREE_TIER, type FounderDirectoryAccess } from "@/lib/investor-directory/types";
 
 const plans = [
   { label: "Free", contacts: 0 },
@@ -41,5 +42,34 @@ describe("decideAdd", () => {
   });
   it("lets everything in when the admin turned blocking off", () => {
     expect(decideAdd(500, holdStatus({ held: 100, max: 100, planLabel: "Basic", enforced: false, plans }))).toEqual({ ok: true, allowed: 500 });
+  });
+});
+
+
+const access = (held: number, contacts = 100): FounderDirectoryAccess => ({
+  tier: FREE_TIER,
+  limits: {
+    plan: "founder_basic", planLabel: "Basic",
+    allowance: { plan_type: "founder_basic", label: "Basic", contacts, emails_per_month: 1000, sort: 1 },
+    topUp: FREE_TIER, contacts, emails: 1000, emailsUsed: 0, periodStart: "x", periodEnd: "y",
+  },
+  status: "active", statusReason: null, termsAccepted: true, termsAcceptedAt: "x", held, formdUncounted: 0, importedToday: 0,
+});
+const settings = { ...DEFAULT_SETTINGS, require_terms: false, daily_cap: 1000, block_over_limit: true };
+
+describe("decideSplitImport", () => {
+  it("lets Form D firms in when the limit is full", () => {
+    const d = decideSplitImport(["f1", "f2", "a"], new Set(["f1", "f2"]), access(100), settings);
+    expect(d).toMatchObject({ ok: true, ids: ["f1", "f2"], limit: 2, trimmedBy: "hold_limit" });
+  });
+  it("counts only the others against the limit", () => {
+    const d = decideSplitImport(["a", "f1", "b", "c"], new Set(["f1"]), access(98), settings);
+    expect(d).toMatchObject({ ok: true, ids: ["f1", "a", "b"], limit: 3, trimmedBy: "hold_limit" });
+  });
+  it("refuses when the limit is full and nothing is Form D", () => {
+    expect(decideSplitImport(["a"], new Set(), access(100), settings).ok).toBe(false);
+  });
+  it("keeps Form D closed on Free", () => {
+    expect(decideSplitImport(["f1"], new Set(["f1"]), access(0, 0), settings).ok).toBe(false);
   });
 });

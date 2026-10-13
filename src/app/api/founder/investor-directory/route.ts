@@ -2,12 +2,12 @@
  * Founder investor directory search.
  *   GET ?q&type&stage&industry&state&source&investingNow=1&hasEmail=1&page
  *     → { rows, total, page, pageSize, access, tiers, plans, settings, facets }
- *   GET …&ids=1 → { ids } every matching id not yet held, for "Select all matching"
+ *   GET …&ids=1 → { ids, formd } every matching id not yet held (and which are Form D), for "Select all matching"
  * Published, non-network rows only; email and phone show only once imported.
  */
 import { NextResponse } from "next/server";
 import { requireFounderInvestorCrmApi } from "@/lib/api/founder-crm";
-import { PAGE_SIZE, directoryFacets, loadFounderAccess, loadPlanAllowances, loadSettings, loadTiers, searchDirectory, searchDirectoryIds } from "@/lib/investor-directory/db";
+import { PAGE_SIZE, directoryFacets, formdIdsAmong, loadFounderAccess, loadPlanAllowances, loadSettings, loadTiers, searchDirectory, searchDirectoryIds } from "@/lib/investor-directory/db";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +30,9 @@ export async function GET(request: Request) {
   };
   if (u.get("ids") === "1") {
     try {
-      return NextResponse.json({ ids: await searchDirectoryIds(query, auth.company.id) });
+      const ids = await searchDirectoryIds(query, auth.company.id);
+      // Form D firms don't count toward the limit, so the page caps only the others.
+      return NextResponse.json({ ids, formd: [...(await formdIdsAmong(ids))] });
     } catch (err) {
       console.error("[investor-directory] select all failed:", err instanceof Error ? err.message : err);
       return NextResponse.json({ error: "Couldn't select every match. Try again." }, { status: 500 });

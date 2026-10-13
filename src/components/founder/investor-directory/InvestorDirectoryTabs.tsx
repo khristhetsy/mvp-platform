@@ -43,7 +43,8 @@ function FormDCard({ total }: Readonly<{ total: number | null }>) {
       </p>
       <p className="mt-2 text-xs text-slate-500">
         Form D lists firms, not people. These records have a firm name, location, phone and website, but no contact name or
-        email, so they can&apos;t be emailed from Manual outreach until you add one. Not the iCFO Capital investor network.
+        email, so they can&apos;t be emailed from Manual outreach until you add one. Form D firms don&apos;t count toward your
+        investor limit; once you add a contact email to one, it counts. Not the iCFO Capital investor network.
       </p>
     </div>
   );
