@@ -206,6 +206,24 @@ export type DirectoryQuery = {
   page?: number;
 };
 
+/** The search filters, shared by the page query and "Select all matching". */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function applyDirectoryFilters<T extends Record<string, any>>(req: T, query: DirectoryQuery): T {
+  let r = req;
+  if (query.q?.trim()) {
+    const t = likeTerm(query.q);
+    r = r.or(`firm.ilike.${t},contact_name.ilike.${t},city.ilike.${t},state.ilike.${t},fund_name.ilike.${t}`);
+  }
+  if (query.types?.length) r = r.overlaps("investor_types", query.types);
+  if (query.stages?.length) r = r.overlaps("funding_stages", query.stages);
+  if (query.industries?.length) r = r.overlaps("industries", query.industries);
+  if (query.states?.length) r = r.in("state", query.states);
+  if (query.sources?.length) r = r.in("source", query.sources);
+  if (query.investingNow) r = r.eq("investing_now", true);
+  if (query.hasEmail) r = r.not("email", "is", null);
+  return r;
+}
+
 const LIST_COLUMNS =
   "id, firm, contact_name, title, email, phone, website, city, state, investor_types, funding_stages, capital_types, industries, fund_name, fund_size, avg_investment, strategy, investing_now, source, source_url, verified_at, verification";
 
@@ -226,22 +244,10 @@ function likeTerm(q: string): string {
  */
 export async function searchDirectory(query: DirectoryQuery, companyId: string | null): Promise<{ rows: FounderDirectoryRow[]; total: number; page: number }> {
   const page = Math.max(1, query.page ?? 1);
-  let req = db()
-    .from("investor_directory")
-    .select(LIST_COLUMNS, { count: "exact" })
-    .eq("status", "published")
-    .eq("in_network", false);
-  if (query.q?.trim()) {
-    const t = likeTerm(query.q);
-    req = req.or(`firm.ilike.${t},contact_name.ilike.${t},city.ilike.${t},state.ilike.${t},fund_name.ilike.${t}`);
-  }
-  if (query.types?.length) req = req.overlaps("investor_types", query.types);
-  if (query.stages?.length) req = req.overlaps("funding_stages", query.stages);
-  if (query.industries?.length) req = req.overlaps("industries", query.industries);
-  if (query.states?.length) req = req.in("state", query.states);
-  if (query.sources?.length) req = req.in("source", query.sources);
-  if (query.investingNow) req = req.eq("investing_now", true);
-  if (query.hasEmail) req = req.not("email", "is", null);
+  const req = applyDirectoryFilters(
+    db().from("investor_directory").select(LIST_COLUMNS, { count: "exact" }).eq("status", "published").eq("in_network", false),
+    query,
+  );
   const from = (page - 1) * PAGE_SIZE;
   const [{ data, count, error }, held] = await Promise.all([
     req.order("firm").range(from, from + PAGE_SIZE - 1),
@@ -260,6 +266,21 @@ export async function searchDirectory(query: DirectoryQuery, companyId: string |
     } as FounderDirectoryRow;
   });
   return { rows, total: count ?? rows.length, page };
+}
+
+/**
+ * Every matching directory id the company doesn't hold yet, in list order, for
+ * "Select all matching". Capped at one import's maximum.
+ */
+export async function searchDirectoryIds(query: DirectoryQuery, companyId: string | null, cap = 5000): Promise<string[]> {
+  const [{ data, error }, held] = await Promise.all([
+    applyDirectoryFilters(db().from("investor_directory").select("id").eq("status", "published").eq("in_network", false), query)
+      .order("firm")
+      .limit(cap + 2000),
+    companyId ? heldDirectoryIds(companyId) : Promise.resolve(new Set<string>()),
+  ]);
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as { id: string }[]).map((r) => r.id).filter((id) => !held.has(id)).slice(0, cap);
 }
 
 /** Distinct filter values that exist in the published directory (states, sources). */

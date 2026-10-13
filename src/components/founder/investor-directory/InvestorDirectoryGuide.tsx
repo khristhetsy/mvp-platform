@@ -57,9 +57,9 @@ function steps(limits: GuideLimits): { title: string; desc: string; screens: Rea
             <Mini caption="Tap a tab">
               <div className="flex flex-wrap items-center gap-1">
                 <span className={GHOST}>Directory</span>
+                <span className={GHOST}>Form D</span>
                 <Tap><span className={GHOST}>LinkedIn</span></Tap>
                 <span className={GHOST}>CSV or Excel</span>
-                <span className={GHOST}>Form D</span>
               </div>
             </Mini>
           }

@@ -65,6 +65,8 @@ export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pi
   const [importing, setImporting] = useState(false);
   const [terms, setTerms] = useState(false);
   const [showPlans, setShowPlans] = useState(false);
+  const [selectingAll, setSelectingAll] = useState(false);
+  const [capped, setCapped] = useState(false);
 
   // Field filters arrive as labels; the API filters on slugs.
   const slugOf = useCallback((opts: { slug: string; label: string }[], labels: string[] | undefined) =>
@@ -115,6 +117,7 @@ export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pi
     setSearch(next);
     setPage(1);
     setSelected(new Set());
+    setCapped(false);
     void load(next, 1);
   }
   function goPage(p: number) {
@@ -191,7 +194,6 @@ export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pi
   const pct = (used: number, of: number) => (of > 0 ? Math.min(100, Math.round((used / of) * 100)) : 0);
   const heldPct = pct(access?.held ?? 0, contactLimit);
   const emailPct = limits ? pct(limits.emailsUsed, limits.emails) : 0;
-  const emailsLeft = limits ? Math.max(0, limits.emails - limits.emailsUsed) : 0;
   const resets = limits ? new Date(limits.periodEnd).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "America/Los_Angeles" }) : "";
   const planLine = limits ? `${limits.planLabel} plan` : "";
   // One investor limit for every source, and the next plan up.
@@ -201,8 +203,26 @@ export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pi
   const heldLeft = access ? Math.max(0, contactLimit - access.held) : 0;
   const nearLimit = !browseOnly && heldPct >= 80;
   const overBy = !browseOnly && selected.size > heldLeft ? selected.size - heldLeft : 0;
-  const holdsLine = limits ? `${limits.planLabel} holds up to ${n(limits.allowance.contacts)} investors` : "";
   const upsell = nextPlan ? ` ${nextPlan.label} holds up to ${n(nextPlan.contacts)}.` : "";
+  const pageAllSelected = selectable.length > 0 && selectable.every((r) => selected.has(r.id));
+
+  // Every match across all pages that isn't held yet, capped at what the plan has left.
+  async function selectAllMatching() {
+    setSelectingAll(true);
+    try {
+      const q = buildQuery(search, 1, false, facets.sources);
+      q.set("ids", "1");
+      const res = await fetch(`/api/founder/investor-directory?${q}`);
+      const body = (await res.json().catch(() => ({}))) as { ids?: string[]; error?: string };
+      if (!res.ok || !body.ids) { setNotice({ text: body.error ?? "Couldn't select every match. Try again.", bad: true }); return; }
+      const room = limits && data?.settings ? heldLeft : body.ids.length;
+      const ids = body.ids.slice(0, Math.max(0, room));
+      setSelected(new Set(ids));
+      setCapped(ids.length < body.ids.length);
+    } finally {
+      setSelectingAll(false);
+    }
+  }
 
   return (
     <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
@@ -255,45 +275,35 @@ export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pi
             <Link href="/upgrade" className="ml-auto rounded-lg bg-[#1A6CE4] px-3 py-1 text-[12px] font-semibold text-white hover:bg-[#2E78F5]">See plans</Link>
           </div>
         ) : (
-          <div className="mx-3 mt-3 grid gap-2 sm:grid-cols-3">
+          <div className="mx-3 mt-3 grid gap-2 sm:grid-cols-2">
             <div className="rounded-lg bg-slate-50 px-3 py-2.5">
               <div className="flex justify-between text-[12px]">
-                <span className="text-slate-500">Investors held</span>
-                <span className="text-slate-800">{n(access.held)} of {n(contactLimit)}</span>
+                <span className="text-slate-500">Investors</span>
+                <span className="font-medium tabular-nums text-slate-800">{n(access.held)} / {n(contactLimit)}</span>
               </div>
               <div className="mt-1.5 h-1.5 rounded-full bg-white">
                 <div className={`h-1.5 rounded-full ${heldPct >= 100 ? "bg-[#A32D2D]" : heldPct >= 80 ? "bg-[#B7791F]" : "bg-[#1A6CE4]"}`} style={{ width: `${heldPct}%` }} />
               </div>
-              <div className={`mt-1 text-[11.5px] ${heldPct >= 80 ? "text-[#8A5300]" : "text-slate-500"}`}>
-                All sources · {planLine} · {n(heldLeft)} left · {holdsLine}
-                {access.status !== "active" ? ` · ${access.status === "paused" ? "Imports paused" : "Access suspended"}` : ""}
+              <div className="mt-1 flex flex-wrap items-center gap-x-3 text-[11.5px] text-slate-500">
+                <span>{planLine}{access.status !== "active" ? ` · ${access.status === "paused" ? "Imports paused" : "Access suspended"}` : ""}</span>
+                <span className="flex-1" />
+                {plans.length > 0 ? (
+                  <button type="button" onClick={() => setShowPlans((v) => !v)} aria-expanded={showPlans} className="font-medium text-[#185FA5] hover:underline">
+                    Limits by plan <i className={`ti ${showPlans ? "ti-chevron-up" : "ti-chevron-down"}`} aria-hidden="true" />
+                  </button>
+                ) : null}
+                {nextPlan ? <Link href="/upgrade" className="font-medium text-[#185FA5] hover:underline">Upgrade</Link> : null}
               </div>
-              {plans.length > 0 ? (
-                <button type="button" onClick={() => setShowPlans((v) => !v)} aria-expanded={showPlans} className="mt-1 text-[11.5px] font-medium text-[#185FA5] hover:underline">
-                  Limits by plan <i className={`ti ${showPlans ? "ti-chevron-up" : "ti-chevron-down"}`} aria-hidden="true" />
-                </button>
-              ) : null}
             </div>
             <div className="rounded-lg bg-slate-50 px-3 py-2.5">
               <div className="flex justify-between text-[12px]">
-                <span className="text-slate-500">Manual outreach emails</span>
-                <span className="text-slate-800">{n(limits.emailsUsed)} of {n(limits.emails)}</span>
+                <span className="text-slate-500">Emails this period</span>
+                <span className="font-medium tabular-nums text-slate-800">{n(limits.emailsUsed)} / {n(limits.emails)}</span>
               </div>
               <div className="mt-1.5 h-1.5 rounded-full bg-white">
                 <div className={`h-1.5 rounded-full ${emailPct >= 100 ? "bg-[#A32D2D]" : emailPct >= 80 ? "bg-[#B7791F]" : "bg-[#1A6CE4]"}`} style={{ width: `${emailPct}%` }} />
               </div>
-              <div className={`mt-1 text-[11.5px] ${emailPct >= 80 ? "text-[#8A5300]" : "text-slate-500"}`}>{n(emailsLeft)} left · resets {resets} PT</div>
-            </div>
-            <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2.5">
-              <div className="min-w-0 flex-1">
-                <div className="text-[12.5px] font-medium text-slate-800">Need more?</div>
-                <div className="text-[11.5px] text-slate-500">
-                  {nextPlan ? `${nextPlan.label} holds up to ${n(nextPlan.contacts)} investors` : `${limits.planLabel} holds up to ${n(limits.allowance.contacts)} investors`}
-                </div>
-              </div>
-              {nextPlan ? (
-                <Link href="/upgrade" className="rounded-lg bg-[#1A6CE4] px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-[#2E78F5]">Upgrade</Link>
-              ) : null}
+              <div className={`mt-1 text-[11.5px] ${emailPct >= 80 ? "text-[#8A5300]" : "text-slate-500"}`}>Resets {resets}</div>
             </div>
           </div>
         )
@@ -325,12 +335,13 @@ export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pi
       {selected.size > 0 ? (
         <div className="mt-3 flex flex-wrap items-center gap-2.5 border-y border-[#B5D4F4] bg-[#E6F1FB] px-3 py-2">
           <span className="rounded-md bg-[#B5D4F4] px-2.5 py-1 text-[12.5px] font-semibold text-[#0C447C]">{selected.size} selected</span>
-          {selected.size < selectable.length ? (
-            <button type="button" onClick={() => setSelected(new Set(selectable.map((r) => r.id)))} className="text-[12.5px] text-[#185FA5]">
-              <i className="ti ti-arrow-right" aria-hidden="true" /> Select all {selectable.length}
+          {total > selected.size && !browseOnly && !capped ? (
+            <button type="button" disabled={selectingAll} onClick={() => void selectAllMatching()} className="text-[12.5px] text-[#185FA5] disabled:opacity-60">
+              <i className="ti ti-arrow-right" aria-hidden="true" /> {selectingAll ? "Selecting…" : `Select all ${n(total)} matching`}
             </button>
           ) : null}
-          <button type="button" aria-label="Clear selection" onClick={() => setSelected(new Set())} className="text-[#185FA5]"><i className="ti ti-x" aria-hidden="true" /></button>
+          {capped ? <span className="text-[12px] text-[#8A5300]">The first {n(selected.size)}, all your plan has room for</span> : null}
+          <button type="button" aria-label="Clear selection" onClick={() => { setSelected(new Set()); setCapped(false); }} className="text-[#185FA5]"><i className="ti ti-x" aria-hidden="true" /></button>
           <button type="button" disabled={importing || overBy > 0} onClick={() => void doImport()} className="ml-auto rounded-lg bg-[#1A6CE4] px-3.5 py-1.5 text-[12.5px] font-semibold text-white hover:bg-[#2E78F5] disabled:opacity-60">
             <i className="ti ti-download" aria-hidden="true" /> {importing ? "Importing…" : "Import to outreach"}
           </button>
@@ -354,6 +365,23 @@ export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pi
       ) : null}
 
       <div className="mt-3">
+        {!error && rows.length > 0 && selectable.length > 0 ? (
+          <label className="flex items-center gap-3 border-b border-slate-100 bg-slate-50 px-3 py-1.5 text-[12px] text-slate-500">
+            <input
+              type="checkbox"
+              aria-label="Select every investor on this page"
+              checked={pageAllSelected}
+              onChange={() => setSelected((s) => {
+                const next = new Set(s);
+                if (pageAllSelected) for (const r of selectable) next.delete(r.id);
+                else for (const r of selectable) next.add(r.id);
+                return next;
+              })}
+              className="h-4 w-4"
+            />
+            <span>Select all on this page ({n(selectable.length)})</span>
+          </label>
+        ) : null}
         {error ? <p className="px-4 py-10 text-center text-sm text-[#A32D2D]">{error}</p>
           : loading && !data ? <p className="px-4 py-10 text-center text-sm text-slate-500">Loading the directory…</p>
           : rows.length === 0 ? (
