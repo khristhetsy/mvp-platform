@@ -5,7 +5,7 @@
  */
 import { NextResponse } from "next/server";
 import { requireFounderInvestorCrmApi } from "@/lib/api/founder-crm";
-import { heldContactsForExport, loadFounderAccess, loadSettings, logEvent } from "@/lib/investor-directory/db";
+import { founderDirectoryEnabled, heldContactsForExport, loadFounderAccess, loadSettings, logEvent } from "@/lib/investor-directory/db";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +17,9 @@ const cell = (v: string | null | undefined) => {
 export async function GET() {
   const auth = await requireFounderInvestorCrmApi();
   if ("error" in auth) return auth.error;
+  if (!(await founderDirectoryEnabled())) {
+    return NextResponse.json({ error: "Investor directory isn't available right now." }, { status: 403 });
+  }
   const [settings, access] = await Promise.all([loadSettings(), loadFounderAccess(auth.profile.id, auth.company.id)]);
   if (!settings.allow_export || !access.tier.can_export || access.status !== "active") {
     return NextResponse.json({ error: "Export isn't included on your plan." }, { status: 403 });

@@ -65,6 +65,11 @@ export type DirectorySettings = {
   allow_export: boolean;
   stale_days: number;
   terms_version: number;
+  /** Which Investor directory tabs founders see. */
+  tab_directory: boolean;
+  tab_formd: boolean;
+  tab_linkedin: boolean;
+  tab_csv: boolean;
 };
 
 export const DEFAULT_SETTINGS: DirectorySettings = {
@@ -80,7 +85,14 @@ export const DEFAULT_SETTINGS: DirectorySettings = {
   allow_export: false,
   stale_days: 180,
   terms_version: 1,
+  tab_directory: true,
+  tab_formd: true,
+  tab_linkedin: true,
+  tab_csv: true,
 };
+
+/** Feature control key for the founder Investor directory and the admin console. */
+export const INVESTOR_DIRECTORY_FEATURE_KEY = "investor_directory";
 
 /** "No top up". The key stays "free" because the access table defaults to it. */
 export const FREE_TIER: DirectoryTier = { key: "free", label: "No top up", hold_limit: 0, email_limit: 0, show_email: false, can_export: false, price_cents: null, sort: 0 };

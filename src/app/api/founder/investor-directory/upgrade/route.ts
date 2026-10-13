@@ -2,13 +2,16 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireFounderInvestorCrmApi } from "@/lib/api/founder-crm";
-import { loadTiers, requestUpgrade } from "@/lib/investor-directory/db";
+import { founderDirectoryEnabled, loadTiers, requestUpgrade } from "@/lib/investor-directory/db";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   const auth = await requireFounderInvestorCrmApi();
   if ("error" in auth) return auth.error;
+  if (!(await founderDirectoryEnabled())) {
+    return NextResponse.json({ error: "Investor directory isn't available right now." }, { status: 403 });
+  }
   const parsed = z.object({ tier: z.string().min(1).max(40) }).safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Pick a plan." }, { status: 400 });
   const tiers = await loadTiers();

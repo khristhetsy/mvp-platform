@@ -126,6 +126,16 @@ export function AccessClient({ allowances, settings, founders }: Readonly<{
         ))}
       </Section>
 
+      <Section title="Tabs founders see" icon="ti-layout-navbar">
+        {toggle("tab_directory", "Directory", "Public investor records")}
+        {toggle("tab_formd", "Form D", "SEC EDGAR firms")}
+        {toggle("tab_linkedin", "LinkedIn", "Connections.csv import")}
+        {toggle("tab_csv", "CSV or Excel", "File import")}
+        <p className="border-t border-slate-100 px-4 py-2.5 text-[12px] text-slate-500">
+          A tab that&apos;s off disappears for every founder; the page opens on the first tab still on. To hide the whole Investor directory, use Admin › Feature controls.
+        </p>
+      </Section>
+
       <Section title="Gatekeeping rules" icon="ti-lock">
         {toggle("block_over_limit", "Block adding investors over the plan's limit", "Every source counts. Founders see an upgrade prompt instead")}
         {num("daily_cap", "Daily import cap per founder", "Contacts per Pacific day", 1)}

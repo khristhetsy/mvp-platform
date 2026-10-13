@@ -19,6 +19,10 @@ const schema = z.object({
   honor_opt_outs: z.boolean().optional(),
   allow_export: z.boolean().optional(),
   stale_days: int(7, 3650),
+  tab_directory: z.boolean().optional(),
+  tab_formd: z.boolean().optional(),
+  tab_linkedin: z.boolean().optional(),
+  tab_csv: z.boolean().optional(),
 });
 
 export async function PATCH(request: Request) {

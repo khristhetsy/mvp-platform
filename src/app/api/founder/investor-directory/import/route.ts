@@ -8,7 +8,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireFounderInvestorCrmApi } from "@/lib/api/founder-crm";
-import { formdIdsAmong, importIntoContacts, loadFounderAccess, loadSettings, maybeAutoPause } from "@/lib/investor-directory/db";
+import { founderDirectoryEnabled, formdIdsAmong, importIntoContacts, loadFounderAccess, loadSettings, maybeAutoPause } from "@/lib/investor-directory/db";
 import { decideSplitImport } from "@/lib/investor-directory/limits";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +18,9 @@ const schema = z.object({ ids: z.array(z.string().uuid()).min(1).max(5000) });
 export async function POST(request: Request) {
   const auth = await requireFounderInvestorCrmApi();
   if ("error" in auth) return auth.error;
+  if (!(await founderDirectoryEnabled())) {
+    return NextResponse.json({ error: "Investor directory isn't available right now." }, { status: 403 });
+  }
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Select investors to import." }, { status: 400 });
   try {

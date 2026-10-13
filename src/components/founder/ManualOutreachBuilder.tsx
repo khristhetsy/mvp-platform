@@ -161,6 +161,18 @@ export function ManualOutreachBuilder({
   const [panel, setPanel] = useState<"none" | "add" | "saveList">("none");
   const [dialog, setDialog] = useState<"none" | "compose">("none");
   const [gearOpen, setGearOpen] = useState(false);
+  // Hidden when an admin switches the Investor directory off in Feature controls.
+  const [directoryOn, setDirectoryOn] = useState(true);
+  useEffect(() => {
+    let live = true;
+    fetch("/api/feature-controls")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body: { disabledHrefs?: string[] } | null) => {
+        if (live && body?.disabledHrefs?.includes("/founder/investor-directory")) setDirectoryOn(false);
+      })
+      .catch(() => {});
+    return () => { live = false; };
+  }, []);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [form, setForm] = useState({ name: "", firm: "", email: "", type: "" });
   const [listName, setListName] = useState("");
@@ -539,11 +551,15 @@ export function ManualOutreachBuilder({
                 </button>
                 {gearOpen ? (
                   <div className={menu}>
-                    <p className={menuHead}>Bring in contacts</p>
-                    <a href="/founder/investor-directory" className={menuItem} onClick={() => setGearOpen(false)}>
-                      <i className="ti ti-world-search mt-0.5 text-base text-slate-500" aria-hidden="true" />
-                      <span>Investor directory<span className="block text-[11px] text-slate-400">Public investors, LinkedIn, CSV or Excel imports</span></span>
-                    </a>
+                    {directoryOn ? (
+                      <>
+                        <p className={menuHead}>Bring in contacts</p>
+                        <Link href="/founder/investor-directory" className={menuItem} onClick={() => setGearOpen(false)}>
+                          <i className="ti ti-world-search mt-0.5 text-base text-slate-500" aria-hidden="true" />
+                          <span>Investor directory<span className="block text-[11px] text-slate-400">Public investors, LinkedIn, CSV or Excel imports</span></span>
+                        </Link>
+                      </>
+                    ) : null}
                     {savedLists.length > 0 ? (
                       <>
                         <div className="my-1 border-t border-slate-100" />
@@ -685,10 +701,9 @@ export function ManualOutreachBuilder({
             <i className="ti ti-mail-off mt-0.5 text-base" aria-hidden="true" />
             <div className="min-w-[220px] flex-1">
               <p className="font-semibold">You&apos;ve sent {emailCap.used.toLocaleString("en-US")} of {emailCap.cap.toLocaleString("en-US")} emails this period.</p>
-              <p className="mt-0.5">Sending resumes {emailCap.resetsLabel}. Drafts and queued follow ups stay saved and go out after the reset. A directory top up or a bigger plan adds more.</p>
+              <p className="mt-0.5">Sending resumes {emailCap.resetsLabel}. Drafts and queued follow ups stay saved and go out after the reset. A bigger plan adds more.</p>
             </div>
             <Link href="/upgrade" className={btn}>See plans</Link>
-            <Link href="/founder/investor-directory" className="cap-btn-primary rounded-lg px-3 py-1.5 text-[12.5px] font-semibold">Add a top up</Link>
           </div>
         ) : null}
 
@@ -703,14 +718,18 @@ export function ManualOutreachBuilder({
             <p className="text-sm font-semibold text-slate-800">{contactList.length === 0 ? "Bring in your investors" : "No investors match your search"}</p>
             <p className="mx-auto mt-1 max-w-md text-[12.5px] text-slate-500">
               {contactList.length === 0
-                ? "Import from the Investor directory (public investors, LinkedIn, CSV or Excel), or add investors one by one."
+                ? directoryOn
+                  ? "Import from the Investor directory (public investors, LinkedIn, CSV or Excel), or add investors one by one."
+                  : "Add investors one by one."
                 : "Clear a filter or try another name."}
             </p>
             {contactList.length === 0 ? (
               <div className="mt-3 flex justify-center gap-2">
-                <a href="/founder/investor-directory" className="cap-btn-primary rounded-lg px-3 py-1.5 text-[12.5px] font-semibold">
-                  Open Investor directory
-                </a>
+                {directoryOn ? (
+                  <Link href="/founder/investor-directory" className="cap-btn-primary rounded-lg px-3 py-1.5 text-[12.5px] font-semibold">
+                    Open Investor directory
+                  </Link>
+                ) : null}
                 <button type="button" onClick={() => setPanel("add")} className={btn}>Add an investor</button>
               </div>
             ) : null}
