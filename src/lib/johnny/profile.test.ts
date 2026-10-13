@@ -243,3 +243,14 @@ describe("investor questions and the no ladder (Oct 13)", () => {
     expect(profileAnswers(p).map((a) => a.label)).toEqual(["Investment thesis", "Follow up"]);
   });
 });
+
+describe("live test fixes (Oct 13, afternoon)", () => {
+  it("reads the typo 'how deals do you work with' as the deal count question", () => {
+    expect(answersFor("how deals do you work with").map((a) => a.id)).toEqual(["count"]);
+  });
+  it("mentions due diligence and prequalification when asked how companies are qualified", () => {
+    const q = answersFor("how do you qualify company")[0];
+    expect(q.wordings[0].join(" ")).toContain("due diligence");
+    expect(answersFor("do you prequalify companies?")[0].id).toBe("diligence");
+  });
+});
