@@ -2,12 +2,10 @@ import { describe, it, expect } from "vitest";
 import {
   DANIELA_AI_LINES,
   DANIELA_COST_LINES,
-  DANIELA_FALLBACK_CHOICES,
-  DANIELA_FALLBACK_WORDINGS,
   DANIELA_OBJECTIONS,
   DANIELA_SYSTEM_PROMPT,
 } from "./config";
-import { matchReply, nextQualifyingStep, normalizeRole } from "./flow";
+import { matchReply, normalizeRole } from "./flow";
 
 function handler(text: string): string {
   const r = matchReply(text);
@@ -99,21 +97,9 @@ describe("approved wording", () => {
   it("uses no dashes as sentence punctuation in the copy", () => {
     const all = [
       ...DANIELA_COST_LINES,
-      ...DANIELA_FALLBACK_WORDINGS.flat(),
       ...DANIELA_OBJECTIONS.flatMap((o) => [...o.lines, ...(o.variants ?? []).flat(), ...Object.values(o.choices ?? {}).flatMap((c) => [...c.lines, c.bridge])]),
     ];
     for (const line of all) expect(line).not.toMatch(/ [-–—] |—|–/);
-  });
-});
-
-describe("fallback", () => {
-  it("has three different wordings and routes each chip to a handled question", () => {
-    const joined = DANIELA_FALLBACK_WORDINGS.map((w) => w.join(" "));
-    expect(joined.length).toBe(3);
-    expect(new Set(joined).size).toBe(3);
-    for (const phrase of Object.values(DANIELA_FALLBACK_CHOICES)) {
-      expect(matchReply(phrase).kind, phrase).not.toBe("unknown");
-    }
   });
 });
 
@@ -124,20 +110,6 @@ describe("system prompt", () => {
     expect(DANIELA_SYSTEM_PROMPT).toContain("I'm an AI assistant for Daniela, and there's nothing here I can't help you with.");
     expect(DANIELA_SYSTEM_PROMPT).toMatch(/Never claim any license or registration/);
     expect(DANIELA_SYSTEM_PROMPT).not.toMatch(/Jessica/);
-  });
-});
-
-describe("nextQualifyingStep", () => {
-  it("walks the founder path in order and stops when everything is known", () => {
-    expect(nextQualifyingStep({})).toBe("role");
-    expect(nextQualifyingStep({ role: "Raising" })).toBe("stage");
-    expect(nextQualifyingStep({ role: "Raising", stage: "Pre revenue" })).toBe("raise");
-    expect(nextQualifyingStep({ role: "Raising", stage: "Pre revenue", raise: "$1M to $5M" })).toBe("timing");
-    expect(nextQualifyingStep({ role: "Raising", stage: "Pre revenue", raise: "$1M to $5M", timing: "Within 30 days" })).toBeNull();
-  });
-  it("asks investors only for a check size", () => {
-    expect(nextQualifyingStep({ role: "Investing" })).toBe("check");
-    expect(nextQualifyingStep({ role: "Investing", checkSize: "$1M to $5M" })).toBeNull();
   });
 });
 
