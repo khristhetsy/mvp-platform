@@ -284,8 +284,9 @@ export function JohnnyChat({ hostId, sourceTag }: { hostId: string; sourceTag: s
       if (ai && ai.ask !== "none" && !missingFields(profile).includes(ASK_TO_FIELD[ai.ask])) ai = null;
       const lines = ai ? ai.lines : [react(changed)];
       const m = missingFields(profile);
-      if ((ai && ai.ready) || !m.length) {
-        await say(lines);
+      if (!m.length) {
+        const plain = lines.filter((l) => !/\?\s*$/.test(l));
+        if (plain.length) await say(plain);
         await readback();
         return;
       }
@@ -338,7 +339,7 @@ export function JohnnyChat({ hostId, sourceTag }: { hostId: string; sourceTag: s
 
     const reflect = async () => {
       mode = "times";
-      const s = profile.sect.length && profile.sect[0] !== OTHER ? profile.sect[0].toLowerCase() : "your range of sectors";
+      const s = profile.sect.length && profile.sect[0] !== OTHER ? profile.sect[0] : "your range of sectors";
       await say([`Thank you, that gives me a clear picture. Companies in ${s} that match your profile fit the deal flow we bring to our investors.`]);
       await offerTimes(`Next step is ${JOHNNY_SLOT_MINUTES} minutes with our team. We cover the rest of your profile there.`);
     };
@@ -462,12 +463,14 @@ export function JohnnyChat({ hostId, sourceTag }: { hostId: string; sourceTag: s
         return;
       }
       mode = "done";
-      const confirmCall = formatSlotWhen(new Date(new Date(slot.start).getTime() - 15 * 60 * 1000).toISOString(), PLATFORM_TZ, PLATFORM_TZ_LABEL);
+      const confirmCall = new Intl.DateTimeFormat("en-US", { timeZone: PLATFORM_TZ, hour: "numeric", minute: "2-digit" })
+        .format(new Date(new Date(slot.start).getTime() - 15 * 60 * 1000))
+        .replace(/[\u202f\u00a0]/g, " ");
       await say(
         [
           `Done. ${formatSlotWhen(slot.start, PLATFORM_TZ, PLATFORM_TZ_LABEL)} with our team.`,
           `Invite is on its way to ${contact.email}.`,
-          `I will call you on ${contact.phone} at ${confirmCall} to confirm.`,
+          `I will call you on ${contact.phone} at ${confirmCall} ${PLATFORM_TZ_LABEL} that day to confirm.`,
           "On the call we will cover the rest of your profile.",
           "Thank you again. Talk to you soon.",
         ],
@@ -511,8 +514,17 @@ export function JohnnyChat({ hostId, sourceTag }: { hostId: string; sourceTag: s
     const converse = async () => {
       const ai = await callAi();
       if (cancelled) return;
-      await say(ai ? ai.lines : [JOHNNY_FALLBACK_LINE]);
-      if (mode !== "done") await resume();
+      const lines = ai ? ai.lines : [JOHNNY_FALLBACK_LINE];
+      await say(lines);
+      if (mode === "done") return;
+      // The reply already asked the open question: show its options, never ask it a second time.
+      const m = missingFields(profile);
+      if (mode === "chat" && !other && m.length && /\?\s*$/.test(lines[lines.length - 1])) {
+        asked = (ai && ai.ask !== "none" && m.includes(ASK_TO_FIELD[ai.ask]) ? ASK_TO_FIELD[ai.ask] : m[0]);
+        showFieldOptions(asked);
+        return;
+      }
+      await resume();
     };
 
     const scripted = async (s: JohnnyScripted) => {
@@ -626,7 +638,10 @@ export function JohnnyChat({ hostId, sourceTag }: { hostId: string; sourceTag: s
         }
       }
       if (mode === "name" && looksLikeName(value)) {
-        contact.fullName = value.replace(/^(i'?m|my name is|it'?s|this is)\s+/i, "").slice(0, 200);
+        contact.fullName = value
+          .replace(/^(i'?m|my name is|it'?s|this is)\s+/i, "")
+          .slice(0, 200)
+          .replace(/\b\p{L}/gu, (c) => c.toUpperCase());
         mode = "email";
         await say([`Thank you, ${contact.fullName.split(/\s+/)[0]}. What is the best email for the invite?`]);
         return;
@@ -638,7 +653,9 @@ export function JohnnyChat({ hostId, sourceTag }: { hostId: string; sourceTag: s
         return;
       }
       if (mode === "phone" && value.replace(/\D/g, "").length >= 7) {
-        contact.phone = value.slice(0, 40);
+        const digits = value.replace(/\D/g, "");
+        const us = digits.length === 10 ? digits : digits.length === 11 && digits.startsWith("1") ? digits.slice(1) : null;
+        contact.phone = us ? `(${us.slice(0, 3)}) ${us.slice(3, 6)}-${us.slice(6)}` : value.slice(0, 40);
         await bookNow();
         return;
       }
