@@ -7,7 +7,7 @@ import "server-only";
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
-import { startOfTodayPT, usageFlag, type UsageFlag } from "@/lib/investor-directory/limits";
+import { holdStatus, startOfTodayPT, usageFlag, type HoldStatus, type UsageFlag } from "@/lib/investor-directory/limits";
 import type { CleanRow } from "@/lib/investor-directory/clean";
 import { loadVocabularies } from "@/lib/vocabulary/store";
 import { getUserPlan } from "@/lib/subscriptions/get-subscription";
@@ -80,23 +80,19 @@ export async function emailsSentSince(founderId: string, since: string): Promise
 }
 
 /**
- * The founder's directory contact limit and Manual outreach email cap: plan
- * allowance + top up, with emails used in the current 30 day period.
- * Pass already loaded tiers or the top up key to save a query.
+ * The founder's investor limit and Manual outreach email cap from the plan,
+ * with emails used in the current 30 day period. Top ups are retired; the
+ * options are kept so existing callers still compile.
  */
-export async function founderLimits(founderId: string, opts: { tiers?: DirectoryTier[]; topUpKey?: string | null } = {}): Promise<FounderLimits> {
-  const [plan, allowances, tiers, accessRow, period] = await Promise.all([
+export async function founderLimits(founderId: string, _opts: { tiers?: DirectoryTier[]; topUpKey?: string | null } = {}): Promise<FounderLimits> {
+  const [plan, allowances, period] = await Promise.all([
     getUserPlan(founderId).catch(() => null),
     loadPlanAllowances(),
-    opts.tiers ? Promise.resolve(opts.tiers) : loadTiers(),
-    opts.topUpKey !== undefined
-      ? Promise.resolve({ data: { tier: opts.topUpKey ?? "free" } })
-      : db().from("investor_directory_access").select("tier").eq("founder_id", founderId).maybeSingle(),
     founderCapPeriod(db(), founderId),
   ]);
   const allowance = pickAllowance(allowances, plan);
-  const topKey = (accessRow.data as { tier?: string } | null)?.tier ?? "free";
-  const topUp = tiers.find((t) => t.key === topKey) ?? FREE_TIER;
+  // Top ups are retired: the plan alone sets the limits. A granted top up row is ignored.
+  const topUp = FREE_TIER;
   const total = addUp(allowance, topUp);
   const emailsUsed = await emailsSentSince(founderId, period.start.toISOString());
   return {
@@ -114,6 +110,37 @@ export async function founderLimits(founderId: string, opts: { tiers?: Directory
 
 // ── Founder access ────────────────────────────────────────────────────────
 
+/**
+ * Investors this company holds from every source except iCFO introductions,
+ * not archived. One limit covers them all.
+ */
+export async function heldContactCount(companyId: string): Promise<number> {
+  const { count } = await db()
+    .from("founder_investor_contacts")
+    .select("id", { count: "exact", head: true })
+    .eq("company_id", companyId)
+    .neq("status", "archived")
+    .or("source.is.null,source.not.in.(introduction,intro)");
+  return count ?? 0;
+}
+
+/** Where the founder stands against the one investor limit. */
+export async function founderHoldStatus(founderId: string, companyId: string): Promise<HoldStatus> {
+  const [limits, held, allowances, settings] = await Promise.all([
+    founderLimits(founderId),
+    heldContactCount(companyId),
+    loadPlanAllowances(),
+    loadSettings(),
+  ]);
+  return holdStatus({
+    held,
+    max: limits.contacts,
+    planLabel: limits.planLabel,
+    enforced: settings.block_over_limit,
+    plans: allowances.map((a) => ({ label: a.label, contacts: a.contacts })),
+  });
+}
+
 /** Directory ids this company already holds (not archived). */
 export async function heldDirectoryIds(companyId: string): Promise<Set<string>> {
   const { data } = await db()
@@ -126,17 +153,17 @@ export async function heldDirectoryIds(companyId: string): Promise<Set<string>> 
 }
 
 export async function loadFounderAccess(founderId: string, companyId: string | null): Promise<FounderDirectoryAccess> {
-  const [settings, tiers, accessRow, held, today] = await Promise.all([
+  const [settings, accessRow, held, today] = await Promise.all([
     loadSettings(),
-    loadTiers(),
     db().from("investor_directory_access").select("*").eq("founder_id", founderId).maybeSingle(),
-    companyId ? heldDirectoryIds(companyId) : Promise.resolve(new Set<string>()),
+    companyId ? heldContactCount(companyId) : Promise.resolve(0),
     db().from("investor_directory_events").select("count").eq("founder_id", founderId).eq("kind", "import").gte("created_at", startOfTodayPT()),
   ]);
   const row = accessRow.data as { tier: string; status: AccessStatus; status_reason: string | null; terms_version: number | null; terms_accepted_at: string | null } | null;
-  const tier = tiers.find((t) => t.key === (row?.tier ?? "free")) ?? FREE_TIER;
+  // Top ups are retired, so every founder reads the plan alone.
+  const tier = FREE_TIER;
   const importedToday = ((today.data ?? []) as { count: number }[]).reduce((s, r) => s + (r.count ?? 0), 0);
-  const limits = await founderLimits(founderId, { tiers, topUpKey: row?.tier ?? "free" });
+  const limits = await founderLimits(founderId);
   return {
     tier,
     limits,
@@ -144,7 +171,7 @@ export async function loadFounderAccess(founderId: string, companyId: string | n
     statusReason: row?.status_reason ?? null,
     termsAccepted: Boolean(row?.terms_accepted_at) && (row?.terms_version ?? 0) >= settings.terms_version,
     termsAcceptedAt: row?.terms_accepted_at ?? null,
-    held: held.size,
+    held,
     importedToday,
   };
 }

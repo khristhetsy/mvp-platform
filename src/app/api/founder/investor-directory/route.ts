@@ -1,12 +1,12 @@
 /**
  * Founder investor directory search.
  *   GET ?q&type&stage&industry&state&source&investingNow=1&hasEmail=1&page
- *     → { rows, total, page, pageSize, access, tiers, settings, facets }
+ *     → { rows, total, page, pageSize, access, tiers, plans, settings, facets }
  * Published, non-network rows only; email and phone show only once imported.
  */
 import { NextResponse } from "next/server";
 import { requireFounderInvestorCrmApi } from "@/lib/api/founder-crm";
-import { PAGE_SIZE, directoryFacets, loadFounderAccess, loadSettings, loadTiers, searchDirectory } from "@/lib/investor-directory/db";
+import { PAGE_SIZE, directoryFacets, loadFounderAccess, loadPlanAllowances, loadSettings, loadTiers, searchDirectory } from "@/lib/investor-directory/db";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +17,7 @@ export async function GET(request: Request) {
   if ("error" in auth) return auth.error;
   const u = new URL(request.url).searchParams;
   try {
-    const [result, access, tiers, settings, facets] = await Promise.all([
+    const [result, access, tiers, settings, facets, allowances] = await Promise.all([
       searchDirectory({
         q: u.get("q") ?? undefined,
         types: many(u, "type"),
@@ -33,12 +33,15 @@ export async function GET(request: Request) {
       loadTiers(),
       loadSettings(),
       u.get("facets") === "1" ? directoryFacets() : Promise.resolve(null),
+      loadPlanAllowances(),
     ]);
     return NextResponse.json({
       ...result,
       pageSize: PAGE_SIZE,
       access,
       tiers: tiers.filter((t) => t.key !== "free"),
+      // What each plan holds, for the "Limits by plan" panel.
+      plans: allowances.map((a) => ({ planType: a.plan_type, label: a.label, contacts: a.contacts })),
       settings: { require_terms: settings.require_terms, daily_cap: settings.daily_cap, allow_export: settings.allow_export, terms_version: settings.terms_version },
       facets,
     });

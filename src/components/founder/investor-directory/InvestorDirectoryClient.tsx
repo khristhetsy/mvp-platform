@@ -15,7 +15,7 @@ import { FounderToolbar } from "@/components/founder/FounderToolbar";
 import { EMPTY_SEARCH, type SearchState } from "@/components/admin/OdooSearchBar";
 import { OdooPager } from "@/components/admin/OdooPager";
 import { useVocabulary } from "@/lib/vocabulary/provider";
-import { DIRECTORY_DISCLAIMER, NOT_NETWORK_NOTE, type DirectoryTier, type FounderDirectoryAccess } from "@/lib/investor-directory/types";
+import { DIRECTORY_DISCLAIMER, type DirectoryTier, type FounderDirectoryAccess } from "@/lib/investor-directory/types";
 import { fmtPT, money } from "@/lib/investor-directory/format";
 
 type Row = {
@@ -29,7 +29,10 @@ type Payload = {
   rows: Row[]; total: number; page: number; pageSize: number; access: FounderDirectoryAccess; tiers: DirectoryTier[];
   settings: { require_terms: boolean; daily_cap: number; allow_export: boolean; terms_version: number };
   facets: { states: string[]; sources: string[] } | null;
+  /** What each plan holds (admin editable), for "Limits by plan". */
+  plans?: PlanLimit[];
 };
+type PlanLimit = { planType: string; label: string; contacts: number };
 
 async function fetchDirectory(q: URLSearchParams): Promise<{ ok: true; body: Payload } | { ok: false; error: string }> {
   try {
@@ -61,7 +64,7 @@ export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pi
   const [notice, setNotice] = useState<{ text: string; bad?: boolean } | null>(null);
   const [importing, setImporting] = useState(false);
   const [terms, setTerms] = useState(false);
-  const [upgrade, setUpgrade] = useState(false);
+  const [showPlans, setShowPlans] = useState(false);
 
   // Field filters arrive as labels; the API filters on slugs.
   const slugOf = useCallback((opts: { slug: string; label: string }[], labels: string[] | undefined) =>
@@ -132,7 +135,7 @@ export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pi
 
   async function doImport(termsJustAccepted = false) {
     if (!data || !access) return;
-    if (browseOnly) { setUpgrade(true); return; }
+    if (browseOnly) { setNotice({ text: "Your plan lets you browse the directory. Basic and up let you add investors. See plans to upgrade.", bad: true }); return; }
     if (data.settings.require_terms && !access.termsAccepted && !termsJustAccepted) { setTerms(true); return; }
     setImporting(true);
     setNotice(null);
@@ -143,7 +146,6 @@ export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pi
       const body = await res.json();
       if (!res.ok) {
         if (body.reason === "terms") setTerms(true);
-        else if (body.reason === "hold_limit" || body.reason === "free_plan") setUpgrade(true);
         setNotice({ text: body.error ?? "Couldn't import those investors.", bad: true });
         return;
       }
@@ -191,7 +193,16 @@ export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pi
   const emailPct = limits ? pct(limits.emailsUsed, limits.emails) : 0;
   const emailsLeft = limits ? Math.max(0, limits.emails - limits.emailsUsed) : 0;
   const resets = limits ? new Date(limits.periodEnd).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "America/Los_Angeles" }) : "";
-  const planLine = limits ? `${limits.planLabel} plan${tier && tier.key !== "free" ? ` + ${tier.label.replace(/^Directory /, "")}` : ""}` : "";
+  const planLine = limits ? `${limits.planLabel} plan` : "";
+  // One investor limit for every source, and the next plan up.
+  const plans = data?.plans ?? [];
+  const myPlan = limits?.allowance.plan_type;
+  const nextPlan = limits ? plans.find((pl) => pl.contacts > limits.allowance.contacts) : undefined;
+  const heldLeft = access ? Math.max(0, contactLimit - access.held) : 0;
+  const nearLimit = !browseOnly && heldPct >= 80;
+  const overBy = !browseOnly && selected.size > heldLeft ? selected.size - heldLeft : 0;
+  const holdsLine = limits ? `${limits.planLabel} holds up to ${n(limits.allowance.contacts)} investors` : "";
+  const upsell = nextPlan ? ` ${nextPlan.label} holds up to ${n(nextPlan.contacts)}.` : "";
 
   return (
     <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
@@ -247,14 +258,21 @@ export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pi
           <div className="mx-3 mt-3 grid gap-2 sm:grid-cols-3">
             <div className="rounded-lg bg-slate-50 px-3 py-2.5">
               <div className="flex justify-between text-[12px]">
-                <span className="text-slate-500">Directory contacts</span>
+                <span className="text-slate-500">Investors held</span>
                 <span className="text-slate-800">{n(access.held)} of {n(contactLimit)}</span>
               </div>
-              <div className="mt-1.5 h-1.5 rounded-full bg-white"><div className="h-1.5 rounded-full bg-[#1A6CE4]" style={{ width: `${heldPct}%` }} /></div>
-              <div className="mt-1 text-[11.5px] text-slate-500">
-                {planLine} · {n(Math.max(0, contactLimit - access.held))} left
+              <div className="mt-1.5 h-1.5 rounded-full bg-white">
+                <div className={`h-1.5 rounded-full ${heldPct >= 100 ? "bg-[#A32D2D]" : heldPct >= 80 ? "bg-[#B7791F]" : "bg-[#1A6CE4]"}`} style={{ width: `${heldPct}%` }} />
+              </div>
+              <div className={`mt-1 text-[11.5px] ${heldPct >= 80 ? "text-[#8A5300]" : "text-slate-500"}`}>
+                All sources · {planLine} · {n(heldLeft)} left · {holdsLine}
                 {access.status !== "active" ? ` · ${access.status === "paused" ? "Imports paused" : "Access suspended"}` : ""}
               </div>
+              {plans.length > 0 ? (
+                <button type="button" onClick={() => setShowPlans((v) => !v)} aria-expanded={showPlans} className="mt-1 text-[11.5px] font-medium text-[#185FA5] hover:underline">
+                  Limits by plan <i className={`ti ${showPlans ? "ti-chevron-up" : "ti-chevron-down"}`} aria-hidden="true" />
+                </button>
+              ) : null}
             </div>
             <div className="rounded-lg bg-slate-50 px-3 py-2.5">
               <div className="flex justify-between text-[12px]">
@@ -269,12 +287,39 @@ export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pi
             <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2.5">
               <div className="min-w-0 flex-1">
                 <div className="text-[12.5px] font-medium text-slate-800">Need more?</div>
-                <div className="text-[11.5px] text-slate-500">A top up adds contacts and emails</div>
+                <div className="text-[11.5px] text-slate-500">
+                  {nextPlan ? `${nextPlan.label} holds up to ${n(nextPlan.contacts)} investors` : `${limits.planLabel} holds up to ${n(limits.allowance.contacts)} investors`}
+                </div>
               </div>
-              <button type="button" onClick={() => setUpgrade(true)} className="rounded-lg bg-[#1A6CE4] px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-[#2E78F5]">Top ups</button>
+              {nextPlan ? (
+                <Link href="/upgrade" className="rounded-lg bg-[#1A6CE4] px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-[#2E78F5]">Upgrade</Link>
+              ) : null}
             </div>
           </div>
         )
+      ) : null}
+
+      {limits && showPlans && plans.length > 0 ? (
+        <div className="mx-3 mt-2 grid gap-2 sm:grid-cols-4">
+          {plans.map((pl) => (
+            <div key={pl.planType} className={`rounded-lg px-3 py-2 ${pl.planType === myPlan ? "border-2 border-[#1A6CE4] bg-white" : "border border-slate-200 bg-slate-50"}`}>
+              <div className="text-[10.5px] uppercase tracking-wide text-slate-500">{pl.label}{pl.planType === myPlan ? " · your plan" : ""}</div>
+              <div className="text-[15px] font-semibold text-slate-900">{pl.contacts > 0 ? `Up to ${n(pl.contacts)}` : "Locked"}</div>
+              <div className="text-[11.5px] text-slate-500">{pl.contacts > 0 ? "investors, all sources" : "Adding investors not included"}</div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {access && limits && nearLimit ? (
+        <div className="mx-3 mt-2 flex flex-wrap items-center gap-2 rounded-lg bg-[#FFF8EC] px-3 py-2 text-[12.5px] text-[#633806]">
+          <span className="min-w-0 flex-1">
+            {heldLeft <= 0
+              ? `You hold ${n(access.held)} of ${n(contactLimit)} investors, the most your plan allows.${upsell}`
+              : `You hold ${n(access.held)} of ${n(contactLimit)} investors on ${limits.planLabel}.${upsell}`}
+          </span>
+          <Link href="/upgrade" className="font-semibold underline">Upgrade</Link>
+        </div>
       ) : null}
 
       {selected.size > 0 ? (
@@ -286,9 +331,18 @@ export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pi
             </button>
           ) : null}
           <button type="button" aria-label="Clear selection" onClick={() => setSelected(new Set())} className="text-[#185FA5]"><i className="ti ti-x" aria-hidden="true" /></button>
-          <button type="button" disabled={importing} onClick={() => void doImport()} className="ml-auto rounded-lg bg-[#1A6CE4] px-3.5 py-1.5 text-[12.5px] font-semibold text-white hover:bg-[#2E78F5] disabled:opacity-60">
+          <button type="button" disabled={importing || overBy > 0} onClick={() => void doImport()} className="ml-auto rounded-lg bg-[#1A6CE4] px-3.5 py-1.5 text-[12.5px] font-semibold text-white hover:bg-[#2E78F5] disabled:opacity-60">
             <i className="ti ti-download" aria-hidden="true" /> {importing ? "Importing…" : "Import to outreach"}
           </button>
+        </div>
+      ) : null}
+
+      {limits && overBy > 0 ? (
+        <div className="mx-3 mt-2 rounded-md bg-[#FCEBEB] px-3 py-2 text-[12.5px] text-[#791F1F]">
+          {heldLeft <= 0
+            ? `${limits.planLabel} holds up to ${n(contactLimit)} investors and you have none left.`
+            : `${limits.planLabel} holds up to ${n(contactLimit)} investors and you have ${n(heldLeft)} left. Untick ${n(overBy)}.`}
+          {nextPlan ? <> Or <Link href="/upgrade" className="font-semibold underline">move to {nextPlan.label}</Link> for up to {n(nextPlan.contacts)}.</> : null}
         </div>
       ) : null}
 
@@ -366,7 +420,6 @@ export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pi
       <p className="px-3 py-3 text-[11.5px] text-slate-500">{DIRECTORY_DISCLAIMER} For your own company&apos;s fundraising only.</p>
 
       {terms ? <TermsDialog onClose={() => setTerms(false)} onAccept={acceptTerms} onAccepted={() => void doImport(true)} /> : null}
-      {upgrade && data ? <UpgradeDialog tiers={data.tiers} current={tier?.key ?? "free"} onClose={() => setUpgrade(false)} /> : null}
     </div>
   );
 }
@@ -407,44 +460,6 @@ function TermsDialog({ onClose, onAccept, onAccepted }: Readonly<{ onClose: () =
           <button type="button" onClick={onClose} className="rounded-lg border border-slate-300 px-3 py-1.5 text-[12.5px]">Cancel</button>
           <button type="button" disabled={busy} onClick={() => void submit()} className="rounded-lg bg-[#1A6CE4] px-3.5 py-1.5 text-[12.5px] font-semibold text-white hover:bg-[#2E78F5]">{busy ? "Saving…" : "Agree and import"}</button>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function UpgradeDialog({ tiers, current, onClose }: Readonly<{ tiers: DirectoryTier[]; current: string; onClose: () => void }>) {
-  const [sent, setSent] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  async function request(key: string) {
-    setError(null);
-    const res = await fetch("/api/founder/investor-directory/upgrade", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tier: key }) });
-    if (!res.ok) { const b = await res.json().catch(() => ({})); setError((b as { error?: string }).error ?? "Couldn't send your request."); return; }
-    setSent(key);
-  }
-  return (
-    <div role="dialog" aria-modal="true" aria-label="Directory top ups" className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4" onClick={onClose}>
-      <div className="w-full max-w-md rounded-xl bg-white p-5 text-[13px]" onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-[16px] font-semibold text-slate-900">Top ups</h2>
-        <p className="mt-1 text-slate-600">Your plan includes directory contacts and Manual outreach emails. A top up adds more on top of the plan.</p>
-        <p className="mt-1 text-[12px] text-[#8A5300]">{NOT_NETWORK_NOTE}.</p>
-        <div className="mt-3 space-y-2">
-          {tiers.filter((t) => t.key !== "free").map((t) => (
-            <div key={t.key} className={`flex items-center gap-3 rounded-lg border px-3 py-2 ${t.key === current ? "border-[#378ADD] bg-[#E6F1FB]" : "border-slate-200"}`}>
-              <div className="min-w-0 flex-1">
-                <div className="font-medium text-slate-900">{t.label}</div>
-                <div className="text-[12px] text-slate-500">+{t.hold_limit.toLocaleString("en-US")} public directory contacts and +{(t.email_limit ?? 0).toLocaleString("en-US")} emails{t.can_export ? " · export included" : ""}</div>
-              </div>
-              {t.price_cents !== null ? <span className="text-[12.5px] text-slate-700">${(t.price_cents / 100).toLocaleString("en-US")}/mo</span> : null}
-              {t.key === current ? <span className="text-[12px] text-[#0C447C]">Current</span>
-                : sent === t.key ? <span className="text-[12px] text-[#27500A]">Requested</span>
-                : <button type="button" onClick={() => void request(t.key)} className="rounded-lg border border-slate-300 px-2.5 py-1 text-[12px] hover:bg-slate-50">Request</button>}
-            </div>
-          ))}
-        </div>
-        {sent ? <p className="mt-3 text-[#27500A]">Request sent. iCFO Capital will confirm your top up by email.</p> : null}
-        <p className="mt-3 text-[12px] text-slate-500">Need more than a top up? <Link href="/upgrade" className="text-[#1A6CE4]">Compare plans</Link>.</p>
-        {error ? <p className="mt-3 text-[#A32D2D]">{error}</p> : null}
-        <div className="mt-4 flex justify-end"><button type="button" onClick={onClose} className="rounded-lg border border-slate-300 px-3 py-1.5 text-[12.5px]">Close</button></div>
       </div>
     </div>
   );

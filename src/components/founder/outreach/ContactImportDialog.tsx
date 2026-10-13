@@ -10,6 +10,7 @@
  */
 
 import { useMemo, useRef, useState } from "react";
+import type { HoldStatus } from "@/lib/investor-directory/limits";
 import { parseCsvCells } from "@/lib/contacts/field-mapping";
 import {
   IMPORT_TARGETS,
@@ -38,9 +39,12 @@ export function downloadTemplateCsv() {
 export function ContactImportDialog({
   mode = "file",
   existingEmails,
+  hold = null,
   onClose,
   onImported,
 }: {
+  /** The founder's investor limit. When set, only what fits is imported. */
+  hold?: HoldStatus | null;
   /** "linkedin" opens with the LinkedIn steps first. */
   mode?: "file" | "linkedin";
   existingEmails: string[];
@@ -62,6 +66,14 @@ export function ContactImportDialog({
     () => (parsed ? applyImportMapping(parsed.rows, mapping, existingEmails) : null),
     [parsed, mapping, existingEmails],
   );
+  // One investor limit for every source: the first rows that fit are imported.
+  const enforced = Boolean(hold?.enforced);
+  const room = hold && enforced ? hold.left : Number.MAX_SAFE_INTEGER;
+  const full = Boolean(hold && enforced && hold.left <= 0);
+  const toImport = result ? result.rows.slice(0, room) : [];
+  const overBy = result ? result.rows.length - toImport.length : 0;
+  const n = (v: number) => v.toLocaleString("en-US");
+  const nextPlanLine = hold?.nextPlan ? `move to ${hold.nextPlan.label} for up to ${n(hold.nextPlan.contacts)}` : "";
   const hasName = mapping.includes("full_name") || mapping.includes("first_name") || mapping.includes("last_name");
 
   function load(fileName: string, cells: string[][]) {
@@ -122,14 +134,14 @@ export function ContactImportDialog({
   }
 
   async function runImport() {
-    if (!result || result.rows.length === 0) return;
+    if (!result || toImport.length === 0) return;
     setImporting(true);
     setError(null);
     setProgress(0);
     let imported = 0;
     try {
-      for (let i = 0; i < result.rows.length; i += BATCH) {
-        const batch = result.rows.slice(i, i + BATCH);
+      for (let i = 0; i < toImport.length; i += BATCH) {
+        const batch = toImport.slice(i, i + BATCH);
         const res = await fetch("/api/founder/investor-contacts/import", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -141,7 +153,7 @@ export function ContactImportDialog({
           break;
         }
         imported += data?.imported ?? 0;
-        setProgress(Math.min(result.rows.length, i + batch.length));
+        setProgress(Math.min(toImport.length, i + batch.length));
       }
       await onImported(imported);
     } catch {
@@ -179,6 +191,16 @@ export function ContactImportDialog({
         </div>
 
         <div className="p-5">
+          {full && hold ? (
+            <p className="mb-4 rounded-lg bg-[#FCEBEB] px-3 py-2 text-[12.5px] text-[#791F1F]" role="status">
+              You hold {n(hold.held)} of {n(hold.max)} investors on {hold.planLabel}, the most your plan allows. Archive investors you no
+              longer need{nextPlanLine ? <>, or <a href="/upgrade" className="font-semibold underline">{nextPlanLine}</a></> : null}.
+            </p>
+          ) : hold && enforced ? (
+            <p className="mb-4 text-[12px] text-slate-500">
+              {hold.planLabel} holds up to {n(hold.max)} investors from every source. You can add {n(hold.left)} more.
+            </p>
+          ) : null}
           {!parsed ? (
             <div className="grid gap-5 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
               <div>
@@ -306,6 +328,12 @@ export function ContactImportDialog({
                   {result.missingName > 0 ? <span className="text-slate-500">{result.missingName.toLocaleString()} row{result.missingName === 1 ? "" : "s"} with no name skipped</span> : null}
                 </div>
               ) : null}
+              {hold && overBy > 0 && !full ? (
+                <p className="mt-3 rounded-lg bg-[#FFF8EC] px-3 py-2 text-[12.5px] text-[#633806]">
+                  {hold.planLabel} holds up to {n(hold.max)} investors and you can add {n(hold.left)} more. The first {n(toImport.length)} rows
+                  will be imported{nextPlanLine ? <>, or <a href="/upgrade" className="font-semibold underline">{nextPlanLine}</a></> : null}.
+                </p>
+              ) : null}
             </div>
           )}
 
@@ -314,7 +342,7 @@ export function ContactImportDialog({
 
         <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-5 py-3">
           {importing ? (
-            <span className="mr-auto text-xs text-slate-500">Importing {progress.toLocaleString()} of {result?.rows.length.toLocaleString()}…</span>
+            <span className="mr-auto text-xs text-slate-500">Importing {progress.toLocaleString()} of {toImport.length.toLocaleString()}…</span>
           ) : null}
           <button type="button" onClick={onClose} className="rounded-md border border-slate-200 px-3.5 py-1.5 text-[13px] text-slate-700 hover:bg-slate-50">
             Cancel
@@ -323,10 +351,10 @@ export function ContactImportDialog({
             <button
               type="button"
               onClick={() => void runImport()}
-              disabled={importing || !hasName || !result || result.rows.length === 0}
+              disabled={importing || full || !hasName || !result || toImport.length === 0}
               className="cap-btn-primary rounded-md px-4 py-1.5 text-[13px] font-semibold disabled:opacity-50"
             >
-              {importing ? "Importing…" : `Import ${result?.rows.length.toLocaleString() ?? 0} contacts`}
+              {importing ? "Importing…" : `Import ${n(toImport.length)} contact${toImport.length === 1 ? "" : "s"}`}
             </button>
           ) : null}
         </div>
