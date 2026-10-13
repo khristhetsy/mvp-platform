@@ -87,6 +87,7 @@ function ImportConnectorTab({ kind }: Readonly<{ kind: "linkedin" | "csv" }>) {
       /* counts stay blank */
     }
   }, []);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- load() sets state only after the fetch resolves
   useEffect(() => { void load(); }, [load]);
 
   const mine = (contacts ?? []).filter((c) => (kind === "linkedin" ? c.source === "linkedin" : CSV_SOURCES.has(c.source)));
