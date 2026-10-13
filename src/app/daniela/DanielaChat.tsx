@@ -18,15 +18,21 @@ import {
   DANIELA_FALLBACK_BRIDGE,
   DANIELA_FALLBACK_LINES,
   DANIELA_FOUNDER_WELCOME,
+  DANIELA_INDUSTRY_ASKS,
+  DANIELA_INDUSTRY_REASK,
   DANIELA_INTRO_CHOICES,
   DANIELA_INTRO_LINES,
   DANIELA_INTRO_RESUME,
   DANIELA_INVESTOR_RECAP,
   DANIELA_INVESTOR_WELCOME,
+  DANIELA_PREP_LINES,
   DANIELA_QUALIFY_FALLBACK,
   DANIELA_RAISE_ASKS,
   DANIELA_RAISE_OPTIONS,
   DANIELA_RAISE_RESUME,
+  DANIELA_ROLE_ASKS,
+  DANIELA_ROLE_OPTIONS,
+  DANIELA_ROLE_RESUME,
   DANIELA_SLOT_MINUTES,
   DANIELA_SPARE_BRIDGES,
   DANIELA_STAGE_ASKS,
@@ -45,9 +51,13 @@ import {
   bookingAnswers,
   formatSlotWhen,
   groupSlotsByDay,
+  industryOf,
+  isSideTalk,
   looksLikeName,
   matchReply,
+  missingProfileStep,
   normalizeRole,
+  optionFor,
   parseAiReply,
   pickWording,
   questionKey,
@@ -55,12 +65,20 @@ import {
   validEmail,
   type DanielaAiReply,
   type DanielaProfile,
+  type ProfileStep,
   type Slot,
 } from "@/lib/daniela/flow";
 
 type Msg = { id: number; from: "daniela" | "you"; text: string; href?: string; hrefLabel?: string };
 type LinkExtra = Pick<Msg, "href" | "hrefLabel">;
-type Replies = { options: string[]; main: boolean; pick: (option: string) => void; resume?: string };
+type Replies = {
+  options: string[];
+  main: boolean;
+  pick: (option: string) => void;
+  resume?: string;
+  /** Takes a typed answer as one of the chips. False when the text is a question or does not say which one. */
+  typed?: (value: string) => boolean;
+};
 type BookResult = { ok: true; meetUrl: string | null } | { ok: false; retry: boolean; message: string };
 type Turn = { role: "user" | "assistant"; content: string };
 
@@ -125,7 +143,7 @@ export function DanielaChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
     };
 
     let current: Replies | null = null;
-    const ask = (options: string[], main = false, resume?: string) =>
+    const ask = (options: string[], main = false, resume?: string, kind?: "role" | "stage" | "raise" | "timing" | "check") =>
       new Promise<string>((resolve) => {
         show({
           options,
@@ -136,6 +154,17 @@ export function DanielaChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
             push("you", option);
             resolve(option);
           },
+          // Jessica 2.0 reads typed answers. So does Daniela: "we make 3m a year" answers the stage chips.
+          typed: kind
+            ? (value) => {
+                const option = optionFor(kind, value, options);
+                if (!option) return false;
+                show(null);
+                push("you", value);
+                resolve(option);
+                return true;
+              }
+            : undefined,
         });
       });
 
@@ -233,23 +262,50 @@ export function DanielaChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
     };
 
     /** One qualifying question. Re-asked questions use the next wording, so nothing repeats word for word. */
-    const askStep = async (step: "check" | "stage" | "raise" | "timing") => {
-      if (step === "check") {
+    const askStep = async (step: ProfileStep) => {
+      if (step === "role") {
+        await say(fresh(DANIELA_ROLE_ASKS));
+        profile.role = normalizeRole(await ask(DANIELA_ROLE_OPTIONS, false, DANIELA_ROLE_RESUME, "role"));
+      } else if (step === "check") {
         await say(fresh(DANIELA_CHECK_ASKS));
-        profile.checkSize = await ask(DANIELA_CHECK_OPTIONS, false, DANIELA_CHECK_RESUME);
+        profile.checkSize = await ask(DANIELA_CHECK_OPTIONS, false, DANIELA_CHECK_RESUME, "check");
       } else if (step === "stage") {
         await say(fresh(DANIELA_STAGE_ASKS));
-        const stage = await ask(DANIELA_STAGE_OPTIONS, false, DANIELA_STAGE_RESUME);
+        const stage = await ask(DANIELA_STAGE_OPTIONS, false, DANIELA_STAGE_RESUME, "stage");
         profile.stage = stage;
         await say([/^Pre/.test(stage) ? "An exciting stage, and the right time to prepare well." : /^Over/.test(stage) ? "That's real traction." : "Thank you, that's helpful context."]);
+      } else if (step === "industry") {
+        await say(fresh(DANIELA_INDUSTRY_ASKS));
+        let text = (await askText()).trim().slice(0, 120);
+        // A question typed into the industry prompt is a question, not an industry.
+        while (isSideTalk(text)) {
+          await answerAside(text);
+          if (cancelled) return;
+          await say(fresh(DANIELA_INDUSTRY_REASK));
+          text = (await askText()).trim().slice(0, 120);
+        }
+        profile.industry = industryOf(text)?.label ?? text;
+        await say(["Thank you, that helps our team prepare."]);
       } else if (step === "raise") {
         await say(fresh(DANIELA_RAISE_ASKS));
-        profile.raise = await ask(DANIELA_RAISE_OPTIONS, false, DANIELA_RAISE_RESUME);
+        profile.raise = await ask(DANIELA_RAISE_OPTIONS, false, DANIELA_RAISE_RESUME, "raise");
       } else {
         await say(fresh(DANIELA_TIMING_ASKS));
-        profile.timing = await ask(DANIELA_TIMING_OPTIONS, false, DANIELA_TIMING_RESUME);
+        profile.timing = await ask(DANIELA_TIMING_OPTIONS, false, DANIELA_TIMING_RESUME, "timing");
       }
       sinceNew = 0;
+    };
+
+    /** Before a call is booked, fill every gap in the profile so the team never gets an empty intake. */
+    const completeProfile = async () => {
+      let step = missingProfileStep(profile);
+      if (!step) return;
+      await say(DANIELA_PREP_LINES);
+      while (step) {
+        await askStep(step);
+        if (cancelled) return;
+        step = missingProfileStep(profile);
+      }
     };
 
     /** The assumptive close: a bridge that fits what was just said, then the real open days. */
@@ -273,6 +329,9 @@ export function DanielaChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
         await say(["No problem. Pick anything that works for you here."], calendarLink());
         return;
       }
+
+      await completeProfile();
+      if (cancelled) return;
 
       await say([profile.name ? `Wonderful, ${profile.name}. Where should I send the invitation?` : "Wonderful. May I have your name?"]);
       if (!profile.name) {
@@ -480,16 +539,17 @@ export function DanielaChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
         resolve(value);
         return true;
       }
+      if (current?.typed?.(value)) return true;
       void sideConversation(value);
       return true;
     };
 
     const intro = async () => {
       await say(DANIELA_INTRO_LINES);
-      let role = await ask(DANIELA_INTRO_CHOICES, false, DANIELA_INTRO_RESUME);
+      let role = await ask(DANIELA_INTRO_CHOICES, false, DANIELA_INTRO_RESUME, "role");
       if (/icfo/i.test(role)) {
         await say(DANIELA_WHAT_INTRO_LINES);
-        role = await ask(DANIELA_WHAT_INTRO_CHOICES, false, DANIELA_WHAT_INTRO_RESUME);
+        role = await ask(DANIELA_WHAT_INTRO_CHOICES, false, DANIELA_WHAT_INTRO_RESUME, "role");
       }
       profile.role = normalizeRole(role);
 
@@ -503,6 +563,7 @@ export function DanielaChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
 
       await say(DANIELA_FOUNDER_WELCOME);
       await askStep("stage");
+      await askStep("industry");
       await askStep("raise");
       await askStep("timing");
       await say([

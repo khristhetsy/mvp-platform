@@ -1,11 +1,16 @@
 import { describe, it, expect } from "vitest";
 import {
   DANIELA_AI_LINES,
+  DANIELA_CHECK_OPTIONS,
   DANIELA_COST_LINES,
   DANIELA_OBJECTIONS,
+  DANIELA_RAISE_OPTIONS,
+  DANIELA_ROLE_OPTIONS,
+  DANIELA_STAGE_OPTIONS,
   DANIELA_SYSTEM_PROMPT,
+  DANIELA_TIMING_OPTIONS,
 } from "./config";
-import { matchReply, normalizeRole } from "./flow";
+import { bookingAnswers, industryOf, matchReply, missingProfileStep, normalizeRole, optionFor } from "./flow";
 
 function handler(text: string): string {
   const r = matchReply(text);
@@ -118,5 +123,64 @@ describe("normalizeRole", () => {
     expect(normalizeRole("Exploring investments")).toBe("Investing");
     expect(normalizeRole("Investing")).toBe("Investing");
     expect(normalizeRole("Raising capital")).toBe("Raising");
+  });
+});
+
+describe("missingProfileStep", () => {
+  it("walks the founder profile in order: stage, industry, raise, timing", () => {
+    expect(missingProfileStep({})).toBe("role");
+    expect(missingProfileStep({ role: "Raising" })).toBe("stage");
+    expect(missingProfileStep({ role: "Raising", stage: "Pre revenue" })).toBe("industry");
+    expect(missingProfileStep({ role: "Raising", stage: "Pre revenue", industry: "solar" })).toBe("raise");
+    expect(missingProfileStep({ role: "Raising", stage: "Pre revenue", industry: "solar", raise: "$1M to $5M" })).toBe("timing");
+    expect(missingProfileStep({ role: "Raising", stage: "Pre revenue", industry: "solar", raise: "$1M to $5M", timing: "Within 30 days" })).toBeNull();
+  });
+  it("asks investors only for a check size", () => {
+    expect(missingProfileStep({ role: "Investing" })).toBe("check");
+    expect(missingProfileStep({ role: "Investing", checkSize: "$1M to $5M" })).toBeNull();
+  });
+});
+
+describe("bookingAnswers", () => {
+  it("saves the founder profile in order, industry included, and leaves out what is missing", () => {
+    expect(
+      bookingAnswers({ role: "Raising", stage: "Pre revenue", industry: "solar", raise: "$1M to $5M", timing: "Within 30 days" }),
+    ).toEqual([
+      { label: "Raising or investing", value: "Raising" },
+      { label: "Company stage", value: "Pre revenue" },
+      { label: "Industry", value: "solar" },
+      { label: "Raise size", value: "$1M to $5M" },
+      { label: "Time to close", value: "Within 30 days" },
+    ]);
+    expect(bookingAnswers({})).toEqual([]);
+  });
+});
+
+describe("optionFor, typed answers read as chips", () => {
+  it("reads stage, raise, timing, check and role from a sentence", () => {
+    expect(optionFor("stage", "we make about 3m a year", DANIELA_STAGE_OPTIONS)).toBe("$1M to $5M");
+    expect(optionFor("stage", "pre revenue", DANIELA_STAGE_OPTIONS)).toBe("Pre revenue");
+    expect(optionFor("stage", "800k in sales", DANIELA_STAGE_OPTIONS)).toBe("Under $1M a year");
+    expect(optionFor("raise", "looking for 2 million", DANIELA_RAISE_OPTIONS)).toBe("$1M to $5M");
+    expect(optionFor("raise", "$25M", DANIELA_RAISE_OPTIONS)).toBe("Over $20M");
+    expect(optionFor("timing", "in a few months", DANIELA_TIMING_OPTIONS)).toBe("In the next few months");
+    expect(optionFor("timing", "asap", DANIELA_TIMING_OPTIONS)).toBe("Within 30 days");
+    expect(optionFor("timing", "not sure", DANIELA_TIMING_OPTIONS)).toBe("Still deciding");
+    expect(optionFor("check", "around 500k", DANIELA_CHECK_OPTIONS)).toBe("$250K to $1M");
+    expect(optionFor("role", "we are a startup raising money", DANIELA_ROLE_OPTIONS)).toBe("Raising capital");
+    expect(optionFor("role", "I am an investor", DANIELA_ROLE_OPTIONS)).toBe("Exploring investments");
+  });
+  it("leaves questions, objections and unclear text to the normal reply", () => {
+    expect(optionFor("raise", "how much does it cost?", DANIELA_RAISE_OPTIONS)).toBeNull();
+    expect(optionFor("stage", "is there a fee", DANIELA_STAGE_OPTIONS)).toBeNull();
+    expect(optionFor("stage", "we sell things", DANIELA_STAGE_OPTIONS)).toBeNull();
+    expect(optionFor("raise", "not sure yet", DANIELA_RAISE_OPTIONS)).toBeNull();
+  });
+});
+
+describe("industryOf", () => {
+  it("maps what a founder types to a plain label", () => {
+    expect(industryOf("solar panels")?.label).toBeTruthy();
+    expect(industryOf("blue sky thinking")).toBeNull();
   });
 });
