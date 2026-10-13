@@ -135,8 +135,12 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
   const [companyName, setCompanyName] = useState(a.company_name);
   const [welcome, setWelcome] = useState(a.welcome_message ?? "");
   const [about, setAbout] = useState(a.about ?? "");
-  const [questions, setQuestions] = useState<Array<Pick<AgentQuestion, "field" | "prompt" | "options" | "enabled">>>(data.questions);
-  const [contactFields, setContactFields] = useState<Array<Pick<AgentContactField, "key" | "label" | "kind" | "required" | "enabled">>>(data.contactFields);
+  const [questions, setQuestions] = useState<Array<Pick<AgentQuestion, "field" | "prompt" | "options" | "enabled">>>(() =>
+    data.questions.map(({ field, prompt, options, enabled }) => ({ field, prompt, options, enabled })),
+  );
+  const [contactFields, setContactFields] = useState<Array<Pick<AgentContactField, "key" | "label" | "kind" | "required" | "enabled">>>(() =>
+    data.contactFields.map(({ key, label, kind, required, enabled }) => ({ key, label, kind, required, enabled })),
+  );
   const [saving, setSaving] = useState(false);
   const [previewKey, setPreviewKey] = useState(0);
   const [ackChecked, setAckChecked] = useState(false);
@@ -183,6 +187,8 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
       const c = await fetch("/api/founder/ir-agent/contact-fields", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fields: contactFields }) });
       const cj = await readJson<{ contactFields: AgentContactField[] }>(c);
       if (!c.ok) throw new Error(cj.error ?? "Could not save contact questions.");
+      setQuestions(qj.questions.map(({ field, prompt, options, enabled }) => ({ field, prompt, options, enabled })));
+      setContactFields(cj.contactFields.map(({ key, label, kind, required, enabled }) => ({ key, label, kind, required, enabled })));
       await reload();
       setPreviewKey((k) => k + 1);
       toast({ title: "Saved", description: "Your agent is updated. The preview restarted.", variant: "success" });
