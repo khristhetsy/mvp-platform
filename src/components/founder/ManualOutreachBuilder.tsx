@@ -20,7 +20,6 @@ import { EMPTY_SEARCH, type SearchState } from "@/components/admin/OdooSearchBar
 import { useDismiss } from "@/lib/ui/use-dismiss";
 import { contactSourceLabel } from "@/lib/founder-crm/contact-labels";
 import { DEFAULT_ATTACHMENTS, normalizeAttachments, type ManualAttachments } from "@/lib/outreach/manual-attachments";
-import { ContactImportDialog, downloadTemplateCsv } from "@/components/founder/outreach/ContactImportDialog";
 import { MyContactsPicker } from "@/components/founder/outreach/MyContactsPicker";
 import { OutreachComposer, type SeqStep } from "@/components/founder/outreach/OutreachComposer";
 import type { AttachmentOptions, OutreachContact, RecipientStatus } from "@/components/founder/outreach/types";
@@ -161,7 +160,7 @@ export function ManualOutreachBuilder({
 
   // ---- UI ----
   const [panel, setPanel] = useState<"none" | "add" | "saveList">("none");
-  const [dialog, setDialog] = useState<"none" | "compose" | "picker" | "import" | "linkedin">("none");
+  const [dialog, setDialog] = useState<"none" | "compose" | "picker">("none");
   const [gearOpen, setGearOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [form, setForm] = useState({ name: "", firm: "", email: "", type: "" });
@@ -494,7 +493,6 @@ export function ManualOutreachBuilder({
   const menu = "absolute left-0 top-[calc(100%+5px)] z-40 min-w-[260px] rounded-xl border border-slate-200 bg-white py-1.5 shadow-lg";
   const menuHead = "px-3 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400";
   const menuItem = "flex w-full items-start gap-2.5 px-3 py-1.5 text-left text-[12.5px] text-slate-700 hover:bg-slate-50";
-  const existingEmails = contactList.map((c) => c.email ?? "").filter(Boolean);
   const unsaved = dirty || savedRecipientIds.length !== selected.size || savedRecipientIds.some((id) => !selected.has(id));
 
   return (
@@ -547,22 +545,10 @@ export function ManualOutreachBuilder({
                       <i className="ti ti-address-book mt-0.5 text-base text-slate-500" aria-hidden="true" />
                       <span>Import from My contacts<span className="block text-[11px] text-slate-400">Pick from your Stage 3 contacts</span></span>
                     </button>
-                    <button type="button" className={menuItem} onClick={() => { setGearOpen(false); setDialog("import"); }}>
-                      <i className="ti ti-file-upload mt-0.5 text-base text-slate-500" aria-hidden="true" />
-                      <span>Import file<span className="block text-[11px] text-slate-400">Drag and drop CSV or Excel</span></span>
-                    </button>
-                    <button type="button" className={menuItem} onClick={() => { setGearOpen(false); setDialog("linkedin"); }}>
-                      <i className="ti ti-brand-linkedin mt-0.5 text-base text-slate-500" aria-hidden="true" />
-                      <span>Import LinkedIn connections<span className="block text-[11px] text-slate-400">Connections.csv export</span></span>
-                    </button>
                     <a href="/founder/investor-directory" className={menuItem} onClick={() => setGearOpen(false)}>
                       <i className="ti ti-world-search mt-0.5 text-base text-slate-500" aria-hidden="true" />
-                      <span>Investor directory<span className="block text-[11px] text-slate-400">Public investors, not the iCFO Capital network</span></span>
+                      <span>Investor directory<span className="block text-[11px] text-slate-400">Public investors, LinkedIn, CSV or Excel imports</span></span>
                     </a>
-                    <button type="button" className={menuItem} onClick={() => { setGearOpen(false); downloadTemplateCsv(); }}>
-                      <i className="ti ti-download mt-0.5 text-base text-slate-500" aria-hidden="true" />
-                      <span>Download CSV template</span>
-                    </button>
                     {savedLists.length > 0 ? (
                       <>
                         <div className="my-1 border-t border-slate-100" />
@@ -722,14 +708,14 @@ export function ManualOutreachBuilder({
             <p className="text-sm font-semibold text-slate-800">{contactList.length === 0 ? "Bring in your investors" : "No investors match your search"}</p>
             <p className="mx-auto mt-1 max-w-md text-[12.5px] text-slate-500">
               {contactList.length === 0
-                ? "Drag and drop a CSV, Excel file or your LinkedIn Connections.csv, or add investors one by one."
+                ? "Import from the Investor directory (public investors, LinkedIn, CSV or Excel), or add investors one by one."
                 : "Clear a filter or try another name."}
             </p>
             {contactList.length === 0 ? (
               <div className="mt-3 flex justify-center gap-2">
-                <button type="button" onClick={() => setDialog("import")} className="cap-btn-primary rounded-lg px-3 py-1.5 text-[12.5px] font-semibold">
-                  Import contacts
-                </button>
+                <a href="/founder/investor-directory" className="cap-btn-primary rounded-lg px-3 py-1.5 text-[12.5px] font-semibold">
+                  Open Investor directory
+                </a>
                 <button type="button" onClick={() => setPanel("add")} className={btn}>Add an investor</button>
               </div>
             ) : null}
@@ -882,19 +868,6 @@ export function ManualOutreachBuilder({
         />
       ) : null}
 
-      {dialog === "import" || dialog === "linkedin" ? (
-        <ContactImportDialog
-          mode={dialog === "linkedin" ? "linkedin" : "file"}
-          existingEmails={existingEmails}
-          onClose={() => setDialog("none")}
-          onImported={async (count) => {
-            await refreshContacts();
-            setDialog("none");
-            setSearch((s) => ({ ...s, groupBy: "source" }));
-            setMessage({ tone: "ok", text: `${count.toLocaleString()} contact${count === 1 ? "" : "s"} imported. They're under Imported; tick the ones to contact.` });
-          }}
-        />
-      ) : null}
     </section>
   );
 }
