@@ -120,9 +120,15 @@ export type FounderDirectoryAccess = {
   statusReason: string | null;
   termsAccepted: boolean;
   termsAcceptedAt: string | null;
+  /** Investors that count toward the plan's limit (every source). */
   held: number;
+  /** Form D firms held with no contact email yet: they don't count. */
+  formdUncounted: number;
   importedToday: number;
 };
+
+/** investor_directory.source for firms published from the SEC Form D registry. */
+export const FORM_D_SOURCE = "SEC Form D";
 
 /** founder_investor_contacts.source for contacts imported from the directory. */
 export const DIRECTORY_CONTACT_SOURCE = "directory";

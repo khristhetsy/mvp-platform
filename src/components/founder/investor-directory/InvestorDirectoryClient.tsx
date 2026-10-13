@@ -15,7 +15,7 @@ import { FounderToolbar } from "@/components/founder/FounderToolbar";
 import { EMPTY_SEARCH, type SearchState } from "@/components/admin/OdooSearchBar";
 import { OdooPager } from "@/components/admin/OdooPager";
 import { useVocabulary } from "@/lib/vocabulary/provider";
-import { DIRECTORY_DISCLAIMER, type DirectoryTier, type FounderDirectoryAccess } from "@/lib/investor-directory/types";
+import { DIRECTORY_DISCLAIMER, FORM_D_SOURCE, type DirectoryTier, type FounderDirectoryAccess } from "@/lib/investor-directory/types";
 import { fmtPT, money } from "@/lib/investor-directory/format";
 
 type Row = {
@@ -67,6 +67,8 @@ export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pi
   const [showPlans, setShowPlans] = useState(false);
   const [selectingAll, setSelectingAll] = useState(false);
   const [capped, setCapped] = useState(false);
+  // Form D firms seen in loaded rows or select all results: they don't count toward the limit.
+  const [knownFormd, setKnownFormd] = useState<Set<string>>(new Set());
 
   // Field filters arrive as labels; the API filters on slugs.
   const slugOf = useCallback((opts: { slug: string; label: string }[], labels: string[] | undefined) =>
@@ -202,7 +204,13 @@ export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pi
   const nextPlan = limits ? plans.find((pl) => pl.contacts > limits.allowance.contacts) : undefined;
   const heldLeft = access ? Math.max(0, contactLimit - access.held) : 0;
   const nearLimit = !browseOnly && heldPct >= 80;
-  const overBy = !browseOnly && selected.size > heldLeft ? selected.size - heldLeft : 0;
+  const formdHere = useMemo(() => {
+    const s = new Set(knownFormd);
+    for (const r of data?.rows ?? []) if (r.source === FORM_D_SOURCE) s.add(r.id);
+    return s;
+  }, [knownFormd, data]);
+  const countedSelected = pinnedSource === FORM_D_SOURCE ? 0 : [...selected].filter((id) => !formdHere.has(id)).length;
+  const overBy = !browseOnly && countedSelected > heldLeft ? countedSelected - heldLeft : 0;
   const upsell = nextPlan ? ` ${nextPlan.label} holds up to ${n(nextPlan.contacts)}.` : "";
   const pageAllSelected = selectable.length > 0 && selectable.every((r) => selected.has(r.id));
 
@@ -213,10 +221,14 @@ export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pi
       const q = buildQuery(search, 1, false, facets.sources);
       q.set("ids", "1");
       const res = await fetch(`/api/founder/investor-directory?${q}`);
-      const body = (await res.json().catch(() => ({}))) as { ids?: string[]; error?: string };
+      const body = (await res.json().catch(() => ({}))) as { ids?: string[]; formd?: string[]; error?: string };
       if (!res.ok || !body.ids) { setNotice({ text: body.error ?? "Couldn't select every match. Try again.", bad: true }); return; }
-      const room = limits && data?.settings ? heldLeft : body.ids.length;
-      const ids = body.ids.slice(0, Math.max(0, room));
+      const formd = new Set(body.formd ?? []);
+      setKnownFormd((k) => new Set([...k, ...formd]));
+      // Form D firms are always selectable; the others stop at what the plan has room for.
+      const counted = body.ids.filter((id) => !formd.has(id));
+      const keep = new Set(counted.slice(0, Math.max(0, heldLeft)));
+      const ids = body.ids.filter((id) => formd.has(id) || keep.has(id));
       setSelected(new Set(ids));
       setCapped(ids.length < body.ids.length);
     } finally {
@@ -285,7 +297,11 @@ export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pi
                 <div className={`h-1.5 rounded-full ${heldPct >= 100 ? "bg-[#A32D2D]" : heldPct >= 80 ? "bg-[#B7791F]" : "bg-[#1A6CE4]"}`} style={{ width: `${heldPct}%` }} />
               </div>
               <div className="mt-1 flex flex-wrap items-center gap-x-3 text-[11.5px] text-slate-500">
-                <span>{planLine}{access.status !== "active" ? ` · ${access.status === "paused" ? "Imports paused" : "Access suspended"}` : ""}</span>
+                <span>
+                  {planLine}
+                  {access.formdUncounted > 0 ? ` · + ${n(access.formdUncounted)} Form D firm${access.formdUncounted === 1 ? "" : "s"}, not counted` : ""}
+                  {access.status !== "active" ? ` · ${access.status === "paused" ? "Imports paused" : "Access suspended"}` : ""}
+                </span>
                 <span className="flex-1" />
                 {plans.length > 0 ? (
                   <button type="button" onClick={() => setShowPlans((v) => !v)} aria-expanded={showPlans} className="font-medium text-[#185FA5] hover:underline">

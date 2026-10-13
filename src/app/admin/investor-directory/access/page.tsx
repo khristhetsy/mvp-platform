@@ -16,7 +16,7 @@ export default async function InvestorDirectoryAccessPage() {
     : { data: [] };
   const nameOf = new Map(((people ?? []) as { id: string; full_name: string | null; email: string | null }[]).map((p) => [p.id, p.full_name ?? p.email ?? "Founder"]));
   const founders: AccessFounder[] = usage.map((u) => ({
-    founderId: u.founderId, name: u.name, company: u.company, held: u.held, status: u.status,
+    founderId: u.founderId, name: u.name, company: u.company, held: u.held, heldAll: u.heldAll, status: u.status,
     plan: u.plan, contactLimit: u.holdLimit, emailsUsed: u.emailsUsed, emailCap: u.emailCap,
     tierKey: tiers.find((t) => t.label === u.tier)?.key ?? "free",
   }));

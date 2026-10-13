@@ -81,6 +81,40 @@ export function decideAdd(requested: number, hold: HoldStatus): { ok: true; allo
   return { ok: true, allowed: Math.min(requested, hold.left) };
 }
 
+/**
+ * Directory import where some ids are Form D firms. Form D firms (no contact
+ * email) don't count toward the plan's limit, so they only face the gates and
+ * the daily cap; the rest also face the limit. Returns the ids to import, in
+ * order: Form D firms first, then the counted ones that fit.
+ */
+export function decideSplitImport(
+  ids: string[],
+  formd: Set<string>,
+  access: FounderDirectoryAccess,
+  settings: DirectorySettings,
+): { ok: true; ids: string[]; limit: number; trimmedBy: "none" | "daily_cap" | "hold_limit" } | { ok: false; reason: Extract<ImportDecision, { ok: false }>["reason"]; message: string } {
+  const free = ids.filter((id) => formd.has(id));
+  const counted = ids.filter((id) => !formd.has(id));
+  // Gates and the daily cap apply to everything; the plan's limit is checked below.
+  const gate = decideImport(ids.length, { ...access, held: 0 }, { ...settings, block_over_limit: false });
+  if (!gate.ok) return gate;
+  let trimmedBy: "none" | "daily_cap" | "hold_limit" = gate.trimmedBy;
+  let countedAllowed = counted.length;
+  if (counted.length > 0) {
+    const hold = decideImport(counted.length, access, settings);
+    if (!hold.ok) {
+      if (hold.reason !== "hold_limit" || free.length === 0) return hold;
+      countedAllowed = 0;
+      trimmedBy = "hold_limit";
+    } else {
+      countedAllowed = hold.allowed;
+      if (hold.trimmedBy !== "none") trimmedBy = hold.trimmedBy;
+    }
+  }
+  const ordered = [...free, ...counted.slice(0, countedAllowed)];
+  return { ok: true, ids: ordered, limit: Math.min(gate.allowed, ordered.length), trimmedBy };
+}
+
 /** Bounce rate in whole percent, or null when there are too few sends to judge. */
 export function bounceRate(sent: number, bounced: number, minSends: number): number | null {
   if (sent < Math.max(1, minSends)) return null;
