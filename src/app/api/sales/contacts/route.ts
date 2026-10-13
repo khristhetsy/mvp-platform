@@ -113,9 +113,14 @@ export async function POST(req: NextRequest): Promise<Response> {
   // Manual adds have no external system, so mint a unique id — prefer the email
   // (natural dedupe key), else a generated one.
   const externalId = parsed.data.email?.trim().toLowerCase() || `manual:${crypto.randomUUID()}`;
+  // crm_contacts.contact_type is a GENERATED column (derived from module, plan and
+  // raw.__profile.membership), so it can never be written directly. Set the membership
+  // the generated expression reads; "other" is simply the absence of one.
+  const MEMBERSHIP = { founder: "Founder", investor: "Investor", advisor: "Advisor" } as const;
+  const membership = parsed.data.contactType && parsed.data.contactType !== "other" ? MEMBERSHIP[parsed.data.contactType] : null;
   const { data, error } = await db()
     .from("crm_contacts")
-    .insert({ name: parsed.data.name.trim(), contact_type: parsed.data.contactType ?? null, email: parsed.data.email || null, company: parsed.data.company || null, phone: parsed.data.phone || null, source: "manual", external_id: externalId, owner_id: ownerId, assignee_ids: scope.isManager ? [] : [profile.id] })
+    .insert({ name: parsed.data.name.trim(), ...(membership ? { raw: { __profile: { membership } } } : {}), email: parsed.data.email || null, company: parsed.data.company || null, phone: parsed.data.phone || null, source: "manual", external_id: externalId, owner_id: ownerId, assignee_ids: scope.isManager ? [] : [profile.id] })
     .select("id, name, email, company, phone, source")
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
