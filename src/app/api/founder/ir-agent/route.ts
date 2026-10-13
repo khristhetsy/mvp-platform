@@ -41,16 +41,26 @@ const patchSchema = z.object({
   welcome_message: z.string().max(600).optional(),
   about: z.string().max(6000).optional(),
   status: z.enum(["draft", "live", "paused"]).optional(),
+  /** The founder confirmed the compliance notice. Required once before going live. */
+  compliance_acknowledged: z.literal(true).optional(),
 });
 
 /** Save the Build tab. The company part of the address is locked; only the ending changes. */
 export async function PUT(req: Request) {
   const auth = await requireFounderAgentApi();
   if ("error" in auth) return auth.error;
-  const { agent } = auth.ctx;
+  const { agent, profile } = auth.ctx;
   const parsed = patchSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid request." }, { status: 400 });
-  const patch = { ...parsed.data };
+  const { compliance_acknowledged, ...rest } = parsed.data;
+  const patch: Parameters<typeof updateAgent>[1] = { ...rest };
+  if (compliance_acknowledged) {
+    patch.compliance_acknowledged_at = new Date().toISOString();
+    patch.compliance_acknowledged_by = profile.id;
+  }
+  if (patch.status === "live" && !agent.compliance_acknowledged_at && !compliance_acknowledged) {
+    return NextResponse.json({ error: "Confirm the compliance notice before going live." }, { status: 400 });
+  }
   if (patch.ending !== undefined) {
     patch.ending = normalizeEnding(patch.ending);
     const check = validateEnding(patch.ending);

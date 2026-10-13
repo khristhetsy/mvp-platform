@@ -9,7 +9,7 @@ type Founder = {
   name: string;
   purpose: string | null;
   override: "allow" | "deny" | null;
-  agent: { company_slug: string; ending: string; status: string; updated_at: string } | null;
+  agent: { company_slug: string; ending: string; status: string; updated_at: string; compliance_acknowledged_at: string | null } | null;
 };
 type Loaded = {
   enabled: boolean;
@@ -132,6 +132,7 @@ export function IrAgentControls() {
                 <tr>
                   <th className="px-3 py-2 font-medium">Company</th>
                   <th className="px-3 py-2 font-medium">Agent</th>
+                  <th className="px-3 py-2 font-medium">Notice</th>
                   <th className="px-3 py-2 font-medium">Access</th>
                 </tr>
               </thead>
@@ -152,6 +153,9 @@ export function IrAgentControls() {
                       )}
                       {f.agent ? <span className="ml-2">{f.agent.status}</span> : null}
                     </td>
+                    <td className="px-3 py-2 text-xs text-slate-600">
+                      {f.agent?.compliance_acknowledged_at ? `Confirmed ${new Date(f.agent.compliance_acknowledged_at).toLocaleDateString()}` : f.agent ? "Not confirmed" : ""}
+                    </td>
                     <td className="px-3 py-2">
                       <select value={f.override ?? ""} onChange={(e) => void setOverride(f.id, (e.target.value || null) as "allow" | "deny" | null)} className="rounded border border-slate-300 px-1.5 py-1 text-xs" disabled={saving}>
                         <option value="">Follow plan</option>
@@ -163,7 +167,7 @@ export function IrAgentControls() {
                 ))}
                 {!founders.length ? (
                   <tr>
-                    <td colSpan={3} className="px-3 py-3 text-xs text-slate-500">
+                    <td colSpan={4} className="px-3 py-3 text-xs text-slate-500">
                       No founder accounts match.
                     </td>
                   </tr>

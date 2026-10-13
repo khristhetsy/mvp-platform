@@ -79,9 +79,30 @@ export const DEFAULT_TEMPLATE: AgentTemplate = {
   ],
 };
 
-/** Locked. Founders cannot edit or remove this line. It sits under every agent page. */
+/** Locked. Founders cannot edit or remove this line. {{company}} is replaced by the page. */
 export const LOCKED_DISCLAIMER =
-  "This conversation is informational only. It is not an offer to sell securities or a solicitation to buy them. Powered by iCapOS.";
+  "You are talking to an AI agent acting for {{company}}, not a person. This conversation is informational only. It is not an offer to sell securities or a solicitation to buy them, and it is not investment, legal or tax advice. Powered by iCapOS. iCFO Capital Global, Inc. is not a broker dealer or investment adviser.";
+
+/** The notice a founder confirms before the agent goes live. Shown on the Build tab; the confirmation is stored on the agent. */
+export const COMPLIANCE_NOTICE = {
+  title: "Read this before your agent talks to investors",
+  points: [
+    {
+      title: "Your agent is an AI, and it says so",
+      body: "Every conversation carries a fixed line stating that visitors are talking to an AI agent acting for your company, not a person, and that nothing it says is an offer to sell securities or a solicitation to buy them. You cannot edit or remove that line. If a visitor asks whether it is a bot, it answers yes.",
+    },
+    {
+      title: "Securities law applies to what your agent says",
+      body: "Your agent speaks for your company. Under U.S. federal securities laws and the rules of the SEC, communications to prospective investors can count as an offer or a general solicitation, and the exemption you rely on (for example Regulation D Rule 506(b) or 506(c)) sets what you may say, to whom, and what you must verify. The agent is built to never state a price, valuation, percentage, projected return or funding promise, and to answer only from facts you give it. That is a guardrail, not a legal review. You are responsible for what you teach it, for the documents you upload, and for how you share the link.",
+    },
+    {
+      title: "Seek your own legal counsel",
+      body: "iCFO Capital Global, Inc. and iCapOS are not a broker dealer, investment adviser, funding portal or law firm, and this page is not legal advice. Before your agent goes live, have a securities attorney review your fact sheet, your taught answers, your uploaded materials and the channels you plan to post the link on.",
+    },
+  ],
+  acknowledgement:
+    "I have read this notice. I understand my agent is an AI that speaks for my company, that securities laws apply to what it says, and that I should consult my own legal counsel before sharing the link with investors.",
+} as const;
 
 export const SLOT_MINUTES = 30;
 

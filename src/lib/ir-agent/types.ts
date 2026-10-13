@@ -57,6 +57,8 @@ export interface AgentRow {
   template_version: number;
   host_profile_id: string | null;
   created_by: string | null;
+  compliance_acknowledged_at: string | null;
+  compliance_acknowledged_by: string | null;
   created_at: string;
   updated_at: string;
 }
