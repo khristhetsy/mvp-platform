@@ -14,7 +14,7 @@ const TONES: Record<Tone, { bg: string; fg: string }> = {
   warn: { bg: "#FAEEDA", fg: "#633806" },
   bad: { bg: "#FCEBEB", fg: "#791F1F" },
   info: { bg: "#E6F1FB", fg: "#0C447C" },
-  pro: { bg: "#EEEDFE", fg: "#3C3489" },
+  pro: { bg: "#EEEDFE", fg: "#185FA5" },
   mute: { bg: "#F1F5F9", fg: "#475569" },
 };
 export type { Tone } from "@/lib/investor-directory/format";
