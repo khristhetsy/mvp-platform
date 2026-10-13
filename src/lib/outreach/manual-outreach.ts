@@ -5,7 +5,8 @@ import { isOutreachLiveSendEnabled } from "@/lib/outreach/investor-outreach";
 import { buildUnsubscribeUrl, filterUnsubscribed } from "@/lib/outreach/unsubscribe";
 import { renderManualEmail } from "@/lib/outreach/manual-template";
 import { notifyManualOutreachSent, type ManualSend } from "@/lib/outreach/outreach-notify";
-import { normalizeAttachments, withOnePagerLink, type ManualAttachments } from "@/lib/outreach/manual-attachments";
+import { normalizeAttachments, withAgentLink, withOnePagerLink, type ManualAttachments } from "@/lib/outreach/manual-attachments";
+import { liveAgentEmailUrlForCompany } from "@/lib/ir-agent/links";
 import { buildManualAttachments, type BuiltAttachment } from "@/lib/outreach/manual-attachments.server";
 import { recordManualSend } from "@/lib/outreach/email-cap";
 import { founderLimits } from "@/lib/investor-directory/db";
@@ -294,6 +295,7 @@ export async function processManualOutreach(): Promise<{ sent: number; liveSend:
     };
     const appBase = (process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com").replace(/\/$/, "");
     const previewUrl = comp.is_published && comp.slug ? `${appBase}/f/${comp.slug}` : null;
+    const agentUrl = await liveAgentEmailUrlForCompany(db, campaign.company_id);
 
     const { data: recipients } = await db
       .from("founder_manual_outreach_recipients")
@@ -307,7 +309,7 @@ export async function processManualOutreach(): Promise<{ sent: number; liveSend:
     // Attachments are built once per campaign (only when something is due and
     // live) and reused for every recipient in this pass.
     const att = normalizeAttachments(campaign.attachments);
-    const bodyTemplate = withOnePagerLink(campaign.email_body ?? "", att);
+    const bodyTemplate = withAgentLink(withOnePagerLink(campaign.email_body ?? "", att), agentUrl ? att : { ...att, agentLink: false });
     let built: BuiltAttachment[] | null = null;
 
     // Plan email cap: how many emails this founder may still send this period.
@@ -380,6 +382,7 @@ export async function processManualOutreach(): Promise<{ sent: number; liveSend:
         company: comp.company_name ?? "our company",
         sector: comp.industry ?? null,
         previewUrl,
+        agentUrl,
         unsubscribeUrl: buildUnsubscribeUrl(r.email),
       });
       const ok = await sendEmail({

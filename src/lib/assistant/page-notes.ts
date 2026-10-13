@@ -35,6 +35,7 @@ export const PAGE_NOTES: Record<string, string> = {
   "/founder/reg-cf": "Reg CF materials: materials for founders running a Reg CF offering.",
   "/founder/matching": "Matching Center: investor contacts across the iCapOS network ranked by fit. Identities stay private until an introduction is made.",
   "/founder/contacts": "My contacts: the founder's own investors, imported, introduced by iCapOS, or added by hand.",
+  "/founder/ir-agent": "My Investor Relations Agent: build an investor relations chat agent modeled on Johnny at icapos.com/[company]/[ending]. The company part is locked, the ending is editable. Build: name, image, welcome, questions and contact questions with a live preview. Train: teach answers and upload PDFs. Share: tracked links, QR code, email and social copy. Conversations: every visitor chat with its source. Available on plans the admin enables.",
   "/founder/investor-directory": "Investor directory: public investor data, not the iCFO Capital investor network. Search, select and import investors into Manual outreach. Each plan holds up to a set number of investors from every source (directory, Form D, LinkedIn, CSV or Excel, added by hand) and sends Manual outreach emails per 30 days: Basic up to 100 investors and 1,000 emails, Professional up to 1,000 and 20,000, Premium up to 10,000 and 40,000. There are no top ups; a bigger plan holds more.",
   "/founder/investors": "Investors: the founder's investor overview.",
   "/founder/investors/matches": "Matches: investors matched to the company.",

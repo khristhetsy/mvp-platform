@@ -6,6 +6,7 @@ import { StageMenuEditor } from "@/components/admin/StageMenuEditor";
 import { AiUsageLimitsControls } from "@/components/admin/AiUsageLimitsControls";
 import { AiBudgetControls } from "@/components/admin/AiBudgetControls";
 import { UploadLimitsControls } from "@/components/admin/UploadLimitsControls";
+import { IrAgentControls } from "@/components/admin/IrAgentControls";
 import { SiteDefaultViewControls } from "@/components/admin/SiteDefaultViewControls";
 import { requirePermissionPage } from "@/lib/api/permissions";
 
@@ -28,6 +29,7 @@ export default async function AdminFeatureControlsPage() {
       <AiBudgetControls />
       <AiUsageLimitsControls />
       <UploadLimitsControls />
+      <IrAgentControls />
       <StageMenuEditor />
     </AppShell>
   );
