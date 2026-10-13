@@ -148,3 +148,12 @@ describe("booking details", () => {
     expect(validPhone("555")).toBe(false);
   });
 });
+
+describe("gap questions are side talk", () => {
+  it("catches success rate, timeline and references mid question", () => {
+    expect(isSideTalk("whats your success rate")).toBe(true);
+    expect(isSideTalk("how long does it take to raise")).toBe(true);
+    expect(isSideTalk("any case studies")).toBe(true);
+    expect(isSideTalk("can I get references")).toBe(true);
+  });
+});

@@ -170,7 +170,7 @@ export function isSideTalk(text: string): boolean {
   const l = low(text);
   return (
     /\?/.test(l) ||
-    /\b(fees?|costs?|price|pricing|charge|upfront|up front|retainer|commission|broker|scam|legit|fake|guarantee|bot|robot|real person|are you (an? )?(ai|human|real|person)|send (me|us)|info|information|deck|not interested|no thanks|too expensive|no budget|can'?t afford|don'?t pay|won'?t pay|not paying|who are you|what do you do|how does (it|this) work|not a fit|my board|my partner|co-?founder)\b/.test(l)
+    /\b(fees?|costs?|price|pricing|charge|upfront|up front|retainer|commission|broker|scam|legit|fake|guarantee|bot|robot|real person|are you (an? )?(ai|human|real|person)|send (me|us)|info|information|deck|not interested|no thanks|too expensive|no budget|can'?t afford|don'?t pay|won'?t pay|not paying|who are you|what do you do|how does (it|this) work|not a fit|my board|my partner|co-?founder|success rate|case stud(y|ies)|references?|testimonials?|time ?line|how long)\b/.test(l)
   );
 }
 
