@@ -204,12 +204,13 @@ export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pi
   const nextPlan = limits ? plans.find((pl) => pl.contacts > limits.allowance.contacts) : undefined;
   const heldLeft = access ? Math.max(0, contactLimit - access.held) : 0;
   const nearLimit = !browseOnly && heldPct >= 80;
+  const formdTab = pinnedSource === FORM_D_SOURCE;
   const formdHere = useMemo(() => {
     const s = new Set(knownFormd);
     for (const r of data?.rows ?? []) if (r.source === FORM_D_SOURCE) s.add(r.id);
     return s;
   }, [knownFormd, data]);
-  const countedSelected = pinnedSource === FORM_D_SOURCE ? 0 : [...selected].filter((id) => !formdHere.has(id)).length;
+  const countedSelected = formdTab ? 0 : [...selected].filter((id) => !formdHere.has(id)).length;
   const overBy = !browseOnly && countedSelected > heldLeft ? countedSelected - heldLeft : 0;
   const upsell = nextPlan ? ` ${nextPlan.label} holds up to ${n(nextPlan.contacts)}.` : "";
   const pageAllSelected = selectable.length > 0 && selectable.every((r) => selected.has(r.id));
@@ -238,6 +239,17 @@ export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pi
 
   return (
     <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
+      {formdTab ? (
+        // Form D tab: no search, just the firm count and the pager.
+        <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-3 py-2.5">
+          <span className="text-[13px] font-semibold text-slate-800">{n(total)} firm{total === 1 ? "" : "s"}</span>
+          <OdooPager
+            label={total === 0 ? "0 / 0" : `${from}-${to} / ${total.toLocaleString("en-US")}`}
+            prev={{ onClick: page > 1 ? () => goPage(page - 1) : undefined, disabled: page <= 1 }}
+            next={{ onClick: to < total ? () => goPage(page + 1) : undefined, disabled: to >= total }}
+          />
+        </div>
+      ) : (
       <div className="border-b border-slate-100 px-3 py-2.5">
         <FounderToolbar
           scope="investor-directory"
@@ -275,10 +287,13 @@ export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pi
           }
         />
       </div>
+      )}
 
+      {formdTab ? null : (
       <div className="mx-3 mt-3 rounded-lg border border-[#F3DDB3] bg-[#FFF8EC] px-3 py-2 text-[12px] text-[#633806]">
         <b>Not the iCFO Capital investor network.</b> These investors come from public records. iCFO Capital has no relationship with them and does not introduce you. For warm introductions from our network, use Match.
       </div>
+      )}
 
       {access && limits ? (
         browseOnly ? (
