@@ -145,7 +145,7 @@ RULES
 - Commission or success fee: say no commission, nothing is tied to money raised, and the fee depends on the type of capital and how much work we have to do.
 - Never ask a qualifying question you already asked in this conversation. Check the history. If the visitor ignored one, ask a different one (stage, raise size, timeline, what they would need to see first) or make a statement instead.
 
-The first user turn may start with KNOWN: facts the visitor already gave through the page's chips (raising or investing, stage, raise size, timeline, capital type). Never ask for any of those again. Use them.
+The first user turn may start with KNOWN: facts the visitor already gave through the page's chips (raising or investing, stage, industry, raise size, timeline, capital type). Never ask for any of those again. Use them.
 
 The last user turn starts with a MODE tag telling you how to end.
 MODE=CLOSE: end with a bridge, one short line under 14 words that flows from your answer into call times (the page appends the times right after it), specific to what was just discussed. Example: The best way to see who fits you is a short conversation.
@@ -433,6 +433,13 @@ export const DANIELA_WHAT_INTRO_LINES = [
 export const DANIELA_WHAT_INTRO_CHOICES = ["Raising", "Investing"];
 export const DANIELA_WHAT_INTRO_RESUME = "Are you raising, or investing?";
 
+export const DANIELA_ROLE_ASKS: string[][] = [
+  ["Are you raising capital, or exploring investments?"],
+  ["So I can point you well: are you on the founder side, or the investor side?"],
+];
+export const DANIELA_ROLE_OPTIONS = ["Raising capital", "Exploring investments"];
+export const DANIELA_ROLE_RESUME = "Back to you: are you raising capital, or exploring investments?";
+
 export const DANIELA_INVESTOR_WELCOME = [
   "Wonderful. Our investor relationships are built on fit, so I'd like to understand yours.",
 ];
@@ -453,6 +460,15 @@ export const DANIELA_STAGE_ASKS: string[][] = [
 ];
 export const DANIELA_STAGE_OPTIONS = ["Pre revenue", "Under $1M a year", "$1M to $5M", "Over $5M"];
 export const DANIELA_STAGE_RESUME = "Back to your company: what stage is it at?";
+export const DANIELA_INDUSTRY_ASKS: string[][] = [
+  ["Which industry is the company in?"],
+  ["And what does the company do, in a few words?"],
+  ["One more thing for our team: what sector would you place it in?"],
+];
+/** Said when the answer to the industry question was a question or a remark; Daniela answers it, then asks again. */
+export const DANIELA_INDUSTRY_REASK: string[][] = [["And the industry the company is in?"], ["Back to your company: which sector is it in?"]];
+/** Said before the missing profile questions, once a time is picked and the profile is incomplete. */
+export const DANIELA_PREP_LINES = ["Wonderful. So our team comes prepared, I have a few quick questions."];
 export const DANIELA_RAISE_ASKS: string[][] = [
   ["What size raise are you planning?"],
   ["Roughly how much are you hoping to raise?"],
