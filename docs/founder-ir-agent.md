@@ -40,6 +40,10 @@ Can: ending, agent name, company name as spoken, welcome (up to 3 lines), fact s
 
 Cannot: the `icapos.com/[company]/` prefix, the disclaimer line, the hard stop on "remove me" or "unsubscribe", the rule against prices, percentages and promises (checked on the server for AI replies and for taught answers).
 
+## Compliance notice
+
+Before Go live, the Build tab shows a notice in three points (the agent is an AI and says so; securities law applies to what it says; seek your own legal counsel) with a required checkbox. The confirmation is stored as `ir_agents.compliance_acknowledged_at` and `compliance_acknowledged_by`, shown to admin in Feature Controls, and the server refuses `status = live` without it. The wording lives in `COMPLIANCE_NOTICE` in `src/lib/ir-agent/defaults.ts`; have counsel review it. The locked footer under every conversation names the AI and the company.
+
 ## Booking
 
 Host is the founder who created the agent. With hours set in Scheduling, the agent offers real open times and books through `/api/scheduling/book` (Meet link when Google Calendar is connected). Without hours, the agent collects the contact fields and ends with "the team will reach out"; the details sit in Conversations.

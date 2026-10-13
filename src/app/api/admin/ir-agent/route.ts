@@ -20,11 +20,11 @@ export async function GET() {
     getPlanAccess(),
     getTemplate(),
     db.from("organizations").select("id, name, purpose, created_at").eq("type", "founder").order("name").limit(500),
-    db.from("ir_agents").select("id, organization_id, company_slug, ending, status, updated_at"),
+    db.from("ir_agents").select("id, organization_id, company_slug, ending, status, updated_at, compliance_acknowledged_at"),
     getAccessOverrides(),
   ]);
-  const byOrg = new Map<string, { company_slug: string; ending: string; status: string; updated_at: string }>();
-  for (const a of (agents.data ?? []) as Array<{ organization_id: string; company_slug: string; ending: string; status: string; updated_at: string }>) byOrg.set(a.organization_id, a);
+  const byOrg = new Map<string, { company_slug: string; ending: string; status: string; updated_at: string; compliance_acknowledged_at: string | null }>();
+  for (const a of (agents.data ?? []) as Array<{ organization_id: string; company_slug: string; ending: string; status: string; updated_at: string; compliance_acknowledged_at: string | null }>) byOrg.set(a.organization_id, a);
   const planMap = new Map(planRows.map((r) => [r.plan_type, r.enabled]));
 
   return NextResponse.json({

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AgentChat } from "@/components/ir-agent/AgentChat";
 import { useToast } from "@/components/ui/ToastProvider";
-import { FIELD_LABELS, type QuestionField } from "@/lib/ir-agent/defaults";
+import { COMPLIANCE_NOTICE, FIELD_LABELS, type QuestionField } from "@/lib/ir-agent/defaults";
 import { AGENT_HOST, CHANNELS, CHANNEL_LABELS, agentUrl, normalizeEnding, trackedUrl, type Channel } from "@/lib/ir-agent/slug";
 import type { AgentContactField, AgentPublicConfig, AgentQuestion, AgentRow, TaughtAnswer } from "@/lib/ir-agent/types";
 
@@ -139,6 +139,9 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
   const [contactFields, setContactFields] = useState<Array<Pick<AgentContactField, "key" | "label" | "kind" | "required" | "enabled">>>(data.contactFields);
   const [saving, setSaving] = useState(false);
   const [previewKey, setPreviewKey] = useState(0);
+  const [ackChecked, setAckChecked] = useState(false);
+  const [noticeOpen, setNoticeOpen] = useState(false);
+  const acknowledged = Boolean(a.compliance_acknowledged_at);
   const fileRef = useRef<HTMLInputElement>(null);
   const checkTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -191,7 +194,15 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
   };
 
   const setStatus = async (status: "live" | "paused") => {
-    const res = await fetch("/api/founder/ir-agent", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) });
+    const body: Record<string, unknown> = { status };
+    if (status === "live" && !acknowledged) {
+      if (!ackChecked) {
+        toast({ title: "Confirm the compliance notice first", variant: "error" });
+        return;
+      }
+      body.compliance_acknowledged = true;
+    }
+    const res = await fetch("/api/founder/ir-agent", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     const j = await readJson<{ agent: AgentRow; config: AgentPublicConfig }>(res);
     if (!res.ok) {
       toast({ title: "Could not change status", description: j.error, variant: "error" });
@@ -442,11 +453,54 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
           )}
         </section>
 
+        {/* Compliance notice: confirmed once before going live */}
+        {!acknowledged || noticeOpen ? (
+          <section className="rounded-xl border border-amber-300 bg-amber-50 p-5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-base font-semibold text-slate-950">Compliance notice</h2>
+              {acknowledged ? (
+                <button type="button" onClick={() => setNoticeOpen(false)} className="text-xs text-[#1A6CE4] underline">
+                  Close
+                </button>
+              ) : (
+                <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-800">Required before Go live</span>
+              )}
+            </div>
+            <p className="mt-1 text-sm font-medium text-slate-800">{COMPLIANCE_NOTICE.title}</p>
+            <ol className="mt-4 space-y-4">
+              {COMPLIANCE_NOTICE.points.map((pt, i) => (
+                <li key={pt.title} className="flex gap-3">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#0A1A40] text-xs font-bold text-white">{i + 1}</span>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">{pt.title}</p>
+                    <p className="mt-1 text-sm leading-relaxed text-slate-700">{pt.body}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+            {!acknowledged ? (
+              <label className="mt-5 flex cursor-pointer items-start gap-3 border-t border-amber-200 pt-4 text-sm leading-relaxed text-slate-800">
+                <input type="checkbox" checked={ackChecked} onChange={(e) => setAckChecked(e.target.checked)} className="mt-1 h-5 w-5 shrink-0" />
+                <span>{COMPLIANCE_NOTICE.acknowledgement}</span>
+              </label>
+            ) : null}
+          </section>
+        ) : (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
+            <span>
+              <span className="font-bold text-emerald-700">✓</span> Compliance notice confirmed on {new Date(a.compliance_acknowledged_at as string).toLocaleString()}
+            </span>
+            <button type="button" onClick={() => setNoticeOpen(true)} className="text-xs text-[#1A6CE4] underline">
+              Read again
+            </button>
+          </div>
+        )}
+
         {/* Locked rules */}
         <section className="rounded-xl border border-slate-200 bg-slate-50 p-5 text-xs text-slate-600">
           <p className="font-semibold text-slate-800">Always on, cannot be changed</p>
           <ul className="mt-2 list-disc space-y-1 pl-4">
-            <li>The disclaimer line under every conversation.</li>
+            <li>The AI disclosure and disclaimer line under every conversation.</li>
             <li>Hard stop on remove me, unsubscribe, stop contacting me.</li>
             <li>No prices, percentages or funding promises in any reply.</li>
             <li>The address starts with {AGENT_HOST.replace("https://", "")}/{a.company_slug}/.</li>
@@ -462,11 +516,11 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
               Pause agent
             </button>
           ) : (
-            <button type="button" onClick={() => void setStatus("live")} className={btnQuiet} disabled={dirty}>
+            <button type="button" onClick={() => void setStatus("live")} className={btnQuiet} disabled={dirty || (!acknowledged && !ackChecked)}>
               {a.status === "paused" ? "Resume agent" : "Go live"}
             </button>
           )}
-          {dirty ? <span className="text-xs text-slate-500">Save before going live.</span> : null}
+          {dirty ? <span className="text-xs text-slate-500">Save before going live.</span> : !acknowledged && !ackChecked ? <span className="text-xs text-slate-500">Confirm the compliance notice to unlock Go live.</span> : null}
         </div>
       </div>
 

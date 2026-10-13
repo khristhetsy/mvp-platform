@@ -240,7 +240,7 @@ export async function buildPublicConfig(agent: AgentRow): Promise<AgentPublicCon
     displayName: agent.display_name,
     imageUrl: agent.image_url,
     welcome,
-    disclaimer: LOCKED_DISCLAIMER,
+    disclaimer: LOCKED_DISCLAIMER.replaceAll("{{company}}", agent.company_name),
     hostProfileId: agent.host_profile_id,
     slotMinutes: SLOT_MINUTES,
     questions: questions.filter((q) => q.enabled),
@@ -261,6 +261,8 @@ export type AgentPatch = {
   about?: string;
   status?: "draft" | "live" | "paused";
   host_profile_id?: string | null;
+  compliance_acknowledged_at?: string | null;
+  compliance_acknowledged_by?: string | null;
 };
 
 export async function updateAgent(agentId: string, patch: AgentPatch): Promise<{ ok: true; agent: AgentRow } | { ok: false; error: string }> {
