@@ -1,7 +1,7 @@
 /**
- * Daniela marketing agent (icapos.com/daniela). The Jessica 1.0 flow with
- * Daniela Felix's face and voice, plus the reply fixes from the Jessica 1.1
- * patch spec. Static settings and the answer sheet live here so the copy can
+ * Daniela marketing agent (icapos.com/daniela). The Jessica 1.0 flow and reply
+ * routing with Daniela Felix's face and voice, plus the extra scripted answers
+ * from the Jessica 1.1 patch spec (licensing, get paid, investors, fit). Static settings and the answer sheet live here so the copy can
  * change without touching the chat flow.
  *
  * Jessica's own files are untouched. Shared helpers (slot grouping, booking
@@ -97,18 +97,6 @@ export const DANIELA_FACTS: DanielaFact[] = [
   },
 ];
 
-/** Used when the AI is unavailable and nothing scripted matches. Never ends in a time offer; it asks what they meant. */
-export const DANIELA_FALLBACK_WORDINGS: string[][] = [
-  ["I want to answer that properly. Are you asking about how we work, what it costs, or our investors?"],
-  ["Let me point you the right way. Is it our process, our fees, or our investors you'd like to know about?"],
-  ["I'd rather not guess. Could you tell me a little more about what you'd like to know?"],
-];
-/** Chips after a fallback wording, and the question each one is routed to. */
-export const DANIELA_FALLBACK_CHOICES: Record<string, string> = {
-  "How it works": "how does it work",
-  "What it costs": "what does it cost",
-  "The investors": "who are the investors",
-};
 /** Used in a side answer when the AI is down and nothing matched (mid booking). */
 export const DANIELA_FALLBACK_LINES = ["That one is better answered by our team on a short call."];
 export const DANIELA_FALLBACK_BRIDGE = "The easiest way to see if it fits is a conversation with our team.";
@@ -118,14 +106,6 @@ export const DANIELA_SPARE_BRIDGES = [
   "Twenty minutes with the team covers the rest.",
   "Let's find a time that suits you.",
   "The call is where this becomes specific to you.",
-];
-/** Bridge into the time offer once the qualifying questions are done. */
-export const DANIELA_AFTER_QUESTIONS_BRIDGE = "Thank you, that helps me point you well.";
-/** Said instead of another push when times were ignored and there is nothing left to ask. */
-export const DANIELA_PATIENCE_WORDINGS: string[][] = [
-  ["Take your time. Ask me anything you like."],
-  ["No rush at all. I'm happy to keep talking it through."],
-  ["Whenever you're ready, I'm here."],
 ];
 /** Said once the visitor has seen open times and typed another question instead of picking one. */
 export const DANIELA_QUALIFY_FALLBACK = "Are you raising right now, or exploring?";
@@ -452,13 +432,6 @@ export const DANIELA_WHAT_INTRO_LINES = [
 ];
 export const DANIELA_WHAT_INTRO_CHOICES = ["Raising", "Investing"];
 export const DANIELA_WHAT_INTRO_RESUME = "Are you raising, or investing?";
-
-export const DANIELA_ROLE_ASKS: string[][] = [
-  ["Are you raising capital, or exploring investments?"],
-  ["So I can point you well: are you on the founder side, or the investor side?"],
-];
-export const DANIELA_ROLE_OPTIONS = ["Raising capital", "Exploring investments"];
-export const DANIELA_ROLE_RESUME = "Back to you: are you raising capital, or exploring investments?";
 
 export const DANIELA_INVESTOR_WELCOME = [
   "Wonderful. Our investor relationships are built on fit, so I'd like to understand yours.",

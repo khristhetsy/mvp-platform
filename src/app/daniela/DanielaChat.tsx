@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { PLATFORM_TZ, PLATFORM_TZ_LABEL } from "@/lib/time/platform-tz";
 import {
-  DANIELA_AFTER_QUESTIONS_BRIDGE,
   DANIELA_AI_CHOICES,
   DANIELA_AI_NO_LINES,
   DANIELA_AI_VARIANTS,
@@ -17,23 +16,17 @@ import {
   DANIELA_COST_CHOICES,
   DANIELA_DISCLAIMER,
   DANIELA_FALLBACK_BRIDGE,
-  DANIELA_FALLBACK_CHOICES,
   DANIELA_FALLBACK_LINES,
-  DANIELA_FALLBACK_WORDINGS,
   DANIELA_FOUNDER_WELCOME,
   DANIELA_INTRO_CHOICES,
   DANIELA_INTRO_LINES,
   DANIELA_INTRO_RESUME,
   DANIELA_INVESTOR_RECAP,
   DANIELA_INVESTOR_WELCOME,
-  DANIELA_PATIENCE_WORDINGS,
   DANIELA_QUALIFY_FALLBACK,
   DANIELA_RAISE_ASKS,
   DANIELA_RAISE_OPTIONS,
   DANIELA_RAISE_RESUME,
-  DANIELA_ROLE_ASKS,
-  DANIELA_ROLE_OPTIONS,
-  DANIELA_ROLE_RESUME,
   DANIELA_SLOT_MINUTES,
   DANIELA_SPARE_BRIDGES,
   DANIELA_STAGE_ASKS,
@@ -54,7 +47,6 @@ import {
   groupSlotsByDay,
   looksLikeName,
   matchReply,
-  nextQualifyingStep,
   normalizeRole,
   parseAiReply,
   pickWording,
@@ -63,7 +55,6 @@ import {
   validEmail,
   type DanielaAiReply,
   type DanielaProfile,
-  type QualifyingStep,
   type Slot,
 } from "@/lib/daniela/flow";
 
@@ -86,10 +77,8 @@ const OTHER_DAY = "Other day";
  * Qualifying questions, the fee answer, objections and the time offer are
  * scripted. Anything else goes to /api/daniela/reply, which answers from the
  * iCFO fact sheet under its rules. She never asks whether they want a call,
- * only when. Jessica 1.1 fixes: after an ignored offer she asks the next
- * unanswered qualifying question or waits instead of pushing times again, and
- * when the AI is down an unknown question gets a clarifying wording with chips
- * instead of a canned line plus a time offer.
+ * only when: one close, then one qualifying question if the times were ignored,
+ * then a close again. Reply routing is Jessica's; only the wording is Daniela's.
  */
 export function DanielaChat({ hostId, sourceTag }: { hostId: string; sourceTag: string | null }) {
   const [msgs, setMsgs] = useState<Msg[]>([]);
@@ -244,11 +233,8 @@ export function DanielaChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
     };
 
     /** One qualifying question. Re-asked questions use the next wording, so nothing repeats word for word. */
-    const askStep = async (step: QualifyingStep) => {
-      if (step === "role") {
-        await say(fresh(DANIELA_ROLE_ASKS));
-        profile.role = normalizeRole(await ask(DANIELA_ROLE_OPTIONS, false, DANIELA_ROLE_RESUME));
-      } else if (step === "check") {
+    const askStep = async (step: "check" | "stage" | "raise" | "timing") => {
+      if (step === "check") {
         await say(fresh(DANIELA_CHECK_ASKS));
         profile.checkSize = await ask(DANIELA_CHECK_OPTIONS, false, DANIELA_CHECK_RESUME);
       } else if (step === "stage") {
@@ -267,21 +253,7 @@ export function DanielaChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
     };
 
     /** The assumptive close: a bridge that fits what was just said, then the real open days. */
-    const offerTimes = async (wanted: string, force = false) => {
-      // Times were offered and the visitor kept talking. Do not push them again: ask the one
-      // thing still unknown, then offer; with nothing left to ask, wait and let the next reply close.
-      if (!force && !booked && aiMode({ booked, offered, sinceNew }) === "QUALIFY") {
-        const step = nextQualifyingStep(profile);
-        if (step) {
-          await askStep(step);
-          if (cancelled) return;
-          await offerTimes(DANIELA_AFTER_QUESTIONS_BRIDGE, true);
-          return;
-        }
-        sinceNew = 2;
-        await say(fresh(DANIELA_PATIENCE_WORDINGS));
-        return;
-      }
+    const offerTimes = async (wanted: string) => {
       const bridge = freshBridge(wanted);
       const slots = await loadSlots();
       if (cancelled) return;
@@ -402,8 +374,8 @@ export function DanielaChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
       return reply;
     };
 
-    const sideConversation = async (value: string, echo = true) => {
-      if (echo) push("you", value);
+    const sideConversation = async (value: string) => {
+      push("you", value);
       const pending = current?.resume ? current : null;
       show(null);
       const scripted = matchReply(value);
@@ -489,14 +461,6 @@ export function DanielaChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
       const reply = await askAi(value);
       setTyping(false);
       if (cancelled) return;
-      if (!reply && scripted.kind === "unknown") {
-        // The AI is down and nothing scripted fits: ask what they meant, with chips, instead of a canned line and a push.
-        await say(fresh(DANIELA_FALLBACK_WORDINGS));
-        const pick = await ask(Object.keys(DANIELA_FALLBACK_CHOICES));
-        if (cancelled) return;
-        await sideConversation(DANIELA_FALLBACK_CHOICES[pick] ?? DANIELA_FALLBACK_CHOICES["How it works"], false);
-        return;
-      }
       const lines = reply ? reply.lines : scripted.kind === "fact" ? fresh([scripted.lines, ...scripted.variants]) : DANIELA_FALLBACK_LINES;
       if (mode === "QUALIFY") {
         sinceNew = 2;

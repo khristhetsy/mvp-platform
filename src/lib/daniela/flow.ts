@@ -7,7 +7,6 @@ import {
   DANIELA_OBJECTIONS,
   type DanielaChoice,
 } from "./config";
-import type { JessicaProfile } from "@/lib/jessica/flow";
 
 /**
  * Daniela's reply matching. Everything that does not depend on her wording
@@ -78,20 +77,4 @@ export function matchReply(text: string): DanielaReply {
     if (fact.match.test(text)) return { kind: "fact", id: fact.id, lines: fact.lines, variants: fact.variants ?? [] };
   }
   return { kind: "unknown", lines: DANIELA_FALLBACK_LINES };
-}
-
-export type QualifyingStep = "role" | "check" | "stage" | "raise" | "timing";
-
-/**
- * The next qualifying question the visitor has not answered, or null when
- * everything is known. Used when a time offer was ignored: Daniela asks this
- * instead of pushing the times again.
- */
-export function nextQualifyingStep(profile: JessicaProfile): QualifyingStep | null {
-  if (!profile.role) return "role";
-  if (profile.role === "Investing") return profile.checkSize ? null : "check";
-  if (!profile.stage) return "stage";
-  if (!profile.raise) return "raise";
-  if (!profile.timing) return "timing";
-  return null;
 }
