@@ -19,9 +19,9 @@ const FORM_D_SOURCE = "SEC Form D";
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: "directory", label: "Directory", icon: "ti-address-book" },
+  { id: "formd", label: "Form D", icon: "ti-file-certificate" },
   { id: "linkedin", label: "LinkedIn", icon: "ti-brand-linkedin" },
   { id: "csv", label: "CSV or Excel", icon: "ti-file-spreadsheet" },
-  { id: "formd", label: "Form D", icon: "ti-file-certificate" },
 ];
 
 function FormDCard({ total }: Readonly<{ total: number | null }>) {
