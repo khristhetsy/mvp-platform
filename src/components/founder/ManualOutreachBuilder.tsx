@@ -4,8 +4,8 @@
  * Outreach → Manual, laid out like the Sales hub Contacts list: New and gear on
  * the left, the Odoo search bar (filters, group by, favorites), row checkboxes,
  * and a selection bar with Send email and Actions. Send email opens the composer
- * (OutreachComposer) with the selected investors; the gear imports contacts
- * (My contacts picker, drag and drop file import, LinkedIn) and loads saved lists.
+ * (OutreachComposer) with the selected investors; the gear links to the Investor
+ * directory (where all imports happen), loads saved lists and exports.
  *
  * Persistence goes through /api/founder/outreach/manual. "Send" starts the
  * campaign: the selected contacts are enrolled and the cron send pass emails
@@ -20,7 +20,6 @@ import { EMPTY_SEARCH, type SearchState } from "@/components/admin/OdooSearchBar
 import { useDismiss } from "@/lib/ui/use-dismiss";
 import { contactSourceLabel } from "@/lib/founder-crm/contact-labels";
 import { DEFAULT_ATTACHMENTS, normalizeAttachments, type ManualAttachments } from "@/lib/outreach/manual-attachments";
-import { MyContactsPicker } from "@/components/founder/outreach/MyContactsPicker";
 import { OutreachComposer, type SeqStep } from "@/components/founder/outreach/OutreachComposer";
 import type { AttachmentOptions, OutreachContact, RecipientStatus } from "@/components/founder/outreach/types";
 
@@ -160,7 +159,7 @@ export function ManualOutreachBuilder({
 
   // ---- UI ----
   const [panel, setPanel] = useState<"none" | "add" | "saveList">("none");
-  const [dialog, setDialog] = useState<"none" | "compose" | "picker">("none");
+  const [dialog, setDialog] = useState<"none" | "compose">("none");
   const [gearOpen, setGearOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [form, setForm] = useState({ name: "", firm: "", email: "", type: "" });
@@ -540,11 +539,7 @@ export function ManualOutreachBuilder({
                 </button>
                 {gearOpen ? (
                   <div className={menu}>
-                    <p className={menuHead}>Add recipients</p>
-                    <button type="button" className={menuItem} onClick={() => { setGearOpen(false); setDialog("picker"); }}>
-                      <i className="ti ti-address-book mt-0.5 text-base text-slate-500" aria-hidden="true" />
-                      <span>Import from My contacts<span className="block text-[11px] text-slate-400">Pick from your Stage 3 contacts</span></span>
-                    </button>
+                    <p className={menuHead}>Bring in contacts</p>
                     <a href="/founder/investor-directory" className={menuItem} onClick={() => setGearOpen(false)}>
                       <i className="ti ti-world-search mt-0.5 text-base text-slate-500" aria-hidden="true" />
                       <span>Investor directory<span className="block text-[11px] text-slate-400">Public investors, LinkedIn, CSV or Excel imports</span></span>
@@ -855,18 +850,6 @@ export function ManualOutreachBuilder({
         />
       ) : null}
 
-      {dialog === "picker" ? (
-        <MyContactsPicker
-          contacts={contactList}
-          selected={selected}
-          onClose={() => setDialog("none")}
-          onAdd={(ids) => {
-            selectIds(ids);
-            setDialog("none");
-            setMessage({ tone: "ok", text: `${ids.length} investor${ids.length === 1 ? "" : "s"} added to this outreach.` });
-          }}
-        />
-      ) : null}
 
     </section>
   );
