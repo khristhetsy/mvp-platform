@@ -37,7 +37,7 @@ export default async function InvestorDirectoryOverviewPage() {
           <Tag tone="ok">{network.total.toLocaleString("en-US")}</Tag>
         </div>
         <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-3 text-[13px]">
-          <i className="ti ti-world text-[#185FA5] aria-hidden="true" />
+          <i className="ti ti-world text-[#185FA5]" aria-hidden="true" />
           <div className="min-w-0 flex-1"><div className="text-slate-800">Investor directory</div><div className="text-[12px] text-slate-500">{stats.withEmail.toLocaleString("en-US")} with email · founders import directly</div></div>
           <Tag tone="pro">{stats.published.toLocaleString("en-US")}</Tag>
         </div>
