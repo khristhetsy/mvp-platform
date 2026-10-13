@@ -385,6 +385,33 @@ export function Jessica2Chat({ hostId, sourceTag }: { hostId: string; sourceTag:
         sinceNew = 2;
         return { quiet: true };
       }
+      if (/success rate|hit rate|close rate|how many (companies|clients|founders|deals) (have you|did you|you)|how often do (they|clients|founders) (get|close|raise)|what percent/.test(l)) {
+        await say(
+          fresh([
+            ["I won't throw a number at you without knowing your company. Every raise is different.", "Khris walks you through real results on the call, for companies like yours."],
+            ["Straight answer: a success rate means little until we know your stage and your raise.", "What I can show you is which investors fit you."],
+          ]),
+        );
+        return { match: true, bridge: "Khris covers real results on the call." };
+      }
+      if (/how long (does|will|would) (it|this|a raise|the raise|raising)|how long to (raise|close)|how (fast|quick(ly)?) can (we|i|you)|time ?line|time ?frame|how many (weeks|months)/.test(l)) {
+        await say(
+          fresh([
+            ["It depends on how ready the company is and the type of capital.", "Khris gives you a realistic timeline once he sees where you are."],
+            ["Honest answer: readiness sets the pace, not us.", "Twenty minutes with Khris and you'll know what to expect."],
+          ]),
+        );
+        return { bridge: "That's the first thing Khris maps out with you." };
+      }
+      if (/case stud|references?\b|testimonial|past clients|who have you (worked|helped)|examples? of (companies|clients|deals)|track record|portfolio/.test(l)) {
+        await say(
+          fresh([
+            ["Khris shares examples on the call, matched to your industry and stage.", "Easier than a generic list."],
+            ["Fair ask. Khris walks you through relevant examples himself, so they actually match your raise."],
+          ]),
+        );
+        return { bridge: "Khris brings examples that fit your company." };
+      }
       if (/guarantee|promise|will (we|i) get funded|sure (we|i) (get|raise)/.test(l)) {
         await say(["Nobody can promise a raise, and anyone who does is someone to avoid. What we do promise is the right investors in front of you and real follow up."]);
         return { bridge: "Khris can show you what that looks like." };
@@ -470,7 +497,7 @@ export function Jessica2Chat({ hostId, sourceTag }: { hostId: string; sourceTag:
         await say(["We're based in La Jolla, California, with offices in Paris and Singapore. We work with founders and investors everywhere."]);
         return { bridge: "Easiest way to meet the team is a quick call." };
       }
-      if (/how long|since when|track record|how many years/.test(l)) {
+      if (/how long (have|has) (you|icfo|the firm|your firm)|been (around|in business|doing this)|since when|how many years/.test(l)) {
         await say(["Over 16 years, and the investor network was built over that time, so they're relationships, not a list."]);
         return { bridge: "Khris can tell you what that means for your raise." };
       }
