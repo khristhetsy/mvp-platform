@@ -8,9 +8,10 @@
 
 import { db, entrepreneurProfile, getProject } from "@/lib/ir/db";
 import { TERM_FIELDS, termLine, termValue } from "./founder-fields";
+import { glanceFields, glanceVars } from "./company-glance";
 
 export type FounderRef = { kind: "project" | "company"; id: string };
-export type FounderField = { key: string; label: string; value: string };
+export type FounderField = { key: string; label: string; value: string; /** This founder's current text when `value` is merge tags (At a glance). */ shown?: string };
 
 export type FounderPrefill = {
   ref: FounderRef;
@@ -27,6 +28,8 @@ export type FounderPrefill = {
   website: string | null;
   /** Everything in the record, for the Founder data panel. */
   fields: FounderField[];
+  /** Merge-tag values for the At a glance fields, to preview the tags in the email. */
+  vars?: Record<string, string>;
 };
 
 export type FounderOption = { ref: FounderRef; label: string; sub: string };
@@ -195,12 +198,20 @@ async function companyPrefill(companyId: string): Promise<FounderPrefill | null>
   const company = String(c.company_name ?? "").trim();
   const banner = await lastBanner(company);
   if (banner) { values.hero_image = banner.url; sources.hero_image = banner.from; fields.push({ key: "hero_image", label: "Banner", value: `${banner.url.split("/").pop()} · from ${banner.from}` }); }
+  // The company page's At a glance numbers, as merge tags. Loaded here, not at the top,
+  // so the prefill stays light for the Investor Relations projects that never need it.
+  let vars: Record<string, string> | undefined;
+  try {
+    const { getAdminCompanyWorkspace } = await import("@/lib/admin/company-workspace");
+    const ws = await getAdminCompanyWorkspace(companyId);
+    if (ws) { fields.push(...glanceFields(ws)); vars = glanceVars(ws); }
+  } catch { /* the rest of the founder data still loads */ }
   return {
     ref: { kind: "company", id: companyId },
     label: [founder, company].filter(Boolean).join(" · ") || company,
     source: "iCapOS company profile",
     recordUrl: `/admin/companies/${companyId}`,
-    values, sources, website: (c.website as string | null) ?? null, fields,
+    values, sources, website: (c.website as string | null) ?? null, fields, vars,
   };
 }
 

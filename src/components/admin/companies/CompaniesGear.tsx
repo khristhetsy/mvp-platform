@@ -14,7 +14,10 @@ export type GearSection = {
   onChange: (value: string) => void;
 };
 
-export function CompaniesGear({ sections }: { sections: GearSection[] }) {
+/** A command at the top of the menu (for example "Email 3 founders"). */
+export type GearAction = { key: string; icon: string; label: string; hint?: string; disabled?: boolean; onClick: () => void };
+
+export function CompaniesGear({ sections, actions = [] }: { sections: GearSection[]; actions?: GearAction[] }) {
   const [open, setOpen] = useState(false);
   const active = sections.filter((s) => s.title !== "View" && s.value !== "").length;
   return (
@@ -36,9 +39,29 @@ export function CompaniesGear({ sections }: { sections: GearSection[] }) {
         <>
           <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 39 }} />
           <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 40, width: 240, maxHeight: "70vh", overflowY: "auto", background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 10, boxShadow: "0 10px 28px rgba(0,0,0,0.14)", padding: "5px 0" }}>
+            {actions.length > 0 && (
+              <div>
+                <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".05em", color: "var(--muted-foreground)", padding: "6px 13px 4px" }}>Actions</div>
+                {actions.map((a) => (
+                  <button
+                    key={a.key}
+                    type="button"
+                    disabled={a.disabled}
+                    onClick={() => { setOpen(false); a.onClick(); }}
+                    style={{ width: "100%", textAlign: "left", display: "flex", alignItems: "flex-start", gap: 9, padding: "6px 13px", background: "none", border: "none", cursor: a.disabled ? "default" : "pointer", opacity: a.disabled ? 0.5 : 1, fontSize: 12.5, color: "var(--foreground)" }}
+                  >
+                    <i className={`ti ${a.icon}`} style={{ fontSize: 14, color: "#2E78F5", marginTop: 1 }} aria-hidden="true" />
+                    <span>
+                      <span style={{ display: "block", fontWeight: 600 }}>{a.label}</span>
+                      {a.hint ? <span style={{ display: "block", fontSize: 11, color: "var(--muted-foreground)" }}>{a.hint}</span> : null}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
             {sections.map((s, i) => (
               <div key={s.title}>
-                {i > 0 && <div style={{ borderTop: "0.5px solid #eef1f5", margin: "4px 0" }} />}
+                {(i > 0 || actions.length > 0) && <div style={{ borderTop: "0.5px solid #eef1f5", margin: "4px 0" }} />}
                 <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".05em", color: "var(--muted-foreground)", padding: "6px 13px 4px" }}>{s.title}</div>
                 {s.options.map((o) => {
                   const on = s.value === o.value;

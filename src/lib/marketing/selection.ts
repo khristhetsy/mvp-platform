@@ -71,3 +71,18 @@ export async function createHiddenList(contactIds: string[], name: string): Prom
   }
   return list.id as string;
 }
+
+/** Founder accounts → marketing_contacts (by email), so a send can log opens and clicks against them. */
+export async function upsertFounderContacts(
+  people: Array<{ email: string; first_name: string | null; last_name: string | null; company: string | null }>,
+): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  if (!people.length) return out;
+  const db = await marketingDb();
+  for (let i = 0; i < people.length; i += 500) {
+    const rows = people.slice(i, i + 500).map((p) => ({ ...p, source: "founder" }));
+    const { data } = await db.from("marketing_contacts").upsert(rows, { onConflict: "email" }).select("id, email");
+    for (const r of (data ?? []) as Array<{ id: string; email: string }>) out.set(r.email, r.id);
+  }
+  return out;
+}

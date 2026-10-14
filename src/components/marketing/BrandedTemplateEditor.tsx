@@ -17,10 +17,12 @@ import { ACCENT_SWATCHES, DESIGN_KEYS, dominantColor, hasDesign, mapFounderValue
 
 type Master = { id: string; name: string; description: string; compiled_html: string; placeholder_schema: PlaceholderSchema };
 type FounderRef = { kind: "project" | "company"; id: string };
-type FounderField = { key: string; label: string; value: string };
+type FounderField = { key: string; label: string; value: string; /** This founder's current text when `value` is merge tags. */ shown?: string };
 type Prefill = {
   ref: FounderRef; label: string; source: string; recordUrl: string;
   values: Record<string, string>; sources: Record<string, string>; website?: string | null; fields: FounderField[];
+  /** Merge-tag values (At a glance numbers) used to preview tags in the email. */
+  vars?: Record<string, string>;
 };
 type FounderOption = { ref: FounderRef; label: string; sub: string };
 const refKey = (r: FounderRef) => `${r.kind}:${r.id}`;
@@ -121,11 +123,13 @@ const inp: React.CSSProperties = { width: "100%", fontSize: 12.5, padding: "6px 
 const btn: React.CSSProperties = { fontSize: 12, padding: "6px 12px", borderRadius: 7, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--foreground)", whiteSpace: "nowrap" };
 const label: React.CSSProperties = { display: "block", fontSize: 11.5, fontWeight: 600, color: "var(--muted-foreground)", margin: "10px 0 4px" };
 
-export function BrandedTemplateEditor({ templateId, projectId, defaultDepartment, primaryLabel = "Save", onClose, onSaved }: {
+export function BrandedTemplateEditor({ templateId, projectId, founderRef, defaultDepartment, primaryLabel = "Save", onClose, onSaved }: {
   /** Edit this branded template; omit to create a new one. */
   templateId?: string;
   /** Investor Relations project: a new template is filled from its founder. */
   projectId?: string;
+  /** "company:<id>": a new template is filled from this company (the Companies list email). */
+  founderRef?: string;
   defaultDepartment?: string;
   primaryLabel?: string;
   onClose: () => void;
@@ -152,7 +156,7 @@ export function BrandedTemplateEditor({ templateId, projectId, defaultDepartment
     let alive = true;
     (async () => {
       try {
-        const q = !templateId && projectId ? `?projectId=${encodeURIComponent(projectId)}` : "";
+        const q = templateId ? "" : projectId ? `?projectId=${encodeURIComponent(projectId)}` : founderRef ? `?founder=${encodeURIComponent(founderRef)}` : "";
         const r = await fetch(`/api/marketing/branded-templates${q}`);
         const j = (await r.json()) as { masters?: Master[]; defaults?: Record<string, string>; prefill?: Prefill | null; error?: string };
         if (!alive) return;
@@ -190,7 +194,7 @@ export function BrandedTemplateEditor({ templateId, projectId, defaultDepartment
       }
     })();
     return () => { alive = false; };
-  }, [templateId, projectId]);
+  }, [templateId, projectId, founderRef]);
 
   const master = masters.find((m) => m.id === masterId) ?? null;
   const schema = master?.placeholder_schema;
@@ -204,7 +208,9 @@ export function BrandedTemplateEditor({ templateId, projectId, defaultDepartment
       banner_image_url: null, footer_note: null, status: "draft", campaign_group_id: null, created_by: "", created_at: "", updated_at: "",
       master: { id: master.id, name: master.name, compiled_html: master.compiled_html, placeholder_schema: master.placeholder_schema },
     } as unknown as CopyWithMaster;
-    return renderCopyHtml(copy, "preview");
+    const out = renderCopyHtml(copy, "preview");
+    // At a glance tags show this founder's numbers here; the send fills each recipient's own.
+    return prefill?.vars ? out.replace(/\{\{\s*([a-zA-Z_]+)\s*\}\}/g, (m, k: string) => (prefill.vars && k in prefill.vars ? prefill.vars[k] : m)) : out;
   }
   const previewHtml = buildPreview();
 
@@ -779,7 +785,7 @@ function FounderDataPanel({ prefill, masterName, slots, slotLabel, hasDesign: de
             return (
               <div key={f.key} style={{ display: "grid", gridTemplateColumns: "92px minmax(0,1fr) auto", gap: 6, alignItems: "start", padding: "5px 0", borderTop: "0.5px solid var(--border)", fontSize: 11.5 }}>
                 <span style={{ color: "var(--muted-foreground)", textDecoration: isOff ? "line-through" : undefined }}>{f.label}</span>
-                <span style={{ overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", wordBreak: "break-word", textDecoration: isOff ? "line-through" : undefined, color: isOff ? "var(--muted-foreground)" : undefined }} title={f.value}>{isLogo ? f.value.split("/").pop() : f.value}</span>
+                <span style={{ overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", wordBreak: "break-word", textDecoration: isOff ? "line-through" : undefined, color: isOff ? "var(--muted-foreground)" : undefined }} title={f.shown ?? f.value}>{isLogo ? f.value.split("/").pop() : (f.shown ?? f.value)}</span>
                 {isOff ? <button type="button" onClick={() => onToggle(f.key, true)} title="Put this back in the email" style={{ ...tag("transparent", "#185FA5"), border: "0.5px solid #B5D4F4", cursor: "pointer" }}>+ Add back</button>
                   : targets.length ? (
                     <span style={{ display: "inline-flex", flexDirection: "column", alignItems: "flex-end", gap: 1 }}>

@@ -17,11 +17,13 @@ const inp: React.CSSProperties = { fontSize: 12.5, padding: "7px 9px", borderRad
 const OTHER = "Other";
 const deptOf = (t: PickerTemplate) => t.department || OTHER;
 
-export function TemplatePicker({ templates, value, onPick, onCreated, defaultDepartment, mergeTags = ["first_name", "company"], brandedProjectId }: {
+export function TemplatePicker({ templates, value, onPick, onCreated, defaultDepartment, mergeTags = ["first_name", "company"], brandedProjectId, brandedFounderRef }: {
   templates: PickerTemplate[]; value: string; onPick: (id: string) => void; onCreated: (t: PickerTemplate) => void;
   defaultDepartment?: string; mergeTags?: string[];
   /** Investor Relations project whose founder fills a new branded template. */
   brandedProjectId?: string;
+  /** "company:<id>": a new branded template is filled from this company. */
+  brandedFounderRef?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -118,6 +120,7 @@ export function TemplatePicker({ templates, value, onPick, onCreated, defaultDep
       {branded ? (
         <BrandedTemplateEditor
           projectId={brandedProjectId}
+          founderRef={brandedFounderRef}
           defaultDepartment={defaultDepartment}
           primaryLabel="Save and use"
           onClose={() => setBranded(false)}
