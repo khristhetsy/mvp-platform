@@ -24,28 +24,99 @@ type PageShortcut = {
 
 const PAGES: PageShortcut[] = [
   // Founder
-  { id: "dashboard",   title: "Dashboard",            subtitle: "Founder terminal",       href: "/founder",                       keywords: ["home", "overview", "dashboard"],           workspace: "founder" },
-  { id: "readiness",   title: "Readiness checklist",  subtitle: "Score & documents",      href: "/founder/readiness",             keywords: ["readiness", "score", "checklist"],         workspace: "founder" },
-  { id: "documents",   title: "Documents",            subtitle: "Upload & manage files",  href: "/founder/documents",             keywords: ["docs", "upload", "files", "pitch deck"],   workspace: "founder" },
-  { id: "crm",         title: "Investor CRM",         subtitle: "Outreach & contacts",    href: "/founder/investors/outreach",    keywords: ["crm", "contacts", "outreach"],             workspace: "founder" },
-  { id: "pipeline",    title: "Investor pipeline",    subtitle: "Track your funnel",      href: "/founder/investor-pipeline",     keywords: ["pipeline", "funnel", "investors"],         workspace: "founder" },
-  { id: "matching",    title: "Investor matching",    subtitle: "Platform matches",       href: "/founder/investors/matches",     keywords: ["matches", "matching", "recommended"],      workspace: "founder" },
-  { id: "deal-rooms",  title: "Deal rooms",           subtitle: "Data room access",       href: "/founder/deal-room",             keywords: ["deal", "room", "data room"],               workspace: "founder" },
-  { id: "capital",     title: "Capital raise",        subtitle: "Fundraising overview",   href: "/founder/capital-raise",         keywords: ["capital", "raise", "fundraising"],         workspace: "founder" },
-  { id: "milestones",  title: "Milestones",           subtitle: "Track your progress",    href: "/founder/milestones",            keywords: ["milestones", "progress", "achievements"],  workspace: "founder" },
-  { id: "raise-cmd",   title: "Raise command center", subtitle: "AI tools",               href: "/founder/command-center",        keywords: ["command", "center", "tools", "ai"],        workspace: "founder" },
-  { id: "raise-kit",   title: "Raise toolkit",        subtitle: "Templates & guides",     href: "/founder/raise-toolkit",         keywords: ["toolkit", "templates"],                    workspace: "founder" },
-  { id: "analytics",   title: "Analytics",            subtitle: "Insights & trends",      href: "/founder/analytics",             keywords: ["analytics", "insights", "metrics"],        workspace: "founder" },
-  { id: "learning-f",  title: "Learning",             subtitle: "Capital modules",        href: "/founder/learning",              keywords: ["learning", "courses", "education"],        workspace: "founder" },
-  { id: "settings-f",  title: "Company settings",     subtitle: "Profile & branding",     href: "/founder/settings",              keywords: ["settings", "profile", "company"],          workspace: "founder" },
-  { id: "actions",     title: "Action center",        subtitle: "Tasks & priorities",     href: "/founder/actions",               keywords: ["actions", "tasks", "priorities"],          workspace: "founder" },
+  { id: "f-dash", title: "Dashboard", subtitle: "Founder terminal", href: "/founder", keywords: ["home", "overview", "terminal"], workspace: "founder" },
+  { id: "f-journey", title: "Journey", subtitle: "Your fundraising journey", href: "/founder/journey", keywords: ["journey", "stages", "roadmap", "progress"], workspace: "founder" },
+  { id: "f-actions", title: "Action center", subtitle: "Tasks and priorities", href: "/founder/actions", keywords: ["actions", "tasks", "priorities", "next steps", "to do"], workspace: "founder" },
+  { id: "f-outreach-report", title: "Outreach report", subtitle: "Investor outreach results", href: "/founder/outreach-report", keywords: ["outreach", "report", "emails sent"], workspace: "founder" },
+  { id: "f-command-center", title: "Raise command center", subtitle: "AI tools for your raise", href: "/founder/command-center", keywords: ["command", "center", "tools", "ai"], workspace: "founder" },
+  { id: "f-onboarding", title: "Onboarding", subtitle: "Set up your company", href: "/founder/onboarding", keywords: ["onboarding", "setup", "get started", "company profile"], workspace: "founder" },
+  { id: "f-stage-onb", title: "Stage 1 overview", subtitle: "Onboarding stage", href: "/founder/stages/onboarding", keywords: ["stage 1", "stage one", "onboarding stage"], workspace: "founder" },
+  { id: "f-readiness", title: "Readiness checklist", subtitle: "Score and documents", href: "/founder/readiness", keywords: ["readiness", "score", "checklist", "investor ready"], workspace: "founder" },
+  { id: "f-wizard", title: "Readiness wizard", subtitle: "Step by step readiness", href: "/founder/readiness/wizard", keywords: ["wizard", "readiness", "guided"], workspace: "founder" },
+  { id: "f-data-room", title: "Data room", subtitle: "Organize diligence files", href: "/founder/readiness/data-room", keywords: ["data room", "dataroom", "files", "diligence"], workspace: "founder" },
+  { id: "f-diligence", title: "Diligence", subtitle: "Diligence checklist", href: "/founder/readiness/diligence", keywords: ["diligence", "due diligence", "checklist"], workspace: "founder" },
+  { id: "f-documents", title: "Documents", subtitle: "Upload and manage files", href: "/founder/documents", keywords: ["docs", "upload", "files", "pitch deck"], workspace: "founder" },
+  { id: "f-preview", title: "Investor preview", subtitle: "See what investors see", href: "/founder/preview", keywords: ["preview", "investor view", "profile preview"], workspace: "founder" },
+  { id: "f-business-plan", title: "Business plan", subtitle: "Plan builder", href: "/founder/business-plan", keywords: ["business plan", "plan"], workspace: "founder" },
+  { id: "f-pitch-deck", title: "Pitch deck", subtitle: "Build your deck", href: "/founder/pitch-deck", keywords: ["pitch deck", "deck", "slides", "presentation"], workspace: "founder" },
+  { id: "f-pitch-analyzer", title: "Pitch deck analyzer", subtitle: "AI deck feedback", href: "/founder/pitch-deck-analyzer", keywords: ["pitch deck analyzer", "deck review", "deck feedback", "analyze deck"], workspace: "founder" },
+  { id: "f-market-claim", title: "Market claim", subtitle: "Size your market", href: "/founder/market-claim", keywords: ["market claim", "tam", "market size", "market"], workspace: "founder" },
+  { id: "f-financial-model", title: "Financial model", subtitle: "Projections", href: "/founder/financial-model", keywords: ["financial model", "financials", "projections", "forecast", "model"], workspace: "founder" },
+  { id: "f-cap-table", title: "Cap table", subtitle: "Ownership and rounds", href: "/founder/cap-table", keywords: ["cap table", "captable", "equity", "ownership", "shares"], workspace: "founder" },
+  { id: "f-valuation", title: "Valuation", subtitle: "What is the company worth", href: "/founder/valuation", keywords: ["valuation", "value", "worth"], workspace: "founder" },
+  { id: "f-reg-cf", title: "Reg CF", subtitle: "Regulation crowdfunding", href: "/founder/reg-cf", keywords: ["reg cf", "regulation cf", "crowdfunding", "form c"], workspace: "founder" },
+  { id: "f-report", title: "Report", subtitle: "Readiness report", href: "/founder/report", keywords: ["report", "readiness report"], workspace: "founder" },
+  { id: "f-pitch-practice", title: "Pitch practice", subtitle: "Rehearse your pitch", href: "/founder/pitch-practice", keywords: ["pitch practice", "rehearse", "practice", "pitch"], workspace: "founder" },
+  { id: "f-board-prep", title: "Board prep", subtitle: "Prepare for the board", href: "/founder/board-prep", keywords: ["board prep", "board", "board meeting"], workspace: "founder" },
+  { id: "f-term-sheet", title: "Term sheet", subtitle: "Understand your terms", href: "/founder/term-sheet", keywords: ["term sheet", "terms", "safe", "convertible"], workspace: "founder" },
+  { id: "f-kpi-glossary", title: "KPI glossary", subtitle: "Metrics explained", href: "/founder/kpi-glossary", keywords: ["kpi", "glossary", "metrics definitions"], workspace: "founder" },
+  { id: "f-raise-toolkit", title: "Raise toolkit", subtitle: "Templates and guides", href: "/founder/raise-toolkit", keywords: ["toolkit", "templates", "guides"], workspace: "founder" },
+  { id: "f-investors", title: "Investors", subtitle: "Your investor list", href: "/founder/investors", keywords: ["investors", "investor list"], workspace: "founder" },
+  { id: "f-stage-mkt", title: "Stage 3 overview", subtitle: "Marketing stage", href: "/founder/stages/marketing", keywords: ["stage 3", "stage three", "marketing stage"], workspace: "founder" },
+  { id: "f-contacts", title: "Contacts", subtitle: "Investor contacts", href: "/founder/contacts", keywords: ["contacts", "people", "add contact"], workspace: "founder" },
+  { id: "f-matches", title: "Matches", subtitle: "Investor matches", href: "/founder/matches", keywords: ["matches", "matched investors"], workspace: "founder" },
+  { id: "f-matching", title: "Investor matching", subtitle: "Platform matches", href: "/founder/matching", keywords: ["matching", "recommended", "investor matching"], workspace: "founder" },
+  { id: "f-crm", title: "Investor CRM", subtitle: "Outreach and contacts", href: "/founder/investors/outreach", keywords: ["crm", "outreach", "contacts", "emails"], workspace: "founder" },
+  { id: "f-inv-matches", title: "Investor matches", subtitle: "Recommended investors", href: "/founder/investors/matches", keywords: ["investor matches", "recommended investors"], workspace: "founder" },
+  { id: "f-pipeline", title: "Investor pipeline", subtitle: "Track your funnel", href: "/founder/investor-pipeline", keywords: ["pipeline", "funnel", "investors", "stages"], workspace: "founder" },
+  { id: "f-directory", title: "Investor directory", subtitle: "Browse investors", href: "/founder/investor-directory", keywords: ["directory", "browse investors", "find investors"], workspace: "founder" },
+  { id: "f-deploy", title: "Deploy", subtitle: "Launch your outreach", href: "/founder/deploy", keywords: ["deploy", "launch", "campaign"], workspace: "founder" },
+  { id: "f-deploy-social", title: "Social deploy", subtitle: "Share on social", href: "/founder/deploy/social", keywords: ["social", "linkedin", "posts"], workspace: "founder" },
+  { id: "f-ir-agent", title: "IR agent", subtitle: "Your AI investor relations agent", href: "/founder/ir-agent", keywords: ["ir agent", "agent", "johnny", "ai agent"], workspace: "founder" },
+  { id: "f-present", title: "Present at events", subtitle: "Pitch at live events", href: "/founder/events/present", keywords: ["present", "pitch event", "demo day"], workspace: "founder" },
+  { id: "f-private-market", title: "Private market", subtitle: "Marketplace", href: "/founder/private-market", keywords: ["private market", "marketplace"], workspace: "founder" },
+  { id: "f-marketplace-new", title: "List on marketplace", subtitle: "Create a listing", href: "/founder/marketplace/new", keywords: ["marketplace", "listing", "list", "new listing"], workspace: "founder" },
+  { id: "f-deal-rooms", title: "Deal rooms", subtitle: "Data room access", href: "/founder/deal-room", keywords: ["deal", "room", "data room", "deal room"], workspace: "founder" },
+  { id: "f-stage-close", title: "Stage 4 overview", subtitle: "Closing stage", href: "/founder/stages/closing", keywords: ["stage 4", "stage four", "closing stage"], workspace: "founder" },
+  { id: "f-offering-type", title: "Offering type", subtitle: "Choose how you raise", href: "/founder/offering-type", keywords: ["offering", "offering type", "reg d", "reg cf"], workspace: "founder" },
+  { id: "f-spvs", title: "SPVs", subtitle: "Special purpose vehicles", href: "/founder/spvs", keywords: ["spv", "spvs", "vehicle", "closing"], workspace: "founder" },
+  { id: "f-capital", title: "Capital raise", subtitle: "Fundraising overview", href: "/founder/capital-raise", keywords: ["capital", "raise", "fundraising", "round"], workspace: "founder" },
+  { id: "f-investor-update", title: "Investor update", subtitle: "Update your investors", href: "/founder/investor-update", keywords: ["investor update", "update", "newsletter"], workspace: "founder" },
+  { id: "f-milestones", title: "Milestones", subtitle: "Track your progress", href: "/founder/milestones", keywords: ["milestones", "progress", "achievements"], workspace: "founder" },
+  { id: "f-analytics", title: "Analytics", subtitle: "Insights and trends", href: "/founder/analytics", keywords: ["analytics", "insights", "metrics", "views"], workspace: "founder" },
+  { id: "f-inbox", title: "Inbox", subtitle: "Your email", href: "/founder/inbox", keywords: ["inbox", "email", "mail"], workspace: "founder" },
+  { id: "f-messages", title: "Messages", subtitle: "Conversations", href: "/founder/messages", keywords: ["messages", "chat", "dm"], workspace: "founder" },
+  { id: "f-updates", title: "Updates", subtitle: "What is new", href: "/founder/updates", keywords: ["updates", "news", "notifications"], workspace: "founder" },
+  { id: "f-calendar", title: "Calendar", subtitle: "Your meetings", href: "/founder/calendar", keywords: ["calendar", "meetings"], workspace: "founder" },
+  { id: "f-schedule", title: "Schedule a meeting", subtitle: "Book time", href: "/founder/schedule", keywords: ["schedule", "book", "meeting", "booking"], workspace: "founder" },
+  { id: "f-events", title: "Events", subtitle: "Upcoming events", href: "/founder/events", keywords: ["events", "webinars"], workspace: "founder" },
+  { id: "f-interest", title: "Investor interest", subtitle: "Who is interested", href: "/founder/investor-interest", keywords: ["interest", "interested", "investor interest"], workspace: "founder" },
+  { id: "f-tasks", title: "Tasks", subtitle: "Your to do list", href: "/founder/tasks", keywords: ["tasks", "to do", "todo"], workspace: "founder" },
+  { id: "f-help", title: "Help", subtitle: "Guides and answers", href: "/founder/help", keywords: ["help", "how to", "guide", "faq"], workspace: "founder" },
+  { id: "f-support", title: "Support", subtitle: "Contact support", href: "/founder/support", keywords: ["support", "contact support", "ticket"], workspace: "founder" },
+  { id: "f-learning", title: "Learning", subtitle: "Capital modules", href: "/founder/learning", keywords: ["learning", "courses", "education"], workspace: "founder" },
+  { id: "f-courses", title: "Courses", subtitle: "All courses", href: "/founder/learning/courses", keywords: ["courses", "lessons"], workspace: "founder" },
+  { id: "f-learn-plan", title: "Learning plan", subtitle: "Your plan", href: "/founder/learning/plan", keywords: ["learning plan", "study plan"], workspace: "founder" },
+  { id: "f-learn-progress", title: "Learning progress", subtitle: "How far you are", href: "/founder/learning/progress", keywords: ["learning progress", "completed"], workspace: "founder" },
+  { id: "f-settings", title: "Company settings", subtitle: "Profile and branding", href: "/founder/settings", keywords: ["settings", "profile", "company", "branding"], workspace: "founder" },
+  { id: "f-team", title: "Team", subtitle: "Invite teammates", href: "/founder/settings/team", keywords: ["team", "members", "invite", "users"], workspace: "founder" },
+  { id: "f-billing", title: "Billing", subtitle: "Plan and invoices", href: "/founder/settings/billing", keywords: ["billing", "plan", "subscription", "payment", "invoices"], workspace: "founder" },
+  { id: "f-integrations", title: "Integrations", subtitle: "Connected apps", href: "/founder/settings/integrations", keywords: ["integrations", "connect", "apps"], workspace: "founder" },
+  { id: "f-feedback", title: "Feedback", subtitle: "Tell us what you think", href: "/founder/settings/feedback", keywords: ["feedback", "suggest", "report a problem"], workspace: "founder" },
   // Investor
-  { id: "inv-dash",    title: "Dashboard",            subtitle: "Investor workspace",     href: "/investor/dashboard",            keywords: ["home", "overview", "dashboard"],           workspace: "investor" },
-  { id: "inv-opp",     title: "Opportunities",        subtitle: "Company matches",        href: "/investor/opportunities",        keywords: ["opportunities", "matches", "companies"],   workspace: "investor" },
-  { id: "inv-port",    title: "Portfolio",            subtitle: "Active investments",     href: "/investor/portfolio",            keywords: ["portfolio", "investments"],                workspace: "investor" },
-  { id: "inv-deal",    title: "Deal rooms",           subtitle: "Active deals",           href: "/investor/deal-room",            keywords: ["deal", "room"],                            workspace: "investor" },
-  { id: "inv-learn",   title: "Learning",             subtitle: "Investor education",     href: "/investor/learning",             keywords: ["learning", "courses", "education"],        workspace: "investor" },
-  { id: "inv-set",     title: "Investor settings",    subtitle: "Profile & integrations", href: "/investor/settings",             keywords: ["settings", "profile"],                     workspace: "investor" },
+  { id: "i-dash", title: "Dashboard", subtitle: "Investor workspace", href: "/investor/dashboard", keywords: ["home", "overview"], workspace: "investor" },
+  { id: "i-profile", title: "Profile", subtitle: "Your investor profile", href: "/investor/onboarding", keywords: ["profile", "onboarding", "preferences", "thesis"], workspace: "investor" },
+  { id: "i-verification", title: "Verification", subtitle: "Accreditation", href: "/investor/verification", keywords: ["verification", "accredited", "accreditation", "kyc"], workspace: "investor" },
+  { id: "i-opp", title: "Opportunities", subtitle: "Company matches", href: "/investor/opportunities", keywords: ["opportunities", "companies", "deals", "browse"], workspace: "investor" },
+  { id: "i-watchlist", title: "Watchlist", subtitle: "Companies you follow", href: "/investor/watchlist", keywords: ["watchlist", "saved", "following", "favorites"], workspace: "investor" },
+  { id: "i-interest", title: "Interest pipeline", subtitle: "Where your interest stands", href: "/investor/interest-pipeline", keywords: ["interest", "pipeline", "interest pipeline"], workspace: "investor" },
+  { id: "i-deal-room", title: "Deal Room", subtitle: "Active deals", href: "/investor/deal-room", keywords: ["deal", "room", "deal room", "data room"], workspace: "investor" },
+  { id: "i-deals", title: "Diligence", subtitle: "Open deals under review", href: "/investor/deals", keywords: ["diligence", "due diligence", "deals"], workspace: "investor" },
+  { id: "i-matches", title: "Matches", subtitle: "Recommended companies", href: "/investor/matches", keywords: ["matches", "recommended"], workspace: "investor" },
+  { id: "i-matching", title: "Matching preferences", subtitle: "Tune your matches", href: "/investor/matching", keywords: ["matching", "preferences", "criteria"], workspace: "investor" },
+  { id: "i-partner-score", title: "Partner score", subtitle: "Your standing", href: "/investor/partner-score", keywords: ["partner score", "score", "rating"], workspace: "investor" },
+  { id: "i-portfolio", title: "Portfolio", subtitle: "Active investments", href: "/investor/portfolio", keywords: ["portfolio", "investments", "holdings"], workspace: "investor" },
+  { id: "i-spvs", title: "SPVs and closings", subtitle: "Deal closings", href: "/investor/spvs", keywords: ["spv", "spvs", "closings", "closing"], workspace: "investor" },
+  { id: "i-activity", title: "Activity", subtitle: "Recent activity", href: "/investor/activity", keywords: ["activity", "history", "log"], workspace: "investor" },
+  { id: "i-actions", title: "Action center", subtitle: "Tasks and priorities", href: "/investor/actions", keywords: ["actions", "action center", "next steps", "priorities"], workspace: "investor" },
+  { id: "i-tasks", title: "Tasks", subtitle: "Your to do list", href: "/investor/tasks", keywords: ["tasks", "to do", "todo"], workspace: "investor" },
+  { id: "i-inbox", title: "Inbox", subtitle: "Your email", href: "/investor/inbox", keywords: ["inbox", "email", "mail"], workspace: "investor" },
+  { id: "i-messages", title: "Messages", subtitle: "Conversations", href: "/investor/messages", keywords: ["messages", "chat"], workspace: "investor" },
+  { id: "i-calendar", title: "Calendar", subtitle: "Your meetings", href: "/investor/calendar", keywords: ["calendar", "meetings"], workspace: "investor" },
+  { id: "i-schedule", title: "Schedule a meeting", subtitle: "Book time", href: "/investor/schedule", keywords: ["schedule", "book", "meeting"], workspace: "investor" },
+  { id: "i-learning", title: "Learning", subtitle: "Investor education", href: "/investor/learning", keywords: ["learning", "courses", "education"], workspace: "investor" },
+  { id: "i-analytics", title: "Analytics", subtitle: "Insights and trends", href: "/investor/analytics", keywords: ["analytics", "insights", "metrics"], workspace: "investor" },
+  { id: "i-settings", title: "Investor settings", subtitle: "Profile and integrations", href: "/investor/settings", keywords: ["settings", "account", "integrations"], workspace: "investor" },
   // Admin
   { id: "ad-dash",     title: "Dashboard",            subtitle: "Admin home",             href: "/admin",                         keywords: ["home", "overview", "admin"],               workspace: "admin" },
   { id: "ad-contacts", title: "Contacts",             subtitle: "All contacts",           href: "/admin/contacts",                keywords: ["contacts", "people", "crm"],               workspace: "admin" },
@@ -183,7 +254,9 @@ const PAGES: PageShortcut[] = [
 type CatKey =
   | "dashboard" | "contacts" | "companies" | "sales" | "marketing" | "ir" | "directory"
   | "accounting" | "social" | "events" | "voice" | "communication" | "support"
-  | "learning" | "admin" | "system" | "analytics";
+  | "learning" | "admin" | "system" | "analytics"
+  | "onboarding" | "preparation" | "closing" | "documents" | "investors"
+  | "market" | "matches" | "portfolio" | "actions" | "profile" | "settings";
 
 const CATS: Record<CatKey, { label: string; bg: string; fg: string; icon: ReactNode }> = {
   dashboard: { label: "Dashboard", bg: "#D1D5DB", fg: "#1F2937", icon: <><rect x="4" y="4" width="7" height="7" rx="1.5" /><rect x="13" y="4" width="7" height="7" rx="1.5" /><rect x="4" y="13" width="7" height="7" rx="1.5" /><rect x="13" y="13" width="7" height="7" rx="1.5" /></> },
@@ -203,39 +276,139 @@ const CATS: Record<CatKey, { label: string; bg: string; fg: string; icon: ReactN
   admin: { label: "Administration", bg: "#E2E8F0", fg: "#334155", icon: <><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" /><path d="M9 12l2 2 4-4" /></> },
   system: { label: "System", bg: "#D1D5DB", fg: "#1F2937", icon: <><path d="M4 7h10M18 7h2M4 17h2M10 17h10" /><circle cx="16" cy="7" r="2" /><circle cx="8" cy="17" r="2" /></> },
   analytics: { label: "Analytics", bg: "#DBEAFE", fg: "#1E40AF", icon: <><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></> },
+  // Founder and investor
+  onboarding: { label: "Onboarding", bg: "#DCE8FD", fg: "#1D5FD6", icon: <path d="M5 21V4M5 4h11l-2 4 2 4H5" /> },
+  preparation: { label: "Preparation", bg: "#FEF3C7", fg: "#A16207", icon: <><rect x="6" y="4" width="12" height="17" rx="2" /><path d="M9 4h6v3H9zM9 14l2 2 4-4" /></> },
+  closing: { label: "Closing", bg: "#DAF2DF", fg: "#15803D", icon: <><rect x="3" y="7" width="18" height="13" rx="2" /><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M3 13h18" /></> },
+  documents: { label: "Documents", bg: "#E0F2FE", fg: "#0369A1", icon: <><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5M9 13h6M9 17h4" /></> },
+  investors: { label: "Investors", bg: "#E6E3FB", fg: "#4F46E5", icon: <><circle cx="9" cy="8" r="3.5" /><path d="M2 20c0-3.5 3-6 7-6s7 2.5 7 6" /><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14c2.5.6 4 2.5 4 6" /></> },
+  market: { label: "Private Market", bg: "#DAF2DF", fg: "#15803D", icon: <><polyline points="3 17 9 11 13 15 21 7" /><polyline points="15 7 21 7 21 13" /></> },
+  matches: { label: "Matches", bg: "#E6E3FB", fg: "#4F46E5", icon: <><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1" /></> },
+  portfolio: { label: "Portfolio", bg: "#FEF3C7", fg: "#A16207", icon: <><path d="M12 3v9h9" /><path d="M20 15a9 9 0 1 1-11-11" /></> },
+  actions: { label: "Action Center", bg: "#FCE7F3", fg: "#BE185D", icon: <path d="M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2" /> },
+  profile: { label: "Profile", bg: "#DCE8FD", fg: "#1D5FD6", icon: <><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" /></> },
+  settings: { label: "Settings", bg: "#D1D5DB", fg: "#1F2937", icon: <><path d="M4 7h10M18 7h2M4 17h2M10 17h10" /><circle cx="16" cy="7" r="2" /><circle cx="8" cy="17" r="2" /></> },
 };
 
-// Order and target of the "Jump to" tiles on the empty state.
-const HUBS: Array<{ cat: CatKey; href: string }> = [
-  { cat: "dashboard", href: "/admin" },
-  { cat: "contacts", href: "/admin/contacts" },
-  { cat: "sales", href: "/admin/sales" },
-  { cat: "marketing", href: "/admin/marketing" },
-  { cat: "ir", href: "/admin/ir" },
-  { cat: "directory", href: "/admin/investor-directory" },
-  { cat: "accounting", href: "/admin/accounting" },
-  { cat: "social", href: "/admin/social" },
-  { cat: "events", href: "/admin/events" },
-  { cat: "voice", href: "/admin/voice" },
-  { cat: "communication", href: "/admin/inbox" },
-  { cat: "support", href: "/admin/companies" },
-  { cat: "learning", href: "/admin/learning" },
-  { cat: "analytics", href: "/admin/analytics" },
-  { cat: "admin", href: "/admin/users/manage" },
-  { cat: "system", href: "/admin/integrations" },
-];
+// Names shown in breadcrumbs, per workspace (falls back to the category label).
+const LABELS: Partial<Record<WorkspaceId, Partial<Record<CatKey, string>>>> = {
+  founder: {
+    onboarding: "Stage 1 · Onboarding",
+    preparation: "Stage 2 · Preparation",
+    marketing: "Stage 3 · Marketing",
+    closing: "Stage 4 · Closing",
+    communication: "Communications",
+  },
+  investor: { communication: "Communications" },
+};
+function labelOf(ws: WorkspaceId, cat: CatKey): string {
+  return LABELS[ws]?.[cat] ?? CATS[cat].label;
+}
 
-// Create shortcuts: New invoice has its own page; the others open the list page
-// where the add button lives.
-const CREATE: Array<{ title: string; href: string }> = [
-  { title: "New invoice", href: "/admin/accounting/invoices/new" },
-  { title: "Add contact", href: "/admin/contacts" },
-  { title: "Add opportunity", href: "/admin/sales/opportunities" },
-  { title: "Add task", href: "/admin/tasks" },
-];
+// "Jump to" tiles and quick actions on the empty state, per workspace.
+type Hub = { cat: CatKey; href: string; label?: string };
+
+const HUBS: Record<WorkspaceId, Hub[]> = {
+  admin: [
+    { cat: "dashboard", href: "/admin" },
+    { cat: "contacts", href: "/admin/contacts" },
+    { cat: "sales", href: "/admin/sales" },
+    { cat: "marketing", href: "/admin/marketing" },
+    { cat: "ir", href: "/admin/ir" },
+    { cat: "directory", href: "/admin/investor-directory" },
+    { cat: "accounting", href: "/admin/accounting" },
+    { cat: "social", href: "/admin/social" },
+    { cat: "events", href: "/admin/events" },
+    { cat: "voice", href: "/admin/voice" },
+    { cat: "communication", href: "/admin/inbox" },
+    { cat: "support", href: "/admin/companies" },
+    { cat: "learning", href: "/admin/learning" },
+    { cat: "analytics", href: "/admin/analytics" },
+    { cat: "admin", href: "/admin/users/manage" },
+    { cat: "system", href: "/admin/integrations" },
+  ],
+  founder: [
+    { cat: "dashboard", href: "/founder" },
+    { cat: "onboarding", href: "/founder/onboarding", label: "1 · Onboarding" },
+    { cat: "preparation", href: "/founder/readiness", label: "2 · Preparation" },
+    { cat: "marketing", href: "/founder/investors", label: "3 · Marketing" },
+    { cat: "closing", href: "/founder/deal-room", label: "4 · Closing" },
+    { cat: "communication", href: "/founder/inbox", label: "Communications" },
+    { cat: "events", href: "/founder/events" },
+    { cat: "learning", href: "/founder/learning" },
+    { cat: "settings", href: "/founder/settings" },
+  ],
+  investor: [
+    { cat: "dashboard", href: "/investor/dashboard" },
+    { cat: "profile", href: "/investor/onboarding" },
+    { cat: "market", href: "/investor/opportunities" },
+    { cat: "matches", href: "/investor/matches" },
+    { cat: "portfolio", href: "/investor/portfolio" },
+    { cat: "actions", href: "/investor/actions" },
+    { cat: "communication", href: "/investor/inbox", label: "Communications" },
+    { cat: "learning", href: "/investor/learning" },
+    { cat: "analytics", href: "/investor/analytics" },
+    { cat: "settings", href: "/investor/settings" },
+  ],
+};
+
+// Quick actions: where a "New ..." page exists it opens that; the others open
+// the page where the add button lives.
+const QUICK: Record<WorkspaceId, Array<{ title: string; href: string }>> = {
+  admin: [
+    { title: "New invoice", href: "/admin/accounting/invoices/new" },
+    { title: "Add contact", href: "/admin/contacts" },
+    { title: "Add opportunity", href: "/admin/sales/opportunities" },
+    { title: "Add task", href: "/admin/tasks" },
+  ],
+  founder: [
+    { title: "Upload document", href: "/founder/documents" },
+    { title: "Add investor contact", href: "/founder/contacts" },
+    { title: "Open Deal Room", href: "/founder/deal-room" },
+  ],
+  investor: [
+    { title: "Browse opportunities", href: "/investor/opportunities" },
+    { title: "Open watchlist", href: "/investor/watchlist" },
+    { title: "Schedule a meeting", href: "/investor/schedule" },
+  ],
+};
+
+function catOfFounder(p: string): CatKey {
+  const starts = (...xs: string[]) => xs.some((x) => p === x || p.startsWith(`${x}/`));
+  if (p === "/founder/stages/onboarding" || starts("/founder/onboarding")) return "onboarding";
+  if (p === "/founder/stages/preparation") return "preparation";
+  if (p === "/founder/stages/marketing") return "marketing";
+  if (p === "/founder/stages/closing") return "closing";
+  if (starts("/founder/events/present")) return "marketing";
+  if (starts("/founder/readiness", "/founder/documents", "/founder/preview", "/founder/business-plan", "/founder/pitch-deck", "/founder/pitch-deck-analyzer", "/founder/market-claim", "/founder/financial-model", "/founder/cap-table", "/founder/valuation", "/founder/reg-cf", "/founder/report", "/founder/pitch-practice", "/founder/board-prep", "/founder/term-sheet", "/founder/kpi-glossary", "/founder/raise-toolkit")) return "preparation";
+  if (starts("/founder/investors", "/founder/contacts", "/founder/matches", "/founder/matching", "/founder/deploy", "/founder/ir-agent", "/founder/investor-directory", "/founder/investor-pipeline", "/founder/private-market", "/founder/marketplace")) return "marketing";
+  if (starts("/founder/deal-room", "/founder/offering-type", "/founder/spvs", "/founder/capital-raise", "/founder/investor-update", "/founder/milestones")) return "closing";
+  if (starts("/founder/analytics")) return "analytics";
+  if (starts("/founder/inbox", "/founder/messages", "/founder/updates", "/founder/investor-interest", "/founder/tasks", "/founder/help", "/founder/support")) return "communication";
+  if (starts("/founder/calendar", "/founder/schedule", "/founder/events")) return "events";
+  if (starts("/founder/learning")) return "learning";
+  if (starts("/founder/settings")) return "settings";
+  return "dashboard";
+}
+
+function catOfInvestor(p: string): CatKey {
+  const starts = (...xs: string[]) => xs.some((x) => p === x || p.startsWith(`${x}/`));
+  if (starts("/investor/onboarding", "/investor/verification")) return "profile";
+  if (starts("/investor/opportunities", "/investor/watchlist", "/investor/interest-pipeline", "/investor/deal-room", "/investor/deals")) return "market";
+  if (starts("/investor/matches", "/investor/matching", "/investor/partner-score")) return "matches";
+  if (starts("/investor/portfolio", "/investor/spvs")) return "portfolio";
+  if (starts("/investor/activity", "/investor/actions", "/investor/tasks")) return "actions";
+  if (starts("/investor/inbox", "/investor/messages", "/investor/calendar", "/investor/schedule")) return "communication";
+  if (starts("/investor/learning")) return "learning";
+  if (starts("/investor/analytics")) return "analytics";
+  if (starts("/investor/settings")) return "settings";
+  return "dashboard";
+}
 
 function catOf(href: string): CatKey {
   const p = href.split("#")[0] ?? href;
+  if (p === "/founder" || p.startsWith("/founder/")) return catOfFounder(p);
+  if (p.startsWith("/investor")) return catOfInvestor(p);
   const starts = (...xs: string[]) => xs.some((x) => p === x || p.startsWith(`${x}/`));
   if (p === "/admin/investors/enrich") return "ir";
   if (starts("/admin/contacts")) return "contacts";
@@ -258,6 +431,9 @@ function catOf(href: string): CatKey {
 
 function dynCat(type: SearchResult["type"]): CatKey {
   switch (type) {
+    case "document": return "documents";
+    case "investor": return "investors";
+    case "deal_room": return "closing";
     case "company": return "companies";
     case "event": return "events";
     case "opportunity": return "sales";
@@ -287,13 +463,13 @@ function hl(text: string, query: string): ReactNode {
 
 // ── Recent items (per browser) ────────────────────────────────────────────────
 
-const RECENT_KEY = "icapos-admin-search-recent";
+const recentKey = (ws: WorkspaceId) => `icapos-${ws}-search-recent`;
 
 type RecentItem = { title: string; subtitle: string | null; href: string; cat: CatKey };
 
-function readRecents(limit: number): RecentItem[] {
+function readRecents(ws: WorkspaceId, limit: number): RecentItem[] {
   try {
-    const raw = window.localStorage.getItem(RECENT_KEY);
+    const raw = window.localStorage.getItem(recentKey(ws));
     const v: unknown = raw ? JSON.parse(raw) : [];
     if (!Array.isArray(v)) return [];
     return (v as RecentItem[]).filter((x) => x && typeof x.href === "string" && typeof x.title === "string" && x.cat in CATS).slice(0, limit);
@@ -302,54 +478,13 @@ function readRecents(limit: number): RecentItem[] {
   }
 }
 
-function saveRecent(item: RecentItem) {
+function saveRecent(ws: WorkspaceId, item: RecentItem) {
   try {
-    const next = [item, ...readRecents(8).filter((x) => x.href !== item.href)].slice(0, 8);
-    window.localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+    const next = [item, ...readRecents(ws, 8).filter((x) => x.href !== item.href)].slice(0, 8);
+    window.localStorage.setItem(recentKey(ws), JSON.stringify(next));
   } catch {
     // Storage can be blocked; recents are a convenience only.
   }
-}
-
-// ── Type icons (founder and investor) ─────────────────────────────────────────
-
-function TypeIcon({ type }: { type: SearchResult["type"] | "page" }) {
-  const ACCENT = "#2E78F5";
-
-  if (type === "contact") return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="12" cy="8" r="4" stroke={ACCENT} strokeWidth="2" />
-      <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke={ACCENT} strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-  if (type === "investor") return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke={ACCENT} strokeWidth="2" strokeLinecap="round" />
-      <circle cx="9" cy="7" r="4" stroke={ACCENT} strokeWidth="2" />
-      <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke={ACCENT} strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-  if (type === "document") return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke={ACCENT} strokeWidth="2" />
-      <polyline points="14 2 14 8 20 8" stroke={ACCENT} strokeWidth="2" />
-      <line x1="8" y1="13" x2="16" y2="13" stroke={ACCENT} strokeWidth="2" />
-      <line x1="8" y1="17" x2="12" y2="17" stroke={ACCENT} strokeWidth="2" />
-    </svg>
-  );
-  if (type === "deal_room" || type === "company" || type === "event") return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <rect x="2" y="3" width="20" height="14" rx="2" stroke={ACCENT} strokeWidth="2" />
-      <path d="M8 21h8M12 17v4" stroke={ACCENT} strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-  // page
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="#6b7280" strokeWidth="2" />
-      <polyline points="9 22 9 12 15 12 15 22" stroke="#6b7280" strokeWidth="2" />
-    </svg>
-  );
 }
 
 const TYPE_LABELS: Record<SearchResult["type"], string> = {
@@ -379,7 +514,8 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
-  const isAdmin = workspace === "admin";
+  const hubs = HUBS[workspace];
+  const quick = QUICK[workspace];
 
   // Open on cmd+K / ctrl+K
   useEffect(() => {
@@ -405,7 +541,7 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
     }
   }, [open]);
 
-  // Debounced API search (founder and admin)
+  // Debounced API search (founder and admin; investors search pages only)
   const fetchDynamic = useCallback(async (q: string) => {
     if ((workspace !== "founder" && workspace !== "admin") || q.length < 2) { setDynamicResults([]); return; }
     setLoading(true);
@@ -430,9 +566,9 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
   const q = query.toLowerCase().trim();
   const workspacePages = PAGES.filter((p) => p.workspace === workspace || p.workspace === "all");
 
-  // Admin ranking: every word must match; exact phrases, titles and keywords
+  // Ranking: every word must match; exact phrases, titles and keywords
   // score higher, so "ai budget" lands on the AI budget section first.
-  function scoreAdminPage(p: PageShortcut): number {
+  function scorePage(p: PageShortcut): number {
     const title = p.title.toLowerCase();
     const sub = p.subtitle.toLowerCase();
     const words = q.split(/\s+/).filter(Boolean);
@@ -455,28 +591,22 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
     return score;
   }
 
-  const adminEmpty = isAdmin && query.length === 0;
-  const matchedPages: PageShortcut[] = adminEmpty
+  const emptyState = query.length === 0;
+  const matchedPages: PageShortcut[] = emptyState
     ? []
-    : query.length === 0
-      ? workspacePages.slice(0, 6)
-      : isAdmin
-        ? workspacePages
-            .map((p) => ({ p, s: scoreAdminPage(p) }))
-            .filter((x) => x.s > 0)
-            .sort((a, b) => b.s - a.s)
-            .slice(0, 8)
-            .map((x) => x.p)
-        : workspacePages.filter(
-            (p) => p.title.toLowerCase().includes(q) || p.keywords.some((k) => k.includes(q)),
-          ).slice(0, 5);
+    : workspacePages
+        .map((p) => ({ p, s: scorePage(p) }))
+        .filter((x) => x.s > 0)
+        .sort((a, b) => b.s - a.s)
+        .slice(0, 8)
+        .map((x) => x.p);
 
   function crumbOf(p: PageShortcut): string {
-    return p.section ? p.subtitle : `${CATS[catOf(p.href)].label} › ${p.title}`;
+    return p.section ? p.subtitle : `${labelOf(workspace, catOf(p.href))} › ${p.title}`;
   }
 
-  // Admin empty state: recent items, create shortcuts, jump to tiles
-  const recents: RecentItem[] = adminEmpty && open ? readRecents(4) : [];
+  // Empty state: recent items, quick actions, jump to tiles
+  const recents: RecentItem[] = emptyState && open ? readRecents(workspace, 4) : [];
 
   // Group dynamic results by type
   const grouped = new Map<SearchResult["type"], SearchResult[]>();
@@ -487,25 +617,25 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
   }
 
   // Flat combined list for keyboard nav index
-  const combined: Combined[] = adminEmpty
+  const combined: Combined[] = emptyState
     ? [
         ...recents.map((r) => ({ href: r.href, meta: r })),
-        ...CREATE.map((c) => ({ href: c.href })),
-        ...HUBS.map((h) => ({ href: h.href, meta: { title: CATS[h.cat].label, subtitle: null, href: h.href, cat: h.cat } })),
+        ...quick.map((c) => ({ href: c.href })),
+        ...hubs.map((h) => ({ href: h.href, meta: { title: h.label ?? labelOf(workspace, h.cat), subtitle: null, href: h.href, cat: h.cat } })),
       ]
     : [
         ...matchedPages.map((p) => ({
           href: p.href,
-          meta: isAdmin ? { title: p.title, subtitle: crumbOf(p), href: p.href, cat: catOf(p.href) } : undefined,
+          meta: { title: p.title, subtitle: crumbOf(p), href: p.href, cat: catOf(p.href) },
         })),
         ...dynamicResults.map((r) => ({
           href: r.href,
-          meta: isAdmin ? { title: r.title, subtitle: r.subtitle, href: r.href, cat: dynCat(r.type) } : undefined,
+          meta: { title: r.title, subtitle: r.subtitle, href: r.href, cat: dynCat(r.type) },
         })),
       ];
 
   function navigate(href: string, meta?: RecentItem) {
-    if (meta && isAdmin) saveRecent(meta);
+    if (meta) saveRecent(workspace, meta);
     setOpen(false);
     router.push(href);
   }
@@ -530,7 +660,7 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
     padding: "10px 18px", border: "none", cursor: "pointer", textAlign: "left",
     transition: "background 0.1s",
   };
-  const activeBg = isAdmin ? "#EAF1FE" : "#EEEDFE";
+  const activeBg = "#EAF1FE";
   const pill: React.CSSProperties = { fontSize: 10.5, fontWeight: 600, borderRadius: 999, padding: "3px 8px", flexShrink: 0 };
 
   return (
@@ -583,7 +713,7 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
             value={query}
             onChange={(e) => { setQuery(e.target.value); setActiveIndex(0); }}
             onKeyDown={onKeyDown}
-            placeholder={workspace === "founder" ? "Search pages, investors, documents…" : isAdmin ? "Search pages, contacts, companies, events…" : "Search pages…"}
+            placeholder={workspace === "founder" ? "Search pages, investors, documents…" : workspace === "admin" ? "Search pages, contacts, companies, events…" : "Search pages…"}
             style={{
               flex: 1, border: "none", outline: "none",
               fontSize: 15, color: "#111827",
@@ -614,8 +744,8 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
             </p>
           )}
 
-          {/* Admin empty state */}
-          {adminEmpty && (
+          {/* Empty state */}
+          {emptyState && (
             <div>
               {recents.length > 0 && (
                 <div>
@@ -639,9 +769,9 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
                 </div>
               )}
 
-              <p style={SECTION_LABEL}>Create</p>
+              <p style={SECTION_LABEL}>{workspace === "admin" ? "Create" : "Quick actions"}</p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: "0 18px 4px" }}>
-                {CREATE.map((c, j) => {
+                {quick.map((c, j) => {
                   const idx = recents.length + j;
                   const on = idx === activeIndex;
                   return (
@@ -661,19 +791,19 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
 
               <p style={{ ...SECTION_LABEL, paddingTop: 14 }}>Jump to</p>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 6, padding: "0 18px 14px" }}>
-                {HUBS.map((h, k) => {
-                  const idx = recents.length + CREATE.length + k;
+                {hubs.map((h, k) => {
+                  const idx = recents.length + quick.length + k;
                   const on = idx === activeIndex;
                   return (
                     <button
-                      key={h.cat}
+                      key={h.href}
                       type="button"
-                      onClick={() => navigate(h.href, { title: CATS[h.cat].label, subtitle: null, href: h.href, cat: h.cat })}
+                      onClick={() => navigate(h.href, { title: h.label ?? labelOf(workspace, h.cat), subtitle: null, href: h.href, cat: h.cat })}
                       onMouseEnter={() => setActiveIndex(idx)}
                       style={{ display: "flex", alignItems: "center", gap: 9, border: `1px solid ${on ? "#BCD3F8" : "#eef0f4"}`, background: on ? "#EAF1FE" : "white", borderRadius: 10, padding: "7px 9px", fontSize: 12.5, fontWeight: 600, color: "#111827", cursor: "pointer", textAlign: "left" }}
                     >
                       <CatChip cat={h.cat} size={26} />
-                      <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{CATS[h.cat].label}</span>
+                      <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.label ?? labelOf(workspace, h.cat)}</span>
                     </button>
                   );
                 })}
@@ -684,38 +814,27 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
           {/* Page shortcuts */}
           {matchedPages.length > 0 && (
             <div>
-              {!isAdmin && (
-                <p style={SECTION_LABEL}>
-                  {query.length === 0 ? "Quick links" : "Pages"}
-                </p>
-              )}
               {matchedPages.map((page, i) => {
                 const isActive = i === activeIndex;
                 const cat = catOf(page.href);
                 return (
                   <div key={page.id}>
-                    {isAdmin && i === 0 && <p style={SECTION_LABEL}>Best match</p>}
-                    {isAdmin && i === 1 && <p style={SECTION_LABEL}>More matches</p>}
+                    {i === 0 && <p style={SECTION_LABEL}>Best match</p>}
+                    {i === 1 && <p style={SECTION_LABEL}>More matches</p>}
                     <button
                       type="button"
-                      onClick={() => navigate(page.href, isAdmin ? { title: page.title, subtitle: crumbOf(page), href: page.href, cat } : undefined)}
+                      onClick={() => navigate(page.href, { title: page.title, subtitle: crumbOf(page), href: page.href, cat })}
                       style={{ ...rowBase, background: isActive ? activeBg : "transparent" }}
                       onMouseEnter={() => setActiveIndex(i)}
                     >
-                      {isAdmin ? <CatChip cat={cat} /> : (
-                        <span style={{ width: 28, height: 28, borderRadius: 7, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                          <TypeIcon type="page" />
-                        </span>
-                      )}
+                      <CatChip cat={cat} />
                       <span style={{ flex: 1, minWidth: 0 }}>
-                        <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#111827" }}>{isAdmin ? hl(page.title, query) : page.title}</span>
-                        <span style={{ display: "block", fontSize: 11, color: "#6b7280" }}>{isAdmin ? crumbOf(page) : page.subtitle}</span>
+                        <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#111827" }}>{hl(page.title, query)}</span>
+                        <span style={{ display: "block", fontSize: 11, color: "#6b7280" }}>{crumbOf(page)}</span>
                       </span>
-                      {isAdmin && (
-                        <span style={{ ...pill, color: page.section && i === 0 ? "#1D5FD6" : "#475569", background: page.section && i === 0 ? "#DCE8FD" : "#EEF1F5" }}>
-                          {page.section ? (i === 0 ? "Jumps to section" : "Section") : "Page"}
-                        </span>
-                      )}
+                      <span style={{ ...pill, color: page.section && i === 0 ? "#1D5FD6" : "#475569", background: page.section && i === 0 ? "#DCE8FD" : "#EEF1F5" }}>
+                        {page.section ? (i === 0 ? "Jumps to section" : "Section") : "Page"}
+                      </span>
                       {isActive && (
                         <kbd style={{ fontSize: 10, color: "#6b7280", background: "white", border: "1px solid #e5e7eb", borderRadius: 4, padding: "2px 6px", flexShrink: 0 }}>↵</kbd>
                       )}
@@ -738,7 +857,7 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
                   const idx = sectionStart + i;
                   const isActive = idx === activeIndex;
                   const email = "email" in r ? r.email : null;
-                  const meta: RecentItem | undefined = isAdmin ? { title: r.title, subtitle: r.subtitle, href: r.href, cat: dynCat(r.type) } : undefined;
+                  const meta: RecentItem = { title: r.title, subtitle: r.subtitle, href: r.href, cat: dynCat(r.type) };
                   return (
                     <div key={r.id} style={{ display: "flex", alignItems: "center", background: isActive ? activeBg : "transparent", transition: "background 0.1s" }} onMouseEnter={() => setActiveIndex(idx)}>
                       <button
@@ -746,17 +865,13 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
                         onClick={() => navigate(r.href, meta)}
                         style={{ ...rowBase, flex: 1, width: "auto", minWidth: 0, background: "transparent" }}
                       >
-                        {isAdmin ? <CatChip cat={dynCat(r.type)} /> : (
-                          <span style={{ width: 28, height: 28, borderRadius: 7, background: "#EEEDFE", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                            <TypeIcon type={r.type} />
-                          </span>
-                        )}
+                        <CatChip cat={dynCat(r.type)} />
                         <span style={{ flex: 1, minWidth: 0 }}>
-                          <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#111827", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{isAdmin ? hl(r.title, query) : r.title}</span>
-                          {r.subtitle && <span style={{ display: "block", fontSize: 11, color: "#6b7280" }}>{isAdmin ? hl(r.subtitle, query) : r.subtitle}</span>}
+                          <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#111827", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{hl(r.title, query)}</span>
+                          {r.subtitle && <span style={{ display: "block", fontSize: 11, color: "#6b7280" }}>{hl(r.subtitle, query)}</span>}
                         </span>
                       </button>
-                      {isAdmin && isActive && email && (
+                      {isActive && email && (
                         <a
                           href={`mailto:${email}`}
                           onClick={(e) => e.stopPropagation()}
@@ -775,12 +890,6 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
             );
           })}
 
-          {/* Hint when empty query */}
-          {query.length === 0 && workspace === "founder" && (
-            <p style={{ padding: "6px 18px 14px", fontSize: 11, color: "#9ca3af", textAlign: "center" }}>
-              Type to search investors, documents, deal rooms…
-            </p>
-          )}
         </div>
 
         {/* Footer */}
