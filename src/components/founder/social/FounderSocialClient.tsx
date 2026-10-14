@@ -302,7 +302,7 @@ function Compose({ usage, accounts, campaigns, companyName, onSaved, goSettings 
   const [emailed, setEmailed] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
   const [contacts, setContacts] = useState<{ id: string; name: string; firm: string | null; email: string }[]>([]);
-  const [chosen, setChosen] = useState<string[]>([]);
+  const [chosenInvestors, setChosenInvestors] = useState<string[]>([]);
   const [emailsLeft, setEmailsLeft] = useState<{ remaining: number | null; limit: number | null }>({ remaining: null, limit: null });
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -401,15 +401,15 @@ function Compose({ usage, accounts, campaigns, companyName, onSaved, goSettings 
 
   async function sendNow() {
     setMsg(null);
-    if (chosen.length === 0) { setMsg({ ok: false, text: "Choose at least one investor." }); return; }
+    if (chosenInvestors.length === 0) { setMsg({ ok: false, text: "Choose at least one investor." }); return; }
     setBusy(true);
     const r = await api<{ queued?: number; sent?: number; live?: boolean }>("/api/founder/social/email-send", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ subject: body.trim().split("\n")[0].slice(0, 80), body, recipientIds: chosen }),
+      body: JSON.stringify({ subject: body.trim().split("\n")[0].slice(0, 80), body, recipientIds: chosenInvestors }),
     });
     setBusy(false);
     if (!r.ok) { setMsg({ ok: false, text: r.data.error ?? "Could not send the email." }); return; }
-    setSendOpen(false); setChosen([]);
+    setSendOpen(false); setChosenInvestors([]);
     setMsg({ ok: true, text: r.data.live === false
       ? `Added ${r.data.queued} investor${r.data.queued === 1 ? "" : "s"}. Live email is switched off on this account, so nothing was delivered.`
       : `Sent to ${r.data.sent ?? 0} of ${r.data.queued} investor${r.data.queued === 1 ? "" : "s"}. Any left over because of your monthly email limit go out after it resets.` });
@@ -513,14 +513,14 @@ function Compose({ usage, accounts, campaigns, companyName, onSaved, goSettings 
               <div className="mt-2 max-h-48 overflow-y-auto">
                 {contacts.map((c) => (
                   <label key={c.id} className="flex items-center gap-2 py-1 text-sm text-slate-800">
-                    <input type="checkbox" checked={chosen.includes(c.id)} onChange={() => setChosen((p) => (p.includes(c.id) ? p.filter((x) => x !== c.id) : [...p, c.id]))} />
+                    <input type="checkbox" checked={chosenInvestors.includes(c.id)} onChange={() => setChosenInvestors((p) => (p.includes(c.id) ? p.filter((x) => x !== c.id) : [...p, c.id]))} />
                     <span className="truncate">{c.name}{c.firm ? `, ${c.firm}` : ""}</span>
                   </label>
                 ))}
               </div>
             )}
             <div className="mt-2 flex gap-2">
-              <button type="button" className={btnPrimary} disabled={busy || chosen.length === 0} onClick={() => void sendNow()}>Send to {chosen.length || "…"} now</button>
+              <button type="button" className={btnPrimary} disabled={busy || chosenInvestors.length === 0} onClick={() => void sendNow()}>Send to {chosenInvestors.length || "…"} now</button>
               <button type="button" className={btn} disabled={busy} onClick={() => setSendOpen(false)}>Cancel</button>
             </div>
           </div>
