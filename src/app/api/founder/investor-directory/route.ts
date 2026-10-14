@@ -30,6 +30,7 @@ export async function GET(request: Request) {
     investingNow: u.get("investingNow") === "1",
     hasEmail: u.get("hasEmail") === "1",
     page: Number(u.get("page") ?? 1) || 1,
+    sort: u.get("sort") === "newest" ? ("newest" as const) : ("firm" as const),
   };
   if (u.get("ids") === "1") {
     try {
