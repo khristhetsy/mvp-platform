@@ -213,6 +213,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           // Intro Requests (/admin/intro-requests) hidden from the menu (2026-10-07): only platform
           // investors with a login use it and there are almost none. The page still works by URL.
           { href: "/admin/prospect-intros", label: "Brokered Intros", requiredPermission: "manage_matching"      },
+          { href: "/admin/ai-usage",        label: "AI usage and cost", requiredPermission: "manage_settings"   },
         ],
       },
       // Kept at the top level, unchanged.
@@ -240,7 +241,6 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/profile",           label: "My Profile",       requiredPermission: "view_admin_dashboard" },
           { href: "/admin/profile-fields",    label: "Profile and fields", requiredPermission: "manage_settings" },
           { href: "/admin/feature-controls",  label: "Feature Controls", requiredPermission: "manage_settings" },
-          { href: "/admin/ai-usage",          label: "AI usage and cost", requiredPermission: "manage_settings" },
         ],
       },
       {
