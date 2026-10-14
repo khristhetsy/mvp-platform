@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireApiProfile } from "@/lib/api/auth";
+import { SALES_ID_PREFIX } from "@/lib/reminders/sales";
+import { updateTask } from "@/lib/sales/tasks";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +15,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as { done?: unknown } | null;
   if (typeof body?.done !== "boolean") return NextResponse.json({ error: "Send done as true or false." }, { status: 400 });
+  // Sales tasks are completed in Sales, so the task page and the clock stay in step.
+  if (id.startsWith(SALES_ID_PREFIX)) {
+    if (auth.profile.role !== "admin" && auth.profile.role !== "analyst") return NextResponse.json({ error: "Insufficient permissions." }, { status: 403 });
+    try {
+      await updateTask(id.slice(SALES_ID_PREFIX.length), { status: body.done ? "done" : "open" }, auth.profile.id);
+      return NextResponse.json({ ok: true });
+    } catch {
+      return NextResponse.json({ error: "Couldn't update the task." }, { status: 500 });
+    }
+  }
   const { data, error } = await raw(auth.supabase)
     .from("user_reminders")
     .update({ done_at: body.done ? new Date().toISOString() : null })
@@ -29,6 +41,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   const auth = await requireApiProfile();
   if ("error" in auth) return auth.error ?? NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
+  if (id.startsWith(SALES_ID_PREFIX)) return NextResponse.json({ error: "Delete Sales tasks from Sales." }, { status: 400 });
   const { error } = await raw(auth.supabase).from("user_reminders").delete().eq("id", id).eq("user_id", auth.profile.id);
   if (error) return NextResponse.json({ error: "Couldn't delete the reminder." }, { status: 500 });
   return NextResponse.json({ ok: true });

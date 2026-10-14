@@ -15,6 +15,12 @@ export type Reminder = {
   kind: ReminderKind;
   due_at: string;
   done_at: string | null;
+  /** "sales" rows are Sales tasks shown in the clock. They are completed in Sales and can't be deleted here. */
+  source?: "reminder" | "sales";
+  /** Sales tasks only have a due date, so the clock shows the day without a time. */
+  date_only?: boolean;
+  /** Who the Sales task is about, shown under the title. */
+  context?: string | null;
 };
 
 export function isReminderKind(value: unknown): value is ReminderKind {
