@@ -5,6 +5,7 @@ import { bookSlot } from "@/lib/scheduling/book";
 import { sendBookingEmails } from "@/lib/scheduling/notify";
 import { cancelBookingByToken } from "@/lib/scheduling/cancel";
 import { handoffFitSession } from "@/lib/fit/handoff";
+import { captureEmail } from "@/lib/fit/sessions";
 import { resolveSource, SOURCE_COOKIE } from "@/lib/attribution/source";
 import { fitSessionTag, heardAboutAnswer, listCampaignOptions, matchCampaignAnswer } from "@/lib/attribution/resolve";
 import { verifyFounderToken } from "@/lib/marketing/match-campaign/token";
@@ -136,6 +137,11 @@ export async function POST(req: NextRequest): Promise<Response> {
     // — the funnel path keeps behaving exactly as it did. Best-effort.
     if (fitSessionId) {
       await handoffFitSession(fitSessionId, { name: parsed.data.name, email: parsed.data.email, phone: parsed.data.phone ?? null, company: parsed.data.company ?? null }).catch(() => {});
+      // The booking form is where the founder's real email is entered, and most sessions
+      // reach the booking without the earlier email capture. Stamp it on the session so the
+      // Match Review lands in the Contact's Note Log (runs after the handoff created the
+      // Contact). Best-effort.
+      await captureEmail(fitSessionId, parsed.data.email).catch(() => {});
     }
 
     return NextResponse.json({ event: result.event, meetUrl: result.meetUrl });
