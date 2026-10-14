@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Odoo-style chatter for the Sales Hub: Send message / Log note / Activities, then the
+ * Odoo-style chatter for the Sales Hub: Send message / Log note / Tasks, then the
  * history split into Notes, Messages and System activity. Notes (iCapOS and Odoo) can
  * be edited and deleted, with a 10 second Undo and a "Recently deleted" list.
  * Self-contained: it fetches its own activity + tasks and reuses existing endpoints
@@ -322,7 +322,7 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
       <div style={{ display: "flex", gap: 4, padding: "8px 10px", borderBottom: "0.5px solid #eef1f5" }}>
         <button type="button" onClick={() => setTab("message")} style={tabBtn("message", "ti-mail", "")}><i className="ti ti-mail" aria-hidden="true" /> Send message</button>
         <button type="button" onClick={() => setTab("note")} style={tabBtn("note", "ti-note", "")}><i className="ti ti-note" aria-hidden="true" /> Log note</button>
-        <button type="button" onClick={() => setTab("activity")} style={tabBtn("activity", "ti-clock-plus", "")}><i className="ti ti-clock-plus" aria-hidden="true" /> Activities</button>
+        <button type="button" onClick={() => setTab("activity")} style={tabBtn("activity", "ti-checkbox", "")}><i className="ti ti-checkbox" aria-hidden="true" /> Tasks{planned.length ? ` · ${planned.length}` : ""}</button>
       </div>
 
       <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
@@ -392,7 +392,7 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
         )}
         {tab === "activity" && (
           <>
-            <input value={task.title} onChange={(e) => setTask({ ...task, title: e.target.value })} placeholder="Activity (e.g. Call follow-up)" style={field} />
+            <input value={task.title} onChange={(e) => setTask({ ...task, title: e.target.value })} placeholder="Task (e.g. Call follow-up)" style={field} />
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               <select value={task.taskType} onChange={(e) => setTask({ ...task, taskType: e.target.value })} style={{ ...field, width: "auto", flex: 1 }}>
                 {taskTypes.map((t) => <option key={t} value={t}>{t}</option>)}
@@ -403,7 +403,7 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
                 {staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
-            <div style={{ display: "flex", justifyContent: "flex-end" }}><button type="button" onClick={addTask} disabled={busy || !task.title.trim()} style={{ ...primary, opacity: busy || !task.title.trim() ? 0.5 : 1 }}>Schedule</button></div>
+            <div style={{ display: "flex", justifyContent: "flex-end" }}><button type="button" onClick={addTask} disabled={busy || !task.title.trim()} style={{ ...primary, opacity: busy || !task.title.trim() ? 0.5 : 1 }}>Add task</button></div>
           </>
         )}
         {(ok || err) && <p style={{ fontSize: 12, margin: 0, color: err ? "#A32D2D" : "#0F6E56" }}>{err ?? ok}</p>}
@@ -411,7 +411,7 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
 
       {planned.length > 0 && (
         <div style={{ padding: "10px 12px", borderTop: "0.5px solid #eef1f5" }}>
-          <div style={{ fontSize: 10.5, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>Planned activities</div>
+          <div style={{ fontSize: 10.5, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>Open tasks</div>
           {planned.map((t) => {
             const d = dueLabel(t.due_date);
             if (editTaskId === t.id) {
