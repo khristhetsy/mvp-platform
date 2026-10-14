@@ -7,7 +7,7 @@
  */
 import { NextResponse } from "next/server";
 import { requireFounderInvestorCrmApi } from "@/lib/api/founder-crm";
-import { PAGE_SIZE, directoryFacets, formdIdsAmong, loadFounderAccess, loadPlanAllowances, loadSettings, loadTiers, searchDirectory, searchDirectoryIds } from "@/lib/investor-directory/db";
+import { founderDirectoryEnabled, PAGE_SIZE, directoryFacets, formdIdsAmong, loadFounderAccess, loadPlanAllowances, loadSettings, loadTiers, searchDirectory, searchDirectoryIds } from "@/lib/investor-directory/db";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +16,9 @@ const many = (u: URLSearchParams, k: string) => u.getAll(k).flatMap((v) => v.spl
 export async function GET(request: Request) {
   const auth = await requireFounderInvestorCrmApi();
   if ("error" in auth) return auth.error;
+  if (!(await founderDirectoryEnabled())) {
+    return NextResponse.json({ error: "Investor directory isn't available right now." }, { status: 403 });
+  }
   const u = new URL(request.url).searchParams;
   const query = {
     q: u.get("q") ?? undefined,

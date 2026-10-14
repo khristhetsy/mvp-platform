@@ -1,13 +1,16 @@
 /** Accept the investor directory terms of use. POST → { acceptedAt } (stored on the founder's record, shown to admins). */
 import { NextResponse } from "next/server";
 import { requireFounderInvestorCrmApi } from "@/lib/api/founder-crm";
-import { acceptTerms } from "@/lib/investor-directory/db";
+import { founderDirectoryEnabled, acceptTerms } from "@/lib/investor-directory/db";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   const auth = await requireFounderInvestorCrmApi();
   if ("error" in auth) return auth.error;
+  if (!(await founderDirectoryEnabled())) {
+    return NextResponse.json({ error: "Investor directory isn't available right now." }, { status: 403 });
+  }
   const body = (await request.json().catch(() => null)) as { agree?: boolean } | null;
   if (body?.agree !== true) return NextResponse.json({ error: "Check the box to continue." }, { status: 400 });
   try {

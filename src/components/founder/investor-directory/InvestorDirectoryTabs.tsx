@@ -161,14 +161,16 @@ function ImportConnectorTab({ kind }: Readonly<{ kind: "linkedin" | "csv" }>) {
   );
 }
 
-export function InvestorDirectoryTabs() {
-  const [tab, setTab] = useState<Tab>("directory");
+export function InvestorDirectoryTabs({ enabled }: Readonly<{ enabled?: Partial<Record<Tab, boolean>> }> = {}) {
+  // Tabs an admin switched off in Admin › Investor Directory › Access are hidden.
+  const shown = TABS.filter((t) => enabled?.[t.id] !== false);
+  const [tab, setTab] = useState<Tab>(shown[0]?.id ?? "directory");
   const [formdTotal, setFormdTotal] = useState<number | null>(null);
 
   return (
     <div>
       <div className="mb-4 flex gap-1 border-b border-slate-200" role="tablist" aria-label="Investor directory">
-        {TABS.map(({ id, label, icon }) => (
+        {shown.map(({ id, label, icon }) => (
           <button
             key={id}
             type="button"
@@ -185,7 +187,12 @@ export function InvestorDirectoryTabs() {
         ))}
       </div>
 
-      {tab === "directory" ? (
+      {shown.length === 0 ? (
+        <p className="rounded-xl border border-slate-200 bg-white px-4 py-10 text-center text-sm text-slate-500">
+          No directory sources are available right now. Contact iCFO Capital if you need one.
+        </p>
+      ) : null}
+      {shown.length === 0 ? null : tab === "directory" ? (
         <InvestorDirectoryClient />
       ) : tab === "linkedin" || tab === "csv" ? (
         <ImportConnectorTab kind={tab} />

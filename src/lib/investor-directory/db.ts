@@ -1,4 +1,5 @@
 import "server-only";
+import { isFeatureEnabled, loadFeatureFlags } from "@/lib/feature-controls";
 
 /**
  * Investor directory data access. Service role only: every caller is a route
@@ -15,7 +16,7 @@ import { founderCapPeriod } from "@/lib/outreach/investor-cap";
 import { DEFAULT_ALLOWANCES, addUp, pickAllowance } from "@/lib/investor-directory/allowance";
 import { labelOf } from "@/lib/vocabulary/lists";
 import {
-  DEFAULT_SETTINGS, DIRECTORY_CONTACT_SOURCE, FORM_D_SOURCE, FREE_TIER,
+  DEFAULT_SETTINGS, DIRECTORY_CONTACT_SOURCE, FORM_D_SOURCE, FREE_TIER, INVESTOR_DIRECTORY_FEATURE_KEY,
   type AccessStatus, type DirectoryPlanAllowance, type DirectoryRecord, type DirectorySettings, type DirectoryTier,
   type FounderDirectoryAccess, type FounderLimits,
 } from "@/lib/investor-directory/types";
@@ -37,6 +38,12 @@ const OUTREACH_SOURCES = ["founder_outreach", "manual-outreach"];
 export async function loadSettings(): Promise<DirectorySettings> {
   const { data } = await db().from("investor_directory_settings").select("*").eq("id", 1).maybeSingle();
   return { ...DEFAULT_SETTINGS, ...(data ?? {}) } as DirectorySettings;
+}
+
+/** Is the Investor directory switched on for founders (Admin › Feature controls)? */
+export async function founderDirectoryEnabled(): Promise<boolean> {
+  const flags = await loadFeatureFlags(db());
+  return isFeatureEnabled(flags, "founder", INVESTOR_DIRECTORY_FEATURE_KEY);
 }
 
 export async function saveSettings(patch: Partial<DirectorySettings>): Promise<void> {
