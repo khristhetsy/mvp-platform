@@ -18,7 +18,7 @@ import { labelOf } from "@/lib/vocabulary/lists";
 import {
   DEFAULT_SETTINGS, DIRECTORY_CONTACT_SOURCE, FORM_D_SOURCE, FREE_TIER, INVESTOR_DIRECTORY_FEATURE_KEY,
   type AccessStatus, type DirectoryPlanAllowance, type DirectoryRecord, type DirectorySettings, type DirectoryTier,
-  type FounderDirectoryAccess, type FounderLimits,
+  type FormdPerson, type FounderDirectoryAccess, type FounderLimits,
 } from "@/lib/investor-directory/types";
 
 function db(): SupabaseClient {
@@ -275,6 +275,8 @@ export type FounderDirectoryRow = Omit<DirectoryRecord, "import_id" | "status" |
   added_at: string;
   /** Form D firms: the latest SEC filing date. Null for everything else. */
   filed_at: string | null;
+  /** Form D firms: people named on the firm's filings (empty for everything else). */
+  formd_people: FormdPerson[];
 };
 
 /** Escape a value for a PostgREST ilike pattern inside .or(). */
@@ -299,7 +301,7 @@ export async function searchDirectory(query: DirectoryQuery, companyId: string |
   ]);
   if (error) throw new Error(error.message);
   const records = (data ?? []) as unknown as DirectoryRecord[];
-  const filed = await formdFilingDates(records);
+  const [filed, people] = await Promise.all([formdFilingDates(records), formdPeople(records)]);
   const rows = records.map((r) => {
     const isHeld = held.has(r.id);
     const { notes: _notes, created_at, ...rest } = r;
@@ -313,6 +315,8 @@ export async function searchDirectory(query: DirectoryQuery, companyId: string |
       hasPhone: Boolean(r.phone),
       added_at: created_at,
       filed_at: filed.get(r.id) ?? null,
+      // Phones show after import, the same rule as the firm's own phone.
+      formd_people: (people.get(r.id) ?? []).map((p) => ({ ...p, phone: isHeld ? p.phone : null })),
     } as FounderDirectoryRow;
   });
   return { rows, total: count ?? rows.length, page };
@@ -331,6 +335,76 @@ async function formdFilingDates(records: DirectoryRecord[]): Promise<Map<string,
   for (const f of (data ?? []) as { id: string; last_filing_at: string | null }[]) {
     const rowId = byFirm.get(f.id);
     if (rowId && f.last_filing_at) out.set(rowId, f.last_filing_at);
+  }
+  return out;
+}
+
+const asList = (v: unknown): string[] =>
+  Array.isArray(v) ? v.map((x) => String(x).trim()).filter(Boolean) : typeof v === "string" && v.trim() ? [v.trim()] : [];
+
+/**
+ * People named on each Form D firm's filings: Admin Form D contacts
+ * (crm_contacts.formd_cik) whose CIK is one of the firm's vehicles, with their
+ * role from the filing's related persons. Keyed by directory row id. Read only.
+ */
+export async function formdPeople(records: Pick<DirectoryRecord, "id" | "source" | "notes">[]): Promise<Map<string, FormdPerson[]>> {
+  const out = new Map<string, FormdPerson[]>();
+  const rowByFirm = new Map<string, string>();
+  for (const r of records) {
+    const m = r.source === FORM_D_SOURCE ? /^formd-firm:(.+)$/.exec(r.notes ?? "") : null;
+    if (m) rowByFirm.set(m[1], r.id);
+  }
+  if (rowByFirm.size === 0) return out;
+  try {
+    const { data: vehicles } = await db().from("formd_firm_vehicles").select("firm_id, cik").in("firm_id", [...rowByFirm.keys()]);
+    const firmsByCik = new Map<string, string[]>();
+    for (const v of (vehicles ?? []) as { firm_id: string; cik: string }[]) {
+      const k = String(v.cik);
+      firmsByCik.set(k, [...(firmsByCik.get(k) ?? []), String(v.firm_id)]);
+    }
+    if (firmsByCik.size === 0) return out;
+    const { data: contacts } = await db()
+      .from("crm_contacts")
+      .select("name, phone, formd_cik, formd_accession_no, profile")
+      .in("formd_cik", [...firmsByCik.keys()])
+      .order("name");
+    type C = { name: string | null; phone: string | null; formd_cik: string; formd_accession_no: string | null; profile: Record<string, unknown> | null };
+    const list = ((contacts ?? []) as C[]).filter((c) => c.name);
+    const accessions = [...new Set(list.map((c) => c.formd_accession_no).filter((a): a is string => Boolean(a)))];
+    const roles = new Map<string, string>();
+    if (accessions.length) {
+      const { data: persons } = await db().from("formd_related_persons").select("accession_no, full_name, first_name, last_name, relationships").in("accession_no", accessions);
+      type P = { accession_no: string; full_name: string | null; first_name: string | null; last_name: string | null; relationships: unknown };
+      for (const p of (persons ?? []) as P[]) {
+        const rel = asList(p.relationships).flatMap((x) => x.split(";")).map((x) => x.trim()).filter(Boolean).join(", ");
+        if (!rel) continue;
+        // The contact's name matches either the full name or first + last (no middle name).
+        const short = [p.first_name, p.last_name].map((x) => (x ?? "").trim()).filter(Boolean).join(" ");
+        for (const n of [p.full_name, short]) if (n && n.trim()) roles.set(`${p.accession_no}|${n.trim().toLowerCase()}`, rel);
+      }
+    }
+    for (const c of list) {
+      const extra = (c.profile?.extra ?? {}) as Record<string, unknown>;
+      const person: FormdPerson = {
+        name: c.name as string,
+        role: roles.get(`${c.formd_accession_no}|${(c.name as string).trim().toLowerCase()}`) ?? null,
+        phone: c.phone,
+        hasPhone: Boolean(c.phone),
+        industries: asList(c.profile?.industries),
+        stages: asList(extra["Entrepreneur funding stage?"]),
+        amounts: asList(extra["Entrepreneur seeking amount of capital?"]),
+        raisingFrom: asList(c.profile?.investorTypes),
+      };
+      for (const firmId of firmsByCik.get(String(c.formd_cik)) ?? []) {
+        const rowId = rowByFirm.get(firmId);
+        if (!rowId) continue;
+        const have = out.get(rowId) ?? [];
+        if (!have.some((h) => h.name.toLowerCase() === person.name.toLowerCase())) out.set(rowId, [...have, person]);
+      }
+    }
+  } catch (err) {
+    // The people are extra detail: the directory still loads without them.
+    console.error("[investor-directory] Form D people lookup failed:", err instanceof Error ? err.message : err);
   }
   return out;
 }
@@ -388,14 +462,29 @@ export async function importIntoContacts(input: {
   // Founder contacts store readable labels (the Manual outreach list shows them as text).
   const vocab = await loadVocabularies();
   const labels = (list: keyof typeof vocab, values: string[]) => values.map((v) => labelOf(vocab[list], v)).join(", ") || null;
-  const insert = rows.map((r) => ({
+  // Form D firms carry the person named on the filing (name, phone, role, what the fund is raising).
+  const people = await formdPeople(rows);
+  const formdNote = (p: FormdPerson | undefined) => {
+    if (!p) return "";
+    const parts = [
+      p.role ? `Role on the Form D filing: ${p.role}.` : "",
+      p.industries.length ? `Fund industry: ${p.industries.join(", ")}.` : "",
+      p.stages.length ? `Raising at: ${p.stages.join(", ")}.` : "",
+      p.amounts.length ? `Raising amount: ${p.amounts.join(", ")}.` : "",
+      p.raisingFrom.length ? `Raising from: ${p.raisingFrom.join(", ")}.` : "",
+    ].filter(Boolean);
+    return parts.length ? ` ${parts.join(" ")}` : "";
+  };
+  const insert = rows.map((r) => {
+    const person = people.get(r.id)?.[0];
+    return {
     founder_id: input.founderId,
     company_id: input.companyId,
     directory_id: r.id,
-    investor_name: r.contact_name ?? r.firm,
+    investor_name: r.contact_name ?? person?.name ?? r.firm,
     firm_name: r.firm,
     email: r.email,
-    phone: r.phone,
+    phone: person?.phone ?? r.phone,
     website: r.website,
     investor_type: labels("investor_type", r.investor_types),
     preferred_sectors: labels("industry", r.industries),
@@ -404,11 +493,12 @@ export async function importIntoContacts(input: {
     geography: [r.city, r.state].filter(Boolean).join(", ") || null,
     source: DIRECTORY_CONTACT_SOURCE,
     tags: ["investor-directory"],
-    notes: `From the iCapOS investor directory (${r.source}). Not the iCFO Capital investor network.`,
+    notes: `From the iCapOS investor directory (${r.source}). Not the iCFO Capital investor network.${formdNote(person)}`,
     status: "new",
     created_at: now,
     updated_at: now,
-  }));
+    };
+  });
   const { error } = await db().from("founder_investor_contacts").insert(insert);
   if (error) throw new Error(error.message);
   await logEvent(input.founderId, input.companyId, "import", insert.length);
