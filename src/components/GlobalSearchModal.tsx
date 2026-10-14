@@ -3,7 +3,10 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import type { WorkspaceId } from "@/lib/workspace-nav";
-import type { SearchResult } from "@/app/api/founder/search/route";
+import type { SearchResult as FounderSearchResult } from "@/app/api/founder/search/route";
+import type { AdminSearchResult } from "@/app/api/admin/search/route";
+
+type SearchResult = FounderSearchResult | AdminSearchResult;
 
 // ── Static page shortcuts ─────────────────────────────────────────────────────
 
@@ -40,6 +43,71 @@ const PAGES: PageShortcut[] = [
   { id: "inv-deal",    title: "Deal rooms",           subtitle: "Active deals",           href: "/investor/deal-room",            keywords: ["deal", "room"],                            workspace: "investor" },
   { id: "inv-learn",   title: "Learning",             subtitle: "Investor education",     href: "/investor/learning",             keywords: ["learning", "courses", "education"],        workspace: "investor" },
   { id: "inv-set",     title: "Investor settings",    subtitle: "Profile & integrations", href: "/investor/settings",             keywords: ["settings", "profile"],                     workspace: "investor" },
+  // Admin
+  { id: "ad-dash",     title: "Dashboard",            subtitle: "Admin home",             href: "/admin",                         keywords: ["home", "overview", "admin"],               workspace: "admin" },
+  { id: "ad-contacts", title: "Contacts",             subtitle: "All contacts",           href: "/admin/contacts",                keywords: ["contacts", "people", "crm"],               workspace: "admin" },
+  { id: "ad-ceo",      title: "CEO",                  subtitle: "CEO view",               href: "/admin/ceo",                     keywords: ["ceo", "executive"],                        workspace: "admin" },
+  { id: "ad-sales",    title: "Sales",                subtitle: "Sales dashboard",        href: "/admin/sales",                   keywords: ["sales", "dashboard"],                      workspace: "admin" },
+  { id: "ad-opps",     title: "Opportunities",        subtitle: "Sales",                  href: "/admin/sales/opportunities",     keywords: ["sales", "opportunities", "deals"],         workspace: "admin" },
+  { id: "ad-pipe",     title: "Pipeline",             subtitle: "Sales",                  href: "/admin/sales/pipeline",          keywords: ["sales", "pipeline"],                       workspace: "admin" },
+  { id: "ad-contr",    title: "Contracts",            subtitle: "Sales",                  href: "/admin/sales/contracts",         keywords: ["sales", "contracts", "spv", "proposal"],   workspace: "admin" },
+  { id: "ad-sched",    title: "Scheduled emails",     subtitle: "Sales",                  href: "/admin/sales/scheduled-emails",  keywords: ["sales", "scheduled", "emails", "send"],    workspace: "admin" },
+  { id: "ad-sales-s",  title: "Sales settings",       subtitle: "Sales",                  href: "/admin/sales/settings",          keywords: ["sales", "settings"],                       workspace: "admin" },
+  { id: "ad-mkt",      title: "Marketing",            subtitle: "Marketing dashboard",    href: "/admin/marketing",               keywords: ["marketing", "dashboard"],                  workspace: "admin" },
+  { id: "ad-mkt-plan", title: "Marketing plan",       subtitle: "Marketing",              href: "/admin/marketing/plan",          keywords: ["marketing", "plan"],                       workspace: "admin" },
+  { id: "ad-mkt-con",  title: "Marketing contacts",   subtitle: "Marketing",              href: "/admin/marketing/contacts",      keywords: ["marketing", "contacts", "leads"],          workspace: "admin" },
+  { id: "ad-lists",    title: "Lists",                subtitle: "Marketing",              href: "/admin/marketing/lists",         keywords: ["marketing", "lists", "segments"],          workspace: "admin" },
+  { id: "ad-camp",     title: "Campaigns",            subtitle: "Marketing",              href: "/admin/marketing/campaigns",     keywords: ["marketing", "campaigns", "match"],         workspace: "admin" },
+  { id: "ad-notices",  title: "Deal notices",         subtitle: "Marketing",              href: "/admin/marketing/deal-notices",  keywords: ["marketing", "deal", "notices"],            workspace: "admin" },
+  { id: "ad-partner",  title: "Partner codes",        subtitle: "Marketing",              href: "/admin/marketing/partner-codes", keywords: ["marketing", "partner", "codes"],           workspace: "admin" },
+  { id: "ad-seq",      title: "Sequences",            subtitle: "Marketing",              href: "/admin/marketing/sequences",     keywords: ["marketing", "sequences", "drip"],          workspace: "admin" },
+  { id: "ad-tmpl",     title: "Templates",            subtitle: "Marketing",              href: "/admin/marketing/templates",     keywords: ["marketing", "templates", "email"],         workspace: "admin" },
+  { id: "ad-testi",    title: "Testimonials",         subtitle: "Marketing",              href: "/admin/marketing/testimonials",  keywords: ["marketing", "testimonials", "reviews"],    workspace: "admin" },
+  { id: "ad-mkt-an",   title: "Marketing analytics",  subtitle: "Marketing",              href: "/admin/marketing/analytics",     keywords: ["marketing", "analytics", "metrics"],       workspace: "admin" },
+  { id: "ad-aeo",      title: "AEO",                  subtitle: "Marketing",              href: "/admin/marketing/aeo",           keywords: ["marketing", "aeo", "seo"],                 workspace: "admin" },
+  { id: "ad-supp",     title: "Suppressions",         subtitle: "Marketing",              href: "/admin/marketing/suppressions",  keywords: ["marketing", "suppressions", "unsubscribe"], workspace: "admin" },
+  { id: "ad-ir",       title: "Investor Relations",   subtitle: "IR dashboard",           href: "/admin/ir",                      keywords: ["ir", "investor", "relations", "dashboard"], workspace: "admin" },
+  { id: "ad-ir-proj",  title: "IR projects",          subtitle: "Investor Relations",     href: "/admin/ir/projects",             keywords: ["ir", "investor", "projects"],              workspace: "admin" },
+  { id: "ad-ir-task",  title: "IR tasks",             subtitle: "Investor Relations",     href: "/admin/ir/tasks",                keywords: ["ir", "investor", "tasks"],                 workspace: "admin" },
+  { id: "ad-ir-imp",   title: "Odoo import",          subtitle: "Investor Relations",     href: "/admin/ir/import",               keywords: ["ir", "odoo", "import"],                    workspace: "admin" },
+  { id: "ad-dir",      title: "Investor Directory",   subtitle: "Directory overview",     href: "/admin/investor-directory",      keywords: ["investor", "directory", "overview"],       workspace: "admin" },
+  { id: "ad-dir-rec",  title: "Directory records",    subtitle: "Investor Directory",     href: "/admin/investor-directory/records",      keywords: ["investor", "directory", "records"], workspace: "admin" },
+  { id: "ad-dir-imp",  title: "Directory imports",    subtitle: "Investor Directory",     href: "/admin/investor-directory/imports",      keywords: ["investor", "directory", "imports"], workspace: "admin" },
+  { id: "ad-dir-ver",  title: "Directory verification", subtitle: "Investor Directory",   href: "/admin/investor-directory/verification", keywords: ["investor", "directory", "verification"], workspace: "admin" },
+  { id: "ad-dir-acc",  title: "Directory access",     subtitle: "Investor Directory",     href: "/admin/investor-directory/access",       keywords: ["investor", "directory", "access"],  workspace: "admin" },
+  { id: "ad-dir-use",  title: "Directory usage",      subtitle: "Investor Directory",     href: "/admin/investor-directory/usage",        keywords: ["investor", "directory", "usage"],   workspace: "admin" },
+  { id: "ad-acct",     title: "Accounting",           subtitle: "Accounting dashboard",   href: "/admin/accounting",              keywords: ["accounting", "dashboard", "finance"],      workspace: "admin" },
+  { id: "ad-cust",     title: "Customers",            subtitle: "Accounting",             href: "/admin/accounting/customers",    keywords: ["accounting", "customers", "clients"],      workspace: "admin" },
+  { id: "ad-inv",      title: "Invoices",             subtitle: "Accounting",             href: "/admin/accounting/invoices",     keywords: ["accounting", "invoices", "billing"],       workspace: "admin" },
+  { id: "ad-pay",      title: "Payments",             subtitle: "Accounting",             href: "/admin/accounting/payments",     keywords: ["accounting", "payments"],                  workspace: "admin" },
+  { id: "ad-bank",     title: "Bank",                 subtitle: "Accounting",             href: "/admin/accounting/bank",         keywords: ["accounting", "bank", "plaid"],             workspace: "admin" },
+  { id: "ad-rep",      title: "Accounting reports",   subtitle: "Accounting",             href: "/admin/accounting/reports",      keywords: ["accounting", "reports", "statements"],     workspace: "admin" },
+  { id: "ad-acct-s",   title: "Accounting settings",  subtitle: "Accounting",             href: "/admin/accounting/settings",     keywords: ["accounting", "settings"],                  workspace: "admin" },
+  { id: "ad-social",   title: "Social Media",         subtitle: "Posts & accounts",       href: "/admin/social",                  keywords: ["social", "media", "linkedin", "posts"],    workspace: "admin" },
+  { id: "ad-events",   title: "Events",               subtitle: "All events",             href: "/admin/events",                  keywords: ["events", "expo", "all events"],            workspace: "admin" },
+  { id: "ad-ev-app",   title: "Event applications",   subtitle: "Events",                 href: "/admin/events/applications",     keywords: ["events", "applications"],                  workspace: "admin" },
+  { id: "ad-ev-spon",  title: "Event sponsors",       subtitle: "Events",                 href: "/admin/events/sponsors",         keywords: ["events", "sponsors"],                      workspace: "admin" },
+  { id: "ad-ev-tmpl",  title: "Event template",       subtitle: "Events",                 href: "/admin/events/email",            keywords: ["events", "template", "email"],             workspace: "admin" },
+  { id: "ad-ev-inv",   title: "Event invitations",    subtitle: "Events",                 href: "/admin/events/invitations",      keywords: ["events", "invitations"],                   workspace: "admin" },
+  { id: "ad-ev-reg",   title: "Event registration",   subtitle: "Events",                 href: "/admin/events/registrations",    keywords: ["events", "registration", "registrations", "attendees"], workspace: "admin" },
+  { id: "ad-ev-net",   title: "Networking matching",  subtitle: "Events",                 href: "/admin/events/networking",       keywords: ["events", "networking", "matching"],        workspace: "admin" },
+  { id: "ad-ev-bro",   title: "Event brochure",       subtitle: "Events",                 href: "/admin/events/brochure",         keywords: ["events", "brochure"],                      workspace: "admin" },
+  { id: "ad-ev-ana",   title: "Event analytics",      subtitle: "Events",                 href: "/admin/events/analytics",        keywords: ["events", "analytics"],                     workspace: "admin" },
+  { id: "ad-ev-gam",   title: "Gamification",         subtitle: "Events",                 href: "/admin/events/gamification",     keywords: ["events", "gamification", "points"],        workspace: "admin" },
+  { id: "ad-voice",    title: "Voice command center", subtitle: "Voice",                  href: "/admin/voice",                   keywords: ["voice", "calling", "command", "center"],   workspace: "admin" },
+  { id: "ad-v-camp",   title: "Voice campaigns",      subtitle: "Voice",                  href: "/admin/voice/campaigns",         keywords: ["voice", "campaigns"],                      workspace: "admin" },
+  { id: "ad-v-calls",  title: "Call review",          subtitle: "Voice",                  href: "/admin/voice/calls",             keywords: ["voice", "calls", "review"],                workspace: "admin" },
+  { id: "ad-v-cons",   title: "Consent ledger",       subtitle: "Voice",                  href: "/admin/voice/consent-ledger",    keywords: ["voice", "consent", "ledger"],              workspace: "admin" },
+  { id: "ad-v-perf",   title: "Voice performance",    subtitle: "Voice",                  href: "/admin/voice/performance",       keywords: ["voice", "performance"],                    workspace: "admin" },
+  { id: "ad-inbox",    title: "Inbox",                subtitle: "Communication",          href: "/admin/inbox",                   keywords: ["inbox", "email", "mail", "communication"], workspace: "admin" },
+  { id: "ad-cal",      title: "Calendar",             subtitle: "Communication",          href: "/admin/calendar",                keywords: ["calendar", "communication"],               workspace: "admin" },
+  { id: "ad-schedule", title: "Scheduling",           subtitle: "Communication",          href: "/admin/schedule",                keywords: ["scheduling", "schedule", "booking"],       workspace: "admin" },
+  { id: "ad-meet",     title: "Meet",                 subtitle: "Communication",          href: "/admin/meet",                    keywords: ["meet", "video", "communication"],          workspace: "admin" },
+  { id: "ad-meetings", title: "Meetings",             subtitle: "Communication",          href: "/admin/meetings",                keywords: ["meetings", "communication"],               workspace: "admin" },
+  { id: "ad-sign",     title: "E-Signatures",         subtitle: "Communication",          href: "/admin/signatures",              keywords: ["signatures", "esign", "sign", "docs"],     workspace: "admin" },
+  { id: "ad-tasks",    title: "Tasks",                subtitle: "Communication",          href: "/admin/tasks",                   keywords: ["tasks", "todo", "communication"],          workspace: "admin" },
+  { id: "ad-actions",  title: "Action Center",        subtitle: "Operational tools",      href: "/admin/actions",                 keywords: ["actions", "operational", "tools"],         workspace: "admin" },
+  { id: "ad-activity", title: "Account activity",     subtitle: "Feed",                   href: "/admin/activity",                keywords: ["activity", "feed", "account"],             workspace: "admin" },
 ];
 
 // ── Type icons ────────────────────────────────────────────────────────────────
@@ -68,7 +136,7 @@ function TypeIcon({ type }: { type: SearchResult["type"] | "page" }) {
       <line x1="8" y1="17" x2="12" y2="17" stroke={ACCENT} strokeWidth="2" />
     </svg>
   );
-  if (type === "deal_room") return (
+  if (type === "deal_room" || type === "company" || type === "event") return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <rect x="2" y="3" width="20" height="14" rx="2" stroke={ACCENT} strokeWidth="2" />
       <path d="M8 21h8M12 17v4" stroke={ACCENT} strokeWidth="2" strokeLinecap="round" />
@@ -88,6 +156,8 @@ const TYPE_LABELS: Record<SearchResult["type"], string> = {
   investor: "Pipeline investors",
   document: "Documents",
   deal_room: "Deal rooms",
+  company: "Companies",
+  event: "Events",
 };
 
 // ── Main modal ────────────────────────────────────────────────────────────────
@@ -129,10 +199,11 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
 
   // Debounced API search (founder only)
   const fetchDynamic = useCallback(async (q: string) => {
-    if (workspace !== "founder" || q.length < 2) { setDynamicResults([]); return; }
+    if ((workspace !== "founder" && workspace !== "admin") || q.length < 2) { setDynamicResults([]); return; }
     setLoading(true);
     try {
-      const res = await fetch(`/api/founder/search?q=${encodeURIComponent(q)}`);
+      const base = workspace === "admin" ? "/api/admin/search" : "/api/founder/search";
+      const res = await fetch(`${base}?q=${encodeURIComponent(q)}`);
       const json = await res.json() as { results?: SearchResult[] };
       setDynamicResults(json.results ?? []);
     } catch {
@@ -156,7 +227,7 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
         (p) =>
           p.title.toLowerCase().includes(q) ||
           p.keywords.some((k) => k.includes(q)),
-      ).slice(0, 5);
+      ).slice(0, workspace === "admin" ? 8 : 5);
 
   // Group dynamic results by type
   const grouped = new Map<SearchResult["type"], SearchResult[]>();
@@ -246,7 +317,7 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
             value={query}
             onChange={(e) => { setQuery(e.target.value); setActiveIndex(0); }}
             onKeyDown={onKeyDown}
-            placeholder={workspace === "founder" ? "Search pages, investors, documents…" : "Search pages…"}
+            placeholder={workspace === "founder" ? "Search pages, investors, documents…" : workspace === "admin" ? "Search pages, contacts, companies, events…" : "Search pages…"}
             style={{
               flex: 1, border: "none", outline: "none",
               fontSize: 15, color: "#111827",
@@ -356,9 +427,9 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
           })}
 
           {/* Hint when empty query */}
-          {query.length === 0 && workspace === "founder" && (
+          {query.length === 0 && (workspace === "founder" || workspace === "admin") && (
             <p style={{ padding: "6px 18px 14px", fontSize: 11, color: "#9ca3af", textAlign: "center" }}>
-              Type to search investors, documents, deal rooms…
+              {workspace === "admin" ? "Type to search contacts, companies, events…" : "Type to search investors, documents, deal rooms…"}
             </p>
           )}
         </div>
