@@ -15,6 +15,8 @@ import { Highlight, NoSearchMatches } from "@/components/ui/SearchStatus";
 import { PLAN_LABELS, PLAN_PRICES } from "@/lib/subscriptions/plans";
 import { OdooSearchBar, EMPTY_SEARCH, type SearchState, type QuickFilter, type GroupOption } from "@/components/admin/OdooSearchBar";
 import { CompaniesGear } from "@/components/admin/companies/CompaniesGear";
+import { SelectionBar } from "@/components/admin/sales/SelectionBar";
+import { MassEmailComposer } from "@/components/marketing/MassEmailComposer";
 import { CompaniesPlanDonut, type PlanSlice, type PlanSliceKey } from "@/components/admin/companies/CompaniesPlanDonut";
 import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 
@@ -193,6 +195,9 @@ function AdminCompaniesModuleViewsInner({
   const query = searchState.q;
   const setQuery = (q: string) => setSearchState((st) => ({ ...st, q }));
   const [slice, setSlice] = useState<PlanSliceKey | null>(null);
+  // Row selection for the list view (select all, and the founder email).
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [emailOpen, setEmailOpen] = useState(false);
   const [view, setView] = useState<ViewMode>("list");
   // Show columns picker (same pattern as Contacts): choice remembered on this browser.
   const [visibleCols, setVisibleCols] = useState<string[]>(() => {
@@ -329,12 +334,44 @@ function AdminCompaniesModuleViewsInner({
     }));
   }, [filtered, t]);
 
+  // Selection works on what the list shows now: a filter or search change drops hidden rows.
+  const chosenIds = listRows.filter((c) => selected.has(c.id)).map((c) => c.id);
+  const allSelected = listRows.length > 0 && chosenIds.length === listRows.length;
+  const toggleOne = (id: string) => setSelected((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+  const selectAllRows = () => setSelected(new Set(listRows.map((c) => c.id)));
+  const clearSelection = () => setSelected(new Set());
+  // No selection means everyone the list shows.
+  const emailIds = chosenIds.length > 0 ? chosenIds : listRows.map((c) => c.id);
+  const emailLabel = chosenIds.length > 0
+    ? `Email ${chosenIds.length.toLocaleString()} selected founder${chosenIds.length === 1 ? "" : "s"}`
+    : `Email all ${listRows.length.toLocaleString()} founder${listRows.length === 1 ? "" : "s"}`;
+
   return (
     <>
+      {emailOpen && emailIds.length > 0 && (
+        <MassEmailComposer
+          source="companies"
+          selection={{ mode: "ids", ids: emailIds, count: emailIds.length }}
+          noun="founder"
+          allowAttachments
+          brandedFounderRef={`company:${emailIds[0]}`}
+          onClose={() => setEmailOpen(false)}
+        />
+      )}
       <CompaniesPlanDonut slices={planTotals.slices} mrr={planTotals.mrr} active={slice} onSelect={setSlice} />
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <CompaniesGear
+          actions={[
+            {
+              key: "email-founders",
+              icon: "ti-mail",
+              label: emailLabel,
+              hint: "Opens the branded template with each founder's At a glance numbers",
+              disabled: listRows.length === 0,
+              onClick: () => setEmailOpen(true),
+            },
+          ]}
           sections={[
             {
               title: "Users",
@@ -495,9 +532,26 @@ function AdminCompaniesModuleViewsInner({
           </div>
         ) : (
           <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+            <SelectionBar
+              count={chosenIds.length}
+              total={listRows.length}
+              onSelectAll={selectAllRows}
+              onClear={clearSelection}
+              heading="Selected companies"
+              actions={[{ key: "email", icon: "ti-mail", label: "Email founders", run: () => setEmailOpen(true) }]}
+            />
             <table className="w-full text-sm [&_td]:align-middle [&_th]:whitespace-nowrap [&_th]:align-middle">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold text-slate-500">
+                  <th className="w-9 px-3 py-2.5">
+                    <input
+                      type="checkbox"
+                      aria-label="Select all companies"
+                      checked={allSelected}
+                      ref={(el) => { if (el) el.indeterminate = chosenIds.length > 0 && !allSelected; }}
+                      onChange={() => (allSelected ? clearSelection() : selectAllRows())}
+                    />
+                  </th>
                   <th className="px-3 py-2.5">{t("companies.colCompany")}</th>
                   {show("founder") && <th className="px-3 py-2.5">{t("companies.colFounder")}</th>}
                   {show("industry") && <th className="px-3 py-2.5">{t("companies.colIndustry")}</th>}
@@ -517,7 +571,7 @@ function AdminCompaniesModuleViewsInner({
               <tbody className="divide-y divide-slate-100">
                 {groupRows(listRows, searchState.groupBy).map(({ header, count, company }) => header ? (
                   <tr key={`g:${header}`} className="bg-slate-50">
-                    <td colSpan={visibleCount} className="px-3 py-2 text-xs font-semibold text-slate-700">
+                    <td colSpan={visibleCount + 1} className="px-3 py-2 text-xs font-semibold text-slate-700">
                       {header} <span className="font-normal text-slate-400">({count})</span>
                     </td>
                   </tr>
@@ -527,6 +581,14 @@ function AdminCompaniesModuleViewsInner({
                     className="hover:bg-slate-50 cursor-pointer"
                     onClick={() => { window.location.href = `/admin/companies/${company.id}`; }}
                   >
+                    <td className="w-9 px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        aria-label={`Select ${company.company_name}`}
+                        checked={selected.has(company.id)}
+                        onChange={() => toggleOne(company.id)}
+                      />
+                    </td>
                     <td className="px-3 py-2.5 font-medium text-slate-900 whitespace-nowrap"><Highlight text={company.company_name} query={query} /></td>
                     {show("founder") && <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap"><Highlight text={company.founder_name} query={query} /></td>}
                     {show("industry") && <td className="px-3 py-2.5 text-slate-500 whitespace-nowrap">{company.industry ? <Highlight text={company.industry} query={query} /> : "—"}</td>}

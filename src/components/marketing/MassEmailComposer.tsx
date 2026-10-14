@@ -59,8 +59,8 @@ const inp: React.CSSProperties = { fontSize: 12.5, padding: "7px 9px", borderRad
  * `resolveShares` turns into real per-recipient links right before a send or test.
  * Without them it behaves exactly as before.
  */
-export function MassEmailComposer({ source, selection, defaultEmail, onClose, noun = "contact", extraMerge, previewAs, initialMode = "once", renderSequence, onSent, defaultDepartment, onePager, allowAttachments = false, notice, shares, resolveShares, brandedProjectId }: {
-  source: "contacts" | "opportunities"; selection: SelectionPayload; defaultEmail?: string; onClose: () => void;
+export function MassEmailComposer({ source, selection, defaultEmail, onClose, noun = "contact", extraMerge, previewAs, initialMode = "once", renderSequence, onSent, defaultDepartment, onePager, allowAttachments = false, notice, shares, resolveShares, brandedProjectId, brandedFounderRef }: {
+  source: "contacts" | "opportunities" | "companies"; selection: SelectionPayload; defaultEmail?: string; onClose: () => void;
   noun?: string; extraMerge?: Record<string, string>; previewAs?: PreviewRecipient[]; initialMode?: "once" | "sequence";
   renderSequence?: (done: (message: string) => void) => ReactNode; onSent?: (sent: number) => void; defaultDepartment?: string;
   onePager?: { url: string; label: string } | null; allowAttachments?: boolean;
@@ -68,6 +68,8 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
   resolveShares?: (keys: string[], ctx: { testEmail?: string }) => Promise<{ buttons: Array<{ label: string; url: string }> } | { error: string }>;
   /** Investor Relations project whose founder fills a new branded template. */
   brandedProjectId?: string;
+  /** "company:<id>": a new branded template is filled from this company (the Companies list). */
+  brandedFounderRef?: string;
 }) {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [sequences, setSequences] = useState<Sequence[]>([]);
@@ -207,7 +209,7 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
             {/* mode */}
             <div style={{ display: "inline-flex", border: "0.5px solid #cdd9ec", borderRadius: 9, overflow: "hidden", marginBottom: 12 }}>
               <button type="button" onClick={() => setMode("once")} style={chip(mode === "once")}>Send once</button>
-              <button type="button" onClick={() => setMode("sequence")} style={chip(mode === "sequence")}>Enroll in sequence</button>
+              {source === "companies" ? null : <button type="button" onClick={() => setMode("sequence")} style={chip(mode === "sequence")}>Enroll in sequence</button>}
             </div>
 
             {mode === "once" ? (
@@ -232,7 +234,7 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
 
                 {/* template */}
                 <p style={{ fontSize: 10.5, color: "var(--muted-foreground)", margin: "0 0 3px" }}>Template</p>
-                <TemplatePicker templates={templates} value={templateId} onPick={(id) => pickTemplate(id)} defaultDepartment={defaultDepartment} brandedProjectId={brandedProjectId}
+                <TemplatePicker templates={templates} value={templateId} onPick={(id) => pickTemplate(id)} defaultDepartment={defaultDepartment} brandedProjectId={brandedProjectId} brandedFounderRef={brandedFounderRef}
                   mergeTags={["first_name", "company", ...Object.keys(extraMerge ?? {})]}
                   onCreated={(t) => { const next = [t, ...templates]; setTemplates(next); pickTemplate(t.id, next); }} />
 
