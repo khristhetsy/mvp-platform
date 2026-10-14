@@ -8,6 +8,7 @@ import { INVESTOR_PROFILE_LABEL, INVESTOR_PROFILE_OPTIONS, isInvestorProfileLabe
 import { parseMoneyBand } from "@/lib/investors/preference-match";
 import { CompanyLinkedRecordEditor } from "./CompanyLinkedRecordEditor";
 import { NoteLogEntries } from "./NoteLogEntries";
+import { ContactTaskViews } from "./ContactTaskViews";
 import { RatingRing } from "@/components/investor-rating/RatingRing";
 import { SalesChatter } from "@/components/sales/SalesChatter";
 
@@ -453,8 +454,9 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
     } catch { setOptMsg("Network error. Couldn’t save the option."); }
     setKindOpen(false);
   }
-  const [contactTasks, setContactTasks] = useState<{ id: string; title: string; task_type: string; due_date: string | null; status: string; assignee_name: string | null }[]>([]);
+  const [contactTasks, setContactTasks] = useState<{ id: string; title: string; task_type: string; due_date: string | null; status: string; assignee_name: string | null; opportunity_id?: string | null }[]>([]);
   const [tasksLoaded, setTasksLoaded] = useState(false);
+  const [taskView, setTaskView] = useState<"all" | "opps" | "pipeline">("all");
   const [confirmTaskId, setConfirmTaskId] = useState<string | null>(null);
   const [savedNotes, setSavedNotes] = useState<string | null>(initialContact.note);
   // Details are edited one field at a time (see Row); these hold the two composite editors.
@@ -1151,6 +1153,11 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                   {profileSub === "tasks" && (
                     <div style={{ paddingTop: 4 }}>
                       <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", marginBottom: 8 }}><i className="ti ti-link" aria-hidden="true" /> New tasks auto-link to {contact.name}.</div>
+                      <div role="group" aria-label="Tasks view" style={{ display: "inline-flex", border: "0.5px solid #d7dbe3", borderRadius: 8, overflow: "hidden", marginBottom: 10 }}>
+                        {([["all", "All"], ["opps", "Opportunities"], ["pipeline", "Pipeline"]] as const).map(([k, label], i) => (
+                          <button key={k} type="button" aria-pressed={taskView === k} onClick={() => setTaskView(k)} style={{ fontSize: 12, fontWeight: 600, padding: "6px 14px", border: "none", borderLeft: i ? "0.5px solid #d7dbe3" : "none", cursor: "pointer", background: taskView === k ? "#4338CA" : "#fff", color: taskView === k ? "#fff" : "var(--foreground)" }}>{label}</button>
+                        ))}
+                      </div>
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 96px 128px 130px", gap: 8, background: "#F5F9FF", border: "0.5px solid #eef1f5", borderRadius: 8, padding: 10 }}>
                         <div style={{ position: "relative", minWidth: 0 }} onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setKindOpen(false); }}>
                           <div style={{ ...inp, display: "flex", alignItems: "center", gap: 6, padding: "0 9px", height: 32, ...(kindOpen ? { borderColor: "#185FA5" } : {}) }}>
@@ -1196,6 +1203,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                         </div>
                       </div>
 
+                      {taskView === "all" && (
                       <div style={{ marginTop: 12, border: "0.5px solid #eef1f5", borderRadius: 8, overflow: "hidden" }}>
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 74px 92px 96px 68px 66px", gap: 8, padding: "8px 12px", background: "#F7F9FC", fontSize: 10, fontWeight: 600, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--muted-foreground)", borderBottom: "0.5px solid #eef1f5" }}>
                           <span>Task</span><span>Type</span><span>Due</span><span>Assignee</span><span>Status</span><span style={{ textAlign: "right" }}>Actions</span>
@@ -1232,6 +1240,8 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                           );
                         })}
                       </div>
+                      )}
+                      {taskView !== "all" && <ContactTaskViews view={taskView} opps={opportunities} tasks={contactTasks} loaded={tasksLoaded} busy={busy} onDone={(id) => void taskDone(id)} />}
                     </div>
                   )}
                   {profileSub === "sendmsg" && (
