@@ -6,14 +6,16 @@ export const dynamic = "force-dynamic";
 
 export type AdminSearchResult = {
   id: string;
-  type: "contact" | "company" | "event";
+  type: "contact" | "company" | "event" | "opportunity" | "invoice";
   title: string;
   subtitle: string | null;
   href: string;
+  /** Contacts only: lets the palette offer an Email action. */
+  email?: string | null;
 };
 
 // GET /api/admin/search?q=… : global ⌘K record search for the admin workspace.
-// Contacts (crm_contacts), companies and events. Few rows per type, one cheap
+// Contacts (crm_contacts), companies, events, deals and invoices. Few rows per type, one cheap
 // query each, no counts (the database is slow per buffer access).
 export async function GET(req: NextRequest): Promise<Response> {
   const profile = await requireRole(["admin", "analyst"]).catch(() => null);
@@ -30,7 +32,7 @@ export async function GET(req: NextRequest): Promise<Response> {
   const wordStart = `% ${safe}%`;
   const contains = `%${safe}%`;
 
-  const [contactsRes, companiesRes, eventsRes] = await Promise.all([
+  const [contactsRes, companiesRes, eventsRes, oppsRes, invoicesRes] = await Promise.all([
     // Prefix and word start matches only, so a common name stops after 5 rows
     // instead of scanning the whole table.
     db
@@ -48,6 +50,16 @@ export async function GET(req: NextRequest): Promise<Response> {
       .select("id, title, status, starts_at")
       .ilike("title", contains)
       .limit(3),
+    db
+      .from("sales_opportunities")
+      .select("id, title, status")
+      .ilike("title", contains)
+      .limit(3),
+    db
+      .from("acct_invoices")
+      .select("id, invoice_number, status")
+      .ilike("invoice_number", contains)
+      .limit(3),
   ]);
 
   const results: AdminSearchResult[] = [];
@@ -59,6 +71,7 @@ export async function GET(req: NextRequest): Promise<Response> {
       title: c.name ?? c.email ?? "Contact",
       subtitle: [c.company, c.email].filter(Boolean).join(" · ") || null,
       href: `/admin/sales/contacts/${c.id}`,
+      email: c.email,
     });
   }
 
@@ -79,6 +92,26 @@ export async function GET(req: NextRequest): Promise<Response> {
       title: e.title ?? "Event",
       subtitle: [e.status, e.starts_at ? new Date(e.starts_at).toISOString().slice(0, 10) : null].filter(Boolean).join(" · ") || null,
       href: `/admin/events/${e.id}`,
+    });
+  }
+
+  for (const o of (oppsRes.data ?? []) as Array<{ id: string; title: string | null; status: string | null }>) {
+    results.push({
+      id: o.id,
+      type: "opportunity",
+      title: o.title ?? "Opportunity",
+      subtitle: ["Sales › Opportunities", o.status].filter(Boolean).join(" · "),
+      href: `/admin/sales/opportunities/${o.id}`,
+    });
+  }
+
+  for (const v of (invoicesRes.data ?? []) as Array<{ id: string; invoice_number: string | null; status: string | null }>) {
+    results.push({
+      id: v.id,
+      type: "invoice",
+      title: v.invoice_number ? `Invoice ${v.invoice_number}` : "Invoice",
+      subtitle: ["Accounting › Invoices", v.status].filter(Boolean).join(" · "),
+      href: `/admin/accounting/invoices/${v.id}`,
     });
   }
 
