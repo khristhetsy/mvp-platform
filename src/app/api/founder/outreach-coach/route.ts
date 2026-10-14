@@ -140,10 +140,10 @@ export async function POST(request: Request) {
     // Per-plan run cap (Admin, Feature Controls, AI usage limits).
     const aiRun = await gateAiRun(auth.profile.id, "outreach_coach");
     if (aiRun.blocked) return aiRun.blocked;
-    const raw = await claudeComplete(
+    const raw = await aiRun.run(() => claudeComplete(
       [{ role: "user", content: userMessage }],
       { usage: { category: "founder", feature: "outreach_coach" }, model: CLAUDE_SONNET, maxTokens: 900, system: SYSTEM_PROMPT },
-    );
+    ));
     await aiRun.done();
 
     // Strip any markdown code fences

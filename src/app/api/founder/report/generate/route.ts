@@ -63,7 +63,7 @@ export async function POST(): Promise<NextResponse> {
     // Per-plan run cap (Admin, Feature Controls, AI usage limits).
     const aiRun = await gateAiRun(profile.id, "diligence_report");
     if (aiRun.blocked) return aiRun.blocked as NextResponse;
-    const result = await generateAndSaveDiligenceReport(admin, company.id);
+    const result = await aiRun.run(() => generateAndSaveDiligenceReport(admin, company.id));
     await aiRun.done();
 
     await writeAuditLog(admin, {

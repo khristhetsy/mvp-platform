@@ -17,7 +17,6 @@ export default async function AdminAiUsagePage() {
   const report = await loadAiUsageReport();
   const { spend } = report;
 
-  const unattributedShare = spend.totalUsd > 0 ? (spend.unattributedUsd / spend.totalUsd) * 100 : null;
   const spendStartsLate =
     report.firstUsageAt !== null && spend.firstAt !== null && new Date(spend.firstAt) > new Date(report.firstUsageAt);
 
@@ -81,18 +80,20 @@ export default async function AdminAiUsagePage() {
                 }
               />
               <OperationalMetric
-                label="Cost with no user attached"
-                value={unattributedShare === null ? "Not measured" : `${unattributedShare.toFixed(1)}%`}
-                detail={
-                  unattributedShare === null
-                    ? "No spend rows to measure."
-                    : `${usd(spend.unattributedUsd)} of ${usd(spend.totalUsd)} across ${spend.unattributedEvents.toLocaleString("en-US")} calls`
-                }
-                flag={
-                  unattributedShare !== null && unattributedShare > 0
-                    ? { text: "Cost per user is incomplete until each AI call passes the user.", tone: "warn" }
-                    : null
-                }
+                label="Cost tied to a user"
+                value={spend.totalUsd > 0 ? usd(spend.totalUsd - spend.unattributedUsd) : "Not measured"}
+                detail={spend.totalUsd > 0 ? `${(((spend.totalUsd - spend.unattributedUsd) / spend.totalUsd) * 100).toFixed(1)}% of the total` : "No spend rows to measure."}
+              />
+              <OperationalMetric
+                label="User cost not tied to a user"
+                value={spend.totalUsd > 0 ? usd(spend.userToolUsd) : "Not measured"}
+                detail={spend.totalUsd > 0 ? `${((spend.userToolUsd / spend.totalUsd) * 100).toFixed(1)}% of the total. New runs now carry the user, so this shrinks.` : "No spend rows to measure."}
+                flag={spend.userToolUsd > 0 ? { text: "Logged before the user was passed to the AI call.", tone: "warn" } : null}
+              />
+              <OperationalMetric
+                label="System cost, no user expected"
+                value={spend.totalUsd > 0 ? usd(spend.systemUsd) : "Not measured"}
+                detail={spend.totalUsd > 0 ? `${((spend.systemUsd / spend.totalUsd) * 100).toFixed(1)}% of the total. Briefings, public chat, admin tools, cron.` : "No spend rows to measure."}
               />
             </MetricRow>
 

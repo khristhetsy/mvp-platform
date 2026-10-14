@@ -22,7 +22,7 @@ export async function POST(request: Request): Promise<Response> {
     // Per-plan run cap (Admin, Feature Controls, AI usage limits).
     const aiRun = await gateAiRun(g.profile.id, "business_plan");
     if (aiRun.blocked) return aiRun.blocked;
-    const draft = await generateSectionDraft(
+    const draft = await aiRun.run(() => generateSectionDraft(
       parsed.data.sectionId,
       {
         name: g.company.company_name,
@@ -32,7 +32,7 @@ export async function POST(request: Request): Promise<Response> {
         fundingAmount: g.company.funding_amount ?? null,
       },
       plan?.sections ?? null,
-    );
+    ));
     await aiRun.done();
     return NextResponse.json(draft);
   } catch (err) {

@@ -4,6 +4,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { getCompanyPledgeSummary, getFounderPledgeCompanyId } from "@/lib/data/investor-pledges";
 import { claudeComplete, isClaudeConfigured, CLAUDE_SONNET } from "@/lib/claude";
+import { withAiUsage } from "@/lib/ai-budget/context";
 
 export const dynamic = "force-dynamic";
 
@@ -214,10 +215,10 @@ export async function GET() {
   const userMessage = `Analyze this startup founder's fundraising situation and provide a health assessment:\n\n${context}`;
 
   try {
-    const raw = await claudeComplete(
+    const raw = await withAiUsage({ profileId: profile.id }, () => claudeComplete(
       [{ role: "user", content: userMessage }],
       { usage: { category: "founder", feature: "round_health_advisor" }, model: CLAUDE_SONNET, maxTokens: 700, system: SYSTEM_PROMPT },
-    );
+    ));
 
     const cleaned = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
     const result = JSON.parse(cleaned) as RoundHealthAdvisorResult;

@@ -4,6 +4,7 @@ import { generateOutreachDraftAI } from "@/lib/founder-crm/outreach-drafts";
 import { evaluateFounderOutreachReadiness } from "@/lib/founder-crm/outreach-readiness";
 import { notifyFounderOutreachBlocked } from "@/lib/notifications/founder-outreach-events";
 import { outreachDraftSchema } from "@/lib/validation";
+import { withAiUsage } from "@/lib/ai-budget/context";
 
 export async function POST(request: Request) {
   const auth = await requireFounderInvestorCrmApi();
@@ -36,14 +37,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Contact not found." }, { status: 404 });
   }
 
-  const draft = await generateOutreachDraftAI({
-    kind: parsed.data.kind,
-    company: auth.company,
-    contact,
-    readinessScore: readiness.readinessScore,
-    founderName: auth.profile.full_name,
-    tone: parsed.data.tone,
-  });
+  const draft = await withAiUsage({ profileId: auth.profile.id }, () =>
+    generateOutreachDraftAI({
+      kind: parsed.data.kind,
+      company: auth.company,
+      contact,
+      readinessScore: readiness.readinessScore,
+      founderName: auth.profile.full_name,
+      tone: parsed.data.tone,
+    }),
+  );
 
   return NextResponse.json({ draft });
 }

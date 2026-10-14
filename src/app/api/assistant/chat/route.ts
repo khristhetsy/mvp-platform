@@ -11,6 +11,7 @@ import { loadAssistantContextForProfile, runAssistantChat } from "@/lib/assistan
 import { emitOperationalEvent } from "@/lib/operational-activity/create-event";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { assistantChatSchema } from "@/lib/validation";
+import { withAiUsage } from "@/lib/ai-budget/context";
 
 function roleFromProfile(role: string): "founder" | "investor" | "admin" | "analyst" {
   if (role === "investor") return "investor";
@@ -89,11 +90,13 @@ export async function POST(request: Request) {
   // Founders only: staff and investors use this chat too and are not on a founder plan.
   const aiRun = auth.profile.role === "founder" ? await gateAiRun(auth.profile.id, "class_assistant") : { blocked: null, done: async () => {} };
   if (aiRun.blocked) return aiRun.blocked;
-  const response = await runAssistantChat({
-    profile: auth.profile,
-    supabase: auth.supabase,
-    request: { ...parsed.data, message },
-  });
+  const response = await withAiUsage({ profileId: auth.profile.id }, () =>
+    runAssistantChat({
+      profile: auth.profile,
+      supabase: auth.supabase,
+      request: { ...parsed.data, message },
+    }),
+  );
   await aiRun.done();
 
   emitOperationalEvent(createServiceRoleClient(), {
