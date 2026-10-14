@@ -10,7 +10,7 @@ import { OdooTasksBoard } from "./OdooTasksBoard";
 const KEY = "ir.tasks.project";
 const ALL = "all";
 
-export function HubTasksClient({ meId, projects }: { meId: string; projects: Array<{ id: string; title: string; founder_name: string | null }> }) {
+export function HubTasksClient({ meId, projects, canColumnMenu = false }: { meId: string; projects: Array<{ id: string; title: string; founder_name: string | null }>; canColumnMenu?: boolean }) {
   const router = useRouter();
   const sp = useSearchParams();
   const fromUrl = sp.get("project");
@@ -44,7 +44,7 @@ export function HubTasksClient({ meId, projects }: { meId: string; projects: Arr
           </select>
         </label>
       </div>
-      {projectId === ALL ? <OdooTasksBoard meId={meId} /> : projectId ? <TasksClient key={projectId} projectId={projectId} meId={meId} initialMonth={null} /> : null}
+      {projectId === ALL ? <OdooTasksBoard meId={meId} canColumnMenu={canColumnMenu} /> : projectId ? <TasksClient key={projectId} projectId={projectId} meId={meId} initialMonth={null} /> : null}
     </div>
   );
 }
