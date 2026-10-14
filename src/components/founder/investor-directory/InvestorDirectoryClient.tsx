@@ -10,7 +10,7 @@
  * accepts the terms of use (own company's fundraising only, no redistribution).
  */
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FounderToolbar } from "@/components/founder/FounderToolbar";
 import { EMPTY_SEARCH, type SearchState } from "@/components/admin/OdooSearchBar";
 import { OdooPager } from "@/components/admin/OdooPager";
@@ -23,7 +23,7 @@ type Row = {
   website: string | null; city: string | null; state: string | null; investor_types: string[]; funding_stages: string[];
   capital_types: string[]; industries: string[]; fund_name: string | null; fund_size: number | null; avg_investment: number | null;
   strategy: string | null; investing_now: boolean | null; source: string; source_url: string | null; verified_at: string | null;
-  held: boolean; hasEmail: boolean; hasPhone: boolean;
+  held: boolean; hasEmail: boolean; hasPhone: boolean; added_at: string; filed_at: string | null;
 };
 type Payload = {
   rows: Row[]; total: number; page: number; pageSize: number; access: FounderDirectoryAccess; tiers: DirectoryTier[];
@@ -43,6 +43,40 @@ async function fetchDirectory(q: URLSearchParams): Promise<{ ok: true; body: Pay
   } catch {
     return { ok: false, error: "Couldn't load the directory." };
   }
+}
+
+/** Table columns the founder can show or hide (saved per device). */
+type ColKey = "email" | "phone" | "type" | "date" | "source" | "location" | "stage" | "industry" | "fund";
+const COLUMNS: { key: ColKey; label: string; on: boolean; width: string }[] = [
+  { key: "email", label: "Email", on: true, width: "minmax(150px,1.2fr)" },
+  { key: "phone", label: "Phone", on: true, width: "minmax(110px,0.9fr)" },
+  { key: "type", label: "Investor type", on: true, width: "minmax(120px,1fr)" },
+  { key: "date", label: "Date", on: true, width: "84px" },
+  { key: "source", label: "Source", on: true, width: "minmax(96px,0.8fr)" },
+  { key: "location", label: "Location", on: false, width: "minmax(110px,0.9fr)" },
+  { key: "stage", label: "Stage", on: false, width: "minmax(110px,0.9fr)" },
+  { key: "industry", label: "Industry", on: false, width: "minmax(120px,1fr)" },
+  { key: "fund", label: "Latest fund", on: false, width: "minmax(120px,1fr)" },
+];
+const DEFAULT_COLS = COLUMNS.filter((c) => c.on).map((c) => c.key);
+
+function readCols(storageKey: string): ColKey[] {
+  try {
+    const raw = typeof window === "undefined" ? null : window.localStorage.getItem(storageKey);
+    const parsed = raw ? (JSON.parse(raw) as string[]) : null;
+    const valid = parsed?.filter((k): k is ColKey => COLUMNS.some((c) => c.key === k));
+    return valid && valid.length ? valid : DEFAULT_COLS;
+  } catch {
+    return DEFAULT_COLS;
+  }
+}
+
+function shortDate(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(iso.length === 10 ? `${iso}T12:00:00Z` : iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  const sameYear = d.getUTCFullYear() === new Date().getUTCFullYear();
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", ...(sameYear ? {} : { year: "numeric" }), timeZone: "UTC" });
 }
 
 const shortSource = (s: string) => s.replace(/\s*\(.*\)\s*$/, "").replace(/^(SBA|USDA)\b.*$/, "$1");
@@ -65,6 +99,12 @@ export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pi
   const [importing, setImporting] = useState(false);
   const [terms, setTerms] = useState(false);
   const [showPlans, setShowPlans] = useState(false);
+  // Columns: each tab remembers its own picks on this device.
+  const colsKey = `icapos.directory.columns.${pinnedSource ? "formd" : "directory"}`;
+  const [cols, setCols] = useState<ColKey[]>(() => readCols(colsKey));
+  const [colsOpen, setColsOpen] = useState(false);
+  const sortRef = useRef<"firm" | "newest">("firm");
+  const [sortNewest, setSortNewest] = useState(false);
   const [selectingAll, setSelectingAll] = useState(false);
   const [capped, setCapped] = useState(false);
   // Form D firms seen in loaded rows or select all results: they don't count toward the limit.
@@ -90,6 +130,7 @@ export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pi
     // A pinned source (the Form D tab) always wins over the Source chips.
     if (pinnedSource) { q.delete("source"); q.append("source", pinnedSource); }
     if (p > 1) q.set("page", String(p));
+    if (sortRef.current === "newest") q.set("sort", "newest");
     if (withFacets) q.set("facets", "1");
     return q;
   }, [industries.all, pinnedSource, slugOf, stages.all, types.all]);
@@ -205,6 +246,27 @@ export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pi
   const heldLeft = access ? Math.max(0, contactLimit - access.held) : 0;
   const nearLimit = !browseOnly && heldPct >= 80;
   const formdTab = pinnedSource === FORM_D_SOURCE;
+  // Form D rows are all "SEC Form D", so that tab drops the Source column.
+  const visibleCols = COLUMNS.filter((c) => cols.includes(c.key) && !(formdTab && c.key === "source"));
+  const gridCols = `28px minmax(200px,1.6fr) ${visibleCols.map((c) => c.width).join(" ")} 24px`;
+  const tableMinWidth = 300 + visibleCols.length * 120;
+  function toggleCol(k: ColKey) {
+    setCols((prev) => {
+      const next = prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k];
+      try { window.localStorage.setItem(colsKey, JSON.stringify(next)); } catch { /* per device only */ }
+      return next;
+    });
+  }
+  function resetCols() {
+    setCols(DEFAULT_COLS);
+    try { window.localStorage.removeItem(colsKey); } catch { /* per device only */ }
+  }
+  function sortByDate(newest: boolean) {
+    sortRef.current = newest ? "newest" : "firm";
+    setSortNewest(newest);
+    setPage(1);
+    void load(search, 1);
+  }
   const formdHere = useMemo(() => {
     const s = new Set(knownFormd);
     for (const r of data?.rows ?? []) if (r.source === FORM_D_SOURCE) s.add(r.id);
@@ -234,6 +296,32 @@ export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pi
       setCapped(ids.length < body.ids.length);
     } finally {
       setSelectingAll(false);
+    }
+  }
+
+  function cellText(row: Row, key: ColKey): { text: string; muted?: boolean } {
+    switch (key) {
+      case "email":
+        if (row.held) return row.email ? { text: row.email } : { text: "No email", muted: true };
+        if (row.source === FORM_D_SOURCE && !row.hasEmail) return { text: "Not in filing", muted: true };
+        return row.hasEmail ? { text: "After import", muted: true } : { text: "No email", muted: true };
+      case "phone":
+        if (row.held) return row.phone ? { text: row.phone } : { text: "None", muted: true };
+        return row.hasPhone ? { text: "After import", muted: true } : { text: "None", muted: true };
+      case "type":
+        return { text: row.investor_types.map(types.label).join(", ") || "—", muted: row.investor_types.length === 0 };
+      case "date":
+        return { text: shortDate(row.filed_at ?? row.added_at) };
+      case "source":
+        return { text: shortSource(row.source) };
+      case "location":
+        return { text: [row.city, row.state].filter(Boolean).join(", ") || "—", muted: !row.city && !row.state };
+      case "stage":
+        return { text: row.funding_stages.map(stages.label).join(", ") || "—", muted: row.funding_stages.length === 0 };
+      case "industry":
+        return { text: row.industries.map(industries.label).join(", ") || "—", muted: row.industries.length === 0 };
+      case "fund":
+        return { text: row.fund_name ?? "—", muted: !row.fund_name };
     }
   }
 
@@ -395,23 +483,53 @@ export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pi
         </div>
       ) : null}
 
-      <div className="mt-3">
-        {!error && rows.length > 0 && selectable.length > 0 ? (
-          <label className="flex items-center gap-3 border-b border-slate-100 bg-slate-50 px-3 py-1.5 text-[12px] text-slate-500">
-            <input
-              type="checkbox"
-              aria-label="Select every investor on this page"
-              checked={pageAllSelected}
-              onChange={() => setSelected((s) => {
-                const next = new Set(s);
-                if (pageAllSelected) for (const r of selectable) next.delete(r.id);
-                else for (const r of selectable) next.add(r.id);
-                return next;
-              })}
-              className="h-4 w-4"
-            />
-            <span>Select all on this page ({n(selectable.length)})</span>
-          </label>
+      <div className="relative mt-3">
+        {colsOpen ? (
+          <div className="absolute right-3 top-8 z-20 w-52 rounded-lg border border-slate-200 bg-white p-2 text-[12.5px] shadow-lg">
+            <p className="px-1 pb-1 text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">Columns</p>
+            {COLUMNS.filter((c) => !(formdTab && c.key === "source")).map((c) => (
+              <label key={c.key} className="flex cursor-pointer items-center gap-2 rounded px-1 py-1 hover:bg-slate-50">
+                <input type="checkbox" checked={cols.includes(c.key)} onChange={() => toggleCol(c.key)} className="h-3.5 w-3.5" />
+                {c.key === "date" ? (formdTab ? "Filing date" : "Date added") : c.label}
+              </label>
+            ))}
+            <div className="mt-1 flex justify-between border-t border-slate-100 px-1 pt-1.5">
+              <button type="button" onClick={resetCols} className="text-[12px] text-[#185FA5] hover:underline">Reset to default</button>
+              <button type="button" onClick={() => setColsOpen(false)} className="text-[12px] text-slate-500 hover:text-slate-800">Done</button>
+            </div>
+          </div>
+        ) : null}
+        <div className="overflow-x-auto">
+        <div style={{ minWidth: tableMinWidth }}>
+        {!error && rows.length > 0 ? (
+          <div className="grid items-center gap-3 border-b border-slate-100 bg-slate-50 px-3 py-1.5 text-[11.5px] font-medium text-slate-500" style={{ gridTemplateColumns: gridCols }}>
+            {selectable.length > 0 ? (
+              <input
+                type="checkbox"
+                aria-label={`Select all on this page (${n(selectable.length)})`}
+                title={`Select all on this page (${n(selectable.length)})`}
+                checked={pageAllSelected}
+                onChange={() => setSelected((s) => {
+                  const next = new Set(s);
+                  if (pageAllSelected) for (const r of selectable) next.delete(r.id);
+                  else for (const r of selectable) next.add(r.id);
+                  return next;
+                })}
+                className="h-4 w-4"
+              />
+            ) : <span />}
+            <span>{formdTab ? "Firm" : "Firm / contact"}</span>
+            {visibleCols.map((c) => c.key === "date" ? (
+              formdTab ? <span key={c.key}>Filed</span> : (
+                <button key={c.key} type="button" onClick={() => sortByDate(!sortNewest)} className="text-left font-medium hover:text-slate-800" title={sortNewest ? "Sort by firm name" : "Sort newest first"}>
+                  Added {sortNewest ? <i className="ti ti-arrow-down" aria-hidden="true" /> : null}
+                </button>
+              )
+            ) : <span key={c.key}>{c.label}</span>)}
+            <button type="button" onClick={() => setColsOpen((v) => !v)} aria-expanded={colsOpen} aria-label="Choose columns" className="text-center text-slate-500 hover:text-slate-800">
+              <i className="ti ti-dots-vertical" aria-hidden="true" />
+            </button>
+          </div>
         ) : null}
         {error ? <p className="px-4 py-10 text-center text-sm text-[#A32D2D]">{error}</p>
           : loading && !data ? <p className="px-4 py-10 text-center text-sm text-slate-500">Loading the directory…</p>
@@ -432,7 +550,7 @@ export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pi
                 const isOpen = open === r.id;
                 return (
                   <div key={r.id} className="border-b border-slate-100">
-                    <div className="flex cursor-pointer items-center gap-3 px-3 py-2.5 hover:bg-slate-50" onClick={() => setOpen(isOpen ? null : r.id)}>
+                    <div className="grid cursor-pointer items-center gap-3 px-3 py-2.5 hover:bg-slate-50" style={{ gridTemplateColumns: gridCols }} onClick={() => setOpen(isOpen ? null : r.id)}>
                       {r.held ? (
                         <i className="ti ti-check w-4 text-center text-[#27500A]" aria-label="In your outreach" />
                       ) : (
@@ -447,13 +565,19 @@ export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pi
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-[14px] font-medium text-slate-900">{r.firm}</div>
                         <div className="truncate text-[12px] text-slate-500">
-                          {[r.contact_name, r.funding_stages.map(stages.label).join(", ") || r.strategy, [r.city, r.state].filter(Boolean).join(", ")].filter(Boolean).join(" · ")}
+                          {[r.contact_name, cols.includes("location") ? null : [r.city, r.state].filter(Boolean).join(", ")].filter(Boolean).join(" · ")}
                         </div>
                       </div>
-                      {r.held
-                        ? <span className="rounded-md bg-[#EAF3DE] px-2 py-0.5 text-[11px] text-[#27500A]">In outreach</span>
-                        : <span className="rounded-md bg-[#E6F1FB] px-2 py-0.5 text-[11px] text-[#0C447C]">{shortSource(r.source)}</span>}
-                      <i className={`ti ti-chevron-${isOpen ? "up" : "down"} text-slate-400`} aria-hidden="true" />
+                      {visibleCols.map((c) => {
+                        if (c.key === "source") {
+                          return r.held
+                            ? <span key={c.key}><span className="rounded-md bg-[#EAF3DE] px-2 py-0.5 text-[11px] text-[#27500A]">In outreach</span></span>
+                            : <span key={c.key} className="truncate"><span className="rounded-md bg-[#E6F1FB] px-2 py-0.5 text-[11px] text-[#0C447C]">{shortSource(r.source)}</span></span>;
+                        }
+                        const v = cellText(r, c.key);
+                        return <span key={c.key} className={`truncate text-[12.5px] ${c.key === "date" || c.key === "phone" ? "tabular-nums " : ""}${v.muted ? "text-slate-400" : "text-slate-700"}`} title={v.text}>{v.text}</span>;
+                      })}
+                      <i className={`ti ti-chevron-${isOpen ? "up" : "down"} text-center text-slate-400`} aria-hidden="true" />
                     </div>
                     {isOpen ? (
                       <div className="grid grid-cols-[100px_minmax(0,1fr)] gap-x-3 gap-y-1 bg-slate-50 px-3 pb-3 pl-10 pt-1 text-[12.5px]">
@@ -474,6 +598,8 @@ export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pi
               })}
             </div>
           ))}
+        </div>
+        </div>
       </div>
 
       <p className="px-3 py-3 text-[11.5px] text-slate-500">{DIRECTORY_DISCLAIMER} For your own company&apos;s fundraising only.</p>

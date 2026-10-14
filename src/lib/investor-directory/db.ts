@@ -242,6 +242,8 @@ export type DirectoryQuery = {
   investingNow?: boolean;
   hasEmail?: boolean;
   page?: number;
+  /** "newest" sorts by date added, newest first; default is firm name. */
+  sort?: "firm" | "newest";
 };
 
 /** The search filters, shared by the page query and "Select all matching". */
@@ -263,12 +265,16 @@ function applyDirectoryFilters<T extends Record<string, any>>(req: T, query: Dir
 }
 
 const LIST_COLUMNS =
-  "id, firm, contact_name, title, email, phone, website, city, state, investor_types, funding_stages, capital_types, industries, fund_name, fund_size, avg_investment, strategy, investing_now, source, source_url, verified_at, verification";
+  "id, firm, contact_name, title, email, phone, website, city, state, investor_types, funding_stages, capital_types, industries, fund_name, fund_size, avg_investment, strategy, investing_now, source, source_url, verified_at, verification, created_at, notes";
 
 export type FounderDirectoryRow = Omit<DirectoryRecord, "import_id" | "status" | "opted_out_at" | "in_network" | "notes" | "created_at" | "updated_at" | "country"> & {
   held: boolean;
   hasEmail: boolean;
   hasPhone: boolean;
+  /** When the record was added to the directory. */
+  added_at: string;
+  /** Form D firms: the latest SEC filing date. Null for everything else. */
+  filed_at: string | null;
 };
 
 /** Escape a value for a PostgREST ilike pattern inside .or(). */
@@ -288,22 +294,45 @@ export async function searchDirectory(query: DirectoryQuery, companyId: string |
   );
   const from = (page - 1) * PAGE_SIZE;
   const [{ data, count, error }, held] = await Promise.all([
-    req.order("firm").range(from, from + PAGE_SIZE - 1),
+    (query.sort === "newest" ? req.order("created_at", { ascending: false }).order("firm") : req.order("firm")).range(from, from + PAGE_SIZE - 1),
     companyId ? heldDirectoryIds(companyId) : Promise.resolve(new Set<string>()),
   ]);
   if (error) throw new Error(error.message);
-  const rows = ((data ?? []) as unknown as DirectoryRecord[]).map((r) => {
+  const records = (data ?? []) as unknown as DirectoryRecord[];
+  const filed = await formdFilingDates(records);
+  const rows = records.map((r) => {
     const isHeld = held.has(r.id);
+    const { notes: _notes, created_at, ...rest } = r;
+    void _notes;
     return {
-      ...r,
+      ...rest,
       email: isHeld ? r.email : null,
       phone: isHeld ? r.phone : null,
       held: isHeld,
       hasEmail: Boolean(r.email),
       hasPhone: Boolean(r.phone),
+      added_at: created_at,
+      filed_at: filed.get(r.id) ?? null,
     } as FounderDirectoryRow;
   });
   return { rows, total: count ?? rows.length, page };
+}
+
+/** Latest SEC filing date for Form D rows, read from the Form D registry (notes = "formd-firm:<id>"). */
+async function formdFilingDates(records: DirectoryRecord[]): Promise<Map<string, string>> {
+  const byFirm = new Map<string, string>();
+  for (const r of records) {
+    const m = r.source === FORM_D_SOURCE ? /^formd-firm:(.+)$/.exec(r.notes ?? "") : null;
+    if (m) byFirm.set(m[1], r.id);
+  }
+  const out = new Map<string, string>();
+  if (byFirm.size === 0) return out;
+  const { data } = await db().from("formd_firms").select("id, last_filing_at").in("id", [...byFirm.keys()]);
+  for (const f of (data ?? []) as { id: string; last_filing_at: string | null }[]) {
+    const rowId = byFirm.get(f.id);
+    if (rowId && f.last_filing_at) out.set(rowId, f.last_filing_at);
+  }
+  return out;
 }
 
 /**
