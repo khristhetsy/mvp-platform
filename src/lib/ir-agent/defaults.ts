@@ -70,6 +70,8 @@ export const DEFAULT_TEMPLATE: AgentTemplate = {
     { field: "check_size", prompt: JOHNNY_QUESTIONS.check[0], options: [...OPTIONS.check], enabled: true },
     { field: "preferred_stages", prompt: JOHNNY_QUESTIONS.stage[0], options: [...OPTIONS.stage], enabled: true },
     { field: "capital_types", prompt: JOHNNY_QUESTIONS.cap[0], options: [...OPTIONS.cap], enabled: true },
+    // Stored as typed and carried onto the booking. The founder's counsel decides whether it stays on.
+    { field: "custom", prompt: "Are you an accredited investor?", options: ["Yes", "No", "Not sure"], enabled: true },
   ],
   contactFields: [
     { key: "name", label: "Full name", kind: "short_text", required: true, enabled: true },
