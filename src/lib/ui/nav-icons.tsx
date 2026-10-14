@@ -1,5 +1,7 @@
 import {
   Activity,
+  AlarmClock,
+  Cpu,
   BotMessageSquare,
   ContactRound,
   ReceiptText,
@@ -400,6 +402,8 @@ export const workspaceNavIconByHref: Record<string, LucideIcon> = {
   "/admin/pricing": Tags,
   "/admin/profile-fields": TextCursorInput,
   "/admin/scheduled-jobs": Clock,
+  "/admin/sales/scheduled-emails": AlarmClock,
+  "/admin/ai-usage": Cpu,
 };
 
 export function getWorkspaceNavIcon(href: string): LucideIcon {
