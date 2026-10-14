@@ -57,7 +57,7 @@ Host is the founder who created the agent. With hours set in Scheduling, the age
 ## Open items for Khris
 
 1. The three fixed Johnny answers (stake, after the call, privacy) are Johnny's and are not copied to founder agents. Founders teach their own.
-2. Accredited investor question: not in the default set. Admin can add it to the master template.
+2. Accredited investor question: in the default set as a custom question (Yes, No, Not sure), stored as typed. Existing agents add it from Build if wanted.
 3. The confirmation call promise is dropped for founder agents (the founder may not make that call).
 4. Johnny's Google token: reconnect in Integrations.
 5. Repo visibility: the repository is public on GitHub.
