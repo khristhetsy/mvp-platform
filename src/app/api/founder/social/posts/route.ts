@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { requireFounderSocial, ownsAccounts, ownsCampaign, socialDb } from "@/lib/social/founder-auth";
+import { requireFounderSocial, ownsAccounts, ownsCampaign, ownsPost, socialDb } from "@/lib/social/founder-auth";
 import { getFounderSocialUsage } from "@/lib/social/founder-limits";
 import { postsThatFit } from "@/lib/social/usage";
 import { logFounderSocialEvent } from "@/lib/social/activity";
@@ -96,4 +96,26 @@ export async function POST(req: NextRequest): Promise<Response> {
     return NextResponse.json({ ok: true, postId: post.id, usage: after });
   }
   return NextResponse.json({ ok: true, postId: post.id, usage, held });
+}
+
+// Move a scheduled post to a new time (drag and drop on the Schedule tab). Only posts that
+// have not gone out yet. Moving a post does not change how many posts count this cycle.
+export async function PATCH(req: NextRequest): Promise<Response> {
+  const auth = await requireFounderSocial();
+  if ("error" in auth) return auth.error;
+  const parsed = z.object({ postId: z.string().uuid(), scheduledAt: z.string().datetime() }).safeParse(await req.json().catch(() => ({})));
+  if (!parsed.success) return NextResponse.json({ error: "Invalid time." }, { status: 400 });
+  const { postId, scheduledAt } = parsed.data;
+  if (!(await ownsPost(auth.founderId, postId))) return NextResponse.json({ error: "Post not found." }, { status: 404 });
+  if (new Date(scheduledAt).getTime() < Date.now() + 60_000) return NextResponse.json({ error: "Pick a time in the future." }, { status: 400 });
+
+  const db = socialDb();
+  const { data: post } = await db.from("social_posts").select("id, status, held_until").eq("id", postId).maybeSingle();
+  if (!post || post.status !== "scheduled" || post.held_until) return NextResponse.json({ error: "Only scheduled posts can be moved." }, { status: 400 });
+  const { error: pe } = await db.from("social_posts").update({ scheduled_at: scheduledAt }).eq("id", postId).eq("owner_profile_id", auth.founderId);
+  if (pe) return NextResponse.json({ error: pe.message }, { status: 400 });
+  // Only variants still waiting to go out move with it.
+  await db.from("social_variants").update({ scheduled_at: scheduledAt, next_attempt_at: scheduledAt }).eq("post_id", postId).eq("status", "queued");
+  await logFounderSocialEvent({ type: "founder.social_post_rescheduled", founderId: auth.founderId, description: `Moved to ${scheduledAt}`, metadata: { postId, scheduledAt } });
+  return NextResponse.json({ ok: true });
 }

@@ -46,7 +46,7 @@ function db(): any { return createServiceRoleClient(); }
 export type AlertEvalResult = { evaluated: number; fired: number };
 
 /** Build the snapshot for a rule's metric from the grain's aggregate + pacing. */
-function snapshotFor(rule: AlertRule, agg: StageResult[], blended: number | null, elapsed: number, revenueNow: number, revenuePrev: number | null): MetricSnapshot {
+export function snapshotFor(rule: AlertRule, agg: StageResult[], blended: number | null, elapsed: number, revenueNow: number, revenuePrev: number | null): MetricSnapshot {
   const paceTarget = elapsed * 100;
   const paceRatioPct = blended !== null && paceTarget > 0 ? (blended / paceTarget) * 100 : null;
   if (rule.metric === "goal_pacing") return { deltaPct: null, paceRatioPct };
