@@ -28,11 +28,14 @@ export type UpsertLinkedInAccountInput = {
   accessToken: string;
   refreshToken: string | null;
   tokenExpiresAt: string | null;
+  /** Founder who owns the account; omitted or null = an iCFO (admin) account. */
+  ownerId?: string | null;
 };
 
 export async function upsertLinkedInAccount(input: UpsertLinkedInAccountInput): Promise<{ id: string }> {
   const row = {
     platform: "linkedin",
+    owner_profile_id: input.ownerId ?? null,
     external_member_id: input.memberUrn,
     display_name: input.displayName,
     access_token: sealToken(input.accessToken),
@@ -43,7 +46,7 @@ export async function upsertLinkedInAccount(input: UpsertLinkedInAccountInput): 
   };
   const { data, error } = await db()
     .from("social_accounts")
-    .upsert(row, { onConflict: "platform,external_member_id" })
+    .upsert(row, { onConflict: "owner_profile_id,platform,external_member_id" })
     .select("id")
     .single();
   if (error) throw new Error(`Failed to save LinkedIn account: ${error.message}`);
@@ -56,6 +59,7 @@ export type FacebookPageInput = {
   pageAccessToken: string;
   /** Page tokens from a long-lived user token don't expire on a fixed schedule. */
   tokenExpiresAt?: string | null;
+  ownerId?: string | null;
 };
 
 /** Upsert one managed Facebook Page as a connected account. Reconnecting a Page
@@ -64,6 +68,7 @@ export async function upsertFacebookPageAccount(input: FacebookPageInput): Promi
   const expiresAt = input.tokenExpiresAt ?? null;
   const row = {
     platform: "facebook",
+    owner_profile_id: input.ownerId ?? null,
     external_member_id: input.pageId,
     display_name: input.pageName,
     access_token: sealToken(input.pageAccessToken),
@@ -74,7 +79,7 @@ export async function upsertFacebookPageAccount(input: FacebookPageInput): Promi
   };
   const { data, error } = await db()
     .from("social_accounts")
-    .upsert(row, { onConflict: "platform,external_member_id" })
+    .upsert(row, { onConflict: "owner_profile_id,platform,external_member_id" })
     .select("id")
     .single();
   if (error) throw new Error(`Failed to save Facebook Page: ${error.message}`);
@@ -87,6 +92,7 @@ export type InstagramAccountInput = {
   /** Token of the Facebook Page the Instagram account is linked to — that's what the Graph API wants. */
   pageAccessToken: string;
   tokenExpiresAt?: string | null;
+  ownerId?: string | null;
 };
 
 /** Upsert one Instagram Business/Creator account (keyed on platform + IG user id). */
@@ -94,6 +100,7 @@ export async function upsertInstagramAccount(input: InstagramAccountInput): Prom
   const expiresAt = input.tokenExpiresAt ?? null;
   const row = {
     platform: "instagram",
+    owner_profile_id: input.ownerId ?? null,
     external_member_id: input.igUserId,
     display_name: input.username ? `@${input.username}` : null,
     access_token: sealToken(input.pageAccessToken),
@@ -104,20 +111,21 @@ export async function upsertInstagramAccount(input: InstagramAccountInput): Prom
   };
   const { data, error } = await db()
     .from("social_accounts")
-    .upsert(row, { onConflict: "platform,external_member_id" })
+    .upsert(row, { onConflict: "owner_profile_id,platform,external_member_id" })
     .select("id")
     .single();
   if (error) throw new Error(`Failed to save Instagram account: ${error.message}`);
   return { id: (data as { id: string }).id };
 }
 
-export type RedditAccountInput = { username: string; refreshToken: string };
+export type RedditAccountInput = { username: string; refreshToken: string; ownerId?: string | null };
 
 /** Upsert the connected Reddit user (keyed on platform + username). Access tokens are
  *  short-lived and fetched per publish, so only the refresh token is stored. */
 export async function upsertRedditAccount(input: RedditAccountInput): Promise<{ id: string }> {
   const row = {
     platform: "reddit",
+    owner_profile_id: input.ownerId ?? null,
     external_member_id: `u/${input.username}`,
     display_name: `u/${input.username}`,
     access_token: null,
@@ -128,7 +136,7 @@ export async function upsertRedditAccount(input: RedditAccountInput): Promise<{ 
   };
   const { data, error } = await db()
     .from("social_accounts")
-    .upsert(row, { onConflict: "platform,external_member_id" })
+    .upsert(row, { onConflict: "owner_profile_id,platform,external_member_id" })
     .select("id")
     .single();
   if (error) throw new Error(`Failed to save Reddit account: ${error.message}`);

@@ -355,8 +355,9 @@ async function countsFor(campaigns: CampaignRow[], tags: string[], start: Date, 
 }
 
 /** Per-campaign funnel for the period containing `now` at the given grain. */
-export async function campaignFunnels(grain: Grain, now = new Date()): Promise<CampaignFunnel[]> {
-  const { data, error: eCamp } = await db().from("social_campaigns").select("id, name, source_tag").is("archived_at", null).order("created_at", { ascending: false });
+export async function campaignFunnels(grain: Grain, now = new Date(), ownerId: string | null = null): Promise<CampaignFunnel[]> {
+  const campBase = db().from("social_campaigns").select("id, name, source_tag").is("archived_at", null);
+  const { data, error: eCamp } = await (ownerId ? campBase.eq("owner_profile_id", ownerId) : campBase.is("owner_profile_id", null)).order("created_at", { ascending: false });
   reportDbError("campaignFunnels: social_campaigns", eCamp);
   const campaigns = (data ?? []) as CampaignRow[];
   if (!campaigns.length) return [];

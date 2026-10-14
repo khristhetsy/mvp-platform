@@ -7,6 +7,7 @@ import { AiUsageLimitsControls } from "@/components/admin/AiUsageLimitsControls"
 import { AiBudgetControls } from "@/components/admin/AiBudgetControls";
 import { UploadLimitsControls } from "@/components/admin/UploadLimitsControls";
 import { SiteDefaultViewControls } from "@/components/admin/SiteDefaultViewControls";
+import { FounderSocialControls } from "@/components/admin/FounderSocialControls";
 import { requirePermissionPage } from "@/lib/api/permissions";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +29,7 @@ export default async function AdminFeatureControlsPage() {
       <AiBudgetControls />
       <AiUsageLimitsControls />
       <UploadLimitsControls />
+      <FounderSocialControls />
       <StageMenuEditor />
     </AppShell>
   );

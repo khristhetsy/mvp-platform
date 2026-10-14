@@ -17,6 +17,8 @@ import { redditAdapter } from "@/lib/social/reddit-adapter";
 import { backoffMsFor } from "@/lib/social/rules";
 import { openToken } from "@/lib/social/token-cipher";
 import { reportDbError } from "@/lib/supabase/report";
+import { logFounderSocialEvent } from "@/lib/social/activity";
+import { notifyStaffIfNotRecent } from "@/lib/notifications/notifications";
 
 const ADAPTERS: Record<string, SocialAdapter> = { linkedin: linkedInAdapter, facebook: facebookAdapter, instagram: instagramAdapter, reddit: redditAdapter };
 
@@ -116,6 +118,23 @@ function toAccount(a: AccountRow): Account {
   return { id: a.id, platform: a.platform, externalMemberId: a.external_member_id, accessToken: openToken(a.access_token), refreshToken: openToken(a.refresh_token), tokenExpiresAt: a.token_expires_at };
 }
 
+type PostMeta = { title: string | null; brief: string | null; owner_profile_id: string | null };
+function postLabel(p: PostMeta): string { return (p.title?.trim() || p.brief?.trim() || "Social post").split("\n")[0].slice(0, 80); }
+
+/** A founder's post that finally failed: one high severity feed entry and one staff
+ *  notification per post, however many variants or queue passes fail. */
+async function reportFounderFailure(post: PostMeta | null, postId: string, network: string | null, error: string): Promise<void> {
+  if (!post?.owner_profile_id) return;
+  await logFounderSocialEvent({
+    type: "founder.social_post_failed", founderId: post.owner_profile_id, dedupeKey: `founder_social_post_failed:${postId}`,
+    description: `${postLabel(post)} on ${network ?? "network"}: ${error}`.slice(0, 300), metadata: { postId, network, error: error.slice(0, 300) },
+  });
+  await notifyStaffIfNotRecent({
+    type: "social_post_failed", title: "Founder social post failed", message: `${postLabel(post)} did not publish (${network ?? "network"}): ${error}`.slice(0, 300),
+    entityType: "social_post", entityId: postId, severity: "warning", deepLink: "/admin/activity", withinHours: 24 * 30,
+  }).catch(() => undefined);
+}
+
 export type QueueRunResult = { processed: number; published: number; retried: number; failed: number; skipped: number; interrupted: number; deferred: number };
 
 export async function runSocialQueue(limit = 20): Promise<QueueRunResult> {
@@ -153,13 +172,14 @@ export async function runSocialQueue(limit = 20): Promise<QueueRunResult> {
 
     const [{ data: account }, { data: post }] = await Promise.all([
       supabase.from("social_accounts").select("id, platform, external_member_id, access_token, refresh_token, token_expires_at").eq("id", row.account_id).maybeSingle(),
-      supabase.from("social_posts").select("link_url, image_url, campaign:social_campaigns(source_tag)").eq("id", row.post_id).maybeSingle(),
+      supabase.from("social_posts").select("link_url, image_url, title, brief, owner_profile_id, campaign:social_campaigns(source_tag)").eq("id", row.post_id).maybeSingle(),
     ]);
 
     const adapter = account ? ADAPTERS[(account as AccountRow).platform] : undefined;
     if (!account || !adapter) {
       await supabase.from("social_variants").update({ status: "failed", error: "No account or adapter.", updated_at: new Date().toISOString() }).eq("id", row.id);
       res.failed++;
+      await reportFounderFailure(post as PostMeta | null, row.post_id, account ? (account as AccountRow).platform : null, "No account or adapter.");
       continue;
     }
 
@@ -199,6 +219,13 @@ export async function runSocialQueue(limit = 20): Promise<QueueRunResult> {
         }).eq("id", row.id);
       }
       res.published++;
+      const pm = post as PostMeta | null;
+      if (pm?.owner_profile_id) {
+        await logFounderSocialEvent({
+          type: "founder.social_post_published", founderId: pm.owner_profile_id,
+          description: postLabel(pm), metadata: { postId: row.post_id, title: postLabel(pm), network: (account as AccountRow).platform, url },
+        });
+      }
     } catch (err) {
       if (err instanceof AdapterNotConfiguredError) {
         await supabase.from("social_variants").update({ status: "skipped", error: err.message, updated_at: new Date().toISOString() }).eq("id", row.id);
@@ -211,6 +238,7 @@ export async function runSocialQueue(limit = 20): Promise<QueueRunResult> {
       if (delay == null) {
         await supabase.from("social_variants").update({ status: "failed", attempts, error: message, updated_at: new Date().toISOString() }).eq("id", row.id);
         res.failed++;
+        await reportFounderFailure(post as PostMeta | null, row.post_id, (account as AccountRow).platform, message);
       } else {
         await supabase.from("social_variants").update({
           status: "queued", attempts, next_attempt_at: new Date(Date.now() + delay).toISOString(), error: message, updated_at: new Date().toISOString(),
