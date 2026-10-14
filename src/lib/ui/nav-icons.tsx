@@ -218,6 +218,7 @@ export const workspaceNavIconByHref: Record<string, LucideIcon> = {
   "/founder/stages/marketing": MapPinned,
   "/founder/stages/closing": Route,
   "/founder/deploy": Megaphone, // Outreach
+  "/founder/deploy/social": Share2, // Social media
   "/founder/ir-agent": BotMessageSquare, // My IR Agent
   "/founder/investor-pipeline": SquareKanban, // Investor CRM
   "/founder/events/present": Projector, // Present at event
