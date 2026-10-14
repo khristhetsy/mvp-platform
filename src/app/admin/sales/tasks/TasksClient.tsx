@@ -1,4 +1,5 @@
 "use client";
+import { TaskTitleInput } from "@/components/sales/TaskTitleInput";
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { OdooSearchBar, EMPTY_SEARCH, textMatch, type SearchState } from "@/components/admin/OdooSearchBar";
@@ -194,7 +195,7 @@ export function TasksClient({ staff, canExport = false }: { staff: Staff[]; canE
 
         {adding && (
           <div style={{ padding: "12px 14px", borderBottom: "0.5px solid #eef1f5", background: "#F5F9FF", display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1.2fr auto", gap: 8, alignItems: "center" }}>
-            <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="Task title" autoFocus style={inp} />
+            <TaskTitleInput value={draft.title} placeholder="Task title" inputStyle={inp} allowedTypes={TASK_TYPES} taskType={draft.taskType} autoFocus onChange={(n) => setDraft((d) => ({ ...d, title: n.title, ...(n.taskType ? { taskType: n.taskType } : {}) }))} />
             <select value={draft.taskType} onChange={(e) => setDraft({ ...draft, taskType: e.target.value })} style={inp}>{TASK_TYPES.map((t) => <option key={t}>{t}</option>)}</select>
             <input type="date" value={draft.dueDate} onChange={(e) => setDraft({ ...draft, dueDate: e.target.value })} style={inp} />
             <select value={draft.assigneeId} onChange={(e) => setDraft({ ...draft, assigneeId: e.target.value })} style={inp}><option value="">Assign to me</option>{staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>

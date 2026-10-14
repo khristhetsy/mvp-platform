@@ -11,6 +11,7 @@ import { NoteLogEntries } from "./NoteLogEntries";
 import { ContactTaskViews } from "./ContactTaskViews";
 import { RatingRing } from "@/components/investor-rating/RatingRing";
 import { SalesChatter } from "@/components/sales/SalesChatter";
+import { TaskTitleInput } from "@/components/sales/TaskTitleInput";
 
 type Contact = {
   id: string; source: string; name: string; email: string | null; company: string | null; phone: string | null; phone2: string | null;
@@ -431,29 +432,6 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
   const [actionErr, setActionErr] = useState<string | null>(null);
   const [showTask, setShowTask] = useState(false);
   const [task, setTask] = useState({ title: "", taskType: "Call", dueDate: "", assigneeId: "" });
-  type TitleOpt = { id: string; title: string; task_type: string };
-  const [titleOpts, setTitleOpts] = useState<TitleOpt[]>([]);
-  const [kindOpen, setKindOpen] = useState(false);
-  const [optMsg, setOptMsg] = useState("");
-  async function loadTitleOpts() {
-    try {
-      const res = await fetch("/api/sales/task-titles");
-      const data = res.ok ? await res.json() : { options: [] };
-      setTitleOpts(data.options ?? []);
-    } catch { /* keep whatever is already loaded */ }
-  }
-  useEffect(() => { void loadTitleOpts(); }, []);
-  async function saveTitleOpt() {
-    const title = task.title.trim();
-    if (!title) return;
-    try {
-      const res = await fetch("/api/sales/task-titles", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title, taskType: task.taskType }) });
-      if (!res.ok) { setOptMsg((await res.json().catch(() => ({})))?.error || "Couldn’t save the option."); return; }
-      await loadTitleOpts();
-      setOptMsg(`Saved. “${title}” is now in the list under ${task.taskType}.`);
-    } catch { setOptMsg("Network error. Couldn’t save the option."); }
-    setKindOpen(false);
-  }
   const [contactTasks, setContactTasks] = useState<{ id: string; title: string; task_type: string; due_date: string | null; status: string; assignee_name: string | null; opportunity_id?: string | null }[]>([]);
   const [tasksLoaded, setTasksLoaded] = useState(false);
   const [taskView, setTaskView] = useState<"all" | "opps" | "pipeline">("all");
@@ -707,7 +685,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
     try {
       const res = await fetch("/api/sales/tasks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: task.title, taskType: task.taskType, dueDate: task.dueDate || null, assigneeId: task.assigneeId || null, contactCrmId: contact.id, contactName: contact.name }) });
       if (!res.ok) { setActionErr((await res.json().catch(() => ({})))?.error || "Couldn’t create the task."); return; }
-      setShowTask(false); setTask({ title: "", taskType: "Call", dueDate: "", assigneeId: "" }); setKindOpen(false);
+      setShowTask(false); setTask({ title: "", taskType: "Call", dueDate: "", assigneeId: "" });
       await loadContactTasks();
     } catch { setActionErr("Network error — couldn’t create the task."); } finally { setBusy(false); }
   }
@@ -1175,42 +1153,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                         ))}
                       </div>
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 96px 128px 130px", gap: 8, background: "#F5F9FF", border: "0.5px solid #eef1f5", borderRadius: 8, padding: 10 }}>
-                        <div style={{ position: "relative", minWidth: 0 }} onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setKindOpen(false); }}>
-                          <div style={{ ...inp, display: "flex", alignItems: "center", gap: 6, padding: "0 9px", height: 32, ...(kindOpen ? { borderColor: "#185FA5" } : {}) }}>
-                            <input value={task.title} onChange={(e) => { setTask({ ...task, title: e.target.value }); setOptMsg(""); setKindOpen(true); }} onFocus={() => setKindOpen(true)} onClick={() => setKindOpen(true)} onKeyDown={(e) => { if (e.key === "Escape") setKindOpen(false); }} placeholder="Task title" autoComplete="off" style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: "transparent", fontSize: 12, color: "var(--foreground)" }} />
-                            <button type="button" aria-label="Show task suggestions" onClick={() => setKindOpen((o) => !o)} style={{ border: "none", background: "none", color: "var(--muted-foreground)", cursor: "pointer", fontSize: 11, padding: 2 }}>▾</button>
-                          </div>
-                          {kindOpen && (() => {
-                            const q = task.title.trim().toLowerCase();
-                            const shown = titleOpts.filter((o) => !q || o.title.toLowerCase().includes(q));
-                            const types = ["Proposal", "Call", "Email", ...Array.from(new Set(titleOpts.map((o) => o.task_type))).filter((t) => !["Proposal", "Call", "Email"].includes(t))];
-                            const exact = titleOpts.some((o) => o.title.toLowerCase() === q);
-                            return (
-                              <div role="listbox" style={{ position: "absolute", zIndex: 20, left: 0, right: 0, top: 36, maxHeight: 340, overflowY: "auto", background: "#fff", border: "0.5px solid #d7dbe3", borderRadius: 8, boxShadow: "0 8px 24px rgba(10,20,40,.16)", padding: 6 }}>
-                                {types.map((t) => {
-                                  const items = shown.filter((o) => o.task_type === t);
-                                  if (items.length === 0) return null;
-                                  return (
-                                    <div key={t}>
-                                      <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--muted-foreground)", padding: "6px 8px 3px" }}>{t}</div>
-                                      {items.map((o) => (
-                                        <button key={o.id} type="button" role="option" aria-selected={task.title === o.title} onMouseDown={(e) => e.preventDefault()} onClick={() => { setTask({ ...task, title: o.title, taskType: o.task_type }); setKindOpen(false); setOptMsg(""); }} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", textAlign: "left", border: "none", background: task.title === o.title ? "#F0F5FC" : "none", borderRadius: 6, padding: "7px 8px", cursor: "pointer", fontSize: 12.5, color: "var(--foreground)" }}>
-                                          <span style={{ flex: 1, minWidth: 0 }}>{o.title}</span>
-                                          <span style={{ fontSize: 10.5, fontWeight: 600, padding: "1px 7px", borderRadius: 999, background: "#E6F1FB", color: "#185FA5", whiteSpace: "nowrap" }}>{o.task_type}</span>
-                                        </button>
-                                      ))}
-                                    </div>
-                                  );
-                                })}
-                                {q && shown.length === 0 && <div style={{ padding: "8px", fontSize: 12, color: "var(--muted-foreground)" }}>No match. Your text will be used as the title.</div>}
-                                {q && !exact && (
-                                  <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={saveTitleOpt} style={{ display: "block", width: "100%", textAlign: "left", marginTop: 6, border: "1px dashed #0F6E56", background: "#E1F5EE", color: "#0F6E56", borderRadius: 6, padding: "8px", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>+ Save “{task.title.trim()}” as a new option under {task.taskType}</button>
-                                )}
-                              </div>
-                            );
-                          })()}
-                          {optMsg && <div role="status" style={{ position: "absolute", left: 0, top: 36, fontSize: 11.5, color: "#0F6E56", whiteSpace: "nowrap" }}>{optMsg}</div>}
-                        </div>
+                        <TaskTitleInput value={task.title} placeholder="Task title" inputStyle={inp} allowedTypes={["Call", "Email", "Demo", "Follow-up", "Proposal"]} taskType={task.taskType} onChange={(n) => setTask((t) => ({ ...t, title: n.title, ...(n.taskType ? { taskType: n.taskType } : {}) }))} />
                         <select value={task.taskType} onChange={(e) => setTask({ ...task, taskType: e.target.value })} style={inp}>{["Call", "Email", "Demo", "Follow-up", "Proposal"].map((t) => <option key={t}>{t}</option>)}</select>
                         <input type="date" value={task.dueDate} onChange={(e) => setTask({ ...task, dueDate: e.target.value })} style={inp} />
                         <select value={task.assigneeId} onChange={(e) => setTask({ ...task, assigneeId: e.target.value })} style={inp}><option value="">Assign to me</option>{assignableStaff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
@@ -1375,7 +1318,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
 
         {showTask && (
           <div style={{ padding: "12px 16px", borderBottom: "0.5px solid #eef1f5", background: "#F5F9FF", display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1.2fr auto", gap: 8, alignItems: "center" }}>
-            <input value={task.title} onChange={(e) => setTask({ ...task, title: e.target.value })} placeholder="Task title" autoFocus style={inp} />
+            <TaskTitleInput value={task.title} placeholder="Task title" inputStyle={inp} allowedTypes={["Call", "Email", "Demo", "Follow-up", "Proposal"]} taskType={task.taskType} autoFocus onChange={(n) => setTask((t) => ({ ...t, title: n.title, ...(n.taskType ? { taskType: n.taskType } : {}) }))} />
             <select value={task.taskType} onChange={(e) => setTask({ ...task, taskType: e.target.value })} style={inp}>{["Call", "Email", "Demo", "Follow-up", "Proposal"].map((t) => <option key={t}>{t}</option>)}</select>
             <input type="date" value={task.dueDate} onChange={(e) => setTask({ ...task, dueDate: e.target.value })} style={inp} />
             <select value={task.assigneeId} onChange={(e) => setTask({ ...task, assigneeId: e.target.value })} style={inp}><option value="">Assign to me</option>{staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>

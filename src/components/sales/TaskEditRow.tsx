@@ -1,4 +1,5 @@
 "use client";
+import { TaskTitleInput } from "./TaskTitleInput";
 
 import { useState } from "react";
 
@@ -53,7 +54,7 @@ export function TaskEditRow({ task, staff, taskTypes = DEFAULT_TYPES, onSaved, o
   return (
     <div style={{ background: "#F5F9FF", border: "0.5px solid #dce6f7", borderRadius: 8, padding: 10, margin: "4px 0 8px" }}>
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.3fr)", gap: 8 }}>
-        <label style={label}>Title<input value={title} onChange={(e) => setTitle(e.target.value)} style={inp} /></label>
+        <div style={label}>Title<TaskTitleInput value={title} placeholder="Task title" inputStyle={inp} allowedTypes={types} taskType={taskType} onChange={(n) => { setTitle(n.title); if (n.taskType) setTaskType(n.taskType); }} /></div>
         <label style={label}>Type<select value={taskType} onChange={(e) => setTaskType(e.target.value)} style={inp}>{types.map((t) => <option key={t}>{t}</option>)}</select></label>
         <label style={label}>Due date<input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} style={inp} /></label>
         <label style={label}>Assignee<select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)} style={inp}><option value="">Unassigned</option>{staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
