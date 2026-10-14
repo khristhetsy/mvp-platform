@@ -108,6 +108,63 @@ const PAGES: PageShortcut[] = [
   { id: "ad-tasks",    title: "Tasks",                subtitle: "Communication",          href: "/admin/tasks",                   keywords: ["tasks", "todo", "communication"],          workspace: "admin" },
   { id: "ad-actions",  title: "Action Center",        subtitle: "Operational tools",      href: "/admin/actions",                 keywords: ["actions", "operational", "tools"],         workspace: "admin" },
   { id: "ad-activity", title: "Account activity",     subtitle: "Feed",                   href: "/admin/activity",                keywords: ["activity", "feed", "account"],             workspace: "admin" },
+  { id: "ad-mkt-set", title: "Marketing settings", subtitle: "Marketing", href: "/admin/marketing/settings/notifications", keywords: ["marketing", "settings", "notifications"], workspace: "admin" },
+  { id: "ad-alerts", title: "Account alerts", subtitle: "Account Activity", href: "/admin/activity/alerts", keywords: ["activity", "alerts"], workspace: "admin" },
+  { id: "ad-assign", title: "Account assignments", subtitle: "Account Activity", href: "/admin/activity/assignments", keywords: ["activity", "assignment", "assignments"], workspace: "admin" },
+  { id: "ad-irfun", title: "Investor Relations Funnel", subtitle: "Admin", href: "/admin/ir-funnel", keywords: ["ir", "funnel", "investor"], workspace: "admin" },
+  { id: "ad-fit", title: "Fit funnel", subtitle: "Admin", href: "/admin/fit", keywords: ["fit", "funnel", "match review"], workspace: "admin" },
+  { id: "ad-enrich", title: "Enrich data", subtitle: "Admin", href: "/admin/investors/enrich", keywords: ["enrich", "data", "investors"], workspace: "admin" },
+  { id: "ad-crm", title: "Investor Relations CRM", subtitle: "CRM", href: "/admin/crm", keywords: ["crm", "activity", "investor"], workspace: "admin" },
+  { id: "ad-crm-pipe", title: "CRM pipeline", subtitle: "CRM", href: "/admin/crm/pipeline", keywords: ["crm", "pipeline"], workspace: "admin" },
+  { id: "ad-crm-msg", title: "CRM messages", subtitle: "CRM", href: "/admin/crm/messages", keywords: ["crm", "messages"], workspace: "admin" },
+  { id: "ad-crm-out", title: "CRM outreach", subtitle: "CRM", href: "/admin/crm/outreach", keywords: ["crm", "outreach"], workspace: "admin" },
+  { id: "ad-crm-unc", title: "Unclassified", subtitle: "CRM", href: "/admin/crm/unclassified", keywords: ["crm", "unclassified"], workspace: "admin" },
+  { id: "ad-spvs", title: "SPVs", subtitle: "Admin", href: "/admin/spvs", keywords: ["spv", "spvs", "closings"], workspace: "admin" },
+  { id: "ad-match", title: "Matching", subtitle: "Admin", href: "/admin/matching", keywords: ["matching", "matches"], workspace: "admin" },
+  { id: "ad-prosp", title: "Prospect Investors", subtitle: "Matching", href: "/admin/matching/prospects", keywords: ["matching", "prospect", "investors"], workspace: "admin" },
+  { id: "ad-oq", title: "Outreach Qualification", subtitle: "Admin", href: "/admin/outreach-qualification", keywords: ["outreach", "qualification", "gate"], workspace: "admin" },
+  { id: "ad-port", title: "Portfolio", subtitle: "Admin", href: "/admin/portfolio", keywords: ["portfolio"], workspace: "admin" },
+  { id: "ad-ready", title: "Readiness Scores", subtitle: "Admin", href: "/admin/readiness", keywords: ["readiness", "scores", "crr", "rating"], workspace: "admin" },
+  { id: "ad-mktpl", title: "Marketplace Review", subtitle: "Admin", href: "/admin/marketplace", keywords: ["marketplace", "review", "private market"], workspace: "admin" },
+  { id: "ad-pscore", title: "Partner Scores", subtitle: "Admin", href: "/admin/partner-scores", keywords: ["partner", "scores"], workspace: "admin" },
+  { id: "ad-dealrooms", title: "Deal Rooms", subtitle: "Admin", href: "/admin/deal-rooms", keywords: ["deal", "rooms"], workspace: "admin" },
+  { id: "ad-dtrack", title: "Diligence Tracker", subtitle: "Admin", href: "/admin/data-room", keywords: ["diligence", "tracker", "data room"], workspace: "admin" },
+  { id: "ad-dreview", title: "Diligence Review", subtitle: "Admin", href: "/admin/diligence", keywords: ["diligence", "review"], workspace: "admin" },
+  { id: "ad-analytics", title: "Analytics", subtitle: "Analytics", href: "/admin/analytics", keywords: ["analytics", "overview", "metrics"], workspace: "admin" },
+  { id: "ad-funnels", title: "Activation funnels", subtitle: "Analytics", href: "/admin/funnels", keywords: ["analytics", "activation", "funnels"], workspace: "admin" },
+  { id: "ad-reports", title: "Reports", subtitle: "Analytics", href: "/admin/reports", keywords: ["analytics", "reports"], workspace: "admin" },
+  { id: "ad-msgact", title: "Founder and investor messages", subtitle: "Analytics", href: "/admin/message-activity", keywords: ["analytics", "messages", "activity"], workspace: "admin" },
+  { id: "ad-insights", title: "Insights", subtitle: "Analytics", href: "/admin/insights", keywords: ["analytics", "insights"], workspace: "admin" },
+  { id: "ad-compl", title: "Compliance", subtitle: "Admin", href: "/admin/compliance", keywords: ["compliance"], workspace: "admin" },
+  { id: "ad-audit", title: "Audit", subtitle: "Admin", href: "/admin/audit", keywords: ["audit", "log"], workspace: "admin" },
+  { id: "ad-companies", title: "Companies", subtitle: "Customer Support", href: "/admin/companies", keywords: ["companies", "customer", "support", "founders"], workspace: "admin" },
+  { id: "ad-investors", title: "Investors", subtitle: "Customer Support", href: "/admin/investors", keywords: ["investors", "customer", "support"], workspace: "admin" },
+  { id: "ad-supq", title: "Support queue", subtitle: "Customer Support", href: "/admin/support", keywords: ["support", "queue", "tickets"], workspace: "admin" },
+  { id: "ad-suplog", title: "Support log", subtitle: "Customer Support", href: "/admin/support/log", keywords: ["support", "log"], workspace: "admin" },
+  { id: "ad-stuck", title: "Stuck founders", subtitle: "Customer Support", href: "/admin/founders-stuck", keywords: ["stuck", "founders", "support"], workspace: "admin" },
+  { id: "ad-intros", title: "Brokered Intros", subtitle: "Customer Support", href: "/admin/prospect-intros", keywords: ["brokered", "intros", "introductions"], workspace: "admin" },
+  { id: "ad-aiuse", title: "AI usage and cost", subtitle: "Customer Support · AI spend by tool", href: "/admin/ai-usage", keywords: ["ai", "usage", "cost", "spend", "tokens", "claude", "vapi", "serper"], workspace: "admin" },
+  { id: "ad-learn", title: "Learning overview", subtitle: "Learning", href: "/admin/learning", keywords: ["learning", "overview"], workspace: "admin" },
+  { id: "ad-courses", title: "Courses", subtitle: "Learning", href: "/admin/learning/courses", keywords: ["learning", "courses"], workspace: "admin" },
+  { id: "ad-roster", title: "Founder roster", subtitle: "Learning", href: "/admin/learning/founders", keywords: ["learning", "founder", "roster"], workspace: "admin" },
+  { id: "ad-manual", title: "Operations Manual", subtitle: "Admin", href: "/admin/manual", keywords: ["operations", "manual", "guide", "help"], workspace: "admin" },
+  { id: "ad-users", title: "User Management", subtitle: "Administration", href: "/admin/users/manage", keywords: ["users", "user management", "team", "staff"], workspace: "admin" },
+  { id: "ad-perms", title: "User Permissions", subtitle: "Administration", href: "/admin/users/permissions", keywords: ["users", "permissions", "roles"], workspace: "admin" },
+  { id: "ad-sync", title: "Contact Sync", subtitle: "Administration", href: "/admin/crm/connectors", keywords: ["contact", "sync", "connectors", "odoo"], workspace: "admin" },
+  { id: "ad-billing", title: "Billing", subtitle: "Administration", href: "/admin/billing", keywords: ["billing", "subscriptions"], workspace: "admin" },
+  { id: "ad-pricing", title: "Pricing", subtitle: "Administration", href: "/admin/pricing", keywords: ["pricing", "plans"], workspace: "admin" },
+  { id: "ad-accounts", title: "Accounts", subtitle: "Administration", href: "/admin/accounts", keywords: ["accounts"], workspace: "admin" },
+  { id: "ad-profile", title: "My Profile", subtitle: "Administration", href: "/admin/profile", keywords: ["profile", "my profile"], workspace: "admin" },
+  { id: "ad-pfields", title: "Profile and fields", subtitle: "Administration", href: "/admin/profile-fields", keywords: ["profile", "fields", "industry", "vocabulary"], workspace: "admin" },
+  { id: "ad-fc", title: "Feature Controls", subtitle: "Administration · AI budget, usage limits, site default view, departments", href: "/admin/feature-controls", keywords: ["feature", "controls", "settings", "website", "site", "site default view", "default view", "home style", "ai budget", "budget", "ai cost cap", "spend limit", "usage limits", "ai usage limits", "upload limits", "outreach automation", "departments", "stage menu", "ir agent", "flags"], workspace: "admin" },
+  { id: "ad-integ", title: "Integrations", subtitle: "System", href: "/admin/integrations", keywords: ["integrations", "connect", "settings"], workspace: "admin" },
+  { id: "ad-queues", title: "Queues", subtitle: "System", href: "/admin/queues", keywords: ["queues"], workspace: "admin" },
+  { id: "ad-auto", title: "Automation", subtitle: "System", href: "/admin/automation", keywords: ["automation"], workspace: "admin" },
+  { id: "ad-jobs", title: "Scheduled jobs", subtitle: "System", href: "/admin/scheduled-jobs", keywords: ["scheduled", "jobs", "cron"], workspace: "admin" },
+  { id: "ad-pb", title: "Page Builder", subtitle: "System", href: "/admin/page-builder-lab", keywords: ["page", "builder", "website", "site", "landing", "settings", "pages"], workspace: "admin" },
+  { id: "ad-health", title: "System Health", subtitle: "System", href: "/admin/system-health", keywords: ["system", "health", "status"], workspace: "admin" },
+  { id: "ad-impexp", title: "Import / Export", subtitle: "System", href: "/admin/imports", keywords: ["import", "export", "csv"], workspace: "admin" },
+  { id: "ad-beta", title: "Beta Operations", subtitle: "System", href: "/admin/beta-operations", keywords: ["beta", "operations"], workspace: "admin" },
 ];
 
 // ── Type icons ────────────────────────────────────────────────────────────────
@@ -221,13 +278,42 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
   // Filter static pages for this workspace
   const q = query.toLowerCase();
   const workspacePages = PAGES.filter((p) => p.workspace === workspace || p.workspace === "all");
+  // Admin ranking: every word must match somewhere; exact phrases, titles and
+  // keywords score higher, so "ai budget" lands on Feature Controls first.
+  function scoreAdminPage(p: PageShortcut): number {
+    const title = p.title.toLowerCase();
+    const sub = p.subtitle.toLowerCase();
+    const words = q.split(/\s+/).filter(Boolean);
+    if (words.length === 0) return 0;
+    let score = 0;
+    for (const w of words) {
+      let best = 0;
+      if (title.startsWith(w) || title.includes(` ${w}`)) best = 30;
+      else if (title.includes(w)) best = 20;
+      if (p.keywords.some((k) => k === w)) best = Math.max(best, 25);
+      else if (p.keywords.some((k) => k.includes(w))) best = Math.max(best, 15);
+      if (sub.includes(w)) best = Math.max(best, 5);
+      if (best === 0) return 0;
+      score += best;
+    }
+    if (title === q) score += 100;
+    else if (title.includes(q)) score += 40;
+    if (p.keywords.some((k) => k.includes(q))) score += 60;
+    return score;
+  }
+
   const matchedPages = query.length === 0
     ? workspacePages.slice(0, 6)
-    : workspacePages.filter(
-        (p) =>
-          p.title.toLowerCase().includes(q) ||
-          p.keywords.some((k) => k.includes(q)),
-      ).slice(0, workspace === "admin" ? 8 : 5);
+    : workspace === "admin"
+      ? workspacePages
+          .map((p) => ({ p, s: scoreAdminPage(p) }))
+          .filter((x) => x.s > 0)
+          .sort((a, b) => b.s - a.s)
+          .slice(0, 8)
+          .map((x) => x.p)
+      : workspacePages.filter(
+          (p) => p.title.toLowerCase().includes(q) || p.keywords.some((k) => k.includes(q)),
+        ).slice(0, 5);
 
   // Group dynamic results by type
   const grouped = new Map<SearchResult["type"], SearchResult[]>();
