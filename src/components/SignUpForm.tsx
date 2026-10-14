@@ -23,9 +23,11 @@ function signUpDestinationByRole(role: SignupRole, privateBetaMode: boolean) {
   return privateBetaMode ? "/investor/onboarding" : "/investor/dashboard";
 }
 
-function defaultPlanForRole(role: SignupRole): PlanType {
-  // Founder Free and the trial are gone for new sign ups; Basic is the default.
-  return role === "founder" ? "founder_basic" : "investor_free";
+function defaultPlanForRole(role: SignupRole, showPremium: boolean): PlanType {
+  // Founders land on Premium, the plan we most want them to take (Oct 14, 2026).
+  // Basic stays the default where Premium is not offered.
+  if (role !== "founder") return "investor_free";
+  return showPremium ? "founder_premium" : "founder_basic";
 }
 
 function PlanCard({
@@ -126,7 +128,7 @@ export function SignUpForm({
   const { getError, inputCls, validate, clearError } = useFormValidation();
 
   const [role, setRole] = useState<SignupRole>("founder");
-  const [selectedPlan, setSelectedPlan] = useState<PlanType>("founder_basic");
+  const [selectedPlan, setSelectedPlan] = useState<PlanType>(() => defaultPlanForRole("founder", showPremium));
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -138,7 +140,7 @@ export function SignUpForm({
     const requestedRole = searchParams.get("role");
     if (requestedRole === "founder" || requestedRole === "investor") {
       setRole(requestedRole);
-      setSelectedPlan(defaultPlanForRole(requestedRole));
+      setSelectedPlan(defaultPlanForRole(requestedRole, showPremium));
     }
     // /start and the free report claim pass the plan the founder chose.
     const requestedPlan = searchParams.get("plan");
@@ -152,7 +154,7 @@ export function SignUpForm({
 
   function handleRoleChange(nextRole: SignupRole) {
     setRole(nextRole);
-    setSelectedPlan(defaultPlanForRole(nextRole));
+    setSelectedPlan(defaultPlanForRole(nextRole, showPremium));
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
