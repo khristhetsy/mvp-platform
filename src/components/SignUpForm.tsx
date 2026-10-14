@@ -32,10 +32,13 @@ function PlanCard({
   plan,
   selected,
   onSelect,
+  agent = false,
 }: Readonly<{
   plan: SignupPlanOption | typeof SIGNUP_INVESTOR_PLAN;
   selected: boolean;
   onSelect: () => void;
+  /** This plan includes the founder IR agent. */
+  agent?: boolean;
 }>) {
   return (
     <button
@@ -72,6 +75,13 @@ function PlanCard({
         </span>
       </div>
       <ul className="mt-3 space-y-1.5">
+        {agent ? (
+          <li className="flex items-start gap-2 text-xs font-semibold leading-5 text-indigo-700">
+            <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-indigo-500" />
+            Investor Relations Agent, raising capital 24/7
+            <span className="ml-1 rounded-full bg-indigo-600 px-1.5 text-[9px] font-semibold uppercase tracking-wider text-white">New</span>
+          </li>
+        ) : null}
         {plan.features.map((feature) => (
           <li key={feature} className="flex items-start gap-2 text-xs leading-5 text-slate-600">
             <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-indigo-500" />
@@ -99,6 +109,7 @@ const BASE_INPUT =
 
 export function SignUpForm({
   privateBetaMode = false,
+  agentPlans = [],
   showPremium = false,
 }: Readonly<{
   privateBetaMode?: boolean;
@@ -106,6 +117,8 @@ export function SignUpForm({
   showPremium?: boolean;
   /** Active pricing, passed by the server page. Defaults to the code constants. */
   pricing?: PricingCatalog;
+  /** Plan types that include the founder IR agent, from Feature Controls. Shown as a line on those plan cards. */
+  agentPlans?: string[];
 }>) {
   const t = useTranslations("sharedCmp");
   const router = useRouter();
@@ -243,6 +256,7 @@ export function SignUpForm({
                 plan={plan}
                 selected={selectedPlan === plan.planType}
                 onSelect={() => setSelectedPlan(plan.planType)}
+                agent={agentPlans.includes(plan.planType)}
               />
             ))
           ) : (

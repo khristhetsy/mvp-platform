@@ -13,6 +13,8 @@ type Founder = {
 };
 type Loaded = {
   enabled: boolean;
+  demoSlug: string | null;
+  liveAgents: Array<{ slug: string; label: string }>;
   plans: Array<{ plan_type: string; label: string; enabled: boolean }>;
   template: AgentTemplate;
   founders: Founder[];
@@ -111,6 +113,7 @@ export function IrAgentControls() {
 
         <div className="border-b border-slate-100 px-4 py-4">
           <p className="text-xs uppercase tracking-wide text-slate-400">Plans that include it</p>
+          <p className="mt-0.5 text-[11px] text-slate-500">Reflected on the pricing page and the signup plan picker: a ticked plan shows &quot;Investor Relations Agent, raising capital 24/7&quot;, an unticked one shows it crossed out.</p>
           <div className="mt-2 flex flex-wrap gap-4">
             {data.plans.map((p) => (
               <label key={p.plan_type} className="flex items-center gap-2 text-sm text-slate-800">
@@ -176,6 +179,25 @@ export function IrAgentControls() {
             </table>
           </div>
           <p className="mt-2 text-[11px] text-slate-500">Demo and internal accounts record conversations but never send email or book real meetings.</p>
+        </div>
+
+        <div className="border-b border-slate-100 px-4 py-4">
+          <p className="text-xs uppercase tracking-wide text-slate-400">Demo agent for the website</p>
+          <p className="mt-0.5 text-[11px] text-slate-500">The pricing page shows &quot;Talk to a demo agent&quot; linking to this live agent. Pick one on a demo or internal account so nothing real is booked.</p>
+          <select
+            value={data.demoSlug ?? ""}
+            disabled={saving}
+            onChange={(e) => void (async () => {
+              const demoSlug = e.target.value || null;
+              if (await put({ demoSlug }, demoSlug ? "Demo agent saved. The pricing page links to it." : "Demo strip removed from the pricing page.")) setData({ ...data, demoSlug });
+            })()}
+            className="mt-2 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+          >
+            <option value="">None (hide the strip)</option>
+            {data.liveAgents.map((a) => (
+              <option key={a.slug} value={a.slug}>{a.label} · /{a.slug}</option>
+            ))}
+          </select>
         </div>
 
         <div className="px-4 py-4">

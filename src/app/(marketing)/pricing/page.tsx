@@ -5,6 +5,7 @@ import { loadPricing } from "@/lib/subscriptions/pricing-server";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { BookDemoButton } from "@/components/marketing-site/BookDemoButton";
 import { loadPriceAnchor } from "@/lib/marketing-site/price-anchor";
+import { AGENT_FEATURE_LINE, TIER_PLAN, getAgentPlanSet, getDemoAgent } from "@/lib/ir-agent/marketing";
 
 export async function generateMetadata(): Promise<Metadata> {
   const catalog = await loadPricing();
@@ -32,6 +33,12 @@ export default async function PricingPage() {
     })),
   };
   const anchor = loadPriceAnchor();
+  // Founder IR agent: the plans that include it come from the same table admin edits in
+  // Feature Controls, so the website always matches the backend. Nothing shows while the
+  // master switch is off.
+  const [agentPlans, demoAgent] = await Promise.all([getAgentPlanSet(), getDemoAgent()]);
+  const agentSold = agentPlans.size > 0;
+  const agentOn = (tierName: string) => agentPlans.has(TIER_PLAN[tierName] ?? "");
   return (
     <>
       <JsonLd data={faqJsonLd} />
@@ -42,6 +49,11 @@ export default async function PricingPage() {
           <p className="font-site-mono text-xs font-semibold uppercase tracking-[0.16em] text-site-blue-lt">{p.eyebrow}</p>
           <h1 className="mt-3 font-site-display text-4xl font-extrabold tracking-tight sm:text-5xl">{p.title}</h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg leading-8 text-white/70">{p.sub}</p>
+          {agentSold ? (
+            <p className="mx-auto mt-3 max-w-2xl text-[15px] leading-7 text-site-blue-lt">
+              New on paid plans: your own investor relations agent at icapos.com/your-company, answering investors and booking calls 24/7.
+            </p>
+          ) : null}
           <Link href={p.mainCta.href} className="mt-7 inline-block rounded-lg bg-site-blue px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi">{p.mainCta.label}</Link>
           {/* Price anchor — the alternative cost of outreach (brief Step 5). Figures from data/price-anchor.json; omitted until populated; no competitor names. */}
           {anchor ? (
@@ -73,7 +85,16 @@ export default async function PricingPage() {
               ) : null}
               {"features" in t && t.features ? (
                 <ul className="mt-5 space-y-2.5">
+                  {agentSold && agentOn(t.name) ? (
+                    <li className="flex gap-2.5 rounded-lg border border-site-blue-lt/50 bg-site-blue/15 px-3 py-2 text-[13.5px] lg:text-[1em] text-white">
+                      <span className="text-site-blue-lt"><i className="ti ti-check" aria-hidden="true" /></span>
+                      <span>{AGENT_FEATURE_LINE} <span className="ml-1 rounded-full bg-site-blue px-1.5 py-0.5 align-middle font-site-mono text-[9px] font-semibold uppercase tracking-wider text-white">New</span></span>
+                    </li>
+                  ) : null}
                   {t.features.map((f) => (<li key={f} className="flex gap-2.5 text-[13.5px] lg:text-[1em] text-white/85"><span className="text-site-blue-lt"><i className="ti ti-check" aria-hidden="true" /></span>{f}</li>))}
+                  {agentSold && !agentOn(t.name) ? (
+                    <li className="flex gap-2.5 text-[13.5px] lg:text-[1em] text-white/40"><span><i className="ti ti-x" aria-hidden="true" /></span><span className="line-through">Investor Relations Agent</span></li>
+                  ) : null}
                 </ul>
               ) : null}
               {"advisory" in t && t.advisory ? (
@@ -90,6 +111,15 @@ export default async function PricingPage() {
             );
           })}
         </div>
+        {demoAgent ? (
+          <div className="mx-auto mt-5 flex max-w-6xl flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/12 bg-white/[0.05] p-5">
+            <div>
+              <p className="font-site-display text-lg font-bold">See an investor relations agent at work</p>
+              <p className="mt-1 text-sm text-white/70">Talk to {demoAgent.displayName} at {demoAgent.companyName} the way an investor would. Two minutes, no sign in.</p>
+            </div>
+            <Link href={demoAgent.path} className="rounded-lg bg-site-blue px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi">Talk to a demo agent</Link>
+          </div>
+        ) : null}
         {spv ? (
           <div className="mx-auto mt-5 grid max-w-6xl gap-5 rounded-2xl border border-white/12 bg-white/[0.03] p-6 md:grid-cols-[1fr_1.2fr_auto] md:items-center">
             <div>
