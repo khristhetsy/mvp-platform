@@ -13,6 +13,7 @@ export type ImportTarget =
   | "first_name"
   | "last_name"
   | "email"
+  | "phone"
   | "firm_name"
   | "position"
   | "investor_type"
@@ -22,6 +23,9 @@ export type ImportTarget =
   | "geography"
   | "website"
   | "linkedin_url"
+  | "twitter_url"
+  | "crunchbase_url"
+  | "connected_on"
   | "notes";
 
 export const IMPORT_TARGETS: Array<{ key: ImportTarget; label: string }> = [
@@ -29,6 +33,7 @@ export const IMPORT_TARGETS: Array<{ key: ImportTarget; label: string }> = [
   { key: "first_name", label: "First name" },
   { key: "last_name", label: "Last name" },
   { key: "email", label: "Email" },
+  { key: "phone", label: "Phone" },
   { key: "firm_name", label: "Firm" },
   { key: "position", label: "Title" },
   { key: "investor_type", label: "Investor type" },
@@ -38,6 +43,9 @@ export const IMPORT_TARGETS: Array<{ key: ImportTarget; label: string }> = [
   { key: "geography", label: "Geography" },
   { key: "website", label: "Website" },
   { key: "linkedin_url", label: "LinkedIn URL" },
+  { key: "twitter_url", label: "Twitter URL" },
+  { key: "crunchbase_url", label: "Crunchbase URL" },
+  { key: "connected_on", label: "Connected on (saved in notes)" },
   { key: "notes", label: "Notes" },
   { key: "skip", label: "Skip this column" },
 ];
@@ -52,17 +60,40 @@ const ALIASES: Record<Exclude<ImportTarget, "skip">, string[]> = {
   first_name: ["firstname", "first", "givenname"],
   last_name: ["lastname", "last", "surname", "familyname"],
   email: ["email", "emailaddress", "mail", "workemail", "emailaddresses"],
+  phone: ["phone", "phonenumber", "mobile", "mobilephone", "mobilenumber", "cell", "cellphone", "telephone", "tel", "workphone"],
   firm_name: ["firm", "firmname", "company", "companyname", "organization", "organisation", "fund", "fundname"],
   position: ["position", "title", "jobtitle", "role"],
   investor_type: ["investortype", "type"],
   sector: ["sector", "sectors", "industry", "industries", "focus"],
-  stage: ["stage", "stages"],
+  stage: ["stage", "stages", "round", "rounds", "investmentstage", "fundingstage"],
   check_size: ["checksize", "ticket", "ticketsize", "cheque", "chequesize"],
-  geography: ["geography", "location", "region", "country", "city"],
+  geography: ["geography", "location", "region", "country", "city", "hq", "headquarters", "hqlocation"],
   website: ["website", "web", "site", "homepage"],
   linkedin_url: ["linkedin", "linkedinurl", "linkedinprofile", "profileurl", "url"],
+  twitter_url: ["twitter", "twitterurl", "twitterprofile", "twitterhandle"],
+  crunchbase_url: ["crunchbase", "crunchbaseurl", "crunchbaseprofile"],
+  connected_on: ["connectedon"],
   notes: ["notes", "note", "comments", "description"],
 };
+
+/** Where each field shows in the column match table. */
+export type ImportGroup = "contact" | "profile" | "skip";
+
+const PROFILE_TARGETS = new Set<ImportTarget>([
+  "investor_type",
+  "sector",
+  "stage",
+  "check_size",
+  "geography",
+  "website",
+  "twitter_url",
+  "crunchbase_url",
+]);
+
+export function importGroup(target: ImportTarget): ImportGroup {
+  if (target === "skip") return "skip";
+  return PROFILE_TARGETS.has(target) ? "profile" : "contact";
+}
 
 export function normHeader(h: string): string {
   return h.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -110,15 +141,26 @@ export function findHeader(cells: string[][]): { columns: string[]; rows: string
   return { columns, rows: clean.slice(at + 1), linkedin };
 }
 
+export type DuplicateMode = "fill" | "skip";
+
+/** A row that did not import cleanly, with the file's own cells so it can be downloaded. */
+export type AttentionRow = { reason: "No name" | "Duplicate email" | "No email"; cells: string[] };
+
 export type MappedImport = {
   /** Rows ready to import (have a name; email optional). */
   rows: CsvImportRow[];
+  /** The rows whose email is already a contact. Only set when duplicates are filled in. */
+  updateRows: CsvImportRow[];
+  /** Rows that need a look: no name, a skipped duplicate, or no email. */
+  attention: AttentionRow[];
   /** Rows with no name at all; they can't be imported. */
   missingName: number;
   /** Ready rows without an email (they import, but can't be emailed). */
   noEmail: number;
   /** Rows dropped because their email is already a contact or repeats in the file. */
   duplicates: number;
+  /** Rows kept because their email is already a contact and empty fields get filled in. */
+  existing: number;
 };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -127,13 +169,18 @@ export function applyImportMapping(
   rows: string[][],
   mapping: ImportTarget[],
   existingEmails: Iterable<string> = [],
+  options: { duplicateMode?: DuplicateMode } = {},
 ): MappedImport {
+  const fillExisting = options.duplicateMode === "fill";
   const known = new Set([...existingEmails].map((e) => e.trim().toLowerCase()).filter(Boolean));
   const seen = new Set<string>();
   const out: CsvImportRow[] = [];
+  const updateRows: CsvImportRow[] = [];
+  const attention: AttentionRow[] = [];
   let missingName = 0;
   let noEmail = 0;
   let duplicates = 0;
+  let existing = 0;
 
   for (const r of rows) {
     const v: Partial<Record<ImportTarget, string>> = {};
@@ -146,24 +193,44 @@ export function applyImportMapping(
     const name = v.full_name || [v.first_name, v.last_name].filter(Boolean).join(" ").trim();
     if (!name) {
       missingName += 1;
+      attention.push({ reason: "No name", cells: r });
       continue;
     }
 
     const rawEmail = (v.email ?? "").toLowerCase();
     const email = EMAIL_RE.test(rawEmail) ? rawEmail : "";
+    let isExisting = false;
     if (email) {
-      if (known.has(email) || seen.has(email)) {
+      if (seen.has(email)) {
         duplicates += 1;
+        attention.push({ reason: "Duplicate email", cells: r });
         continue;
+      }
+      if (known.has(email)) {
+        if (!fillExisting) {
+          duplicates += 1;
+          attention.push({ reason: "Duplicate email", cells: r });
+          continue;
+        }
+        isExisting = true;
+        existing += 1;
       }
       seen.add(email);
     } else {
       noEmail += 1;
+      attention.push({ reason: "No email", cells: r });
     }
 
-    const notes = [v.position ? `Title: ${v.position}` : "", v.notes ?? ""].filter(Boolean).join("\n");
+    const notes = [
+      v.position ? `Title: ${v.position}` : "",
+      v.connected_on ? `Connected on: ${v.connected_on}` : "",
+      v.notes ?? "",
+    ]
+      .filter(Boolean)
+      .join("\n");
     const row: CsvImportRow = { investor_name: name };
     if (email) row.email = email;
+    if (v.phone) row.phone = v.phone;
     if (v.firm_name) row.firm_name = v.firm_name;
     if (v.investor_type) row.investor_type = v.investor_type;
     if (v.sector) row.sector = v.sector;
@@ -172,14 +239,17 @@ export function applyImportMapping(
     if (v.geography) row.geography = v.geography;
     if (v.website) row.website = v.website;
     if (v.linkedin_url) row.linkedin_url = v.linkedin_url;
+    if (v.twitter_url) row.twitter_url = v.twitter_url;
+    if (v.crunchbase_url) row.crunchbase_url = v.crunchbase_url;
     if (notes) row.notes = notes;
     out.push(row);
+    if (isExisting) updateRows.push(row);
   }
 
-  return { rows: out, missingName, noEmail, duplicates };
+  return { rows: out, updateRows, attention, missingName, noEmail, duplicates, existing };
 }
 
 /** The template founders can download and fill in. */
 export const TEMPLATE_CSV =
-  "full_name,email,firm,title,investor_type,sector,stage,check_size,geography,linkedin_url,notes\n" +
-  "Ada Lovelace,ada@analyticalventures.com,Analytical Ventures,Partner,VC,Fintech,Seed,250k-1m,US,https://www.linkedin.com/in/ada,Met at demo day\n";
+  "full_name,email,phone,firm,title,investor_type,sector,stage,check_size,geography,linkedin_url,notes\n" +
+  "Ada Lovelace,ada@analyticalventures.com,+1 415 555 0142,Analytical Ventures,Partner,VC,Fintech,Seed,250k-1m,US,https://www.linkedin.com/in/ada,Met at demo day\n";

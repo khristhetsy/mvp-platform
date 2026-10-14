@@ -3,10 +3,13 @@
 /**
  * Drag and drop contact import for Outreach → Manual (and anywhere a founder
  * imports investors). Drop a CSV, an Excel .xlsx or LinkedIn's Connections.csv,
- * or paste rows from a spreadsheet. Columns are matched to contact fields, the
- * founder can change any match, and counts (ready / no email / duplicates) show
- * before anything is saved. Rows go to /api/founder/investor-contacts/import in
- * batches.
+ * or paste rows from a spreadsheet. Columns are matched to contact fields
+ * (contact details and the investor profile), the founder can change any match,
+ * and counts (new / existing / no email / no name) show before anything is
+ * saved. An email that is already a contact either has its empty fields filled
+ * in or is skipped, the founder's choice. Rows go to
+ * /api/founder/investor-contacts/import in batches, and a result screen shows
+ * what was saved for every field.
  */
 
 import { useMemo, useRef, useState } from "react";
@@ -18,6 +21,10 @@ import {
   applyImportMapping,
   autoMap,
   findHeader,
+  importGroup,
+  type AttentionRow,
+  type DuplicateMode,
+  type ImportGroup,
   type ImportTarget,
 } from "@/lib/founder-crm/import-mapping";
 
@@ -25,6 +32,90 @@ const MAX_ROWS = 5000;
 const BATCH = 200;
 
 type Parsed = { fileName: string; columns: string[]; rows: string[][]; linkedin: boolean };
+
+/** What the import saved, shown on the result screen. */
+type Summary = {
+  imported: number;
+  updated: number;
+  unchanged: number;
+  failed: number;
+  overLimit: number;
+  fieldCounts: Record<string, number>;
+  attention: AttentionRow[];
+  columns: string[];
+  leftOut: string[];
+  fields: string[];
+};
+
+type ImportResponse = {
+  imported?: number;
+  updated?: number;
+  unchanged?: number;
+  failed?: number;
+  overLimit?: number;
+  fieldCounts?: Record<string, number>;
+  error?: string;
+};
+
+/** The saved field each import target ends up in, for the result screen. */
+const SAVED_FIELD: Partial<Record<ImportTarget, string>> = {
+  full_name: "name",
+  first_name: "name",
+  last_name: "name",
+  email: "email",
+  phone: "phone",
+  firm_name: "firm_name",
+  investor_type: "investor_type",
+  sector: "preferred_sectors",
+  stage: "preferred_stages",
+  check_size: "check_size",
+  geography: "geography",
+  website: "website",
+  linkedin_url: "linkedin_url",
+  twitter_url: "twitter_url",
+  crunchbase_url: "crunchbase_url",
+  position: "notes",
+  connected_on: "notes",
+  notes: "notes",
+};
+
+const FIELD_ORDER: Array<{ key: string; label: string }> = [
+  { key: "name", label: "Name" },
+  { key: "email", label: "Email" },
+  { key: "phone", label: "Phone" },
+  { key: "firm_name", label: "Firm" },
+  { key: "investor_type", label: "Investor type" },
+  { key: "preferred_sectors", label: "Sectors" },
+  { key: "preferred_stages", label: "Stages" },
+  { key: "check_size", label: "Check size" },
+  { key: "geography", label: "Geography" },
+  { key: "website", label: "Website" },
+  { key: "linkedin_url", label: "LinkedIn URL" },
+  { key: "twitter_url", label: "Twitter URL" },
+  { key: "crunchbase_url", label: "Crunchbase URL" },
+  { key: "notes", label: "Notes (title, connected on)" },
+];
+
+const GROUP_LABEL: Record<ImportGroup, string> = {
+  contact: "Contact",
+  profile: "Investor profile",
+  skip: "Not imported",
+};
+
+function downloadAttentionCsv(columns: string[], rows: AttentionRow[]) {
+  const q = (v: string) => `"${v.replace(/"/g, '""')}"`;
+  const lines = [[...columns, "Reason"].map(q).join(",")];
+  for (const r of rows) {
+    lines.push([...columns.map((_, i) => r.cells[i] ?? ""), r.reason].map(q).join(","));
+  }
+  const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "icapos-import-rows-to-review.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 export function downloadTemplateCsv() {
   const blob = new Blob([TEMPLATE_CSV], { type: "text/csv" });
@@ -61,17 +152,23 @@ export function ContactImportDialog({
   const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [duplicateMode, setDuplicateMode] = useState<DuplicateMode>("fill");
+  const [summary, setSummary] = useState<Summary | null>(null);
 
   const result = useMemo(
-    () => (parsed ? applyImportMapping(parsed.rows, mapping, existingEmails) : null),
-    [parsed, mapping, existingEmails],
+    () => (parsed ? applyImportMapping(parsed.rows, mapping, existingEmails, { duplicateMode }) : null),
+    [parsed, mapping, existingEmails, duplicateMode],
   );
   // One investor limit for every source: the first rows that fit are imported.
   const enforced = Boolean(hold?.enforced);
   const room = hold && enforced ? hold.left : Number.MAX_SAFE_INTEGER;
   const full = Boolean(hold && enforced && hold.left <= 0);
-  const toImport = result ? result.rows.slice(0, room) : [];
-  const overBy = result ? result.rows.length - toImport.length : 0;
+  // Filling an existing contact adds no investor, so only brand new rows count against the limit.
+  const updateSet = useMemo(() => new Set(result?.updateRows ?? []), [result]);
+  const newRows = useMemo(() => (result ? result.rows.filter((r) => !updateSet.has(r)) : []), [result, updateSet]);
+  const keptNew = newRows.slice(0, room);
+  const toImport = result ? [...result.updateRows, ...keptNew] : [];
+  const overBy = newRows.length - keptNew.length;
   const n = (v: number) => v.toLocaleString("en-US");
   const nextPlanLine = hold?.nextPlan ? `move to ${hold.nextPlan.label} for up to ${n(hold.nextPlan.contacts)}` : "";
   const hasName = mapping.includes("full_name") || mapping.includes("first_name") || mapping.includes("last_name");
@@ -134,33 +231,66 @@ export function ContactImportDialog({
   }
 
   async function runImport() {
-    if (!result || toImport.length === 0) return;
+    if (!result || toImport.length === 0 || !parsed) return;
     setImporting(true);
     setError(null);
     setProgress(0);
-    let imported = 0;
+    const total = { imported: 0, updated: 0, unchanged: 0, failed: 0, overLimit: 0 };
+    const fieldCounts: Record<string, number> = {};
+    let stopped = false;
     try {
       for (let i = 0; i < toImport.length; i += BATCH) {
         const batch = toImport.slice(i, i + BATCH);
         const res = await fetch("/api/founder/investor-contacts/import", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ rows: batch, confirm: true, source: parsed?.linkedin ? "linkedin" : "csv_import" }),
+          body: JSON.stringify({
+            rows: batch,
+            confirm: true,
+            duplicateMode,
+            source: parsed.linkedin ? "linkedin" : "csv_import",
+          }),
         });
-        const data = (await res.json().catch(() => null)) as { imported?: number; error?: string } | null;
+        const data = (await res.json().catch(() => null)) as ImportResponse | null;
         if (!res.ok) {
           setError(data?.error ?? "Import stopped partway. Contacts imported so far are saved.");
+          stopped = true;
           break;
         }
-        imported += data?.imported ?? 0;
+        total.imported += data?.imported ?? 0;
+        total.updated += data?.updated ?? 0;
+        total.unchanged += data?.unchanged ?? 0;
+        total.failed += data?.failed ?? 0;
+        total.overLimit += data?.overLimit ?? 0;
+        for (const [field, n] of Object.entries(data?.fieldCounts ?? {})) {
+          fieldCounts[field] = (fieldCounts[field] ?? 0) + n;
+        }
         setProgress(Math.min(toImport.length, i + batch.length));
       }
-      await onImported(imported);
     } catch {
       setError("Network error. Contacts imported so far are saved.");
+      stopped = true;
     } finally {
       setImporting(false);
     }
+    // Show what was saved. If nothing was saved and the import stopped, stay here with the error.
+    if (!stopped || total.imported + total.updated > 0) {
+      const fields = [...new Set(mapping.map((t) => SAVED_FIELD[t]).filter((f): f is string => Boolean(f)))];
+      setSummary({
+        ...total,
+        fieldCounts,
+        attention: result.attention,
+        columns: parsed.columns,
+        leftOut: parsed.columns.filter((_, i) => (mapping[i] ?? "skip") === "skip"),
+        fields,
+      });
+    }
+  }
+
+  /** Close, and tell the page how many contacts were saved so it can refresh. */
+  function finish() {
+    if (summary) void onImported(summary.imported + summary.updated);
+    else onClose();
   }
 
   const steps =
@@ -173,7 +303,7 @@ export function ContactImportDialog({
         ]
       : [
           <>Download the <button type="button" onClick={downloadTemplateCsv} className="font-medium text-[#1A6CE4] hover:underline">CSV template</button>, or use your own file.</>,
-          <>Include at least a <b>name</b>. Add an <b>email</b> for anyone you want to contact. Firm, title, industry and stage are optional.</>,
+          <>Include at least a <b>name</b>. Add an <b>email</b> for anyone you want to contact. Phone, firm, title, industry and stage are optional.</>,
           <>From LinkedIn: Settings and Privacy, Data privacy, Get a copy of your data, Connections. Drop the <b>Connections.csv</b> here.</>,
           <>Check the column matches and counts, then import.</>,
         ];
@@ -183,25 +313,30 @@ export function ContactImportDialog({
       <div className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white shadow-xl">
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
           <h2 className="text-[15px] font-semibold text-slate-900">
-            {mode === "linkedin" ? "Import LinkedIn connections" : "Import contacts"}
+            {summary
+              ? mode === "linkedin" ? "LinkedIn import finished" : "Import finished"
+              : mode === "linkedin" ? "Import LinkedIn connections" : "Import contacts"}
           </h2>
-          <button type="button" onClick={onClose} className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Close">
+          <button type="button" onClick={finish} className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Close">
             <i className="ti ti-x" aria-hidden="true" />
           </button>
         </div>
 
         <div className="p-5">
-          {full && hold ? (
+          {summary ? (
+            <ResultView summary={summary} />
+          ) : null}
+          {!summary && full && hold ? (
             <p className="mb-4 rounded-lg bg-[#FCEBEB] px-3 py-2 text-[12.5px] text-[#791F1F]" role="status">
               You hold {n(hold.held)} of {n(hold.max)} investors on {hold.planLabel}, the most your plan allows. Archive investors you no
               longer need{nextPlanLine ? <>, or <a href="/upgrade" className="font-semibold underline">{nextPlanLine}</a></> : null}.
             </p>
-          ) : hold && enforced ? (
+          ) : !summary && hold && enforced ? (
             <p className="mb-4 text-[12px] text-slate-500">
               {hold.planLabel} holds up to {n(hold.max)} investors from every source. You can add {n(hold.left)} more.
             </p>
           ) : null}
-          {!parsed ? (
+          {summary ? null : !parsed ? (
             <div className="grid gap-5 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
               <div>
                 <div
@@ -285,48 +420,109 @@ export function ContactImportDialog({
                 </button>
               </div>
 
-              <p className="mt-4 text-xs font-medium text-slate-500">Column matches</p>
-              <div className="mt-1.5 grid gap-1.5 sm:grid-cols-2">
-                {parsed.columns.map((col, i) => {
-                  const sample = parsed.rows.find((r) => (r[i] ?? "").trim())?.[i] ?? "";
-                  const t = mapping[i] ?? "skip";
-                  return (
-                    <label key={`${col}-${i}`} className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 ${t === "skip" ? "border-amber-200 bg-amber-50/60" : "border-slate-200 bg-slate-50"}`}>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[12.5px] font-medium text-slate-800">{col}</span>
-                        <span className="block truncate text-[11px] text-slate-400">{sample || "empty"}</span>
+              {parsed.linkedin ? (
+                <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12.5px] leading-relaxed text-amber-900">
+                  LinkedIn withholds most email addresses, so many connections import as names only and cannot be emailed until you add one.
+                  LinkedIn also does not export phone numbers or investor profile details. Those stay empty until you import a file that has them.
+                </p>
+              ) : null}
+
+              <fieldset className="mt-4">
+                <legend className="text-[12.5px] font-semibold text-slate-700">If an email is already in your contacts</legend>
+                <div className="mt-1.5 grid gap-2 sm:grid-cols-2">
+                  {([
+                    { key: "fill", title: "Fill empty fields only", body: "Adds a missing phone, firm or profile detail. Never overwrites what you already have." },
+                    { key: "skip", title: "Skip duplicates", body: "Leaves existing contacts exactly as they are." },
+                  ] as const).map((o) => (
+                    <label
+                      key={o.key}
+                      className={`flex cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2.5 ${
+                        duplicateMode === o.key ? "border-[#1A6CE4] bg-blue-50/60" : "border-slate-200 hover:bg-slate-50"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="duplicate-mode"
+                        checked={duplicateMode === o.key}
+                        onChange={() => setDuplicateMode(o.key)}
+                        className="mt-1"
+                      />
+                      <span>
+                        <span className="block text-[13px] font-semibold text-slate-900">{o.title}</span>
+                        <span className="block text-[12px] leading-snug text-slate-500">{o.body}</span>
                       </span>
-                      <i className="ti ti-arrow-right text-slate-400" aria-hidden="true" />
-                      <select
-                        value={t}
-                        onChange={(e) => {
-                          const next = [...mapping];
-                          next[i] = e.target.value as ImportTarget;
-                          setMapping(next);
-                        }}
-                        className="w-36 rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[12px]"
-                        aria-label={`Field for ${col}`}
-                      >
-                        {IMPORT_TARGETS.map((o) => (
-                          <option key={o.key} value={o.key}>{o.label}</option>
-                        ))}
-                      </select>
                     </label>
+                  ))}
+                </div>
+              </fieldset>
+
+              {result ? (
+                <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {[
+                    { n: newRows.length, label: "New contacts", tone: "text-emerald-700" },
+                    duplicateMode === "fill"
+                      ? { n: result.existing, label: "Existing, will be filled in", tone: "text-[#185FA5]" }
+                      : { n: result.duplicates, label: "Duplicates, skipped", tone: "text-slate-600" },
+                    { n: result.noEmail, label: "No email, saved but cannot be emailed", tone: "text-amber-700" },
+                    { n: result.missingName, label: "No name, cannot import", tone: "text-red-700" },
+                  ].map((c) => (
+                    <div key={c.label} className="rounded-lg border border-slate-200 px-3 py-2">
+                      <div className={`text-xl font-bold ${c.tone}`}>{n(c.n)}</div>
+                      <div className="text-[11.5px] leading-snug text-slate-500">{c.label}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              {result && duplicateMode === "fill" && result.duplicates > 0 ? (
+                <p className="mt-1.5 text-[11.5px] text-slate-500">
+                  {n(result.duplicates)} repeated email{result.duplicates === 1 ? "" : "s"} inside the file {result.duplicates === 1 ? "is" : "are"} skipped.
+                </p>
+              ) : null}
+
+              <div className="mt-4">
+                <div className="grid grid-cols-[1fr_1fr_1.1fr] gap-3 border-b border-slate-200 pb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                  <span>Your column</span>
+                  <span>First row sample</span>
+                  <span>Saves to</span>
+                </div>
+                {(["contact", "profile", "skip"] as const).map((group) => {
+                  const cols = parsed.columns
+                    .map((col, i) => ({ col, i, t: mapping[i] ?? ("skip" as ImportTarget) }))
+                    .filter((c) => importGroup(c.t) === group);
+                  if (cols.length === 0) return null;
+                  return (
+                    <div key={group}>
+                      <p className="pb-1 pt-3 text-[12.5px] font-bold text-slate-800">{GROUP_LABEL[group]}</p>
+                      {cols.map(({ col, i, t }) => {
+                        const sample = parsed.rows.find((r) => (r[i] ?? "").trim())?.[i] ?? "";
+                        return (
+                          <div key={`${col}-${i}`} className="grid grid-cols-[1fr_1fr_1.1fr] items-center gap-3 border-b border-slate-100 py-1.5">
+                            <span className={`truncate text-[13px] font-medium ${t === "skip" ? "text-slate-500" : "text-slate-900"}`}>{col}</span>
+                            <span className="truncate text-[12px] text-slate-500">{sample || "empty"}</span>
+                            <select
+                              value={t}
+                              onChange={(e) => {
+                                const next = [...mapping];
+                                next[i] = e.target.value as ImportTarget;
+                                setMapping(next);
+                              }}
+                              className={`w-full rounded-md border px-2 py-1.5 text-[13px] ${t === "skip" ? "border-amber-200 bg-amber-50/60 text-slate-600" : "border-slate-200 bg-white text-slate-900"}`}
+                              aria-label={`Field for ${col}`}
+                            >
+                              {IMPORT_TARGETS.map((o) => (
+                                <option key={o.key} value={o.key}>{o.label}</option>
+                              ))}
+                            </select>
+                          </div>
+                        );
+                      })}
+                    </div>
                   );
                 })}
               </div>
 
               {!hasName ? (
                 <p className="mt-3 text-xs text-red-600">Match a column to Full name, or to First name and Last name, before importing.</p>
-              ) : null}
-
-              {result ? (
-                <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3 text-[12.5px]">
-                  <span className="rounded-full bg-blue-50 px-2.5 py-0.5 font-medium text-[#185FA5]">{result.rows.length.toLocaleString()} ready</span>
-                  {result.noEmail > 0 ? <span className="text-amber-700">{result.noEmail.toLocaleString()} without email (imported, can&apos;t be emailed)</span> : null}
-                  {result.duplicates > 0 ? <span className="text-slate-500">{result.duplicates.toLocaleString()} duplicate{result.duplicates === 1 ? "" : "s"} skipped</span> : null}
-                  {result.missingName > 0 ? <span className="text-slate-500">{result.missingName.toLocaleString()} row{result.missingName === 1 ? "" : "s"} with no name skipped</span> : null}
-                </div>
               ) : null}
               {hold && overBy > 0 && !full ? (
                 <p className="mt-3 rounded-lg bg-[#FFF8EC] px-3 py-2 text-[12.5px] text-[#633806]">
@@ -340,25 +536,101 @@ export function ContactImportDialog({
           {error ? <p className="mt-3 text-xs text-red-600" role="alert">{error}</p> : null}
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-5 py-3">
+        <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-100 px-5 py-3">
           {importing ? (
             <span className="mr-auto text-xs text-slate-500">Importing {progress.toLocaleString()} of {toImport.length.toLocaleString()}…</span>
-          ) : null}
-          <button type="button" onClick={onClose} className="rounded-md border border-slate-200 px-3.5 py-1.5 text-[13px] text-slate-700 hover:bg-slate-50">
-            Cancel
-          </button>
-          {parsed ? (
+          ) : summary ? null : (
+            <span className="mr-auto text-xs text-slate-500">Nothing is saved until you press Import.</span>
+          )}
+          {summary ? (
+            <button type="button" onClick={finish} className="cap-btn-primary rounded-md px-4 py-1.5 text-[13px] font-semibold">
+              View my contacts
+            </button>
+          ) : (
+            <>
+              <button type="button" onClick={onClose} className="rounded-md border border-slate-200 px-3.5 py-1.5 text-[13px] text-slate-700 hover:bg-slate-50">
+                Cancel
+              </button>
+              {parsed ? (
+                <button
+                  type="button"
+                  onClick={() => void runImport()}
+                  disabled={importing || !hasName || !result || toImport.length === 0}
+                  className="cap-btn-primary rounded-md px-4 py-1.5 text-[13px] font-semibold disabled:opacity-50"
+                >
+                  {importing ? "Importing…" : `Import ${n(toImport.length)} contact${toImport.length === 1 ? "" : "s"}`}
+                </button>
+              ) : null}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const FIELD_LABEL = new Map(FIELD_ORDER.map((f) => [f.key, f.label]));
+
+function ResultView({ summary }: Readonly<{ summary: Summary }>) {
+  const n = (v: number) => v.toLocaleString("en-US");
+  const saved = summary.imported + summary.updated;
+  const rows = FIELD_ORDER.filter((f) => summary.fields.includes(f.key));
+  const needLook = summary.attention.length;
+  const noName = summary.attention.filter((a) => a.reason === "No name").length;
+  const dupes = summary.attention.filter((a) => a.reason === "Duplicate email").length;
+  const noEmail = summary.attention.filter((a) => a.reason === "No email").length;
+  return (
+    <div>
+      <p className="text-xl font-bold text-slate-900">{n(saved)} contact{saved === 1 ? "" : "s"} saved</p>
+      <p className="mt-1 text-[13px] text-slate-600">
+        {n(summary.imported)} new{summary.updated > 0 ? `, ${n(summary.updated)} existing contact${summary.updated === 1 ? "" : "s"} filled in` : ""}
+        {summary.unchanged > 0 ? `, ${n(summary.unchanged)} already had everything in the file` : ""}. Here is what was stored for each field.
+      </p>
+
+      {saved > 0 ? (
+        <div className="mt-3">
+          <div className="grid grid-cols-[1.2fr_2fr_1fr] gap-3 border-b border-slate-200 pb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+            <span>Field</span>
+            <span>Rows with a value saved</span>
+            <span className="text-right">Count</span>
+          </div>
+          {rows.map((f) => {
+            const count = summary.fieldCounts[f.key] ?? 0;
+            return (
+              <div key={f.key} className="grid grid-cols-[1.2fr_2fr_1fr] items-center gap-3 border-b border-slate-100 py-1.5">
+                <span className="text-[13px] font-medium text-slate-900">{FIELD_LABEL.get(f.key)}</span>
+                <span className="block h-2 overflow-hidden rounded-full bg-slate-100">
+                  <span className="block h-2 rounded-full bg-[#1A6CE4]" style={{ width: `${Math.min(100, Math.round((count / saved) * 100))}%` }} />
+                </span>
+                <span className="text-right text-[12.5px] text-slate-600">{n(count)} of {n(saved)}</span>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
+
+      {needLook > 0 || summary.failed > 0 || summary.overLimit > 0 || summary.leftOut.length > 0 ? (
+        <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-3 text-[12.5px] leading-relaxed text-amber-900">
+          <p className="font-semibold">Needs a look</p>
+          <ul className="mt-1 list-disc space-y-0.5 pl-4">
+            {noName > 0 ? <li>{n(noName)} row{noName === 1 ? "" : "s"} had no name and {noName === 1 ? "was" : "were"} not imported.</li> : null}
+            {dupes > 0 ? <li>{n(dupes)} row{dupes === 1 ? "" : "s"} repeated an email and {dupes === 1 ? "was" : "were"} skipped.</li> : null}
+            {noEmail > 0 ? <li>{n(noEmail)} row{noEmail === 1 ? "" : "s"} had no email, so {noEmail === 1 ? "it is" : "they are"} saved but cannot be emailed yet.</li> : null}
+            {summary.failed > 0 ? <li>{n(summary.failed)} row{summary.failed === 1 ? "" : "s"} could not be saved. Try importing them again.</li> : null}
+            {summary.overLimit > 0 ? <li>{n(summary.overLimit)} row{summary.overLimit === 1 ? "" : "s"} did not fit your plan&apos;s investor limit.</li> : null}
+            {summary.leftOut.length > 0 ? <li>Columns left out: {summary.leftOut.join(", ")}.</li> : null}
+          </ul>
+          {needLook > 0 ? (
             <button
               type="button"
-              onClick={() => void runImport()}
-              disabled={importing || full || !hasName || !result || toImport.length === 0}
-              className="cap-btn-primary rounded-md px-4 py-1.5 text-[13px] font-semibold disabled:opacity-50"
+              onClick={() => downloadAttentionCsv(summary.columns, summary.attention)}
+              className="mt-2.5 rounded-md border border-amber-300 bg-white px-3 py-1.5 text-[12.5px] font-semibold text-amber-900 hover:bg-amber-100"
             >
-              {importing ? "Importing…" : `Import ${n(toImport.length)} contact${toImport.length === 1 ? "" : "s"}`}
+              Download the {n(needLook)} row{needLook === 1 ? "" : "s"} as CSV
             </button>
           ) : null}
         </div>
-      </div>
+      ) : null}
     </div>
   );
 }

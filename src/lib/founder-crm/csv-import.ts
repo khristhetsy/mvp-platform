@@ -4,6 +4,7 @@ export type CsvImportRow = {
   investor_name?: string;
   firm_name?: string;
   email?: string;
+  phone?: string;
   investor_type?: string;
   sector?: string;
   stage?: string;
@@ -26,6 +27,7 @@ export type ParsedCsvRow = {
     investor_name: string;
     firm_name: string | null;
     email: string | null;
+    phone: string | null;
     investor_type: string | null;
     preferred_sectors: string | null;
     preferred_stages: string | null;
@@ -97,6 +99,7 @@ export function parseCsvImportRows(rows: CsvImportRow[]): ParsedCsvRow[] {
               investor_name: name,
               firm_name: row.firm_name?.trim() || null,
               email,
+              phone: row.phone?.trim() || null,
               investor_type: row.investor_type?.trim() || null,
               preferred_sectors: row.sector?.trim() || null,
               preferred_stages: row.stage?.trim() || null,
@@ -127,15 +130,93 @@ export function dedupeImportRows(
   const seen = new Set<string>();
   return parsed.map((row) => {
     if (!row.valid || !row.data?.email) {
-      return { ...row, duplicate: false, skipped: false };
+      return { ...row, duplicate: false, existing: false, skipped: false };
     }
 
     const email = row.data.email;
-    if (existingEmails.has(email) || seen.has(email)) {
-      return { ...row, duplicate: true, skipped: true };
+    if (existingEmails.has(email)) {
+      // Already one of the founder's contacts. The import route either skips it
+      // or fills its empty fields, depending on the founder's choice.
+      return { ...row, duplicate: true, existing: true, skipped: true };
+    }
+    if (seen.has(email)) {
+      return { ...row, duplicate: true, existing: false, skipped: true };
     }
 
     seen.add(email);
-    return { ...row, duplicate: false, skipped: false };
+    return { ...row, duplicate: false, existing: false, skipped: false };
   });
+}
+
+type ParsedData = NonNullable<ParsedCsvRow["data"]>;
+
+/** Fields that can be filled on a contact the founder already holds. */
+export const FILLABLE_FIELDS = [
+  "firm_name",
+  "phone",
+  "website",
+  "investor_type",
+  "preferred_sectors",
+  "preferred_stages",
+  "geography",
+  "linkedin_url",
+  "twitter_url",
+  "crunchbase_url",
+  "personal_website_url",
+  "other_social_url",
+  "notes",
+] as const;
+
+export type FillableField = (typeof FILLABLE_FIELDS)[number] | "check_size";
+
+function isEmpty(value: string | null | undefined) {
+  return !value || !value.trim();
+}
+
+/**
+ * What an import row can add to a contact that already exists: only fields the
+ * contact has empty. Anything the founder already has is never overwritten,
+ * and the name and email never change.
+ */
+export function fillEmptyPatch(
+  existing: Pick<
+    FounderInvestorContactRecord,
+    | "firm_name" | "phone" | "website" | "investor_type" | "preferred_sectors" | "preferred_stages"
+    | "geography" | "linkedin_url" | "twitter_url" | "crunchbase_url" | "personal_website_url"
+    | "other_social_url" | "notes" | "check_size_min" | "check_size_max"
+  >,
+  incoming: ParsedData,
+) {
+  const patch: Partial<Record<(typeof FILLABLE_FIELDS)[number], string>> & {
+    check_size_min?: number;
+    check_size_max?: number;
+  } = {};
+  const filled: FillableField[] = [];
+
+  for (const field of FILLABLE_FIELDS) {
+    const next = incoming[field];
+    if (isEmpty(existing[field]) && !isEmpty(next)) {
+      patch[field] = next as string;
+      filled.push(field);
+    }
+  }
+
+  const hasCheck = existing.check_size_min !== null || existing.check_size_max !== null;
+  if (!hasCheck && (incoming.check_size_min !== null || incoming.check_size_max !== null)) {
+    if (incoming.check_size_min !== null) patch.check_size_min = incoming.check_size_min;
+    if (incoming.check_size_max !== null) patch.check_size_max = incoming.check_size_max;
+    filled.push("check_size");
+  }
+
+  return { patch, filled };
+}
+
+/** Which fields a parsed row carries, for the "what was saved" counts. */
+export function presentFields(data: ParsedData): FillableField[] {
+  const out: FillableField[] = [];
+  for (const field of FILLABLE_FIELDS) {
+    if (!isEmpty(data[field])) out.push(field);
+  }
+  if (data.check_size_min !== null || data.check_size_max !== null) out.push("check_size");
+  return out;
 }
