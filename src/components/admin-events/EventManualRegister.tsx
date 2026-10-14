@@ -11,8 +11,11 @@ import {
 } from "@/lib/icfo-events/registration-fields";
 import { resolveAll, sectorOptions, type FieldSet } from "@/lib/icfo-events/registration-field-sets";
 import { useVocabulary } from "@/lib/vocabulary/provider";
+import { mapProfileToFill, type ContactProfileBits } from "@/lib/icfo-events/contact-profile-map";
 
-type ContactHit = { id: string; name: string; email: string; company: string; title: string; country: string; phone: string };
+const isBlank = (v: unknown): boolean => v == null || (Array.isArray(v) ? v.length === 0 : String(v).trim() === "");
+
+type ContactHit = { id: string; name: string; email: string; company: string; title: string; country: string; phone: string; profile?: ContactProfileBits };
 
 /** Registration types that look the guest up in Contacts (Sponsor does not). */
 const LOOKUP_ROLES: AttendeeType[] = ["investor", "founder", "service"];
@@ -51,6 +54,9 @@ export function EventManualRegister({ eventId, onAdded, onClose, fieldSet }: { e
   const [activeHit, setActiveHit] = useState(0);
   const [linked, setLinked] = useState<string | null>(null); // the picked contact's name
   const [filled, setFilled] = useState<Set<string>>(new Set()); // answer keys filled from Contacts
+  const [linkedHit, setLinkedHit] = useState<ContactHit | null>(null); // the picked contact, for re-mapping on a role change
+  const [notes, setNotes] = useState<Record<string, string>>({}); // key to "where this came from"
+  const [hints, setHints] = useState<Record<string, string>>({}); // key to what the profile says, when it can't be mapped
   const skipNextLookup = useRef(false);
   const nameValue = String(answers.name ?? "");
   const lookupOn = LOOKUP_ROLES.includes(role);
@@ -90,6 +96,7 @@ export function EventManualRegister({ eventId, onAdded, onClose, fieldSet }: { e
     if (key !== "name") dropFilled(key);
   }
   function toggleChip(key: string, opt: string) {
+    dropFilled(key);
     setAnswers((a) => {
       const cur = Array.isArray(a[key]) ? (a[key] as string[]) : [];
       return { ...a, [key]: cur.includes(opt) ? cur.filter((x) => x !== opt) : [...cur, opt] };
@@ -106,27 +113,60 @@ export function EventManualRegister({ eventId, onAdded, onClose, fieldSet }: { e
       const hit = opts.find((o) => o.toLowerCase() === c.country.toLowerCase()) ?? opts.find((o) => o === "Other");
       if (hit) next.country = hit;
     }
+    // What the profile adds for this registration type (investor type, stages, sectors, ...).
+    const pf = mapProfileToFill(role, c.profile, fields);
     setAnswers((a) => {
-      const merged = { ...a };
+      const merged: Record<string, unknown> = { ...a };
       for (const [k, v] of Object.entries(next)) if (v) merged[k] = v;
+      Object.assign(merged, pf.values);
       return merged;
     });
-    setFilled(new Set(Object.entries(next).filter(([, v]) => v).map(([k]) => k)));
+    setFilled(new Set([...Object.entries(next).filter(([, v]) => v).map(([k]) => k), ...Object.keys(pf.values)]));
+    setNotes(pf.notes);
+    setHints(pf.hints);
+    setLinkedHit(c);
     setLinked(c.name);
     setHits([]);
     setLookupOpen(false);
     setError(null);
   }
 
+  // Switching the registration type while linked: fill what the new type asks for from the
+  // same Contact, without overwriting anything already typed.
+  useEffect(() => {
+    if (!linkedHit) return;
+    const pf = mapProfileToFill(role, linkedHit.profile, fields);
+    const open = Object.keys(pf.values).filter((k) => isBlank(answers[k]));
+    if (open.length > 0) {
+      setAnswers((a) => {
+        const merged = { ...a };
+        for (const k of open) if (isBlank(merged[k])) merged[k] = pf.values[k];
+        return merged;
+      });
+      setFilled((s) => new Set([...s, ...open]));
+      setNotes((n) => ({ ...n, ...pf.notes }));
+    }
+    setHints(pf.hints);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role]);
+
+  function clearLink() {
+    setLinked(null);
+    setLinkedHit(null);
+    setFilled(new Set());
+    setNotes({});
+    setHints({});
+  }
+
   function unlinkContact() {
     skipNextLookup.current = true;
-    setLinked(null);
-    setFilled(new Set());
+    clearLink();
   }
 
   /** Editing a field the Contact filled makes it the admin's value, so it loses the green tint. */
   function dropFilled(key: string) {
     setFilled((s) => { if (!s.has(key)) return s; const n = new Set(s); n.delete(key); return n; });
+    setNotes((n) => { if (!(key in n)) return n; const { [key]: _drop, ...rest } = n; void _drop; return rest; });
   }
 
   async function submit() {
@@ -181,7 +221,7 @@ export function EventManualRegister({ eventId, onAdded, onClose, fieldSet }: { e
               value={nameValue}
               onChange={(e) => {
                 set("name", e.target.value);
-                if (linked) { setLinked(null); setFilled(new Set()); }
+                if (linked) clearLink();
                 setLookupOpen(true);
               }}
               onFocus={() => setLookupOpen(true)}
@@ -241,14 +281,26 @@ export function EventManualRegister({ eventId, onAdded, onClose, fieldSet }: { e
     }
     if (f.kind === "chips") {
       const cur = Array.isArray(answers[f.key]) ? (answers[f.key] as string[]) : [];
+      const fromContact = filled.has(f.key);
+      const chipsNeedInput = Boolean(linked) && f.required === true && cur.length === 0;
       return (
         <div key={f.key} className="sm:col-span-2">
-          <p className="mb-1.5 text-[11px] text-[var(--text-secondary)]">{f.label}</p>
-          <div className="flex flex-wrap gap-1.5">
-            {f.options!.map((o) => (
-              <button key={o} type="button" onClick={() => toggleChip(f.key, o)} className={`rounded-full border px-2.5 py-1 text-xs ${cur.includes(o) ? "border-[var(--navy)] bg-[var(--navy)] text-white" : "border-[var(--border-subtle)] text-[var(--text-secondary)]"}`}>{o}</button>
-            ))}
+          <div className="mb-1.5 flex items-baseline justify-between gap-3">
+            <p className="text-[11px] text-[var(--text-secondary)]">{f.label}</p>
+            {fromContact && notes[f.key] && <span className="text-[11px] text-emerald-700">{notes[f.key]}</span>}
           </div>
+          <div className="flex flex-wrap gap-1.5">
+            {f.options!.map((o) => {
+              const on = cur.includes(o);
+              const style = on
+                ? (fromContact ? "border-emerald-700 bg-emerald-50 font-semibold text-emerald-800" : "border-[var(--navy)] bg-[var(--navy)] text-white")
+                : (chipsNeedInput ? "border-amber-300 bg-amber-50/60 text-[var(--text-secondary)]" : "border-[var(--border-subtle)] text-[var(--text-secondary)]");
+              return (
+                <button key={o} type="button" aria-pressed={on} onClick={() => toggleChip(f.key, o)} className={`rounded-full border px-2.5 py-1 text-xs ${style}`}>{o}</button>
+              );
+            })}
+          </div>
+          {chipsNeedInput && <span className="mt-1 block text-[11px] text-amber-800">Not on the Contact record. Please choose.</span>}
         </div>
       );
     }
@@ -265,7 +317,12 @@ export function EventManualRegister({ eventId, onAdded, onClose, fieldSet }: { e
         ) : (
           <input type={f.key === "email" ? "email" : f.key === "phone" ? "tel" : "text"} value={String(answers[f.key] ?? "")} onChange={(e) => set(f.key, e.target.value)} className={`w-full rounded-md border px-2 py-1.5 text-xs ${tint}`} />
         )}
-        {needsHint && <span className="mt-1 block text-[11px] text-amber-800">Not on the Contact record. Please fill in.</span>}
+        {filled.has(f.key) && notes[f.key] && <span className="mt-1 block text-[11px] text-emerald-700">{notes[f.key]}</span>}
+        {needsHint && (
+          <span className="mt-1 block text-[11px] text-amber-800">
+            {hints[f.key] ? `${hints[f.key]}. Pick the closest range.` : "Not on the Contact record. Please fill in."}
+          </span>
+        )}
       </label>
     );
   }
@@ -281,7 +338,7 @@ export function EventManualRegister({ eventId, onAdded, onClose, fieldSet }: { e
       {linked && lookupOn && (
         <div className="mb-3 flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800" role="status">
           <i className="ti ti-circle-check" aria-hidden="true" />
-          <span className="min-w-0 flex-1"><b>Linked to Contact: {linked}.</b> Fields were filled from Contacts. You can edit any of them before registering.</span>
+          <span className="min-w-0 flex-1"><b>Linked to Contact: {linked}.</b> {filled.size} field{filled.size === 1 ? "" : "s"} filled from the Contact and its profile. You can edit any of them before registering.</span>
           <button type="button" onClick={unlinkContact} className="shrink-0 rounded-md border border-emerald-300 bg-white px-2 py-1 text-[11px] hover:bg-emerald-50">Unlink</button>
         </div>
       )}
