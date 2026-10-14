@@ -430,6 +430,8 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
   const [actionErr, setActionErr] = useState<string | null>(null);
   const [showTask, setShowTask] = useState(false);
   const [task, setTask] = useState({ title: "", taskType: "Call", dueDate: "", assigneeId: "" });
+  const [taskKind, setTaskKind] = useState<"" | "Add" | "Edit" | "Feature">("");
+  const [kindOpen, setKindOpen] = useState(false);
   const [contactTasks, setContactTasks] = useState<{ id: string; title: string; task_type: string; due_date: string | null; status: string; assignee_name: string | null }[]>([]);
   const [tasksLoaded, setTasksLoaded] = useState(false);
   const [confirmTaskId, setConfirmTaskId] = useState<string | null>(null);
@@ -675,9 +677,9 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
     if (!task.title.trim()) return;
     setBusy(true); setActionErr(null);
     try {
-      const res = await fetch("/api/sales/tasks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: task.title, taskType: task.taskType, dueDate: task.dueDate || null, assigneeId: task.assigneeId || null, contactCrmId: contact.id, contactName: contact.name }) });
+      const res = await fetch("/api/sales/tasks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: taskKind ? `${taskKind}: ${task.title.trim()}` : task.title, taskType: task.taskType, dueDate: task.dueDate || null, assigneeId: task.assigneeId || null, contactCrmId: contact.id, contactName: contact.name }) });
       if (!res.ok) { setActionErr((await res.json().catch(() => ({})))?.error || "Couldn’t create the task."); return; }
-      setShowTask(false); setTask({ title: "", taskType: "Call", dueDate: "", assigneeId: "" });
+      setShowTask(false); setTask({ title: "", taskType: "Call", dueDate: "", assigneeId: "" }); setTaskKind(""); setKindOpen(false);
       await loadContactTasks();
     } catch { setActionErr("Network error — couldn’t create the task."); } finally { setBusy(false); }
   }
@@ -1129,7 +1131,31 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                     <div style={{ paddingTop: 4 }}>
                       <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", marginBottom: 8 }}><i className="ti ti-link" aria-hidden="true" /> New tasks auto-link to {contact.name}.</div>
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 96px 128px 130px", gap: 8, background: "#F5F9FF", border: "0.5px solid #eef1f5", borderRadius: 8, padding: 10 }}>
-                        <input value={task.title} onChange={(e) => setTask({ ...task, title: e.target.value })} placeholder="Task title" style={inp} />
+                        <div style={{ position: "relative", minWidth: 0 }} onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setKindOpen(false); }}>
+                          <div style={{ ...inp, display: "flex", alignItems: "center", gap: 6, padding: "0 9px", height: 32, ...(kindOpen ? { borderColor: "#185FA5" } : {}) }}>
+                            {taskKind && (() => {
+                              const kc = taskKind === "Add" ? { bg: "#E1F5EE", fg: "#0F6E56" } : taskKind === "Edit" ? { bg: "#FAEEDA", fg: "#854F0B" } : { bg: "#EEEDFE", fg: "#534AB7" };
+                              return <button type="button" onClick={() => setKindOpen(true)} title="Change type" style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 999, border: "none", background: kc.bg, color: kc.fg, cursor: "pointer", whiteSpace: "nowrap" }}>{taskKind}</button>;
+                            })()}
+                            <input value={task.title} onChange={(e) => setTask({ ...task, title: e.target.value })} onFocus={() => { if (!taskKind) setKindOpen(true); }} onClick={() => { if (!taskKind) setKindOpen(true); }} onKeyDown={(e) => { if (e.key === "Escape") setKindOpen(false); }} placeholder="Task title" style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: "transparent", fontSize: 12, color: "var(--foreground)" }} />
+                            <button type="button" aria-label="Choose task type" onClick={() => setKindOpen((o) => !o)} style={{ border: "none", background: "none", color: "var(--muted-foreground)", cursor: "pointer", fontSize: 11, padding: 2 }}>▾</button>
+                          </div>
+                          {kindOpen && (
+                            <div role="listbox" style={{ position: "absolute", zIndex: 20, left: 0, right: 0, top: 36, background: "#fff", border: "0.5px solid #d7dbe3", borderRadius: 8, boxShadow: "0 8px 24px rgba(10,20,40,.16)", padding: 6 }}>
+                              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--muted-foreground)", padding: "4px 8px" }}>Task type</div>
+                              {([
+                                { k: "Add", icon: "+", d: "Add something new for this contact", bg: "#E1F5EE", fg: "#0F6E56" },
+                                { k: "Edit", icon: "✎", d: "Change or correct existing details", bg: "#FAEEDA", fg: "#854F0B" },
+                                { k: "Feature", icon: "★", d: "Request a new capability", bg: "#EEEDFE", fg: "#534AB7" },
+                              ] as const).map((o) => (
+                                <button key={o.k} type="button" role="option" aria-selected={taskKind === o.k} onMouseDown={(e) => e.preventDefault()} onClick={() => { setTaskKind(o.k); setKindOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", border: "none", background: taskKind === o.k ? "#F0F5FC" : "none", borderRadius: 6, padding: 8, cursor: "pointer" }}>
+                                  <span style={{ flex: "none", width: 26, height: 26, borderRadius: 6, display: "grid", placeItems: "center", fontWeight: 700, fontSize: 14, background: o.bg, color: o.fg }}>{o.icon}</span>
+                                  <span><b style={{ display: "block", fontSize: 12.5, color: "var(--foreground)" }}>{o.k}</b><span style={{ display: "block", fontSize: 11, color: "var(--muted-foreground)" }}>{o.d}</span></span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                         <select value={task.taskType} onChange={(e) => setTask({ ...task, taskType: e.target.value })} style={inp}>{["Call", "Email", "Demo", "Follow-up", "Proposal"].map((t) => <option key={t}>{t}</option>)}</select>
                         <input type="date" value={task.dueDate} onChange={(e) => setTask({ ...task, dueDate: e.target.value })} style={inp} />
                         <select value={task.assigneeId} onChange={(e) => setTask({ ...task, assigneeId: e.target.value })} style={inp}><option value="">Assign to me</option>{assignableStaff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
