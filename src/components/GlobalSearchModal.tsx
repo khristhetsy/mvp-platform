@@ -1,8 +1,14 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import type { WorkspaceId } from "@/lib/workspace-nav";
+import {
+  getAdminWorkspaceNavSections,
+  getFounderWorkspaceNavSections,
+  getInvestorWorkspaceNavSections,
+  type WorkspaceId,
+} from "@/lib/workspace-nav";
+import { buildSearchIndex, searchMenu } from "@/lib/nav-search";
 import type { SearchResult } from "@/app/api/founder/search/route";
 
 // ── Static page shortcuts ─────────────────────────────────────────────────────
@@ -41,6 +47,32 @@ const PAGES: PageShortcut[] = [
   { id: "inv-learn",   title: "Learning",             subtitle: "Investor education",     href: "/investor/learning",             keywords: ["learning", "courses", "education"],        workspace: "investor" },
   { id: "inv-set",     title: "Investor settings",    subtitle: "Profile & integrations", href: "/investor/settings",             keywords: ["settings", "profile"],                     workspace: "investor" },
 ];
+
+// Menu pages are searched from the live navigation, so every workspace (admin
+// included) finds its pages without a hand kept list.
+const ROOT_LABEL: Record<WorkspaceId, string> = { founder: "Founder", investor: "Investor", admin: "Admin" };
+
+function navSectionsFor(workspace: WorkspaceId) {
+  if (workspace === "admin") return getAdminWorkspaceNavSections();
+  if (workspace === "investor") return getInvestorWorkspaceNavSections();
+  return getFounderWorkspaceNavSections();
+}
+
+type PageItem = { id: string; title: string; subtitle: string; href: string; reason?: string; terms?: string[] };
+
+/** The label with the matched words highlighted. */
+function Highlighted({ text, terms }: { text: string; terms?: string[] }) {
+  const list = (terms ?? []).filter(Boolean).map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  if (list.length === 0) return <>{text}</>;
+  const parts = text.split(new RegExp(`(${list.join("|")})`, "ig"));
+  return (
+    <>
+      {parts.map((part, i) =>
+        i % 2 === 1 ? <mark key={i} style={{ background: "#FAEEDA", color: "#633806", borderRadius: 3, padding: "0 1px" }}>{part}</mark> : part,
+      )}
+    </>
+  );
+}
 
 // ── Type icons ────────────────────────────────────────────────────────────────
 
@@ -147,16 +179,29 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
     return () => clearTimeout(t);
   }, [query, fetchDynamic]);
 
-  // Filter static pages for this workspace
+  // Pages: the live menu first (word by word, with synonyms), then the older
+  // static shortcuts that the menu search did not already return.
+  const index = useMemo(() => buildSearchIndex(navSectionsFor(workspace), ROOT_LABEL[workspace]), [workspace]);
   const q = query.toLowerCase();
   const workspacePages = PAGES.filter((p) => p.workspace === workspace || p.workspace === "all");
-  const matchedPages = query.length === 0
-    ? workspacePages.slice(0, 6)
-    : workspacePages.filter(
-        (p) =>
-          p.title.toLowerCase().includes(q) ||
-          p.keywords.some((k) => k.includes(q)),
-      ).slice(0, 5);
+  const toItem = (p: PageShortcut): PageItem => ({ id: p.id, title: p.title, subtitle: p.subtitle, href: p.href });
+  let matchedPages: PageItem[];
+  if (query.length === 0) {
+    matchedPages = workspacePages.length > 0
+      ? workspacePages.slice(0, 6).map(toItem)
+      : index.slice(0, 6).map((e) => ({ id: e.href, title: e.label, subtitle: e.path, href: e.href }));
+  } else {
+    const menuHits = searchMenu(index, query, 6);
+    const seen = new Set(menuHits.map((h) => h.href));
+    const extra = workspacePages
+      .filter((p) => !seen.has(p.href) && (p.title.toLowerCase().includes(q) || p.keywords.some((k) => k.includes(q))))
+      .slice(0, 3)
+      .map(toItem);
+    matchedPages = [
+      ...menuHits.map((h) => ({ id: h.href, title: h.label, subtitle: h.path, href: h.href, reason: h.reason, terms: h.terms })),
+      ...extra,
+    ];
+  }
 
   // Group dynamic results by type
   const grouped = new Map<SearchResult["type"], SearchResult[]>();
@@ -168,13 +213,22 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
 
   // Flat combined list for keyboard nav index
   type CombinedResult =
-    | { kind: "page"; item: PageShortcut }
-    | { kind: "dynamic"; item: SearchResult };
+    | { kind: "page"; item: PageItem }
+    | { kind: "dynamic"; item: SearchResult }
+    | { kind: "ask" };
 
   const combined: CombinedResult[] = [
     ...matchedPages.map((p) => ({ kind: "page" as const, item: p })),
     ...dynamicResults.map((r) => ({ kind: "dynamic" as const, item: r })),
+    ...(query.length >= 2 ? [{ kind: "ask" as const }] : []),
   ];
+  const askIndex = query.length >= 2 ? combined.length - 1 : -1;
+
+  /** Hand the question to the iCapOS Assistant, which knows the whole menu. */
+  function askAssistant() {
+    setOpen(false);
+    window.dispatchEvent(new CustomEvent("icapos-assistant:ask", { detail: { prompt: `Where do I find "${query}" in the menu? Point me to the page.` } }));
+  }
 
   function navigate(href: string) {
     setOpen(false);
@@ -190,7 +244,9 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
       setActiveIndex((i) => Math.max(i - 1, 0));
     } else if (e.key === "Enter") {
       const item = combined[activeIndex];
-      if (item) navigate(item.item.href);
+      if (!item) return;
+      if (item.kind === "ask") askAssistant();
+      else navigate(item.item.href);
     }
   }
 
@@ -270,10 +326,10 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
         {/* Results */}
         <div style={{ maxHeight: 420, overflowY: "auto" }}>
 
-          {/* Empty query with no results */}
-          {combined.length === 0 && query.length >= 2 && !loading && (
-            <p style={{ padding: "24px 18px", textAlign: "center", fontSize: 13, color: "#9ca3af" }}>
-              No results for &ldquo;{query}&rdquo;
+          {/* Nothing matched */}
+          {matchedPages.length === 0 && dynamicResults.length === 0 && query.length >= 2 && !loading && (
+            <p style={{ padding: "18px 18px 8px", textAlign: "center", fontSize: 13, color: "#9ca3af" }}>
+              No pages match &ldquo;{query}&rdquo;. Try fewer or different words, or ask below.
             </p>
           )}
 
@@ -281,7 +337,7 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
           {matchedPages.length > 0 && (
             <div>
               <p style={{ padding: "10px 18px 4px", fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: ".08em" }}>
-                {query.length === 0 ? "Quick links" : "Pages"}
+                {query.length === 0 ? "Quick links" : "Best matches"}
               </p>
               {matchedPages.map((page, i) => {
                 const isActive = i === activeIndex;
@@ -302,9 +358,12 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
                       <TypeIcon type="page" />
                     </span>
                     <span style={{ flex: 1, minWidth: 0 }}>
-                      <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#111827" }}>{page.title}</span>
+                      <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#111827" }}><Highlighted text={page.title} terms={page.terms} /></span>
                       <span style={{ display: "block", fontSize: 11, color: "#6b7280" }}>{page.subtitle}</span>
                     </span>
+                    {page.reason && (
+                      <span style={{ fontSize: 10.5, color: "#6b7280", background: "#f3f4f6", borderRadius: 999, padding: "1px 8px", whiteSpace: "nowrap", flexShrink: 0 }}>{page.reason}</span>
+                    )}
                     {isActive && (
                       <kbd style={{ fontSize: 10, color: "#9ca3af", background: "white", border: "1px solid #e5e7eb", borderRadius: 4, padding: "2px 6px", flexShrink: 0 }}>↵</kbd>
                     )}
@@ -354,6 +413,34 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
               </div>
             );
           })}
+
+          {/* Ask the assistant */}
+          {askIndex >= 0 && (
+            <div style={{ borderTop: "1px solid #f3f4f6" }}>
+              <p style={{ padding: "10px 18px 4px", fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: ".08em" }}>
+                Not what you meant?
+              </p>
+              <button
+                type="button"
+                onClick={askAssistant}
+                onMouseEnter={() => setActiveIndex(askIndex)}
+                style={{
+                  width: "100%", display: "flex", alignItems: "center", gap: 12,
+                  padding: "10px 18px", border: "none", cursor: "pointer", textAlign: "left",
+                  background: activeIndex === askIndex ? "#EEEDFE" : "transparent",
+                }}
+              >
+                <span style={{ width: 28, height: 28, borderRadius: 7, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: "#6b7280", fontSize: 14, fontWeight: 700 }}>?</span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#111827" }}>Ask what you are looking for</span>
+                  <span style={{ display: "block", fontSize: 11, color: "#6b7280" }}>The iCapOS Assistant will point you to the right page</span>
+                </span>
+                {activeIndex === askIndex && (
+                  <kbd style={{ fontSize: 10, color: "#9ca3af", background: "white", border: "1px solid #e5e7eb", borderRadius: 4, padding: "2px 6px", flexShrink: 0 }}>↵</kbd>
+                )}
+              </button>
+            </div>
+          )}
 
           {/* Hint when empty query */}
           {query.length === 0 && workspace === "founder" && (
