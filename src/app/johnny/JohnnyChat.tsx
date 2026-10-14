@@ -30,6 +30,7 @@ import {
   type JohnnyScripted,
 } from "@/lib/johnny/config";
 import {
+  ACCREDITED_OPTIONS,
   OTHER,
   ASK_TO_FIELD,
   OPTIONS,
@@ -43,6 +44,7 @@ import {
   mergeAiFields,
   missingFields,
   profileAnswers,
+  readAccredited,
   summaryLine,
   type FieldKey,
   type JohnnyAiReply,
@@ -51,7 +53,7 @@ import {
 type Msg = { id: number; from: "johnny" | "you"; text: string; href?: string; hrefLabel?: string };
 type LinkExtra = Pick<Msg, "href" | "hrefLabel">;
 type Options = { options: string[]; main: boolean; pick: (option: string) => void };
-type Mode = "chat" | "confirm" | "times" | "name" | "email" | "phone" | "done";
+type Mode = "chat" | "accredited" | "confirm" | "times" | "name" | "email" | "phone" | "done";
 type Turn = { role: "user" | "assistant"; content: string };
 type BookResult = { ok: true; meetUrl: string | null } | { ok: false; retry: boolean; message: string };
 
@@ -188,7 +190,8 @@ export function JohnnyChat({ hostId, sourceTag }: { hostId: string; sourceTag: s
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            mode,
+            // The accredited step is part of the read back as far as the reply route is concerned.
+            mode: mode === "accredited" ? "confirm" : mode,
             known: {
               investor_type: profile.type ?? null,
               check_size_min: profile.cmin ?? null,
@@ -315,8 +318,30 @@ export function JohnnyChat({ hostId, sourceTag }: { hostId: string; sourceTag: s
         await reflect();
         return;
       }
+      // One question before the read back, asked once: accredited status goes to accredited_status.
+      if (!profile.accredited) {
+        await askAccredited(["One more thing before I read it back."]);
+        return;
+      }
       await say([summaryLine(profile), freshOne(JOHNNY_CONFIRM_QUESTIONS)]);
       confirmOptions();
+    };
+
+    const askAccredited = async (lead: string[] = []) => {
+      mode = "accredited";
+      await say([...lead, "Are you an accredited investor?"]);
+      showOptions([...ACCREDITED_OPTIONS], (o) => void accreditedAnswered(o), true);
+    };
+
+    const accreditedAnswered = async (value: string) => {
+      const a = readAccredited(value);
+      if (!a) {
+        await converse();
+        return;
+      }
+      profile.accredited = a;
+      setOptionsState(null);
+      await readback();
     };
 
     const confirmTyped = async (value: string) => {
@@ -497,6 +522,8 @@ export function JohnnyChat({ hostId, sourceTag }: { hostId: string; sourceTag: s
         const all = JOHNNY_QUESTIONS[asked].flatMap((q) => JOHNNY_LEADS.map((lead) => `${lead}${lower(q)}`));
         await say([freshOne(all)]);
         showFieldOptions(asked);
+      } else if (mode === "accredited") {
+        await askAccredited();
       } else if (mode === "confirm") {
         await say([freshOne(JOHNNY_CONFIRM_QUESTIONS)]);
         confirmOptions();
@@ -537,7 +564,7 @@ export function JohnnyChat({ hostId, sourceTag }: { hostId: string; sourceTag: s
         await say([freshOne(JOHNNY_STALL_LINES)]);
         await offerTimes("");
       } else if (s.kind === "toomany") {
-        if (mode === "chat" || mode === "confirm") {
+        if (mode === "chat" || mode === "accredited" || mode === "confirm") {
           await say(["Fair point, no more questions from me."]);
           mode = "times";
           await offerTimes(`Next step is ${JOHNNY_SLOT_MINUTES} minutes with our team, and we cover the rest there.`);
@@ -657,6 +684,10 @@ export function JohnnyChat({ hostId, sourceTag }: { hostId: string; sourceTag: s
         const us = digits.length === 10 ? digits : digits.length === 11 && digits.startsWith("1") ? digits.slice(1) : null;
         contact.phone = us ? `(${us.slice(0, 3)}) ${us.slice(3, 6)}-${us.slice(6)}` : value.slice(0, 40);
         await bookNow();
+        return;
+      }
+      if (mode === "accredited" && readAccredited(value)) {
+        await accreditedAnswered(value);
         return;
       }
       const s = matchJohnny(value);

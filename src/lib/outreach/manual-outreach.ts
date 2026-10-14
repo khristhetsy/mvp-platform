@@ -262,7 +262,7 @@ type RecipientRow = {
  * only happens when INVESTOR_OUTREACH_LIVE=true; otherwise steps advance without
  * emailing — safe for end-to-end testing.
  */
-export async function processManualOutreach(): Promise<{ sent: number; liveSend: boolean }> {
+export async function processManualOutreach(onlyCompanyId?: string): Promise<{ sent: number; liveSend: boolean }> {
   const db = client();
   const live = isOutreachLiveSendEnabled();
   let sent = 0;
@@ -277,7 +277,9 @@ export async function processManualOutreach(): Promise<{ sent: number; liveSend:
     campaigns = (await db.from("founder_manual_outreach").select(campaignBase).eq("status", "queued")).data;
   }
 
-  for (const campaign of (campaigns ?? []) as CampaignRow[]) {
+  // "Send now" from the founder social Compose tab runs the pass for that one company only.
+  const due = ((campaigns ?? []) as CampaignRow[]).filter((c) => !onlyCompanyId || c.company_id === onlyCompanyId);
+  for (const campaign of due) {
     const steps = Array.isArray(campaign.sequence) ? campaign.sequence : [];
     if (steps.length === 0) continue;
 
