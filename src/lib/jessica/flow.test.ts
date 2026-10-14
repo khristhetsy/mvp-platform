@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { JESSICA_OBJECTIONS } from "./config";
-import { aiMode, bookingAnswers, looksLikeName, pickWording, questionKey, formatSlotWhen, groupSlotsByDay, matchReply, normalizeRole, parseAiReply, timeOfferLine, validEmail } from "./flow";
+import { JESSICA_FALLBACK_CHIPS, JESSICA_FALLBACK_VARIANTS, JESSICA_OBJECTIONS, JESSICA_PATIENCE_LINES, JESSICA_QUALIFY_ASKS } from "./config";
+import { aiMode, bookingAnswers, looksLikeName, nextQualifyingStep, pickWording, questionKey, formatSlotWhen, groupSlotsByDay, matchReply, normalizeRole, parseAiReply, timeOfferLine, validEmail } from "./flow";
 
 const PT = "America/Los_Angeles";
 
@@ -134,6 +134,81 @@ describe("matchReply", () => {
   });
   it("falls back for anything it has no answer for", () => {
     expect(matchReply("what is the weather like").kind).toBe("unknown");
+  });
+});
+
+describe("matchReply, Jessica 1.1 routing", () => {
+  const route = (text: string) => {
+    const r = matchReply(text);
+    return r.kind === "objection" || r.kind === "fact" ? `${r.kind}:${r.id}` : r.kind;
+  };
+  it("reaches the right handler for each approved input", () => {
+    expect(route("are you guys license")).toBe("objection:licensing");
+    expect(route("do you make commission")).toBe("objection:commission");
+    expect(route("is there a fee")).toBe("cost");
+    expect(route("I dont pay upfront fee")).toBe("objection:upfront-fee");
+    expect(route("i dont think its a fit")).toBe("objection:fit");
+    expect(route("are you a AI?")).toBe("ai");
+    expect(route("how do you get paid")).toBe("objection:get-paid");
+    expect(route("Do does your company do")).toBe("fact:what");
+    expect(route("what does it cost")).toBe("cost");
+    expect(route("how does it work")).toBe("fact:process");
+    expect(route("who are the investors")).toBe("fact:investors");
+    expect(route("gibberish")).toBe("unknown");
+  });
+  it("does not read know it's a fit as a fit objection", () => {
+    expect(route("I know it's a fit")).not.toBe("objection:fit");
+  });
+  it("answers licensing with the approved position", () => {
+    const r = matchReply("are you registered with the SEC?");
+    expect(r.lines.join(" ")).toMatch(/not a broker dealer, an investment adviser or a funding portal/);
+    expect(r.lines.join(" ")).toMatch(/don't sell securities/);
+  });
+  it("gives the fit objection its three chips", () => {
+    const r = matchReply("doesn't seem like a fit");
+    if (r.kind !== "objection") throw new Error("expected objection");
+    expect(Object.keys(r.choices ?? {})).toEqual(["The cost", "Access to investors", "The timing"]);
+  });
+});
+
+describe("nextQualifyingStep", () => {
+  it("asks role, then check size for investors", () => {
+    expect(nextQualifyingStep({})).toBe("role");
+    expect(nextQualifyingStep({ role: "Investing" })).toBe("check");
+    expect(nextQualifyingStep({ role: "Investing", checkSize: "$1M to $5M" })).toBeNull();
+  });
+  it("asks stage, raise, timing for founders, in that order", () => {
+    expect(nextQualifyingStep({ role: "Raising" })).toBe("stage");
+    expect(nextQualifyingStep({ role: "Raising", stage: "Pre revenue" })).toBe("raise");
+    expect(nextQualifyingStep({ role: "Raising", stage: "Pre revenue", raise: "Under $1M" })).toBe("timing");
+    expect(nextQualifyingStep({ role: "Raising", stage: "Pre revenue", raise: "Under $1M", timing: "A few months" })).toBeNull();
+  });
+});
+
+describe("Jessica 1.1 copy", () => {
+  it("every qualifying question has three different wordings and chips", () => {
+    for (const ask of Object.values(JESSICA_QUALIFY_ASKS)) {
+      expect(new Set(ask.questions).size).toBe(3);
+      expect(ask.options.length).toBeGreaterThanOrEqual(2);
+    }
+  });
+  it("the fallback has three different wordings, chips that each reach a handler, and no time offer", () => {
+    expect(new Set(JESSICA_FALLBACK_VARIANTS.map((w) => w.join(" "))).size).toBe(3);
+    expect(Object.keys(JESSICA_FALLBACK_CHIPS)).toEqual(["How it works", "What it costs", "The investors"]);
+    for (const text of Object.values(JESSICA_FALLBACK_CHIPS)) expect(matchReply(text).kind).not.toBe("unknown");
+    expect(JESSICA_FALLBACK_VARIANTS.flat().join(" ")).not.toMatch(/\btimes\b|calendar|book|\bopen\b/i);
+  });
+  it("patience lines offer nothing and ask nothing", () => {
+    for (const w of JESSICA_PATIENCE_LINES) expect(w.join(" ")).not.toMatch(/\?|book|schedule/i);
+  });
+  it("no new line quotes a percentage or promises funding", () => {
+    const all = [
+      ...JESSICA_FALLBACK_VARIANTS.flat(),
+      ...JESSICA_PATIENCE_LINES.flat(),
+      ...Object.values(JESSICA_QUALIFY_ASKS).flatMap((a) => a.questions),
+      ...matchReply("who are the investors").lines,
+    ];
+    expect(all.join(" ")).not.toMatch(/\d+\s?%|guarantee|contingent/i);
   });
 });
 

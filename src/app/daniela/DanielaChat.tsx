@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { PLATFORM_TZ, PLATFORM_TZ_LABEL } from "@/lib/time/platform-tz";
+import { AGENT_IDLE_LINES, AGENT_OPTOUT_AFTER, AGENT_OPTOUT_LINES, IDLE_MS, isOptOut, replyPauseMs, typingMs } from "@/lib/chat-agents/presence";
 import {
   DANIELA_AI_CHOICES,
   DANIELA_AI_NO_LINES,
@@ -122,19 +123,47 @@ export function DanielaChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
       setMsgs((list) => [...list, { id, from, text, ...extra }]);
     };
 
+    // Like Johnny: never an instant reply, one "Are you still there?" after five quiet minutes,
+    // and a full stop when the visitor asks to be removed.
+    let visitorSpoke = false;
+    let stopped = false;
+    let idleAsked = false;
+    let idleTimer: ReturnType<typeof setTimeout> | null = null;
+    const clearIdle = () => {
+      if (idleTimer) clearTimeout(idleTimer);
+      idleTimer = null;
+    };
+    const armIdle = () => {
+      clearIdle();
+      if (idleAsked || stopped || booked || cancelled) return;
+      idleTimer = setTimeout(() => {
+        if (cancelled || busy || stopped || booked) return;
+        idleAsked = true;
+        void say([AGENT_IDLE_LINES[0]]);
+      }, IDLE_MS);
+    };
+    const heard = () => {
+      visitorSpoke = true;
+      idleAsked = false;
+      clearIdle();
+    };
+
     const say = async (lines: string[], extra?: LinkExtra) => {
       busy = true;
+      clearIdle();
       lines.forEach((l) => said.add(questionKey(l)));
+      if (visitorSpoke) await sleep(replyPauseMs(Math.random()));
       for (let i = 0; i < lines.length; i++) {
         if (cancelled) return;
         setTyping(true);
-        await sleep(350 + Math.min(lines[i].length * 12, 700));
+        await sleep(typingMs(lines[i].length, !visitorSpoke));
         if (cancelled) return;
         setTyping(false);
         push("daniela", lines[i], i === lines.length - 1 ? extra : undefined);
         await sleep(150);
       }
       busy = false;
+      armIdle();
     };
 
     const show = (next: Replies | null) => {
@@ -151,6 +180,7 @@ export function DanielaChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
           resume,
           pick: (option) => {
             show(null);
+            heard();
             push("you", option);
             resolve(option);
           },
@@ -532,6 +562,20 @@ export function DanielaChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
 
     submitRef.current = (value) => {
       if (busy || cancelled) return false;
+      heard();
+      if (stopped) {
+        push("you", value);
+        void say([AGENT_OPTOUT_AFTER]);
+        return true;
+      }
+      if (isOptOut(value)) {
+        stopped = true;
+        waiter = null;
+        show(null);
+        push("you", value);
+        void say(AGENT_OPTOUT_LINES);
+        return true;
+      }
       if (waiter) {
         const resolve = waiter;
         waiter = null;
@@ -579,6 +623,7 @@ export function DanielaChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
     return () => {
       cancelled = true;
       clearTimeout(timer);
+      clearIdle();
     };
   }, [hostId, sourceTag]);
 

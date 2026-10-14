@@ -6,6 +6,7 @@ import {
   JESSICA_FALLBACK_LINES,
   JESSICA_OBJECTIONS,
   type JessicaChoice,
+  type JessicaQualifyStep,
 } from "./config";
 
 /** An open slot as returned by /api/scheduling/slots (ISO instants). */
@@ -138,6 +139,19 @@ export function matchReply(text: string): JessicaReply {
     if (fact.match.test(text)) return { kind: "fact", id: fact.id, lines: fact.lines, variants: fact.variants ?? [] };
   }
   return { kind: "unknown", lines: JESSICA_FALLBACK_LINES };
+}
+
+/**
+ * The next qualifying question to ask, or null when the profile is complete.
+ * Order: role first, then check size for investors, or stage, raise size and timing for founders.
+ */
+export function nextQualifyingStep(profile: JessicaProfile): JessicaQualifyStep | null {
+  if (!profile.role) return "role";
+  if (profile.role === "Investing") return profile.checkSize ? null : "check";
+  if (!profile.stage) return "stage";
+  if (!profile.raise) return "raise";
+  if (!profile.timing) return "timing";
+  return null;
 }
 
 export type JessicaAiMode = "CLOSE" | "QUALIFY" | "DONE";

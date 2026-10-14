@@ -46,8 +46,17 @@ export const JESSICA_FACTS: JessicaFact[] = [
     ],
   },
   {
+    id: "investors",
+    match: /who are (the|your) investors|investor network/i,
+    lines: ["Angels, family offices, VCs and institutions, in a network built over 16 years. We introduce on fit, not volume."],
+    variants: [
+      ["The network is angels, family offices, VCs and institutions, built over 16 years.", "We only introduce the ones whose mandate fits your company."],
+      ["Mostly angels, family offices and VCs, with some institutions. We match on mandate, never a mass list."],
+    ],
+  },
+  {
     id: "what",
-    match: /what do you do|what does icfo|what do you guys do|what (is|does) (your|the) company/i,
+    match: /what do you do|what does icfo|what do you guys do|what (is|does) (your|the) company|do does|company do/i,
     lines: [
       "We get founders in front of the right investors.",
       "We rate how ready you are, match you with investors whose mandate fits, and follow up with them for you.",
@@ -59,7 +68,7 @@ export const JESSICA_FACTS: JessicaFact[] = [
   },
   {
     id: "process",
-    match: /how.*(work|do you)|process|what are the steps/i,
+    match: /how (does|do) (it|this|that|you guys|you|icfo)( all)? work|\bprocess\b|\bsteps\b/i,
     lines: [
       "Three steps. We rate how ready you are, match you with the right investors from a network built over 16 years, and get your materials in front of them.",
       "Then we follow up with the ones who show interest. The team runs it with you.",
@@ -78,7 +87,65 @@ export const JESSICA_FACTS: JessicaFact[] = [
 
 /** Used when the AI reply is unavailable (no key, budget spent, rate limited, bad answer). */
 export const JESSICA_FALLBACK_LINES = ["That one is better answered by the team on a quick call."];
-export const JESSICA_FALLBACK_BRIDGE = "Easiest way to see if it fits is a quick call with the team.";
+/**
+ * When nothing matches and the AI is down: three wordings, rotated, never the
+ * same one twice in a session, each followed by chips (see JESSICA_FALLBACK_CHIPS).
+ * The fallback never ends in a time offer.
+ */
+export const JESSICA_FALLBACK_VARIANTS: string[][] = [
+  ["That one is better answered by the team.", "In the meantime, I can walk you through a few things."],
+  ["Good question, and I'd rather not guess at it.", "Here's what I can cover right now."],
+  ["I don't want to give you a half answer on that.", "Pick one of these and I'll go deeper."],
+];
+export const JESSICA_FALLBACK_EXHAUSTED = ["I'll leave that one with the team. Tap one of these and I'll go deeper."];
+/** Chip label, and the question it stands for. A tap runs the same handler as typing it. */
+export const JESSICA_FALLBACK_CHIPS: Record<string, string> = {
+  "How it works": "how does it work",
+  "What it costs": "what does it cost",
+  "The investors": "who are the investors",
+};
+
+/** Said when a time offer was ignored, nothing is left to ask, and the visitor typed again. No new offer. */
+export const JESSICA_PATIENCE_LINES: string[][] = [
+  ["No rush, those days are still open."],
+  ["Take your time. The times above are still there when you're ready."],
+  ["Whenever you're ready, just tap a day."],
+];
+
+export type JessicaQualifyStep = "role" | "check" | "stage" | "raise" | "timing";
+
+/**
+ * The next qualifying question, with three wordings so a re-ask is never the same
+ * words, and the chips that answer it. Order of asking is nextQualifyingStep().
+ */
+export const JESSICA_QUALIFY_ASKS: Record<JessicaQualifyStep, { questions: string[]; options: string[] }> = {
+  role: {
+    questions: [
+      "So I point you the right way: are you raising or investing?",
+      "Which side are you on, raising capital or looking at deals?",
+      "Quick one: are you on the raising side or the investing side?",
+    ],
+    options: ["Raising", "Investing"],
+  },
+  check: {
+    questions: ["What size checks do you usually write?", "What's a typical check for you?", "Roughly what do you write per deal?"],
+    options: ["Under $250K", "$250K to $1M", "$1M to $5M", "$5M plus"],
+  },
+  stage: {
+    questions: ["What stage is the company at?", "Where does the company stand today, revenue wise?", "Tell me where the business is right now."],
+    options: ["Pre revenue", "Under $1M a year", "$1M to $5M", "Over $5M"],
+  },
+  raise: {
+    questions: ["Roughly how much are you looking to raise?", "What size raise are you planning?", "How big is the round you have in mind?"],
+    options: ["Under $1M", "$1M to $5M", "$5M to $20M", "Over $20M"],
+  },
+  timing: {
+    questions: ["How soon do you want to close?", "What's your timeline for closing?", "When would you like the raise done?"],
+    options: ["Within 30 days", "A few months", "Not sure yet"],
+  },
+};
+
+export const JESSICA_FALLBACK_BRIDGE ="Easiest way to see if it fits is a quick call with the team.";
 /** Spare bridges, used when the one a reply would use has already been said. */
 export const JESSICA_SPARE_BRIDGES = [
   "The team can take it from here on a short call.",
@@ -182,6 +249,31 @@ export interface JessicaObjection {
  * funding, and Jessica never asks whether they want a call, only when.
  */
 export const JESSICA_OBJECTIONS: JessicaObjection[] = [
+  {
+    id: "licensing",
+    match: /licen[sc]|regulat|registered|finra|\bsec\b|legit/i,
+    lines: [
+      "iCFO Capital Global, Inc. is not a broker dealer, an investment adviser or a funding portal, and we don't sell securities.",
+      "Our work is preparation, introductions and education.",
+    ],
+    variants: [
+      ["Same answer, and it matters: we're not a broker dealer, an investment adviser or a funding portal.", "We prepare companies and make introductions. We don't sell securities."],
+      ["To be clear on the structure: no securities sold and no investment advice. We do readiness, introductions and education."],
+    ],
+    bridge: "The team can walk you through exactly how that works on a short call.",
+    repeatBridge: "Fifteen minutes with the team covers the structure end to end.",
+  },
+  {
+    id: "get-paid",
+    match: /get paid|make money|business model|how do you earn|who pays/i,
+    lines: ["We're paid for the work we do, not for money you raise.", "How much depends on the type of capital, and how much work we have to do."],
+    variants: [
+      ["Short answer: we're paid for the work, never a cut of your raise.", "The fee depends on the type of capital, and how much work we have to do."],
+      ["Our fee is for the work involved, and nothing is tied to money raised.", "The team lays out exactly what's due and when before anything starts."],
+    ],
+    bridge: "The team can show you what that looks like for your raise.",
+    repeatBridge: "Fifteen minutes with the team settles it.",
+  },
   {
     id: "upfront-fee",
     match: /(don'?t|do not|won'?t|will not|never|not going to|refuse to) (want to )?pay|no (upfront|up front) fees?|not paying (any|an)? ?(upfront|up front)/i,
@@ -315,6 +407,29 @@ export const JESSICA_OBJECTIONS: JessicaObjection[] = [
       "How it works": {
         lines: ["We rate how ready you are, match you with the right investors, get your materials in front of them and follow up."],
         bridge: "Easier to show than explain, and 20 minutes is enough.",
+      },
+    },
+  },
+  {
+    id: "fit",
+    match: /\b(dont|don'?t|do not|not|isn'?t|doesn'?t|no)\b.{0,25}\bfit\b/i,
+    lines: ["That's fair, and I'd rather you decide with the facts.", "What would make it feel like a fit?"],
+    variants: [
+      ["Fair enough, and no pressure.", "What's the one thing that would make this feel right for you?"],
+      ["Understood. Help me see it from your side: what's missing for it to fit?"],
+    ],
+    choices: {
+      "The cost": {
+        lines: ["It depends on the type of capital, and how much work we have to do. Nothing is tied to money raised."],
+        bridge: "The team lays out the whole structure on a short call.",
+      },
+      "Access to investors": {
+        lines: ["That's the core of it. We match you with investors whose mandate fits, from a network built over 16 years."],
+        bridge: "It's easier to show you who fits than to describe it.",
+      },
+      "The timing": {
+        lines: ["Fair, timing matters. Starting the conversation early means you're ready when it's right."],
+        bridge: "A short call now maps out what the timeline would look like.",
       },
     },
   },
