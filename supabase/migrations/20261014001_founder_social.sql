@@ -45,7 +45,7 @@ insert into public.founder_social_limits (plan_type, enabled, posts_per_month) v
   ('founder_free',         false, 0),
   ('founder_basic',        true,  10),
   ('founder_professional', true,  100),
-  ('founder_premium',      false, null)   -- off until the Premium limit is decided
+  ('founder_premium',      true,  null)   -- Premium: open, no monthly cap
 on conflict (plan_type) do nothing;
 
 -- 5. RLS: service role only, same pattern as social_connect_invites. Founder routes
