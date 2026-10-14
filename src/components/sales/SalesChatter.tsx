@@ -13,6 +13,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { postScheduled, ScheduleSendMenu } from "@/components/email/ScheduleSend";
 import { formatSendAt } from "@/lib/scheduled-emails/time";
 import { TaskEditRow } from "./TaskEditRow";
+import { TaskTitleInput } from "./TaskTitleInput";
 import { ptDayDiff } from "@/lib/time/pt-day-diff";
 
 type Activity = {
@@ -392,7 +393,7 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
         )}
         {tab === "activity" && (
           <>
-            <input value={task.title} onChange={(e) => setTask({ ...task, title: e.target.value })} placeholder="Task (e.g. Call follow-up)" style={field} />
+            <TaskTitleInput value={task.title} placeholder="Task (e.g. Call follow-up)" inputStyle={field} allowedTypes={taskTypes} taskType={task.taskType} onChange={(n) => setTask((t) => ({ ...t, title: n.title, ...(n.taskType ? { taskType: n.taskType } : {}) }))} />
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               <select value={task.taskType} onChange={(e) => setTask({ ...task, taskType: e.target.value })} style={{ ...field, width: "auto", flex: 1 }}>
                 {taskTypes.map((t) => <option key={t} value={t}>{t}</option>)}

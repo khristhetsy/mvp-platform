@@ -1,4 +1,5 @@
 "use client";
+import { TaskTitleInput } from "@/components/sales/TaskTitleInput";
 
 import { useState, useEffect } from "react";
 import { OdooStageBar } from "@/components/ui/OdooStageBar";
@@ -378,7 +379,7 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
             <div>
               <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", marginBottom: 8 }}><i className="ti ti-link" aria-hidden="true" /> New tasks link to this opportunity{o.contact_name ? ` and ${o.contact_name}` : ""}. Shows the deal&rsquo;s and the contact&rsquo;s tasks.</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 96px 128px 130px", gap: 8, background: "#F5F9FF", border: "0.5px solid #eef1f5", borderRadius: 8, padding: 10 }}>
-                <input value={taskDraft.title} onChange={(e) => setTaskDraft({ ...taskDraft, title: e.target.value })} placeholder="Task title" style={inp} />
+                <TaskTitleInput value={taskDraft.title} placeholder="Task title" inputStyle={inp} allowedTypes={["Call", "Email", "Demo", "Follow-up", "Proposal"]} taskType={taskDraft.taskType} onChange={(n) => setTaskDraft((d) => ({ ...d, title: n.title, ...(n.taskType ? { taskType: n.taskType } : {}) }))} />
                 <select value={taskDraft.taskType} onChange={(e) => setTaskDraft({ ...taskDraft, taskType: e.target.value })} style={inp}>{["Call", "Email", "Demo", "Follow-up", "Proposal"].map((t) => <option key={t}>{t}</option>)}</select>
                 <input type="date" value={taskDraft.dueDate} onChange={(e) => setTaskDraft({ ...taskDraft, dueDate: e.target.value })} style={inp} />
                 <select value={taskDraft.assigneeId} onChange={(e) => setTaskDraft({ ...taskDraft, assigneeId: e.target.value })} style={inp}><option value="">Assign to me</option>{staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
