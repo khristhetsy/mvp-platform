@@ -63,7 +63,7 @@ export async function setTemplate(raw: unknown, updatedBy: string | null): Promi
 
 /* ---------- access ---------- */
 
-export const FOUNDER_PLANS = ["founder_free", "founder_trial", "founder_basic", "founder_professional", "founder_premium", "founder_managed_ir"] as const;
+export const FOUNDER_PLANS = ["founder_free", "founder_basic", "founder_professional", "founder_premium", "founder_managed_ir"] as const;
 export type PlanAccessRow = { plan_type: string; enabled: boolean };
 
 /** Which plans include the agent: a row in ir_agent_plan_access means included. */

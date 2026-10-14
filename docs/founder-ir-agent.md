@@ -40,6 +40,10 @@ Can: ending, agent name, company name as spoken, welcome (up to 3 lines), fact s
 
 Cannot: the `icapos.com/[company]/` prefix, the disclaimer line, the hard stop on "remove me" or "unsubscribe", the rule against prices, percentages and promises (checked on the server for AI replies and for taught answers).
 
+## Website and signup
+
+The pricing page and the signup plan picker read `ir_agent_plan_access` (`getAgentPlanSet`): a plan that includes the agent shows "Investor Relations Agent, raising capital 24/7" with a NEW badge, others show it crossed out, and nothing shows while the master switch is off. Admin picks a live agent as the website demo in Feature Controls (`platform_settings` key `ir_agent_demo`); the pricing page then shows "Talk to a demo agent" linking to it with `src=pricing`.
+
 ## Compliance notice
 
 Before Go live, the Build tab shows a notice in three points (the agent is an AI and says so; securities law applies to what it says; seek your own legal counsel) with a required checkbox. The confirmation is stored as `ir_agents.compliance_acknowledged_at` and `compliance_acknowledged_by`, shown to admin in Feature Controls, and the server refuses `status = live` without it. The wording lives in `COMPLIANCE_NOTICE` in `src/lib/ir-agent/defaults.ts`; have counsel review it. The locked footer under every conversation names the AI and the company.
