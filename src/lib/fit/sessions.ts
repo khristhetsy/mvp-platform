@@ -7,6 +7,7 @@
 
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import type { MatchResult } from "@/lib/fit/match-investors";
+import { logFitMatchNote } from "@/lib/fit/note-log-entry";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return createServiceRoleClient(); }
@@ -47,10 +48,14 @@ export async function setSnapshot(id: string, matchedCount: number, snapshot: Ma
     match_snapshot: snapshot,
     updated_at: new Date().toISOString(),
   }).eq("id", id);
+  // If the founder already left an email, the match is now complete: log it on the Contact.
+  await logFitMatchNote(id);
 }
 
 /** Attach an email on capture (nurture list keyed to the four criteria). */
 export async function captureEmail(id: string, email: string): Promise<void> {
   if (!id || !email.trim()) return;
   await db().from(TABLE).update({ email: email.trim().toLowerCase(), updated_at: new Date().toISOString() }).eq("id", id);
+  // If the match snapshot is already stamped, log it on the Contact (no-op until both exist).
+  await logFitMatchNote(id);
 }
