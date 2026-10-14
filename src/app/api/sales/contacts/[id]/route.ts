@@ -29,7 +29,7 @@ const patchSchema = z.object({
   state: z.string().max(120).nullable().optional(),
   zip: z.string().max(40).nullable().optional(),
   country: z.string().max(120).nullable().optional(),
-  preferences: z.record(z.string().max(200), z.array(z.string().max(200)).max(40)).optional(),
+  preferences: z.record(z.string().max(200), z.array(z.string().max(5000)).max(200)).optional(),
 });
 
 // PATCH /api/sales/contacts/[id] — edit user-owned contact fields.
