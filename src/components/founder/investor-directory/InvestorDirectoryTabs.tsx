@@ -67,7 +67,7 @@ const COPY = {
     icon: "ti-file-spreadsheet",
     title: "CSV or Excel file",
     description: "Drop a .csv or .xlsx, or paste rows from a spreadsheet. Map the columns, preview, then import.",
-    note: "Up to 5,000 rows per file. Duplicates of contacts you already hold are skipped, and only what fits your plan's limit is imported.",
+    note: "Up to 5,000 rows per file. An email you already hold has its empty fields filled in, and only what fits your plan's limit is imported.",
     button: "Import a file",
     mode: "file" as const,
   },

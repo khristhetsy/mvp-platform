@@ -295,11 +295,14 @@ export const founderInvestorContactImportSchema = z.object({
   confirm: z.boolean().optional(),
   /** Where the rows came from; LinkedIn exports are tagged so they group as imported. */
   source: z.enum(["csv_import", "linkedin"]).optional(),
+  /** An email already in the founder's contacts: fill its empty fields (default) or skip the row. */
+  duplicateMode: z.enum(["fill", "skip"]).optional(),
   rows: z.array(
     z.object({
       investor_name: z.string().optional(),
       firm_name: z.string().optional(),
       email: z.string().optional(),
+      phone: z.string().optional(),
       investor_type: z.string().optional(),
       sector: z.string().optional(),
       stage: z.string().optional(),

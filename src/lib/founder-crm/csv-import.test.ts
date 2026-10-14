@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseCsvImportRows, dedupeImportRows } from "./csv-import";
+import { parseCsvImportRows, dedupeImportRows, fillEmptyPatch, presentFields } from "./csv-import";
 import type { FounderInvestorContactRecord } from "@/lib/founder-crm/types";
 
 function checkSize(value: string) {
@@ -88,5 +88,47 @@ describe("dedupeImportRows", () => {
     ]);
     const result = dedupeImportRows(parsed, []);
     expect(result.every((r) => !r.skipped)).toBe(true);
+  });
+});
+
+describe("phone and fill empty fields", () => {
+  it("saves a trimmed phone number", () => {
+    const [row] = parseCsvImportRows([{ investor_name: "A", phone: "  +1 415 555 0142 " }]);
+    expect(row.data?.phone).toBe("+1 415 555 0142");
+  });
+
+  it("flags a row that matches an existing contact", () => {
+    const parsed = parseCsvImportRows([{ investor_name: "A", email: "a@b.com" }]);
+    const [row] = dedupeImportRows(parsed, [{ email: "A@B.com" } as FounderInvestorContactRecord]);
+    expect(row).toMatchObject({ duplicate: true, existing: true, skipped: true });
+  });
+
+  it("fills only the fields the existing contact has empty", () => {
+    const [incoming] = parseCsvImportRows([
+      { investor_name: "Ada", email: "ada@av.com", phone: "+1 415 555 0142", firm_name: "New Firm", sector: "Fintech", check_size: "250k-1m" },
+    ]);
+    const existing = {
+      firm_name: "Analytical Ventures", phone: null, website: null, investor_type: null, preferred_sectors: "", preferred_stages: null,
+      geography: null, linkedin_url: null, twitter_url: null, crunchbase_url: null, personal_website_url: null, other_social_url: null,
+      notes: null, check_size_min: null, check_size_max: null,
+    };
+    const { patch, filled } = fillEmptyPatch(existing, incoming.data!);
+    expect(patch).toEqual({ phone: "+1 415 555 0142", preferred_sectors: "Fintech", check_size_min: 250_000, check_size_max: 1_000_000 });
+    expect(filled).toEqual(["phone", "preferred_sectors", "check_size"]);
+  });
+
+  it("changes nothing when the contact already has every value", () => {
+    const [incoming] = parseCsvImportRows([{ investor_name: "Ada", firm_name: "New Firm" }]);
+    const existing = {
+      firm_name: "Old Firm", phone: null, website: null, investor_type: null, preferred_sectors: null, preferred_stages: null,
+      geography: null, linkedin_url: null, twitter_url: null, crunchbase_url: null, personal_website_url: null, other_social_url: null,
+      notes: null, check_size_min: null, check_size_max: null,
+    };
+    expect(fillEmptyPatch(existing, incoming.data!).filled).toEqual([]);
+  });
+
+  it("lists which fields a row carries", () => {
+    const [row] = parseCsvImportRows([{ investor_name: "A", phone: "1", check_size: "1m", geography: "US" }]);
+    expect(presentFields(row.data!)).toEqual(["phone", "geography", "check_size"]);
   });
 });
