@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import type { WorkspaceId } from "@/lib/workspace-nav";
 import type { SearchResult as FounderSearchResult } from "@/app/api/founder/search/route";
@@ -17,6 +18,8 @@ type PageShortcut = {
   href: string;
   keywords: string[];
   workspace: WorkspaceId | "all";
+  /** A section inside a page (opens the page scrolled to that section). */
+  section?: boolean;
 };
 
 const PAGES: PageShortcut[] = [
@@ -156,7 +159,7 @@ const PAGES: PageShortcut[] = [
   { id: "ad-accounts", title: "Accounts", subtitle: "Administration", href: "/admin/accounts", keywords: ["accounts"], workspace: "admin" },
   { id: "ad-profile", title: "My Profile", subtitle: "Administration", href: "/admin/profile", keywords: ["profile", "my profile"], workspace: "admin" },
   { id: "ad-pfields", title: "Profile and fields", subtitle: "Administration", href: "/admin/profile-fields", keywords: ["profile", "fields", "industry", "vocabulary"], workspace: "admin" },
-  { id: "ad-fc", title: "Feature Controls", subtitle: "Administration · AI budget, usage limits, site default view, departments", href: "/admin/feature-controls", keywords: ["feature", "controls", "settings", "website", "site", "site default view", "default view", "home style", "ai budget", "budget", "ai cost cap", "spend limit", "usage limits", "ai usage limits", "upload limits", "outreach automation", "departments", "stage menu", "ir agent", "flags"], workspace: "admin" },
+  { id: "ad-fc", title: "Feature Controls", subtitle: "Administration · site view, AI budget, limits, departments, stages", href: "/admin/feature-controls", keywords: ["feature", "controls", "settings", "flags"], workspace: "admin" },
   { id: "ad-integ", title: "Integrations", subtitle: "System", href: "/admin/integrations", keywords: ["integrations", "connect", "settings"], workspace: "admin" },
   { id: "ad-queues", title: "Queues", subtitle: "System", href: "/admin/queues", keywords: ["queues"], workspace: "admin" },
   { id: "ad-auto", title: "Automation", subtitle: "System", href: "/admin/automation", keywords: ["automation"], workspace: "admin" },
@@ -164,10 +167,151 @@ const PAGES: PageShortcut[] = [
   { id: "ad-pb", title: "Page Builder", subtitle: "System", href: "/admin/page-builder-lab", keywords: ["page", "builder", "website", "site", "landing", "settings", "pages"], workspace: "admin" },
   { id: "ad-health", title: "System Health", subtitle: "System", href: "/admin/system-health", keywords: ["system", "health", "status"], workspace: "admin" },
   { id: "ad-impexp", title: "Import / Export", subtitle: "System", href: "/admin/imports", keywords: ["import", "export", "csv"], workspace: "admin" },
-  { id: "ad-beta", title: "Beta Operations", subtitle: "System", href: "/admin/beta-operations", keywords: ["beta", "operations"], workspace: "admin" },
+  { id: "ad-beta", title: "Beta Operations", subtitle: "System", href: "/admin/beta-operations", keywords: ["beta", "operations"], workspace: "admin" },  { id: "sec-site-default-view", title: "Public site default view", subtitle: "Administration › Feature Controls", href: "/admin/feature-controls#site-default-view", keywords: ["website", "web site", "site default view", "default view", "browse the site", "ai mode", "landing", "homepage"], workspace: "admin", section: true },
+  { id: "sec-outreach-automation", title: "Outreach automation", subtitle: "Administration › Feature Controls", href: "/admin/feature-controls#outreach-automation", keywords: ["outreach automation", "auto outreach", "automation toggle", "automated outreach"], workspace: "admin", section: true },
+  { id: "sec-departments", title: "Departments", subtitle: "Administration › Feature Controls", href: "/admin/feature-controls#departments", keywords: ["departments", "teams", "department chips"], workspace: "admin", section: true },
+  { id: "sec-ai-budget", title: "AI budget", subtitle: "Administration › Feature Controls", href: "/admin/feature-controls#ai-budget", keywords: ["ai budget", "budget", "ai cost cap", "spend limit", "claude budget", "monthly cap"], workspace: "admin", section: true },
+  { id: "sec-ai-usage-limits", title: "AI usage limits", subtitle: "Administration › Feature Controls", href: "/admin/feature-controls#ai-usage-limits", keywords: ["ai usage limits", "usage limits", "run caps", "founder ai limits", "per founder limits"], workspace: "admin", section: true },
+  { id: "sec-upload-limits", title: "Upload limits", subtitle: "Administration › Feature Controls", href: "/admin/feature-controls#upload-limits", keywords: ["upload limits", "file size", "upload size", "import limit"], workspace: "admin", section: true },
+  { id: "sec-ir-agent", title: "IR agent controls", subtitle: "Administration › Feature Controls", href: "/admin/feature-controls#ir-agent", keywords: ["ir agent", "johnny", "investor relations agent", "agent controls"], workspace: "admin", section: true },
+  { id: "sec-stage-menu", title: "Stage menu", subtitle: "Administration › Feature Controls", href: "/admin/feature-controls#stage-menu", keywords: ["stage menu", "founder stages", "menu editor", "stages"], workspace: "admin", section: true },
+  { id: "sec-founder-social", title: "Founder social controls", subtitle: "Administration › Feature Controls", href: "/admin/feature-controls#founder-social", keywords: ["founder social", "social limits", "post limits", "social media limits"], workspace: "admin", section: true },
 ];
 
-// ── Type icons ────────────────────────────────────────────────────────────────
+// ── Admin categories: one icon and color each ─────────────────────────────────
+
+type CatKey =
+  | "dashboard" | "contacts" | "companies" | "sales" | "marketing" | "ir" | "directory"
+  | "accounting" | "social" | "events" | "voice" | "communication" | "support"
+  | "learning" | "admin" | "system" | "analytics";
+
+const CATS: Record<CatKey, { label: string; bg: string; fg: string; icon: ReactNode }> = {
+  dashboard: { label: "Dashboard", bg: "#D1D5DB", fg: "#1F2937", icon: <><rect x="4" y="4" width="7" height="7" rx="1.5" /><rect x="13" y="4" width="7" height="7" rx="1.5" /><rect x="4" y="13" width="7" height="7" rx="1.5" /><rect x="13" y="13" width="7" height="7" rx="1.5" /></> },
+  contacts: { label: "Contacts", bg: "#DCE8FD", fg: "#1D5FD6", icon: <><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" /></> },
+  companies: { label: "Companies", bg: "#D5F2EE", fg: "#0F766E", icon: <><rect x="5" y="3" width="14" height="18" rx="1" /><path d="M9 7h2M13 7h2M9 11h2M13 11h2M10 21v-4h4v4" /></> },
+  sales: { label: "Sales", bg: "#DAF2DF", fg: "#15803D", icon: <><polyline points="3 17 9 11 13 15 21 7" /><polyline points="15 7 21 7 21 13" /></> },
+  marketing: { label: "Marketing", bg: "#FDE2E0", fg: "#B42318", icon: <><path d="M3 11v2a1 1 0 0 0 1 1h3l8 5V5L7 10H4a1 1 0 0 0-1 1z" /><path d="M19 9a4 4 0 0 1 0 6" /></> },
+  ir: { label: "Investor Relations", bg: "#E6E3FB", fg: "#4F46E5", icon: <><circle cx="9" cy="8" r="3.5" /><path d="M2 20c0-3.5 3-6 7-6s7 2.5 7 6" /><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14c2.5.6 4 2.5 4 6" /></> },
+  directory: { label: "Investor Directory", bg: "#E0F2FE", fg: "#0369A1", icon: <><path d="M4 4h10a4 4 0 0 1 4 4v12H8a4 4 0 0 1-4-4z" /><path d="M4 16a4 4 0 0 1 4-4h10" /></> },
+  accounting: { label: "Accounting", bg: "#FEF3C7", fg: "#A16207", icon: <><rect x="5" y="3" width="14" height="18" rx="2" /><path d="M8 7h8M8 12h2M12 12h2M8 16h2M12 16h2" /></> },
+  social: { label: "Social Media", bg: "#FAE8FF", fg: "#A21CAF", icon: <><circle cx="6" cy="12" r="2.5" /><circle cx="18" cy="6" r="2.5" /><circle cx="18" cy="18" r="2.5" /><path d="M8.2 11l7.6-4M8.2 13l7.6 4" /></> },
+  events: { label: "Events", bg: "#FFEBD5", fg: "#C2410C", icon: <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></> },
+  voice: { label: "Voice", bg: "#ECFCCB", fg: "#4D7C0F", icon: <><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></> },
+  communication: { label: "Communication", bg: "#CFFAFE", fg: "#0E7490", icon: <path d="M4 5h16v11H9l-5 4z" /> },
+  support: { label: "Customer Support", bg: "#FCE7F3", fg: "#BE185D", icon: <><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="3.5" /><path d="M5.6 5.6l3.9 3.9M14.5 14.5l3.9 3.9M18.4 5.6l-3.9 3.9M9.5 14.5l-3.9 3.9" /></> },
+  learning: { label: "Learning", bg: "#E7E5E4", fg: "#57534E", icon: <><path d="M2 9l10-5 10 5-10 5z" /><path d="M6 11.5V16c0 1.5 3 3 6 3s6-1.5 6-3v-4.5" /></> },
+  admin: { label: "Administration", bg: "#E2E8F0", fg: "#334155", icon: <><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" /><path d="M9 12l2 2 4-4" /></> },
+  system: { label: "System", bg: "#D1D5DB", fg: "#1F2937", icon: <><path d="M4 7h10M18 7h2M4 17h2M10 17h10" /><circle cx="16" cy="7" r="2" /><circle cx="8" cy="17" r="2" /></> },
+  analytics: { label: "Analytics", bg: "#DBEAFE", fg: "#1E40AF", icon: <><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></> },
+};
+
+// Order and target of the "Jump to" tiles on the empty state.
+const HUBS: Array<{ cat: CatKey; href: string }> = [
+  { cat: "dashboard", href: "/admin" },
+  { cat: "contacts", href: "/admin/contacts" },
+  { cat: "sales", href: "/admin/sales" },
+  { cat: "marketing", href: "/admin/marketing" },
+  { cat: "ir", href: "/admin/ir" },
+  { cat: "directory", href: "/admin/investor-directory" },
+  { cat: "accounting", href: "/admin/accounting" },
+  { cat: "social", href: "/admin/social" },
+  { cat: "events", href: "/admin/events" },
+  { cat: "voice", href: "/admin/voice" },
+  { cat: "communication", href: "/admin/inbox" },
+  { cat: "support", href: "/admin/companies" },
+  { cat: "learning", href: "/admin/learning" },
+  { cat: "analytics", href: "/admin/analytics" },
+  { cat: "admin", href: "/admin/users/manage" },
+  { cat: "system", href: "/admin/integrations" },
+];
+
+// Create shortcuts: New invoice has its own page; the others open the list page
+// where the add button lives.
+const CREATE: Array<{ title: string; href: string }> = [
+  { title: "New invoice", href: "/admin/accounting/invoices/new" },
+  { title: "Add contact", href: "/admin/contacts" },
+  { title: "Add opportunity", href: "/admin/sales/opportunities" },
+  { title: "Add task", href: "/admin/tasks" },
+];
+
+function catOf(href: string): CatKey {
+  const p = href.split("#")[0] ?? href;
+  const starts = (...xs: string[]) => xs.some((x) => p === x || p.startsWith(`${x}/`));
+  if (p === "/admin/investors/enrich") return "ir";
+  if (starts("/admin/contacts")) return "contacts";
+  if (starts("/admin/sales")) return "sales";
+  if (starts("/admin/marketing")) return "marketing";
+  if (starts("/admin/investor-directory")) return "directory";
+  if (starts("/admin/accounting")) return "accounting";
+  if (starts("/admin/social")) return "social";
+  if (starts("/admin/events")) return "events";
+  if (starts("/admin/voice")) return "voice";
+  if (starts("/admin/inbox", "/admin/calendar", "/admin/schedule", "/admin/meet", "/admin/meetings", "/admin/signatures", "/admin/tasks")) return "communication";
+  if (starts("/admin/companies", "/admin/investors", "/admin/support", "/admin/founders-stuck", "/admin/prospect-intros", "/admin/ai-usage")) return "support";
+  if (starts("/admin/learning")) return "learning";
+  if (starts("/admin/users", "/admin/billing", "/admin/pricing", "/admin/accounts", "/admin/profile", "/admin/profile-fields", "/admin/feature-controls", "/admin/crm/connectors")) return "admin";
+  if (starts("/admin/integrations", "/admin/queues", "/admin/automation", "/admin/scheduled-jobs", "/admin/page-builder-lab", "/admin/system-health", "/admin/imports", "/admin/beta-operations")) return "system";
+  if (starts("/admin/analytics", "/admin/funnels", "/admin/reports", "/admin/message-activity", "/admin/insights", "/admin/compliance", "/admin/audit", "/admin/report-compare")) return "analytics";
+  if (starts("/admin/ir", "/admin/ir-funnel", "/admin/crm", "/admin/fit", "/admin/spvs", "/admin/matching", "/admin/outreach-qualification", "/admin/portfolio", "/admin/readiness", "/admin/marketplace", "/admin/partner-scores", "/admin/deal-rooms", "/admin/data-room", "/admin/diligence")) return "ir";
+  return "dashboard";
+}
+
+function dynCat(type: SearchResult["type"]): CatKey {
+  switch (type) {
+    case "company": return "companies";
+    case "event": return "events";
+    case "opportunity": return "sales";
+    case "invoice": return "accounting";
+    default: return "contacts";
+  }
+}
+
+function CatChip({ cat, size = 28 }: { cat: CatKey; size?: number }) {
+  const c = CATS[cat];
+  return (
+    <span style={{ width: size, height: size, borderRadius: 7, background: c.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+      <svg width={Math.round(size * 0.55)} height={Math.round(size * 0.55)} viewBox="0 0 24 24" fill="none" stroke={c.fg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{c.icon}</svg>
+    </span>
+  );
+}
+
+// Highlight the typed words inside a result title.
+function hl(text: string, query: string): ReactNode {
+  const words = query.split(/\s+/).filter((w) => w.length > 0).map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  if (words.length === 0) return text;
+  const re = new RegExp(`(${words.join("|")})`, "ig");
+  return text.split(re).map((part, i) =>
+    i % 2 === 1 ? <mark key={i} style={{ background: "#FFE9A8", color: "inherit", borderRadius: 3, padding: "0 1px" }}>{part}</mark> : part,
+  );
+}
+
+// ── Recent items (per browser) ────────────────────────────────────────────────
+
+const RECENT_KEY = "icapos-admin-search-recent";
+
+type RecentItem = { title: string; subtitle: string | null; href: string; cat: CatKey };
+
+function readRecents(limit: number): RecentItem[] {
+  try {
+    const raw = window.localStorage.getItem(RECENT_KEY);
+    const v: unknown = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(v)) return [];
+    return (v as RecentItem[]).filter((x) => x && typeof x.href === "string" && typeof x.title === "string" && x.cat in CATS).slice(0, limit);
+  } catch {
+    return [];
+  }
+}
+
+function saveRecent(item: RecentItem) {
+  try {
+    const next = [item, ...readRecents(8).filter((x) => x.href !== item.href)].slice(0, 8);
+    window.localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+  } catch {
+    // Storage can be blocked; recents are a convenience only.
+  }
+}
+
+// ── Type icons (founder and investor) ─────────────────────────────────────────
 
 function TypeIcon({ type }: { type: SearchResult["type"] | "page" }) {
   const ACCENT = "#2E78F5";
@@ -215,11 +359,17 @@ const TYPE_LABELS: Record<SearchResult["type"], string> = {
   deal_room: "Deal rooms",
   company: "Companies",
   event: "Events",
+  opportunity: "Deals",
+  invoice: "Invoices",
 };
 
 // ── Main modal ────────────────────────────────────────────────────────────────
 
 type Props = { workspace?: WorkspaceId };
+
+type Combined = { href: string; meta?: RecentItem };
+
+const SECTION_LABEL: React.CSSProperties = { padding: "10px 18px 4px", fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: ".08em" };
 
 export function GlobalSearchModal({ workspace = "founder" }: Props) {
   const [open, setOpen] = useState(false);
@@ -229,6 +379,7 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+  const isAdmin = workspace === "admin";
 
   // Open on cmd+K / ctrl+K
   useEffect(() => {
@@ -254,7 +405,7 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
     }
   }, [open]);
 
-  // Debounced API search (founder only)
+  // Debounced API search (founder and admin)
   const fetchDynamic = useCallback(async (q: string) => {
     if ((workspace !== "founder" && workspace !== "admin") || q.length < 2) { setDynamicResults([]); return; }
     setLoading(true);
@@ -276,10 +427,11 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
   }, [query, fetchDynamic]);
 
   // Filter static pages for this workspace
-  const q = query.toLowerCase();
+  const q = query.toLowerCase().trim();
   const workspacePages = PAGES.filter((p) => p.workspace === workspace || p.workspace === "all");
-  // Admin ranking: every word must match somewhere; exact phrases, titles and
-  // keywords score higher, so "ai budget" lands on Feature Controls first.
+
+  // Admin ranking: every word must match; exact phrases, titles and keywords
+  // score higher, so "ai budget" lands on the AI budget section first.
   function scoreAdminPage(p: PageShortcut): number {
     const title = p.title.toLowerCase();
     const sub = p.subtitle.toLowerCase();
@@ -299,21 +451,32 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
     if (title === q) score += 100;
     else if (title.includes(q)) score += 40;
     if (p.keywords.some((k) => k.includes(q))) score += 60;
+    if (p.section) score += 5;
     return score;
   }
 
-  const matchedPages = query.length === 0
-    ? workspacePages.slice(0, 6)
-    : workspace === "admin"
-      ? workspacePages
-          .map((p) => ({ p, s: scoreAdminPage(p) }))
-          .filter((x) => x.s > 0)
-          .sort((a, b) => b.s - a.s)
-          .slice(0, 8)
-          .map((x) => x.p)
-      : workspacePages.filter(
-          (p) => p.title.toLowerCase().includes(q) || p.keywords.some((k) => k.includes(q)),
-        ).slice(0, 5);
+  const adminEmpty = isAdmin && query.length === 0;
+  const matchedPages: PageShortcut[] = adminEmpty
+    ? []
+    : query.length === 0
+      ? workspacePages.slice(0, 6)
+      : isAdmin
+        ? workspacePages
+            .map((p) => ({ p, s: scoreAdminPage(p) }))
+            .filter((x) => x.s > 0)
+            .sort((a, b) => b.s - a.s)
+            .slice(0, 8)
+            .map((x) => x.p)
+        : workspacePages.filter(
+            (p) => p.title.toLowerCase().includes(q) || p.keywords.some((k) => k.includes(q)),
+          ).slice(0, 5);
+
+  function crumbOf(p: PageShortcut): string {
+    return p.section ? p.subtitle : `${CATS[catOf(p.href)].label} › ${p.title}`;
+  }
+
+  // Admin empty state: recent items, create shortcuts, jump to tiles
+  const recents: RecentItem[] = adminEmpty && open ? readRecents(4) : [];
 
   // Group dynamic results by type
   const grouped = new Map<SearchResult["type"], SearchResult[]>();
@@ -324,16 +487,25 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
   }
 
   // Flat combined list for keyboard nav index
-  type CombinedResult =
-    | { kind: "page"; item: PageShortcut }
-    | { kind: "dynamic"; item: SearchResult };
+  const combined: Combined[] = adminEmpty
+    ? [
+        ...recents.map((r) => ({ href: r.href, meta: r })),
+        ...CREATE.map((c) => ({ href: c.href })),
+        ...HUBS.map((h) => ({ href: h.href, meta: { title: CATS[h.cat].label, subtitle: null, href: h.href, cat: h.cat } })),
+      ]
+    : [
+        ...matchedPages.map((p) => ({
+          href: p.href,
+          meta: isAdmin ? { title: p.title, subtitle: crumbOf(p), href: p.href, cat: catOf(p.href) } : undefined,
+        })),
+        ...dynamicResults.map((r) => ({
+          href: r.href,
+          meta: isAdmin ? { title: r.title, subtitle: r.subtitle, href: r.href, cat: dynCat(r.type) } : undefined,
+        })),
+      ];
 
-  const combined: CombinedResult[] = [
-    ...matchedPages.map((p) => ({ kind: "page" as const, item: p })),
-    ...dynamicResults.map((r) => ({ kind: "dynamic" as const, item: r })),
-  ];
-
-  function navigate(href: string) {
+  function navigate(href: string, meta?: RecentItem) {
+    if (meta && isAdmin) saveRecent(meta);
     setOpen(false);
     router.push(href);
   }
@@ -347,11 +519,19 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
       setActiveIndex((i) => Math.max(i - 1, 0));
     } else if (e.key === "Enter") {
       const item = combined[activeIndex];
-      if (item) navigate(item.item.href);
+      if (item) navigate(item.href, item.meta);
     }
   }
 
   if (!open) return null;
+
+  const rowBase: React.CSSProperties = {
+    width: "100%", display: "flex", alignItems: "center", gap: 12,
+    padding: "10px 18px", border: "none", cursor: "pointer", textAlign: "left",
+    transition: "background 0.1s",
+  };
+  const activeBg = isAdmin ? "#EAF1FE" : "#EEEDFE";
+  const pill: React.CSSProperties = { fontSize: 10.5, fontWeight: 600, borderRadius: 999, padding: "3px 8px", flexShrink: 0 };
 
   return (
     <>
@@ -375,7 +555,7 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
           position: "fixed",
           top: "clamp(12px, 12vh, 80px)", left: "50%", transform: "translateX(-50%)",
           zIndex: 9991,
-          width: "min(600px, calc(100vw - 24px))",
+          width: "min(640px, calc(100vw - 24px))",
           background: "white",
           borderRadius: 16,
           boxShadow: "0 24px 64px rgba(83,74,183,0.18), 0 4px 24px rgba(0,0,0,0.12)",
@@ -403,7 +583,7 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
             value={query}
             onChange={(e) => { setQuery(e.target.value); setActiveIndex(0); }}
             onKeyDown={onKeyDown}
-            placeholder={workspace === "founder" ? "Search pages, investors, documents…" : workspace === "admin" ? "Search pages, contacts, companies, events…" : "Search pages…"}
+            placeholder={workspace === "founder" ? "Search pages, investors, documents…" : isAdmin ? "Search pages, contacts, companies, events…" : "Search pages…"}
             style={{
               flex: 1, border: "none", outline: "none",
               fontSize: 15, color: "#111827",
@@ -425,7 +605,7 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
         </div>
 
         {/* Results */}
-        <div style={{ maxHeight: 420, overflowY: "auto" }}>
+        <div style={{ maxHeight: 520, overflowY: "auto" }}>
 
           {/* Empty query with no results */}
           {combined.length === 0 && query.length >= 2 && !loading && (
@@ -434,78 +614,161 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
             </p>
           )}
 
+          {/* Admin empty state */}
+          {adminEmpty && (
+            <div>
+              {recents.length > 0 && (
+                <div>
+                  <p style={SECTION_LABEL}>Recent</p>
+                  {recents.map((r, i) => (
+                    <button
+                      key={r.href}
+                      type="button"
+                      onClick={() => navigate(r.href, r)}
+                      onMouseEnter={() => setActiveIndex(i)}
+                      style={{ ...rowBase, background: i === activeIndex ? activeBg : "transparent" }}
+                    >
+                      <CatChip cat={r.cat} />
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#111827" }}>{r.title}</span>
+                        {r.subtitle && <span style={{ display: "block", fontSize: 11, color: "#6b7280" }}>{r.subtitle}</span>}
+                      </span>
+                      {i === activeIndex && <kbd style={{ fontSize: 10, color: "#6b7280", background: "white", border: "1px solid #e5e7eb", borderRadius: 4, padding: "2px 6px", flexShrink: 0 }}>↵</kbd>}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <p style={SECTION_LABEL}>Create</p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: "0 18px 4px" }}>
+                {CREATE.map((c, j) => {
+                  const idx = recents.length + j;
+                  const on = idx === activeIndex;
+                  return (
+                    <button
+                      key={c.title}
+                      type="button"
+                      onClick={() => navigate(c.href)}
+                      onMouseEnter={() => setActiveIndex(idx)}
+                      style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: "#1D5FD6", background: on ? "#EAF1FE" : "white", border: "1px solid #BCD3F8", borderRadius: 8, padding: "6px 10px", cursor: "pointer" }}
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1D5FD6" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                      {c.title}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <p style={{ ...SECTION_LABEL, paddingTop: 14 }}>Jump to</p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 6, padding: "0 18px 14px" }}>
+                {HUBS.map((h, k) => {
+                  const idx = recents.length + CREATE.length + k;
+                  const on = idx === activeIndex;
+                  return (
+                    <button
+                      key={h.cat}
+                      type="button"
+                      onClick={() => navigate(h.href, { title: CATS[h.cat].label, subtitle: null, href: h.href, cat: h.cat })}
+                      onMouseEnter={() => setActiveIndex(idx)}
+                      style={{ display: "flex", alignItems: "center", gap: 9, border: `1px solid ${on ? "#BCD3F8" : "#eef0f4"}`, background: on ? "#EAF1FE" : "white", borderRadius: 10, padding: "7px 9px", fontSize: 12.5, fontWeight: 600, color: "#111827", cursor: "pointer", textAlign: "left" }}
+                    >
+                      <CatChip cat={h.cat} size={26} />
+                      <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{CATS[h.cat].label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Page shortcuts */}
           {matchedPages.length > 0 && (
             <div>
-              <p style={{ padding: "10px 18px 4px", fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: ".08em" }}>
-                {query.length === 0 ? "Quick links" : "Pages"}
-              </p>
+              {!isAdmin && (
+                <p style={SECTION_LABEL}>
+                  {query.length === 0 ? "Quick links" : "Pages"}
+                </p>
+              )}
               {matchedPages.map((page, i) => {
                 const isActive = i === activeIndex;
+                const cat = catOf(page.href);
                 return (
-                  <button
-                    key={page.id}
-                    type="button"
-                    onClick={() => navigate(page.href)}
-                    style={{
-                      width: "100%", display: "flex", alignItems: "center", gap: 12,
-                      padding: "10px 18px", border: "none", cursor: "pointer", textAlign: "left",
-                      background: isActive ? "#EEEDFE" : "transparent",
-                      transition: "background 0.1s",
-                    }}
-                    onMouseEnter={() => setActiveIndex(i)}
-                  >
-                    <span style={{ width: 28, height: 28, borderRadius: 7, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <TypeIcon type="page" />
-                    </span>
-                    <span style={{ flex: 1, minWidth: 0 }}>
-                      <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#111827" }}>{page.title}</span>
-                      <span style={{ display: "block", fontSize: 11, color: "#6b7280" }}>{page.subtitle}</span>
-                    </span>
-                    {isActive && (
-                      <kbd style={{ fontSize: 10, color: "#9ca3af", background: "white", border: "1px solid #e5e7eb", borderRadius: 4, padding: "2px 6px", flexShrink: 0 }}>↵</kbd>
-                    )}
-                  </button>
+                  <div key={page.id}>
+                    {isAdmin && i === 0 && <p style={SECTION_LABEL}>Best match</p>}
+                    {isAdmin && i === 1 && <p style={SECTION_LABEL}>More matches</p>}
+                    <button
+                      type="button"
+                      onClick={() => navigate(page.href, isAdmin ? { title: page.title, subtitle: crumbOf(page), href: page.href, cat } : undefined)}
+                      style={{ ...rowBase, background: isActive ? activeBg : "transparent" }}
+                      onMouseEnter={() => setActiveIndex(i)}
+                    >
+                      {isAdmin ? <CatChip cat={cat} /> : (
+                        <span style={{ width: 28, height: 28, borderRadius: 7, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <TypeIcon type="page" />
+                        </span>
+                      )}
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#111827" }}>{isAdmin ? hl(page.title, query) : page.title}</span>
+                        <span style={{ display: "block", fontSize: 11, color: "#6b7280" }}>{isAdmin ? crumbOf(page) : page.subtitle}</span>
+                      </span>
+                      {isAdmin && (
+                        <span style={{ ...pill, color: page.section && i === 0 ? "#1D5FD6" : "#475569", background: page.section && i === 0 ? "#DCE8FD" : "#EEF1F5" }}>
+                          {page.section ? (i === 0 ? "Jumps to section" : "Section") : "Page"}
+                        </span>
+                      )}
+                      {isActive && (
+                        <kbd style={{ fontSize: 10, color: "#6b7280", background: "white", border: "1px solid #e5e7eb", borderRadius: 4, padding: "2px 6px", flexShrink: 0 }}>↵</kbd>
+                      )}
+                    </button>
+                  </div>
                 );
               })}
             </div>
           )}
 
-          {/* Dynamic results — grouped by type */}
+          {/* Dynamic results, grouped by type */}
           {[...grouped.entries()].map(([type, rows]) => {
             const sectionStart = matchedPages.length + dynamicResults.indexOf(rows[0]!);
             return (
               <div key={type} style={{ borderTop: "1px solid #f3f4f6" }}>
-                <p style={{ padding: "10px 18px 4px", fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: ".08em" }}>
+                <p style={SECTION_LABEL}>
                   {TYPE_LABELS[type]}
                 </p>
                 {rows.map((r, i) => {
                   const idx = sectionStart + i;
                   const isActive = idx === activeIndex;
+                  const email = "email" in r ? r.email : null;
+                  const meta: RecentItem | undefined = isAdmin ? { title: r.title, subtitle: r.subtitle, href: r.href, cat: dynCat(r.type) } : undefined;
                   return (
-                    <button
-                      key={r.id}
-                      type="button"
-                      onClick={() => navigate(r.href)}
-                      style={{
-                        width: "100%", display: "flex", alignItems: "center", gap: 12,
-                        padding: "10px 18px", border: "none", cursor: "pointer", textAlign: "left",
-                        background: isActive ? "#EEEDFE" : "transparent",
-                        transition: "background 0.1s",
-                      }}
-                      onMouseEnter={() => setActiveIndex(idx)}
-                    >
-                      <span style={{ width: 28, height: 28, borderRadius: 7, background: "#EEEDFE", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        <TypeIcon type={r.type} />
-                      </span>
-                      <span style={{ flex: 1, minWidth: 0 }}>
-                        <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#111827", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.title}</span>
-                        {r.subtitle && <span style={{ display: "block", fontSize: 11, color: "#6b7280" }}>{r.subtitle}</span>}
-                      </span>
-                      {isActive && (
-                        <kbd style={{ fontSize: 10, color: "#9ca3af", background: "white", border: "1px solid #e5e7eb", borderRadius: 4, padding: "2px 6px", flexShrink: 0 }}>↵</kbd>
+                    <div key={r.id} style={{ display: "flex", alignItems: "center", background: isActive ? activeBg : "transparent", transition: "background 0.1s" }} onMouseEnter={() => setActiveIndex(idx)}>
+                      <button
+                        type="button"
+                        onClick={() => navigate(r.href, meta)}
+                        style={{ ...rowBase, flex: 1, width: "auto", minWidth: 0, background: "transparent" }}
+                      >
+                        {isAdmin ? <CatChip cat={dynCat(r.type)} /> : (
+                          <span style={{ width: 28, height: 28, borderRadius: 7, background: "#EEEDFE", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <TypeIcon type={r.type} />
+                          </span>
+                        )}
+                        <span style={{ flex: 1, minWidth: 0 }}>
+                          <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#111827", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{isAdmin ? hl(r.title, query) : r.title}</span>
+                          {r.subtitle && <span style={{ display: "block", fontSize: 11, color: "#6b7280" }}>{isAdmin ? hl(r.subtitle, query) : r.subtitle}</span>}
+                        </span>
+                      </button>
+                      {isAdmin && isActive && email && (
+                        <a
+                          href={`mailto:${email}`}
+                          onClick={(e) => e.stopPropagation()}
+                          style={{ fontSize: 11, fontWeight: 600, color: "#1D5FD6", background: "white", border: "1px solid #BCD3F8", borderRadius: 6, padding: "4px 8px", textDecoration: "none", marginRight: 8, flexShrink: 0 }}
+                        >
+                          Email
+                        </a>
                       )}
-                    </button>
+                      {isActive && (
+                        <kbd style={{ fontSize: 10, color: "#6b7280", background: "white", border: "1px solid #e5e7eb", borderRadius: 4, padding: "2px 6px", marginRight: 18, flexShrink: 0 }}>↵</kbd>
+                      )}
+                    </div>
                   );
                 })}
               </div>
@@ -513,9 +776,9 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
           })}
 
           {/* Hint when empty query */}
-          {query.length === 0 && (workspace === "founder" || workspace === "admin") && (
+          {query.length === 0 && workspace === "founder" && (
             <p style={{ padding: "6px 18px 14px", fontSize: 11, color: "#9ca3af", textAlign: "center" }}>
-              {workspace === "admin" ? "Type to search contacts, companies, events…" : "Type to search investors, documents, deal rooms…"}
+              Type to search investors, documents, deal rooms…
             </p>
           )}
         </div>
@@ -523,7 +786,7 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
         {/* Footer */}
         <div style={{ padding: "8px 18px", borderTop: "1px solid #f3f4f6", display: "flex", alignItems: "center", gap: 12, background: "#fafafa" }}>
           {([["↑↓", "navigate"], ["↵", "open"], ["esc", "close"]] as [string, string][]).map(([key, label]) => (
-            <span key={key} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "#9ca3af" }}>
+            <span key={key} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "#6b7280" }}>
               <kbd style={{ fontSize: 10, background: "#e5e7eb", borderRadius: 3, padding: "1px 5px", fontFamily: "inherit" }}>{key}</kbd>
               {label}
             </span>

@@ -10,16 +10,12 @@ import { UploadLimitsControls } from "@/components/admin/UploadLimitsControls";
 import { IrAgentControls } from "@/components/admin/IrAgentControls";
 import { SiteDefaultViewControls } from "@/components/admin/SiteDefaultViewControls";
 import { requirePermissionPage } from "@/lib/api/permissions";
-import { InvestorDirectoryLimitsControls } from "@/components/admin/InvestorDirectoryLimitsControls";
-import { loadPlanAllowances, loadSettings } from "@/lib/investor-directory/db";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminFeatureControlsPage() {
   const t = await getTranslations("adminPages");
   const { profile } = await requirePermissionPage("manage_settings");
-  // Never let the directory lookup break this page.
-  const directory = await Promise.all([loadSettings(), loadPlanAllowances()]).catch(() => null);
 
   return (
     <AppShell
@@ -28,16 +24,15 @@ export default async function AdminFeatureControlsPage() {
       profileName={profile.full_name ?? profile.email ?? "Admin"}
       profileSubtitle={t("featureControls")}
     >
-      {directory ? <InvestorDirectoryLimitsControls settings={directory[0]} allowances={directory[1]} /> : null}
-      <SiteDefaultViewControls />
-      <OutreachAutomationToggle />
-      <DepartmentsControls />
-      <AiBudgetControls />
-      <AiUsageLimitsControls />
-      <UploadLimitsControls />
-      <IrAgentControls />
-      <StageMenuEditor />
-      <FounderSocialControls />
+      <div id="site-default-view" className="scroll-mt-24"><SiteDefaultViewControls /></div>
+      <div id="outreach-automation" className="scroll-mt-24"><OutreachAutomationToggle /></div>
+      <div id="departments" className="scroll-mt-24"><DepartmentsControls /></div>
+      <div id="ai-budget" className="scroll-mt-24"><AiBudgetControls /></div>
+      <div id="ai-usage-limits" className="scroll-mt-24"><AiUsageLimitsControls /></div>
+      <div id="upload-limits" className="scroll-mt-24"><UploadLimitsControls /></div>
+      <div id="ir-agent" className="scroll-mt-24"><IrAgentControls /></div>
+      <div id="stage-menu" className="scroll-mt-24"><StageMenuEditor /></div>
+      <div id="founder-social" className="scroll-mt-24"><FounderSocialControls /></div>
     </AppShell>
   );
 }
