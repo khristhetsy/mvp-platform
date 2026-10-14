@@ -1,4 +1,5 @@
 import { getValidGoogleAccessToken } from "@/lib/integrations/google-access-token";
+import { recipientHeader } from "@/lib/email/recipients";
 
 const GMAIL_SEND_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send";
 const GMAIL_SEND_SCOPE = "https://www.googleapis.com/auth/gmail.send";
@@ -53,9 +54,9 @@ function bodyMime(body: string, html?: string | null): string {
 export function buildRawMessage(to: string, subject: string, body: string, html?: string | null, attachments: GmailAttachment[] = [], cc?: string | null, bcc?: string | null): string {
   // Bcc-only sends (blast to a list) are valid — when there's no To, use the standard
   // "undisclosed-recipients:;" placeholder so the header is well-formed.
-  const recipientHeaders = [`To: ${to.trim() || "undisclosed-recipients:;"}`];
-  if (cc && cc.trim()) recipientHeaders.push(`Cc: ${cc.trim()}`);
-  if (bcc && bcc.trim()) recipientHeaders.push(`Bcc: ${bcc.trim()}`);
+  const recipientHeaders = [`To: ${recipientHeader(to) || "undisclosed-recipients:;"}`];
+  if (recipientHeader(cc)) recipientHeaders.push(`Cc: ${recipientHeader(cc)}`);
+  if (recipientHeader(bcc)) recipientHeaders.push(`Bcc: ${recipientHeader(bcc)}`);
 
   if (attachments.length === 0) {
     const message = [

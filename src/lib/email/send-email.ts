@@ -13,15 +13,12 @@ import { recordDelivery } from "@/lib/cron/job-deliveries";
 import { logOutboundEmail, type EmailRole } from "@/lib/email/email-log";
 import { holdForFounderDigest } from "@/lib/notifications/founder-email-budget/gate";
 import { personalFromHeader, verifiedSenderDomains } from "@/lib/email/sender-domains";
+import { parseRecipients } from "@/lib/email/recipients";
 
 const RESEND_API = "https://api.resend.com/emails";
 
-/** Split a comma/semicolon-separated recipient string (or array) into clean addresses. */
-export function parseRecipients(value?: string | string[] | null): string[] {
-  if (!value) return [];
-  const list = Array.isArray(value) ? value : String(value).split(/[,;]/);
-  return list.map((s) => s.trim()).filter((s) => s.includes("@"));
-}
+/** Recipient parsing lives in recipients.ts so every send path shares it. */
+export { parseRecipients };
 
 export type EmailPayload = {
   to: string | string[];
