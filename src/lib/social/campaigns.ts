@@ -33,14 +33,16 @@ export function makeSourceTag(prefix = "camp"): string {
   return `${prefix}_${(crypto.randomUUID?.() ?? String(Date.now())).replace(/-/g, "").slice(0, 8)}`;
 }
 
-export async function listCampaigns(): Promise<Campaign[]> {
-  const { data } = await db().from("social_campaigns").select("id, name, budget_cents, source_tag").is("archived_at", null).order("created_at", { ascending: false });
+/** `ownerId` null = iCFO's own campaigns (the admin page); a founder id = that founder's. */
+export async function listCampaigns(ownerId: string | null = null): Promise<Campaign[]> {
+  const base = db().from("social_campaigns").select("id, name, budget_cents, source_tag").is("archived_at", null);
+  const { data } = await (ownerId ? base.eq("owner_profile_id", ownerId) : base.is("owner_profile_id", null)).order("created_at", { ascending: false });
   return ((data ?? []) as Campaign[]).map((c) => ({ ...c, budget_cents: Number(c.budget_cents) || 0 }));
 }
 
-export async function createCampaign(name: string, budgetCents: number, createdBy?: string | null, tagPrefix = "camp"): Promise<Campaign | null> {
+export async function createCampaign(name: string, budgetCents: number, createdBy?: string | null, tagPrefix = "camp", ownerId: string | null = null): Promise<Campaign | null> {
   const { data, error } = await db().from("social_campaigns")
-    .insert({ name: name.trim(), budget_cents: Math.max(0, Math.round(budgetCents)), source_tag: makeSourceTag(tagPrefix), created_by: createdBy ?? null })
+    .insert({ name: name.trim(), budget_cents: Math.max(0, Math.round(budgetCents)), source_tag: makeSourceTag(tagPrefix), created_by: createdBy ?? null, owner_profile_id: ownerId })
     .select("id, name, budget_cents, source_tag").single();
   if (error) return null;
   return data as Campaign;

@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/AppShell";
+import { FounderSocialControls } from "@/components/admin/FounderSocialControls";
 import { getTranslations } from "next-intl/server";
 import { DepartmentsControls } from "@/components/admin/DepartmentsControls";
 import { OutreachAutomationToggle } from "@/components/admin/OutreachAutomationToggle";
@@ -31,6 +32,7 @@ export default async function AdminFeatureControlsPage() {
       <UploadLimitsControls />
       <IrAgentControls />
       <StageMenuEditor />
+      <FounderSocialControls />
     </AppShell>
   );
 }

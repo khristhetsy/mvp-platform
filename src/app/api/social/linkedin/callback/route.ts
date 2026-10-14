@@ -20,11 +20,14 @@ import {
 } from "@/lib/social/linkedin-oauth";
 import { originFromRequest } from "@/lib/social/request-origin";
 import { CONNECT_META_COOKIE, applyConnectMeta, decodeConnectMeta } from "@/lib/social/account-admin";
+import { FOUNDER_CONNECT_COOKIE, FOUNDER_SOCIAL_PATH } from "@/lib/social/founder-connect";
+import { getFounderSocialUsage } from "@/lib/social/founder-limits";
+import { logFounderSocialEvent } from "@/lib/social/activity";
 
 export const dynamic = "force-dynamic";
 
-function back(origin: string, status: string, message?: string) {
-  const url = new URL("/admin/social", origin);
+function backTo(origin: string, status: string, message?: string, founderFlow = false) {
+  const url = new URL(founderFlow ? FOUNDER_SOCIAL_PATH : "/admin/social", origin);
   url.searchParams.set("tab", "settings");
   url.searchParams.set("linkedin", status);
   if (message) url.searchParams.set("message", message);
@@ -42,8 +45,12 @@ export async function GET(request: Request) {
   const cookieStore = await cookies();
   const storedState = cookieStore.get(LINKEDIN_STATE_COOKIE)?.value;
   const meta = decodeConnectMeta(cookieStore.get(CONNECT_META_COOKIE)?.value);
+  // A founder starts this flow from /api/founder/social/connect, which sets this cookie.
+  const founderFlow = cookieStore.get(FOUNDER_CONNECT_COOKIE)?.value === "1";
   cookieStore.delete(LINKEDIN_STATE_COOKIE);
   cookieStore.delete(CONNECT_META_COOKIE);
+  cookieStore.delete(FOUNDER_CONNECT_COOKIE);
+  const back = (o: string, s: string, m?: string) => backTo(o, s, m, founderFlow);
 
   // The user denied consent, or LinkedIn returned an error.
   if (oauthError) {
@@ -66,12 +73,17 @@ export async function GET(request: Request) {
   }
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
   const role = normalizeUserRole((profile as { role?: string } | null)?.role);
-  if (role !== "admin" && role !== "analyst") {
+  const isStaff = role === "admin" || role === "analyst";
+  if (founderFlow ? role !== "founder" : !isStaff) {
     return back(origin, "error", "not_authorized");
   }
 
   if (!storedState || storedState !== state || !verifyLinkedInState(env, state, user.id)) {
     return back(origin, "error", "invalid_state");
+  }
+
+  if (founderFlow && !(await getFounderSocialUsage(user.id).catch(() => null))?.enabled) {
+    return back(origin, "error", "plan_not_included");
   }
 
   try {
@@ -83,8 +95,13 @@ export async function GET(request: Request) {
       accessToken: token.access_token,
       refreshToken: token.refresh_token ?? null,
       tokenExpiresAt: tokenExpiresAt(token.expires_in),
+      ownerId: founderFlow ? user.id : null,
     });
-    await applyConnectMeta(id, meta, user.id);
+    if (founderFlow) {
+      await logFounderSocialEvent({ type: "founder.social_account_connected", founderId: user.id, description: `LinkedIn${member.name ? `, ${member.name}` : ""}`, metadata: { network: "linkedin", account: member.name } });
+    } else {
+      await applyConnectMeta(id, meta, user.id);
+    }
     return back(origin, "connected", member.name ?? undefined);
   } catch (err) {
     return back(origin, "error", err instanceof Error ? err.message : "oauth_failed");

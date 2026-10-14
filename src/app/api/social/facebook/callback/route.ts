@@ -20,11 +20,14 @@ import {
 } from "@/lib/social/meta-oauth";
 import { originFromRequest } from "@/lib/social/request-origin";
 import { CONNECT_META_COOKIE, applyConnectMeta, decodeConnectMeta } from "@/lib/social/account-admin";
+import { FOUNDER_CONNECT_COOKIE, FOUNDER_SOCIAL_PATH } from "@/lib/social/founder-connect";
+import { getFounderSocialUsage } from "@/lib/social/founder-limits";
+import { logFounderSocialEvent } from "@/lib/social/activity";
 
 export const dynamic = "force-dynamic";
 
-function back(origin: string, status: string, message?: string) {
-  const url = new URL("/admin/social", origin);
+function backTo(origin: string, status: string, message?: string, founderFlow = false) {
+  const url = new URL(founderFlow ? FOUNDER_SOCIAL_PATH : "/admin/social", origin);
   url.searchParams.set("tab", "settings");
   url.searchParams.set("facebook", status);
   if (message) url.searchParams.set("message", message);
@@ -42,8 +45,11 @@ export async function GET(request: Request) {
   const cookieStore = await cookies();
   const storedState = cookieStore.get(META_STATE_COOKIE)?.value;
   const meta = decodeConnectMeta(cookieStore.get(CONNECT_META_COOKIE)?.value);
+  const founderFlow = cookieStore.get(FOUNDER_CONNECT_COOKIE)?.value === "1";
   cookieStore.delete(META_STATE_COOKIE);
   cookieStore.delete(CONNECT_META_COOKIE);
+  cookieStore.delete(FOUNDER_CONNECT_COOKIE);
+  const back = (o: string, s: string, m?: string) => backTo(o, s, m, founderFlow);
 
   if (oauthError) return back(origin, "error", oauthErrorDesc ?? oauthError);
   if (!code || !state) return back(origin, "error", "missing_code");
@@ -56,11 +62,17 @@ export async function GET(request: Request) {
   if (!user) return NextResponse.redirect(new URL("/auth/sign-in", origin));
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
   const role = normalizeUserRole((profile as { role?: string } | null)?.role);
-  if (role !== "admin" && role !== "analyst") return back(origin, "error", "not_authorized");
+  const isStaff = role === "admin" || role === "analyst";
+  if (founderFlow ? role !== "founder" : !isStaff) return back(origin, "error", "not_authorized");
 
   if (!storedState || storedState !== state || !verifyMetaState(env, state, user.id)) {
     return back(origin, "error", "invalid_state");
   }
+
+  if (founderFlow && !(await getFounderSocialUsage(user.id).catch(() => null))?.enabled) {
+    return back(origin, "error", "plan_not_included");
+  }
+  const ownerId = founderFlow ? user.id : null;
 
   try {
     const shortLived = await exchangeMetaCode(env, code);
@@ -72,19 +84,22 @@ export async function GET(request: Request) {
     const wantIg = meta.target === "instagram";
     let igCount = 0, labelled = false;
     for (const page of pages) {
-      const { id } = await upsertFacebookPageAccount({ pageId: page.id, pageName: page.name, pageAccessToken: page.accessToken });
+      const { id } = await upsertFacebookPageAccount({ pageId: page.id, pageName: page.name, pageAccessToken: page.accessToken, ownerId });
       const fbMeta = !wantIg && !labelled ? meta : { assignedTo: meta.assignedTo };
       if (fbMeta === meta) labelled = true;
-      await applyConnectMeta(id, fbMeta, user.id);
+      if (!founderFlow) await applyConnectMeta(id, fbMeta, user.id);
       if (page.instagram) {
-        const ig = await upsertInstagramAccount({ igUserId: page.instagram.id, username: page.instagram.username, pageAccessToken: page.accessToken });
+        const ig = await upsertInstagramAccount({ igUserId: page.instagram.id, username: page.instagram.username, pageAccessToken: page.accessToken, ownerId });
         const igMeta = wantIg && !labelled ? meta : { assignedTo: meta.assignedTo };
         if (igMeta === meta) labelled = true;
-        await applyConnectMeta(ig.id, igMeta, user.id);
+        if (!founderFlow) await applyConnectMeta(ig.id, igMeta, user.id);
         igCount++;
       }
     }
     if (wantIg && igCount === 0) return back(origin, "no_instagram");
+    if (founderFlow) {
+      await logFounderSocialEvent({ type: "founder.social_account_connected", founderId: user.id, description: igCount ? `Facebook and Instagram` : "Facebook", metadata: { network: wantIg ? "instagram" : "facebook", pages: pages.length, instagram: igCount } });
+    }
     return back(origin, "connected", igCount ? `${pages.length} Page(s) and ${igCount} Instagram account(s)` : `${pages.length} Page(s)`);
   } catch (err) {
     return back(origin, "error", err instanceof Error ? err.message : "oauth_failed");

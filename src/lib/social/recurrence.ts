@@ -5,6 +5,7 @@
  * the IO (create/materialize/pause/end) is server-only.
  */
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { getFounderSocialUsage } from "@/lib/social/founder-limits";
 import { syncPostEvent } from "@/lib/social/gcal-sync";
 import { zoneOffsetMinutes } from "@/lib/cron/zoned-schedule";
 import { PLATFORM_TZ } from "@/lib/time/platform-tz";
@@ -158,7 +159,7 @@ function ruleFromRow(r: Record<string, unknown>): RecurrenceRule {
   };
 }
 
-export async function createRecurrence(input: RecurrenceRule & RecurrenceTemplate & { createdBy?: string | null }, now = new Date()): Promise<{ id: string } | null> {
+export async function createRecurrence(input: RecurrenceRule & RecurrenceTemplate & { createdBy?: string | null; ownerId?: string | null }, now = new Date()): Promise<{ id: string } | null> {
   const first = generateOccurrences(input)[0] ?? null;
   const { data, error } = await db().from("social_recurrences").insert({
     freq: input.freq, interval_n: Math.max(1, input.interval || 1), weekdays: input.weekdays ?? [], time_local: input.timeLocal,
@@ -167,6 +168,7 @@ export async function createRecurrence(input: RecurrenceRule & RecurrenceTemplat
     campaign_id: input.campaignId ?? null, archetype: input.archetype ?? null, department: input.department ?? null, brief: input.brief ?? null,
     body: input.body ?? "", comment_text: input.comment ?? null, link_url: input.linkUrl ?? null, image_url: input.imageUrl ?? null,
     account_ids: input.variants.map((v) => v.accountId), variants: input.variants, created_by: input.createdBy ?? null,
+    owner_profile_id: input.ownerId ?? null,
   }).select("id").single();
   if (error || !data) return null;
   // Fill the near-term occurrences immediately so they show on the calendar.
@@ -187,8 +189,19 @@ export async function materializeRecurrence(id: string, now = new Date()): Promi
   const horizonMs = now.getTime() + MATERIALIZE_HORIZON_DAYS * 86400000;
   let created = 0;
   let nextRunMs = row.next_run ? new Date(row.next_run).getTime() : null;
+  // A founder's series respects the plan limit: occurrences past it are kept as held drafts.
+  const ownerId = (row.owner_profile_id as string | null) ?? null;
+  let room = Number.POSITIVE_INFINITY;
+  let heldUntil: string | null = null;
+  if (ownerId) {
+    const usage = await getFounderSocialUsage(ownerId, now);
+    room = usage.enabled ? (usage.remaining ?? Number.POSITIVE_INFINITY) : 0;
+    heldUntil = usage.resetAt;
+  }
   while (nextRunMs !== null && nextRunMs <= horizonMs) {
-    await createOccurrencePost(id, template, new Date(nextRunMs), row.created_by as string | null);
+    const hold = room <= 0;
+    await createOccurrencePost(id, template, new Date(nextRunMs), row.created_by as string | null, ownerId, hold ? heldUntil : null);
+    if (!hold) room -= 1;
     created++;
     nextRunMs = nextAfter(rule, nextRunMs);
   }
@@ -201,18 +214,20 @@ export async function materializeRecurrence(id: string, now = new Date()): Promi
   return created;
 }
 
-async function createOccurrencePost(recurrenceId: string, template: RecurrenceTemplate, when: Date, createdBy: string | null): Promise<void> {
+async function createOccurrencePost(recurrenceId: string, template: RecurrenceTemplate, when: Date, createdBy: string | null, ownerId: string | null = null, heldUntil: string | null = null): Promise<void> {
   const iso = when.toISOString();
   const { data: post } = await db().from("social_posts").insert({
     archetype: template.archetype ?? null, brief: template.brief ?? null, department: template.department ?? null,
     campaign_id: template.campaignId ?? null, recurrence_id: recurrenceId,
     body: template.variants[0]?.body ?? template.body ?? "", comment_text: template.comment ?? null, link_url: template.linkUrl ?? null, image_url: template.imageUrl ?? null,
-    status: "scheduled", scheduled_at: iso, created_by: createdBy,
+    status: heldUntil ? "draft" : "scheduled", scheduled_at: iso, created_by: createdBy,
+    owner_profile_id: ownerId, held_until: heldUntil,
   }).select("id").single();
   if (!post) return;
+  // Held occurrences keep their variants parked, so nothing publishes until the founder acts.
   const rows = template.variants.map((v) => ({
     post_id: post.id, account_id: v.accountId, body: v.body, comment_text: template.comment ?? null,
-    status: "queued", scheduled_at: iso, next_attempt_at: iso, idempotency_key: `${post.id}:${v.accountId}`,
+    status: heldUntil ? "skipped" : "queued", scheduled_at: iso, next_attempt_at: iso, idempotency_key: `${post.id}:${v.accountId}`,
   }));
   if (rows.length) await db().from("social_variants").insert(rows);
 }

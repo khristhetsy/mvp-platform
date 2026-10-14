@@ -23,6 +23,7 @@ export async function listSocialAccounts(): Promise<SocialAccount[]> {
   const { data, error } = await db().from("social_accounts")
     .select("id, platform, display_name, status, token_expires_at, label, assigned_to, is_default, external_member_id, assignee:profiles!social_accounts_assigned_to_fkey(full_name, email)")
     .neq("status", "disconnected")
+    .is("owner_profile_id", null)   // iCFO's own accounts only; founders' accounts live on the founder page
     .order("is_default", { ascending: false }).order("created_at", { ascending: true }).limit(50);
   if (error) throw new Error(`Failed to list accounts: ${error.message}`);   // e.g. migration not applied
   return ((data ?? []) as Array<Record<string, unknown>>).map((r) => {
@@ -38,11 +39,14 @@ export async function listSocialAccounts(): Promise<SocialAccount[]> {
 export async function listQueue(limit = 200): Promise<QueueItem[]> {
   const { data } = await db()
     .from("social_variants")
-    .select("id, account_id, status, body, comment_text, url, error, attempts, next_attempt_at, published_at, scheduled_at, gcal_event_id, event_color, busy, account:social_accounts(platform, display_name), post:social_posts(id, department, link_url, recurrence_id, campaign:social_campaigns(id, name))")
+    .select("id, account_id, status, body, comment_text, url, error, attempts, next_attempt_at, published_at, scheduled_at, gcal_event_id, event_color, busy, account:social_accounts(platform, display_name), post:social_posts(id, department, link_url, recurrence_id, owner_profile_id, campaign:social_campaigns(id, name))")
     .neq("status", "archived")
     .order("updated_at", { ascending: false })
-    .limit(limit);
-  return ((data ?? []) as Array<Record<string, unknown>>).map((r) => {
+    .limit(limit * 4);   // over-fetch: founder rows are filtered out below
+  const adminOnly = ((data ?? []) as Array<Record<string, unknown>>)
+    .filter((r) => !(r.post as { owner_profile_id?: string | null } | null)?.owner_profile_id)
+    .slice(0, limit);
+  return adminOnly.map((r) => {
     const acc = r.account as { platform?: string; display_name?: string } | null;
     const post = r.post as { id?: string | null; department?: string | null; link_url?: string | null; recurrence_id?: string | null; campaign?: { id?: string | null; name?: string | null } | null } | null;
     return {

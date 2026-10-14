@@ -12,11 +12,14 @@ import { verifyLinkedInState } from "@/lib/social/linkedin-oauth";
 import { REDDIT_STATE_COOKIE, exchangeRedditCode, fetchRedditUsername, getRedditOAuthEnv } from "@/lib/social/reddit-oauth";
 import { originFromRequest } from "@/lib/social/request-origin";
 import { CONNECT_META_COOKIE, applyConnectMeta, decodeConnectMeta } from "@/lib/social/account-admin";
+import { FOUNDER_CONNECT_COOKIE, FOUNDER_SOCIAL_PATH } from "@/lib/social/founder-connect";
+import { getFounderSocialUsage } from "@/lib/social/founder-limits";
+import { logFounderSocialEvent } from "@/lib/social/activity";
 
 export const dynamic = "force-dynamic";
 
-function back(origin: string, status: string, message?: string) {
-  const url = new URL("/admin/social", origin);
+function backTo(origin: string, status: string, message?: string, founderFlow = false) {
+  const url = new URL(founderFlow ? FOUNDER_SOCIAL_PATH : "/admin/social", origin);
   url.searchParams.set("tab", "settings");
   url.searchParams.set("reddit", status);
   if (message) url.searchParams.set("message", message);
@@ -33,8 +36,11 @@ export async function GET(request: Request) {
   const cookieStore = await cookies();
   const storedState = cookieStore.get(REDDIT_STATE_COOKIE)?.value;
   const meta = decodeConnectMeta(cookieStore.get(CONNECT_META_COOKIE)?.value);
+  const founderFlow = cookieStore.get(FOUNDER_CONNECT_COOKIE)?.value === "1";
   cookieStore.delete(REDDIT_STATE_COOKIE);
   cookieStore.delete(CONNECT_META_COOKIE);
+  cookieStore.delete(FOUNDER_CONNECT_COOKIE);
+  const back = (o: string, s: string, m?: string) => backTo(o, s, m, founderFlow);
 
   if (oauthError) return back(origin, "error", oauthError);
   if (!code || !state) return back(origin, "error", "missing_code");
@@ -47,18 +53,27 @@ export async function GET(request: Request) {
   if (!user) return NextResponse.redirect(new URL("/auth/sign-in", origin));
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
   const role = normalizeUserRole((profile as { role?: string } | null)?.role);
-  if (role !== "admin" && role !== "analyst") return back(origin, "error", "not_authorized");
+  const isStaff = role === "admin" || role === "analyst";
+  if (founderFlow ? role !== "founder" : !isStaff) return back(origin, "error", "not_authorized");
 
   if (!storedState || storedState !== state || !verifyLinkedInState(env, state, user.id)) {
     return back(origin, "error", "invalid_state");
+  }
+
+  if (founderFlow && !(await getFounderSocialUsage(user.id).catch(() => null))?.enabled) {
+    return back(origin, "error", "plan_not_included");
   }
 
   try {
     const token = await exchangeRedditCode(env, code);
     if (!token.refresh_token) return back(origin, "error", "no_refresh_token");
     const username = await fetchRedditUsername(token.access_token);
-    const { id } = await upsertRedditAccount({ username, refreshToken: token.refresh_token });
-    await applyConnectMeta(id, meta, user.id);
+    const { id } = await upsertRedditAccount({ username, refreshToken: token.refresh_token, ownerId: founderFlow ? user.id : null });
+    if (founderFlow) {
+      await logFounderSocialEvent({ type: "founder.social_account_connected", founderId: user.id, description: `Reddit, u/${username}`, metadata: { network: "reddit", account: `u/${username}` } });
+    } else {
+      await applyConnectMeta(id, meta, user.id);
+    }
     return back(origin, "connected", `u/${username}`);
   } catch (err) {
     return back(origin, "error", err instanceof Error ? err.message : "oauth_failed");

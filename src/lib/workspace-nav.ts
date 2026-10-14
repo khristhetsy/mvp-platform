@@ -478,6 +478,7 @@ export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
           { href: "/founder/contacts", label: "My contacts", minStage: "deploy" },
           { href: "/founder/matches", label: "Investor matches", minStage: "deploy" },
           { href: "/founder/deploy", label: "Outreach", minStage: "deploy" },
+          { href: "/founder/deploy/social", label: "Social media", minStage: "deploy" },
           { href: "/founder/ir-agent", label: "My IR Agent", minStage: "deploy" },
           { href: "/founder/investor-directory", label: "Investor directory", minStage: "deploy" },
           { href: "/founder/investor-pipeline", label: "Investor CRM", minStage: "deploy" },

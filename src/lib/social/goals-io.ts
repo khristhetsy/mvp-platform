@@ -49,16 +49,18 @@ export type AlertRule = {
   campaign_id: string | null; enabled: boolean;
 };
 
-export async function listAlertRules(): Promise<AlertRule[]> {
-  const { data } = await db().from("social_alert_rules")
-    .select("id, metric, direction, threshold_pct, grain, channel, campaign_id, enabled")
+/** `ownerId` null = iCFO's own rules (evaluated by alerts-eval); a founder id = that founder's. */
+export async function listAlertRules(ownerId: string | null = null): Promise<AlertRule[]> {
+  const base = db().from("social_alert_rules")
+    .select("id, metric, direction, threshold_pct, grain, channel, campaign_id, enabled");
+  const { data } = await (ownerId ? base.eq("owner_profile_id", ownerId) : base.is("owner_profile_id", null))
     .order("created_at", { ascending: true });
   return ((data ?? []) as AlertRule[]).map((r) => ({ ...r, threshold_pct: Number(r.threshold_pct) }));
 }
 
-export async function createAlertRule(input: Omit<AlertRule, "id">, createdBy?: string | null): Promise<AlertRule | null> {
+export async function createAlertRule(input: Omit<AlertRule, "id">, createdBy?: string | null, ownerId: string | null = null): Promise<AlertRule | null> {
   const { data, error } = await db().from("social_alert_rules")
-    .insert({ ...input, threshold_pct: Number(input.threshold_pct) || 10, created_by: createdBy ?? null })
+    .insert({ ...input, threshold_pct: Number(input.threshold_pct) || 10, created_by: createdBy ?? null, owner_profile_id: ownerId })
     .select("id, metric, direction, threshold_pct, grain, channel, campaign_id, enabled").single();
   if (error) return null;
   return data as AlertRule;
