@@ -12,6 +12,7 @@
  * what was saved for every field.
  */
 
+import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import type { HoldStatus } from "@/lib/investor-directory/limits";
 import { parseCsvCells } from "@/lib/contacts/field-mapping";
@@ -329,7 +330,7 @@ export function ContactImportDialog({
           {!summary && full && hold ? (
             <p className="mb-4 rounded-lg bg-[#FCEBEB] px-3 py-2 text-[12.5px] text-[#791F1F]" role="status">
               You hold {n(hold.held)} of {n(hold.max)} investors on {hold.planLabel}, the most your plan allows. Archive investors you no
-              longer need{nextPlanLine ? <>, or <a href="/upgrade" className="font-semibold underline">{nextPlanLine}</a></> : null}.
+              longer need{nextPlanLine ? <>, or <Link href="/upgrade" className="font-semibold underline">{nextPlanLine}</Link></> : null}.
             </p>
           ) : !summary && hold && enforced ? (
             <p className="mb-4 text-[12px] text-slate-500">
@@ -527,7 +528,7 @@ export function ContactImportDialog({
               {hold && overBy > 0 && !full ? (
                 <p className="mt-3 rounded-lg bg-[#FFF8EC] px-3 py-2 text-[12.5px] text-[#633806]">
                   {hold.planLabel} holds up to {n(hold.max)} investors and you can add {n(hold.left)} more. The first {n(toImport.length)} rows
-                  will be imported{nextPlanLine ? <>, or <a href="/upgrade" className="font-semibold underline">{nextPlanLine}</a></> : null}.
+                  will be imported{nextPlanLine ? <>, or <Link href="/upgrade" className="font-semibold underline">{nextPlanLine}</Link></> : null}.
                 </p>
               ) : null}
             </div>
