@@ -240,6 +240,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/profile",           label: "My Profile",       requiredPermission: "view_admin_dashboard" },
           { href: "/admin/profile-fields",    label: "Profile and fields", requiredPermission: "manage_settings" },
           { href: "/admin/feature-controls",  label: "Feature Controls", requiredPermission: "manage_settings" },
+          { href: "/admin/ai-usage",          label: "AI usage and cost", requiredPermission: "manage_settings" },
         ],
       },
       {
