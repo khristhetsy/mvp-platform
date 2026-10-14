@@ -13,6 +13,7 @@
  * Clicking a card opens the side panel (investor checklist, status, star).
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { HScrollBoard } from "@/components/admin/HScrollBoard";
 import { OdooSearchBar, textMatch, type SearchState } from "@/components/admin/OdooSearchBar";
 import { NewButton, ToolbarGear } from "@/components/admin/ToolbarGear";
@@ -53,7 +54,13 @@ const fmtShort = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleDateStrin
 const addDays = (iso: string, n: number) => new Date(new Date(`${iso}T00:00:00Z`).getTime() + n * DAY).toISOString().slice(0, 10);
 const daysBetween = (a: string, b: string) => Math.round((new Date(`${b}T00:00:00Z`).getTime() - new Date(`${a}T00:00:00Z`).getTime()) / DAY);
 
-export function OdooTasksBoard({ meId }: { meId: string }) {
+type Impact = { tasks: number; investors: number; activities: number; odooLinked?: number };
+
+export function OdooTasksBoard({ meId, canColumnMenu = false }: { meId: string; canColumnMenu?: boolean }) {
+  const router = useRouter();
+  const [menuFor, setMenuFor] = useState<string | null>(null);
+  const [confirmDel, setConfirmDel] = useState<{ col: Column; impact: Impact | null } | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState<SearchState>(START);
@@ -145,7 +152,8 @@ export function OdooTasksBoard({ meId }: { meId: string }) {
     void patchTask(t.id, { milestoneId: to.id, deadline }, { milestone_id: to.id, deadline, week });
   }
 
-  async function createIn(projectId: string, monthId: string | null) {
+  /** `openForm` (the column plus) goes straight to the full task form; the toolbar New keeps the side panel. */
+  async function createIn(projectId: string, monthId: string | null, openForm = false) {
     if (!data) return;
     const weeks = data.weeks.filter((w) => w.project_id === projectId && (!monthId || w.parent_id === monthId)).sort((a, b) => a.sort_order - b.sort_order);
     const used = new Set(data.tasks.map((t) => t.milestone_id));
@@ -155,8 +163,50 @@ export function OdooTasksBoard({ meId }: { meId: string }) {
     const j = await r.json().catch(() => ({}));
     if (!r.ok) { setError(j.error ?? "Couldn't create the task."); return; }
     setAdding(false);
+    if (openForm) { router.push(`/admin/ir/projects/${projectId}/tasks/${j.id}`); return; }
     await load();
     setOpenId(j.id);
+  }
+
+  /** Gear menu actions. Archive All and Delete act on the tasks the column shows; Unarchive All restores the column's archived tasks. */
+  async function columnCall(body: Record<string, unknown>) {
+    const r = await fetch("/api/admin/ir/tasks/column", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error ?? "Couldn't update the column.");
+    return j;
+  }
+  const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
+  const scopeOf = (c: Column) => c.monthId ? { scope: "month", monthId: c.monthId } : c.id === c.project_id ? { scope: "project" } : { scope: "loose" };
+  function menuAction(c: Column, a: "fold" | "edit" | "delete" | "archive" | "unarchive") {
+    setMenuFor(null);
+    if (a === "fold") { toggleFold(c.id, false); return; }
+    if (a === "edit") {
+      if (!c.tasks.length) { setError("This column has no tasks to edit."); return; }
+      router.push(`/admin/ir/projects/${c.project_id}/tasks/${c.tasks[0].id}`); // newest week of the column
+      return;
+    }
+    if (a === "delete") {
+      if (!c.tasks.length) { setError("This column has no tasks to delete."); return; }
+      setConfirmDel({ col: c, impact: null });
+      void columnCall({ action: "preview", ids: c.tasks.map((t) => t.id) }).then((impact) => setConfirmDel((d) => d && d.col.id === c.id ? { col: c, impact } : d)).catch((e: Error) => { setConfirmDel(null); setError(e.message); });
+      return;
+    }
+    if (a === "archive") {
+      if (!c.tasks.length) return;
+      void columnCall({ action: "archive", ids: c.tasks.map((t) => t.id) }).then((j) => { setNotice(`${plural(j.count, "task")} archived from ${c.label}.`); return load(); }).catch((e: Error) => setError(e.message));
+      return;
+    }
+    void columnCall({ action: "unarchive", projectId: c.project_id, ...scopeOf(c) }).then((j) => { setNotice(j.count ? `${plural(j.count, "task")} restored to ${c.label}.` : `Nothing archived in ${c.label}.`); return load(); }).catch((e: Error) => setError(e.message));
+  }
+  async function confirmDelete() {
+    if (!confirmDel) return;
+    const c = confirmDel.col;
+    setConfirmDel(null);
+    try {
+      const j = await columnCall({ action: "delete", ids: c.tasks.map((t) => t.id) });
+      setNotice(`${plural(j.count, "task")} deleted from ${c.label}.`);
+      await load();
+    } catch (e) { setError(e instanceof Error ? e.message : "Couldn't delete the tasks."); }
   }
 
   if (error && !data) return <div role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[12.5px] text-rose-700">{error}</div>;
@@ -186,6 +236,17 @@ export function OdooTasksBoard({ meId }: { meId: string }) {
       </div>
 
       {adding ? <NewTaskForm projects={data.projects} months={data.months} onCancel={() => setAdding(false)} onCreate={(p, m) => void createIn(p, m)} /> : null}
+      {confirmDel ? (
+        <div role="alertdialog" aria-label={`Delete ${confirmDel.col.label}`} className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[12.5px] text-rose-800">
+          <span className="min-w-0 flex-1">
+            Delete the {plural(confirmDel.col.tasks.length, "task")} in {confirmDel.col.label}?{" "}
+            {confirmDel.impact ? `This also removes ${plural(confirmDel.impact.investors, "investor match")} and ${plural(confirmDel.impact.activities, "activity")}.${confirmDel.impact.odooLinked ? " Tasks linked to Odoo are archived there too." : ""}` : "Checking what it removes…"}
+          </span>
+          <button type="button" onClick={() => void confirmDelete()} disabled={!confirmDel.impact} className="rounded-lg bg-rose-600 px-3 py-1.5 text-[12.5px] font-semibold text-white hover:bg-rose-700 disabled:opacity-50">Delete</button>
+          <button type="button" onClick={() => setConfirmDel(null)} className="rounded-lg px-2 py-1.5 text-slate-600 hover:bg-white">Cancel</button>
+        </div>
+      ) : null}
+      {notice ? <div role="status" className="mb-2 flex items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[12.5px] text-emerald-800">{notice}<button type="button" onClick={() => setNotice(null)} className="ml-auto" aria-label="Dismiss"><i className="ti ti-x" aria-hidden="true" /></button></div> : null}
       {error ? <div role="alert" className="mb-2 flex items-center rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[12.5px] text-rose-700">{error}<button type="button" onClick={() => setError(null)} className="ml-auto" aria-label="Dismiss"><i className="ti ti-x" aria-hidden="true" /></button></div> : null}
 
       {weekly ? <AllFoundersBoard /> : (
@@ -212,8 +273,25 @@ export function OdooTasksBoard({ meId }: { meId: string }) {
                   <div key={c.id} {...dnd} style={{ flex: "0 0 260px", minWidth: 260 }} className={`rounded-lg px-1 pb-2 ${over ? "bg-indigo-50 ring-2 ring-indigo-300" : dragId && canDrop(c) ? "bg-slate-50 ring-1 ring-dashed ring-slate-300" : ""}`}>
                     <div className="group flex items-center gap-1 pt-1">
                       <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-slate-900" title={c.label}>{c.label}</span>
-                      <button type="button" onClick={() => toggleFold(c.id, false)} aria-label={`Fold ${c.label}`} className="rounded px-1 text-slate-400 opacity-0 hover:bg-slate-100 group-hover:opacity-100 focus:opacity-100"><i className="ti ti-chevrons-left" aria-hidden="true" /></button>
-                      <button type="button" onClick={() => void createIn(c.project_id, c.monthId)} aria-label={`Add task to ${c.label}`} className="rounded px-1 text-slate-500 hover:bg-slate-100"><i className="ti ti-plus" aria-hidden="true" /></button>
+                      {canColumnMenu ? (
+                        <span className="relative">
+                          <button type="button" onClick={() => setMenuFor(menuFor === c.id ? null : c.id)} aria-label={`Settings for ${c.label}`} title="Settings" aria-haspopup="menu" aria-expanded={menuFor === c.id}
+                            className={`rounded px-1 text-slate-500 hover:bg-slate-100 focus:opacity-100 group-hover:opacity-100 ${menuFor === c.id ? "bg-slate-100 opacity-100" : "opacity-0"}`}><i className="ti ti-settings" aria-hidden="true" /></button>
+                          {menuFor === c.id ? (
+                            <>
+                              <div onClick={() => setMenuFor(null)} className="fixed inset-0 z-[39]" />
+                              <div role="menu" aria-label={`${c.label} settings`} className="absolute right-0 top-[calc(100%+4px)] z-40 w-40 rounded-lg border border-slate-300 bg-white py-1 shadow-[0_10px_28px_rgba(0,0,0,0.14)]">
+                                {([["fold", "Fold"], ["edit", "Edit"], ["delete", "Delete"], ["archive", "Archive All"], ["unarchive", "Unarchive All"]] as const).map(([k, label]) => (
+                                  <button key={k} type="button" role="menuitem" onClick={() => menuAction(c, k)} className={`block w-full px-3 py-1.5 text-left text-[13px] hover:bg-slate-50 ${k === "delete" ? "text-rose-600" : "text-slate-700"}`}>{label}</button>
+                                ))}
+                              </div>
+                            </>
+                          ) : null}
+                        </span>
+                      ) : (
+                        <button type="button" onClick={() => toggleFold(c.id, false)} aria-label={`Fold ${c.label}`} className="rounded px-1 text-slate-400 opacity-0 hover:bg-slate-100 group-hover:opacity-100 focus:opacity-100"><i className="ti ti-chevrons-left" aria-hidden="true" /></button>
+                      )}
+                      <button type="button" onClick={() => void createIn(c.project_id, c.monthId, true)} aria-label={`Add task to ${c.label}`} className="rounded px-1 text-slate-500 hover:bg-slate-100"><i className="ti ti-plus" aria-hidden="true" /></button>
                     </div>
                     <div className="mb-2.5 mt-1.5 flex items-center gap-2">
                       <div className="flex h-2.5 flex-1 overflow-hidden bg-slate-200">
