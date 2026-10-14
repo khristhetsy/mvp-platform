@@ -259,7 +259,9 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
   const addContact = () => setContactFields([...contactFields, { key: `field_${contactFields.length + 1}`, label: "", kind: "short_text", required: false, enabled: true }]);
   const removeC = (i: number) => setContactFields(contactFields.filter((_, k) => k !== i));
 
-  const previewConfig = useMemo(() => data.config, [data.config]);
+  // Remount the preview only when the saved config really changes, not on every data reload.
+  const previewSignature = JSON.stringify(data.config);
+  const previewConfig = useMemo(() => JSON.parse(previewSignature) as AgentPublicConfig, [previewSignature]);
 
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_min(100%,520px)]">
