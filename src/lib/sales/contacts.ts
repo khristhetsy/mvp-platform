@@ -274,6 +274,21 @@ export async function updateContact(id: string, patch: ContactPatch, actorId?: s
     const { error } = await db().from("crm_contacts").update(update).eq("id", id);
     if (error) throw new Error(error.message);
   }
+
+  // Type (founder / investor / advisor / other) is a GENERATED column that reads
+  // raw.__profile.membership, never the override. Without this, changing Membership in the
+  // editor saved the override but left Type (and the Contacts grouping) on "Other".
+  if (patch.membership !== undefined) {
+    const { data: row } = await db().from("crm_contacts").select("raw").eq("id", id).maybeSingle();
+    if (row) {
+      const raw = (row.raw && typeof row.raw === "object" ? row.raw : {}) as Record<string, unknown>;
+      const profile = { ...((raw.__profile as Record<string, unknown> | undefined) ?? {}) };
+      const m = (patch.membership ?? "").trim();
+      if (m) profile.membership = m; else delete profile.membership;
+      const { error } = await db().from("crm_contacts").update({ raw: { ...raw, __profile: profile } }).eq("id", id);
+      if (error) throw new Error(error.message);
+    }
+  }
   // Keep /fit in step with what staff just changed. This edit can touch `company` (firm
   // de-dup) and every scoring field, and it does NOT move synced_at — so without this the
   // scheduled rebuild would never notice, and matching would run on the old values
