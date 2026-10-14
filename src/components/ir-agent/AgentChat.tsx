@@ -810,7 +810,13 @@ export function AgentChat({ config, sourceTag, preview = false }: { config: Agen
         await readback();
       }
     };
-    const timer = setTimeout(() => void intro(), 0);
+    // A fresh conversation whenever the config changes: the preview restarts clean.
+    const timer = setTimeout(() => {
+      setMsgs([]);
+      setOptionsState(null);
+      setTyping(false);
+      void intro();
+    }, 0);
 
     return () => {
       cancelled = true;
