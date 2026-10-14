@@ -25,7 +25,7 @@ type Staff = { id: string; name: string };
 type Activity = { id: string; kind: string; summary: string; actor_name: string | null; created_at: string };
 type OdooMsg = { id: number; date: string | null; author: string | null; subject: string | null; body: string; type: string | null; isNote?: boolean };
 type BookingLite = { id: string; event_type: string | null; start_time: string; end_time: string; timezone: string | null; meet_url: string | null; status: string; answers: { label: string; value: string }[]; booker_phone: string | null };
-const LEAD_STATUSES = ["new", "contacted", "qualified", "paused", "not interested", "won", "lost"];
+const LEAD_STATUSES = ["new", "contacted", "qualified", "paused", "not interested", "not a fit", "won", "lost"];
 // Profile fields that must always be a plain text box, never a select dropdown —
 // even when Odoo reports selection options for them. These are free-form by
 // nature (a written note, a referral name, a management-team description).
