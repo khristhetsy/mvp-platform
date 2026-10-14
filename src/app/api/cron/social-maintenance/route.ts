@@ -3,6 +3,8 @@ import { withCronGate } from "@/lib/cron/gate";
 import { getCronSecret, validateCronSecret, cronUnauthorizedResponse, cronMisconfiguredResponse } from "@/lib/notifications/cron/auth";
 import { evaluateAlertRules } from "@/lib/social/alerts-eval";
 import { materializeDueRecurrences } from "@/lib/social/recurrence";
+import { evaluateFounderAlertRules } from "@/lib/social/alerts-eval-founder";
+import { releaseHeldDrafts } from "@/lib/social/founder-held";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -27,7 +29,10 @@ async function scheduledGET(request: Request): Promise<Response> {
   // the next publish pass, at most 5 minutes later.
   const recurrences = await materializeDueRecurrences().catch((err) => ({ error: err instanceof Error ? err.message : "recurrences failed" }));
   const alerts = await evaluateAlertRules().catch((err) => ({ error: err instanceof Error ? err.message : "alerts failed" }));
-  return NextResponse.json({ recurrences, alerts });
+  // Founder side: remind founders whose limit reset, then check their own alert rules.
+  const heldDrafts = await releaseHeldDrafts().catch((err) => ({ error: err instanceof Error ? err.message : "held drafts failed" }));
+  const founderAlerts = await evaluateFounderAlertRules().catch((err) => ({ error: err instanceof Error ? err.message : "founder alerts failed" }));
+  return NextResponse.json({ recurrences, alerts, heldDrafts, founderAlerts });
 }
 
 // Pause switch and run log: Admin, System, Scheduled jobs.

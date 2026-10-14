@@ -2,15 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireFounderSocial, ownsCampaign } from "@/lib/social/founder-auth";
 import { createCampaign, listCampaigns, setCampaignArchived, updateCampaign } from "@/lib/social/campaigns";
-import { campaignFunnels } from "@/lib/social/funnel";
+import { campaignFunnels, periodStart, nextPeriodStart } from "@/lib/social/funnel";
+import { countFounderIntros } from "@/lib/social/founder-intros";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(): Promise<Response> {
   const auth = await requireFounderSocial();
   if ("error" in auth) return auth.error;
-  const [campaigns, funnels] = await Promise.all([listCampaigns(auth.founderId), campaignFunnels("month", new Date(), auth.founderId).catch(() => [])]);
-  return NextResponse.json({ campaigns, funnels });
+  const now = new Date();
+  const start = periodStart("month", now);
+  const [campaigns, funnels, intros] = await Promise.all([
+    listCampaigns(auth.founderId),
+    campaignFunnels("month", now, auth.founderId).catch(() => []),
+    countFounderIntros(auth.founderId, start, nextPeriodStart("month", start)).catch(() => 0),
+  ]);
+  return NextResponse.json({ campaigns, funnels, intros });
 }
 
 export async function POST(req: NextRequest): Promise<Response> {

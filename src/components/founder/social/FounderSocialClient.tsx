@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import type { SocialUsage } from "@/lib/social/usage";
 import type { CampaignFunnel, StageKey } from "@/components/admin/social/funnel-types";
 import { fmt } from "@/components/admin/social/funnel-types";
 import { FOUNDER_SOCIAL_DISCLAIMER, TEMPLATE_KEYS, TEMPLATE_LABELS, type TemplateKey } from "@/lib/social/templates";
 import { FounderSocialGuide } from "@/components/founder/social/FounderSocialGuide";
+import { AlertsPanel, GoalsPanel, ScheduleBoard, SeriesList } from "@/components/founder/social/FounderSocialExtras";
 
 type Tab = "overview" | "campaigns" | "compose" | "schedule" | "library" | "attribution" | "settings";
 const TABS: { key: Tab; label: string }[] = [
@@ -74,17 +75,18 @@ export function FounderSocialClient({ initialUsage, companyName, initialTab }: {
   const [funnels, setFunnels] = useState<CampaignFunnel[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [guideOpen, setGuideOpen] = useState(false);
+  const [intros, setIntros] = useState(0);
 
   const reload = useCallback(async () => {
     const [u, a, c, l] = await Promise.all([
       api<{ usage: SocialUsage }>("/api/founder/social/usage"),
       api<{ accounts: Account[] }>("/api/founder/social/accounts"),
-      api<{ campaigns: Campaign[]; funnels: CampaignFunnel[] }>("/api/founder/social/campaigns"),
+      api<{ campaigns: Campaign[]; funnels: CampaignFunnel[]; intros?: number }>("/api/founder/social/campaigns"),
       api<{ posts: Post[] }>("/api/founder/social/library"),
     ]);
     if (u.ok && u.data.usage) setUsage(u.data.usage);
     if (a.ok) setAccounts(a.data.accounts ?? []);
-    if (c.ok) { setCampaigns(c.data.campaigns ?? []); setFunnels(c.data.funnels ?? []); }
+    if (c.ok) { setCampaigns(c.data.campaigns ?? []); setFunnels(c.data.funnels ?? []); setIntros(c.data.intros ?? 0); }
     if (l.ok) setPosts(l.data.posts ?? []);
   }, []);
 
@@ -119,12 +121,23 @@ export function FounderSocialClient({ initialUsage, companyName, initialTab }: {
       </div>
 
       <div className="mt-4">
-        {tab === "overview" && <Overview usage={usage} funnels={funnels} />}
-        {tab === "campaigns" && <Campaigns campaigns={campaigns} funnels={funnels} onChange={reload} />}
+        {tab === "overview" && <Overview usage={usage} funnels={funnels} intros={intros} />}
+        {tab === "campaigns" && (
+          <div className="space-y-4">
+            <Campaigns campaigns={campaigns} funnels={funnels} onChange={reload} />
+            <GoalsPanel onChange={reload} />
+            <AlertsPanel />
+          </div>
+        )}
         {tab === "compose" && <Compose usage={usage} accounts={accounts} campaigns={campaigns} companyName={companyName} onSaved={reload} goSettings={() => setTab("settings")} />}
-        {tab === "schedule" && <Schedule posts={posts} />}
+        {tab === "schedule" && (
+          <div>
+            <ScheduleBoard posts={posts} onChange={reload} />
+            <SeriesList />
+          </div>
+        )}
         {tab === "library" && <Library posts={posts} onChange={reload} />}
-        {tab === "attribution" && <Attribution funnels={funnels} />}
+        {tab === "attribution" && <Attribution funnels={funnels} intros={intros} />}
         {tab === "settings" && <Settings accounts={accounts} onChange={reload} />}
       </div>
 
@@ -149,7 +162,7 @@ function sumStage(funnels: CampaignFunnel[], key: StageKey): { actual: number; t
   return { actual, target };
 }
 
-function Overview({ usage, funnels }: { usage: SocialUsage; funnels: CampaignFunnel[] }) {
+function Overview({ usage, funnels, intros }: { usage: SocialUsage; funnels: CampaignFunnel[]; intros: number }) {
   const [tip, setTip] = useState<string | null>(null);
   useEffect(() => {
     let live = true;
@@ -165,7 +178,8 @@ function Overview({ usage, funnels }: { usage: SocialUsage; funnels: CampaignFun
     { label: "Impressions (est.)", actual: outreach.actual * 300, target: outreach.target != null ? outreach.target * 300 : null },
     { label: "Clicks", ...sumStage(funnels, "clicks") },
     { label: "Meetings", ...sumStage(funnels, "meetings") },
-    { label: "Investor intros", ...sumStage(funnels, "conversions") },
+    // Intro requests made through iCapOS this month, from all sources. Not yet traced to a post.
+    { label: "Investor intros", actual: intros, target: null },
   ];
 
   return (
@@ -191,6 +205,7 @@ function Overview({ usage, funnels }: { usage: SocialUsage; funnels: CampaignFun
             })}
           </div>
         )}
+        {funnels.length > 0 && <p className="mt-3 text-[11px] text-slate-500">Investor intros counts every intro request you made through iCapOS this month. It is not yet traced to a single post.</p>}
         {tip && (
           <div className="mt-4 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-sm text-violet-900">
             <span className="font-semibold">AI agent. </span>{tip}
@@ -266,7 +281,6 @@ function Campaigns({ campaigns, funnels, onChange }: { campaigns: Campaign[]; fu
           </tbody>
         </table>
       )}
-      <p className="mt-3 text-xs text-slate-500">Goals per stage and the goal planner are not enabled for founders yet.</p>
     </div>
   );
 }
@@ -281,6 +295,9 @@ function Compose({ usage, accounts, campaigns, companyName, onSaved, goSettings 
   const [campaignId, setCampaignId] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
   const [when, setWhen] = useState("");
+  const [repeat, setRepeat] = useState<"none" | "daily" | "weekly" | "monthly">("none");
+  const [repeatCount, setRepeatCount] = useState("8");
+  const [emailed, setEmailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [dialog, setDialog] = useState(false);
@@ -322,6 +339,25 @@ function Compose({ usage, accounts, campaigns, companyName, onSaved, goSettings 
       const out = await agent({ action: "variants", text: body, networks: [...new Set(chosen.map((a) => a.platform))] });
       if (out?.variants) variants = chosen.map((a) => ({ accountId: a.id, body: out.variants?.[a.platform] ?? body }));
     }
+    if (mode === "schedule" && repeat !== "none") {
+      const [datePart, timePart] = when.split("T");
+      const [yy, mm, dd] = datePart.split("-").map(Number);
+      const weekday = new Date(Date.UTC(yy, mm - 1, dd)).getUTCDay();
+      const rr = await api<{ id?: string }>("/api/founder/social/recurrences", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          freq: repeat, interval: 1, weekdays: repeat === "weekly" ? [weekday] : [], timeLocal: timePart, startDate: datePart,
+          endType: "after", endCount: Math.max(2, Math.min(52, Number(repeatCount) || 8)),
+          campaignId: campaignId || null, linkUrl: linkUrl || null, body, variants,
+        }),
+      });
+      setBusy(false);
+      if (!rr.ok) { setMsg({ ok: false, text: rr.data.error ?? "Could not create the repeating post." }); return; }
+      setMsg({ ok: true, text: "Repeating post created. Each post counts toward your monthly limit when it is added, and any past the limit wait as drafts until it resets." });
+      setBody("");
+      await onSaved();
+      return;
+    }
     const r = await api<{ usage?: SocialUsage }>("/api/founder/social/posts", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ mode, scheduledAt, campaignId: campaignId || null, linkUrl: linkUrl || null, variants }),
@@ -333,6 +369,20 @@ function Compose({ usage, accounts, campaigns, companyName, onSaved, goSettings 
     setDialog(false);
     if (mode !== "draft") setBody("");
     await onSaved();
+  }
+
+  async function emailIt() {
+    setMsg(null); setEmailed(false);
+    if (!body.trim()) { setMsg({ ok: false, text: "Write something first." }); return; }
+    setBusy(true);
+    const r = await api<{ url?: string }>("/api/founder/social/email-draft", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subject: body.trim().split("\n")[0].slice(0, 80), body }),
+    });
+    setBusy(false);
+    if (!r.ok) { setMsg({ ok: false, text: r.data.error ?? "Could not save the email draft." }); return; }
+    setEmailed(true);
+    setMsg({ ok: true, text: "Saved as a draft in Manual outreach. Open it to choose investors and send. Your plan's email limits apply there." });
   }
 
   return (
@@ -392,12 +442,26 @@ function Compose({ usage, accounts, campaigns, companyName, onSaved, goSettings 
           <label className="text-xs text-slate-500 sm:col-span-2">Date and time (PT)
             <input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-900" />
           </label>
+          <label className="text-xs text-slate-500">Repeat
+            <select value={repeat} onChange={(e) => setRepeat(e.target.value as typeof repeat)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-900">
+              <option value="none">Does not repeat</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          </label>
+          {repeat !== "none" && (
+            <label className="text-xs text-slate-500">Number of posts
+              <input inputMode="numeric" value={repeatCount} onChange={(e) => setRepeatCount(e.target.value.replace(/[^0-9]/g, ""))} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-900" />
+            </label>
+          )}
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <span className={`mr-auto text-xs ${reached ? "text-red-700" : "text-slate-500"}`}>
             {local.limit === null ? "Unlimited posts" : reached ? `${local.used} of ${local.limit} used` : `${local.remaining} of ${local.limit} posts left this cycle`}
           </span>
+          <button type="button" className={btn} disabled={busy} onClick={() => void emailIt()}>Email this</button>
           <button type="button" className={btn} disabled={busy} onClick={() => void save("draft")}>Save draft</button>
           {reached ? (
             <button type="button" className={btnPrimary} onClick={() => setDialog(true)}>Upgrade to schedule</button>
@@ -409,6 +473,7 @@ function Compose({ usage, accounts, campaigns, companyName, onSaved, goSettings 
           )}
         </div>
         {msg && <p className={`mt-2 text-xs ${msg.ok ? "text-emerald-700" : "text-red-700"}`}>{msg.text}</p>}
+        {emailed && <Link href="/founder/deploy" className="mt-1 inline-block text-xs font-medium text-[#1A6CE4] hover:underline">Open Manual outreach</Link>}
       </div>
 
       {dialog && (
@@ -432,33 +497,6 @@ function Compose({ usage, accounts, campaigns, companyName, onSaved, goSettings 
 }
 
 // ───────────────────────────── Schedule ─────────────────────────────
-
-function networksOf(p: Post): string {
-  return [...new Set(p.variants.map((v) => v.account?.platform).filter((x): x is string => Boolean(x)))].map((x) => PLATFORM_LABEL[x] ?? x).join(", ");
-}
-
-function Schedule({ posts }: { posts: Post[] }) {
-  const rows = useMemo(() => posts
-    .filter((p) => !p.archived_at && (p.status === "scheduled" || p.held_until))
-    .sort((a, b) => (a.scheduled_at ?? "").localeCompare(b.scheduled_at ?? "")), [posts]);
-  return (
-    <div className={card}>
-      <h2 className="text-base font-semibold text-slate-900">Schedule</h2>
-      {rows.length === 0 ? (
-        <p className="mt-2 text-sm text-slate-600">Nothing scheduled. Write a post in Compose and pick a date and time.</p>
-      ) : rows.map((p) => (
-        <div key={p.id} className="flex items-start justify-between gap-3 border-t border-slate-100 py-2 first:border-t-0">
-          <div className="min-w-0">
-            <div className="truncate text-sm text-slate-900">{p.title?.trim() || p.body.split("\n")[0]}</div>
-            <div className="text-xs text-slate-500">{p.scheduled_at ? pt(p.scheduled_at) : "No date"}{networksOf(p) ? ` · ${networksOf(p)}` : ""}</div>
-          </div>
-          <span className={`shrink-0 text-xs ${p.held_until ? "text-slate-500" : "text-emerald-700"}`}>{p.held_until ? `Draft, waiting for reset ${pt(p.held_until, false)}` : "Scheduled"}</span>
-        </div>
-      ))}
-      <p className="mt-3 text-xs text-slate-500">Drag to reschedule and recurring series are not enabled for founders yet.</p>
-    </div>
-  );
-}
 
 // ───────────────────────────── Library ─────────────────────────────
 
@@ -488,7 +526,7 @@ function Library({ posts, onChange }: { posts: Post[]; onChange: () => Promise<v
 
 // ───────────────────────────── Attribution ─────────────────────────────
 
-function Attribution({ funnels }: { funnels: CampaignFunnel[] }) {
+function Attribution({ funnels, intros }: { funnels: CampaignFunnel[]; intros: number }) {
   const get = (f: CampaignFunnel, k: StageKey) => f.stages.find((s) => s.stage === k)?.actual ?? 0;
   return (
     <div className={card}>
@@ -501,7 +539,8 @@ function Attribution({ funnels }: { funnels: CampaignFunnel[] }) {
           ))}</tbody>
         </table>
       )}
-      <p className="mt-3 text-xs text-slate-500">Impressions are estimated (published posts × 300). Clicks come from your tracked links.</p>
+      <p className="mt-3 text-sm text-slate-700">Investor intro requests this month: <b>{intros}</b></p>
+      <p className="mt-1 text-xs text-slate-500">Intros count every request you made through iCapOS, from all sources. They are not yet traced to a single post. Impressions are estimated (published posts × 300). Clicks come from your tracked links.</p>
     </div>
   );
 }

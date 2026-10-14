@@ -13,6 +13,11 @@ export type FounderSocialEventType =
   | "founder.social_post_failed"
   | "founder.social_email_sent"
   | "founder.social_limit_reached"
+  | "founder.social_post_rescheduled"
+  | "founder.social_series_created"
+  | "founder.social_drafts_released"
+  | "founder.social_alert_fired"
+  | "founder.social_email_draft_created"
   | "admin.social_limits_changed";
 
 const META: Record<FounderSocialEventType, { title: string; severity: OperationalEventSeverity }> = {
@@ -22,6 +27,11 @@ const META: Record<FounderSocialEventType, { title: string; severity: Operationa
   "founder.social_post_failed": { title: "Social post failed", severity: "high" },
   "founder.social_email_sent": { title: "Social email sent", severity: "info" },
   "founder.social_limit_reached": { title: "Social post limit reached", severity: "medium" },
+  "founder.social_post_rescheduled": { title: "Social post rescheduled", severity: "info" },
+  "founder.social_series_created": { title: "Repeating social post created", severity: "info" },
+  "founder.social_drafts_released": { title: "Saved social drafts released", severity: "info" },
+  "founder.social_alert_fired": { title: "Social alert sent", severity: "info" },
+  "founder.social_email_draft_created": { title: "Social email draft created", severity: "info" },
   "admin.social_limits_changed": { title: "Founder social limits changed", severity: "info" },
 };
 
