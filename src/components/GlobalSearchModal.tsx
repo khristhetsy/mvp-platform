@@ -1,9 +1,15 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import type { WorkspaceId } from "@/lib/workspace-nav";
+import {
+  getAdminWorkspaceNavSections,
+  getFounderWorkspaceNavSections,
+  getInvestorWorkspaceNavSections,
+  type WorkspaceId,
+} from "@/lib/workspace-nav";
+import { buildSearchIndex, searchMenu } from "@/lib/nav-search";
 import type { SearchResult as FounderSearchResult } from "@/app/api/founder/search/route";
 import type { AdminSearchResult } from "@/app/api/admin/search/route";
 
@@ -20,6 +26,9 @@ type PageShortcut = {
   workspace: WorkspaceId | "all";
   /** A section inside a page (opens the page scrolled to that section). */
   section?: boolean;
+  /** Menu search hits: the menu trail to show, and why the page matched. */
+  path?: string;
+  reason?: string;
 };
 
 const PAGES: PageShortcut[] = [
@@ -502,7 +511,17 @@ const TYPE_LABELS: Record<SearchResult["type"], string> = {
 
 type Props = { workspace?: WorkspaceId };
 
-type Combined = { href: string; meta?: RecentItem };
+type Combined = { href: string; meta?: RecentItem; ask?: boolean };
+
+// Menu pages are searched from the live navigation, so every workspace (admin
+// included) finds its pages without a hand kept list.
+const ROOT_LABEL: Record<WorkspaceId, string> = { founder: "Founder", investor: "Investor", admin: "Admin" };
+
+function navSectionsFor(workspace: WorkspaceId) {
+  if (workspace === "admin") return getAdminWorkspaceNavSections();
+  if (workspace === "investor") return getInvestorWorkspaceNavSections();
+  return getFounderWorkspaceNavSections();
+}
 
 const SECTION_LABEL: React.CSSProperties = { padding: "10px 18px 4px", fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: ".08em" };
 
@@ -516,6 +535,7 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
   const router = useRouter();
   const hubs = HUBS[workspace];
   const quick = QUICK[workspace];
+  const menuIndex = useMemo(() => buildSearchIndex(navSectionsFor(workspace), ROOT_LABEL[workspace]), [workspace]);
 
   // Open on cmd+K / ctrl+K
   useEffect(() => {
@@ -592,7 +612,7 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
   }
 
   const emptyState = query.length === 0;
-  const matchedPages: PageShortcut[] = emptyState
+  const shortcutHits: PageShortcut[] = emptyState
     ? []
     : workspacePages
         .map((p) => ({ p, s: scorePage(p) }))
@@ -600,8 +620,19 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
         .sort((a, b) => b.s - a.s)
         .slice(0, 8)
         .map((x) => x.p);
+  // Then the live menu, word by word with synonyms ("website setting" finds Feature Controls),
+  // for pages the shortcuts above did not already return.
+  const matchedPages: PageShortcut[] = emptyState
+    ? []
+    : [
+        ...shortcutHits,
+        ...searchMenu(menuIndex, query, 6)
+          .filter((h) => !shortcutHits.some((p) => p.href === h.href))
+          .map((h): PageShortcut => ({ id: `menu:${h.href}`, title: h.label, subtitle: h.path, href: h.href, keywords: [], workspace, path: h.path, reason: h.reason })),
+      ].slice(0, 8);
 
   function crumbOf(p: PageShortcut): string {
+    if (p.path) return p.path;
     return p.section ? p.subtitle : `${labelOf(workspace, catOf(p.href))} › ${p.title}`;
   }
 
@@ -632,7 +663,16 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
           href: r.href,
           meta: { title: r.title, subtitle: r.subtitle, href: r.href, cat: dynCat(r.type) },
         })),
+        ...(query.length >= 2 ? [{ href: "", ask: true }] : []),
       ];
+  const askIndex = !emptyState && query.length >= 2 ? combined.length - 1 : -1;
+  const hasResults = matchedPages.length + dynamicResults.length > 0;
+
+  /** Hand the question to the iCapOS Assistant, which knows the whole menu. */
+  function askAssistant() {
+    setOpen(false);
+    window.dispatchEvent(new CustomEvent("icapos-assistant:ask", { detail: { prompt: `Where do I find "${query}" in the menu? Point me to the page.` } }));
+  }
 
   function navigate(href: string, meta?: RecentItem) {
     if (meta) saveRecent(workspace, meta);
@@ -649,7 +689,8 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
       setActiveIndex((i) => Math.max(i - 1, 0));
     } else if (e.key === "Enter") {
       const item = combined[activeIndex];
-      if (item) navigate(item.href, item.meta);
+      if (item?.ask) askAssistant();
+      else if (item) navigate(item.href, item.meta);
     }
   }
 
@@ -738,9 +779,9 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
         <div style={{ maxHeight: 520, overflowY: "auto" }}>
 
           {/* Empty query with no results */}
-          {combined.length === 0 && query.length >= 2 && !loading && (
-            <p style={{ padding: "24px 18px", textAlign: "center", fontSize: 13, color: "#9ca3af" }}>
-              No results for &ldquo;{query}&rdquo;
+          {!hasResults && query.length >= 2 && !loading && (
+            <p style={{ padding: "24px 18px 8px", textAlign: "center", fontSize: 13, color: "#9ca3af" }}>
+              No results for &ldquo;{query}&rdquo;. Try fewer or different words, or ask below.
             </p>
           )}
 
@@ -833,7 +874,7 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
                         <span style={{ display: "block", fontSize: 11, color: "#6b7280" }}>{crumbOf(page)}</span>
                       </span>
                       <span style={{ ...pill, color: page.section && i === 0 ? "#1D5FD6" : "#475569", background: page.section && i === 0 ? "#DCE8FD" : "#EEF1F5" }}>
-                        {page.section ? (i === 0 ? "Jumps to section" : "Section") : "Page"}
+                        {page.reason ?? (page.section ? (i === 0 ? "Jumps to section" : "Section") : "Page")}
                       </span>
                       {isActive && (
                         <kbd style={{ fontSize: 10, color: "#6b7280", background: "white", border: "1px solid #e5e7eb", borderRadius: 4, padding: "2px 6px", flexShrink: 0 }}>↵</kbd>
@@ -889,6 +930,28 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
               </div>
             );
           })}
+
+          {/* Ask the assistant */}
+          {askIndex >= 0 && (
+            <div style={{ borderTop: "1px solid #f3f4f6" }}>
+              <p style={SECTION_LABEL}>Not what you meant?</p>
+              <button
+                type="button"
+                onClick={askAssistant}
+                onMouseEnter={() => setActiveIndex(askIndex)}
+                style={{ ...rowBase, background: activeIndex === askIndex ? activeBg : "transparent" }}
+              >
+                <span style={{ width: 28, height: 28, borderRadius: 7, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: "#6b7280", fontSize: 14, fontWeight: 700 }}>?</span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#111827" }}>Ask what you are looking for</span>
+                  <span style={{ display: "block", fontSize: 11, color: "#6b7280" }}>The iCapOS Assistant will point you to the right page</span>
+                </span>
+                {activeIndex === askIndex && (
+                  <kbd style={{ fontSize: 10, color: "#6b7280", background: "white", border: "1px solid #e5e7eb", borderRadius: 4, padding: "2px 6px", flexShrink: 0 }}>↵</kbd>
+                )}
+              </button>
+            </div>
+          )}
 
         </div>
 
