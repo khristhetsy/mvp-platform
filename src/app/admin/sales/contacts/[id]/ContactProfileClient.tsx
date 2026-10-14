@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { groupContactProfile } from "@/lib/sales/contact-profile-sections";
 import { INVESTOR_PROFILE_LABEL, INVESTOR_PROFILE_OPTIONS, isInvestorProfileLabel } from "@/lib/sales/investor-profile";
 import { parseMoneyBand } from "@/lib/investors/preference-match";
@@ -497,6 +497,11 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
   const [editingKey, setEditingKey] = useState<string | null>(null);
   // Sub-tab strip at the profile position: Profile · Note Log · Activity.
   const [profileSub, setProfileSub] = useState<"sendmsg" | "profile" | "notelog" | "tasks">("profile");
+  // Deep link from the clock reminders menu: ?tab=tasks&task=<id>&from=reminders.
+  const linkQs = useSearchParams();
+  const focusTaskId = linkQs.get("task");
+  const fromReminders = linkQs.get("from") === "reminders";
+  const wantTasksTab = linkQs.get("tab") === "tasks";
   // ── Send message: a real email composer (same engine as mass-email) ──────────
   type MailTemplate = { id: string; name: string; subject: string; html_body: string; department: string | null };
   const [mailTemplates, setMailTemplates] = useState<MailTemplate[]>([]);
@@ -734,6 +739,14 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
     setProfileSub("tasks");
     if (!tasksLoaded) void loadContactTasks();
   }
+  useEffect(() => {
+    if (wantTasksTab) openTasksTab();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wantTasksTab]);
+  useEffect(() => {
+    if (!focusTaskId || !tasksLoaded) return;
+    document.getElementById(`contact-task-${focusTaskId}`)?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [focusTaskId, tasksLoaded]);
 
   const address = [contact.street, contact.street2, contact.city, contact.state, contact.zip, contact.country].filter(Boolean).join(", ") || null;
   const pipelineCents = opportunities.reduce((a, o) => a + (o.value_cents ?? 0), 0);
@@ -1152,6 +1165,9 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                   </>)}
                   {profileSub === "tasks" && (
                     <div style={{ paddingTop: 4 }}>
+                      {fromReminders && (
+                        <button type="button" onClick={() => router.back()} style={{ background: "none", border: "none", padding: 0, marginBottom: 8, color: "#185FA5", fontSize: 12, cursor: "pointer" }}>← Back to previous page</button>
+                      )}
                       <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", marginBottom: 8 }}><i className="ti ti-link" aria-hidden="true" /> New tasks auto-link to {contact.name}.</div>
                       <div role="group" aria-label="Tasks view" style={{ display: "inline-flex", border: "0.5px solid #d7dbe3", borderRadius: 8, overflow: "hidden", marginBottom: 10 }}>
                         {([["all", "All"], ["opps", "Opportunities"], ["pipeline", "Pipeline"]] as const).map(([k, label], i) => (
@@ -1226,7 +1242,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                             );
                           }
                           return (
-                            <div key={ct.id} style={{ display: "grid", gridTemplateColumns: "1fr 74px 92px 96px 68px 66px", gap: 8, alignItems: "center", padding: "9px 12px", borderTop: "0.5px solid #eef1f5", fontSize: 12.5 }}>
+                            <div key={ct.id} id={`contact-task-${ct.id}`} style={{ display: "grid", gridTemplateColumns: "1fr 74px 92px 96px 68px 66px", gap: 8, alignItems: "center", padding: "9px 12px", borderTop: "0.5px solid #eef1f5", fontSize: 12.5, ...(ct.id === focusTaskId ? { background: "#FFF8DB", boxShadow: "inset 3px 0 0 #E0A100" } : {}) }}>
                               <span style={{ textDecoration: cdone ? "line-through" : "none", color: cdone ? "var(--muted-foreground)" : "var(--foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ct.title}</span>
                               <span style={{ fontSize: 10.5, color: "#185FA5", background: "#E6F1FB", borderRadius: 8, padding: "2px 8px", justifySelf: "start" }}>{ct.task_type}</span>
                               <span style={{ fontSize: 11.5, color: "var(--muted-foreground)" }}>{ct.due_date ? ct.due_date.slice(5) : "—"}</span>

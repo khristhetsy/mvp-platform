@@ -53,3 +53,10 @@ export function formatReminderDue(dueAt: string, now: Date = new Date()): string
       : new Intl.DateTimeFormat("en-US", { timeZone: PLATFORM_TZ, month: "short", day: "numeric" }).format(d);
   return `${day}, ${time} ${PLATFORM_TZ_LABEL}`;
 }
+
+/** The PT wall time of an instant as HH:MM, for the edit card. */
+export function ptTimeOf(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "09:00";
+  return new Intl.DateTimeFormat("en-GB", { timeZone: PLATFORM_TZ, hourCycle: "h23", hour: "2-digit", minute: "2-digit" }).format(d);
+}

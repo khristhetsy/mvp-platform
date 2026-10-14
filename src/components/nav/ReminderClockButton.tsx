@@ -7,9 +7,10 @@
  * (reminder-alerts cron).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { Check, ClipboardList, Clock, Forward, ListChecks, PhoneCall, Plus, Trash2, type LucideIcon } from "lucide-react";
 import { REMINDER_KINDS, REMINDER_KIND_LABEL, type Reminder, type ReminderKind } from "@/lib/reminders/types";
-import { formatReminderDue, ptToday, ptWallToIso, reminderGroup, type ReminderGroup } from "@/lib/reminders/pt";
+import { formatReminderDue, ptTimeOf, ptToday, ptWallToIso, reminderGroup, type ReminderGroup } from "@/lib/reminders/pt";
 
 const KIND_STYLE: Record<ReminderKind, { icon: LucideIcon; tile: string }> = {
   task: { icon: ClipboardList, tile: "bg-blue-50 text-blue-700" },
@@ -41,6 +42,7 @@ export function ReminderClockButton() {
   const [time, setTime] = useState("09:00");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
@@ -91,7 +93,9 @@ export function ReminderClockButton() {
     if (!dueAt) { setError("Pick a date and time"); return; }
     setSaving(true);
     setError(null);
-    const r = await fetch("/api/reminders", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ title: t, kind, dueAt }) }).catch(() => null);
+    const r = editingId
+      ? await fetch(`/api/reminders/${editingId}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ title: t, kind, dueAt }) }).catch(() => null)
+      : await fetch("/api/reminders", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ title: t, kind, dueAt }) }).catch(() => null);
     setSaving(false);
     if (!r || !r.ok) {
       const d = r ? ((await r.json().catch(() => null)) as { error?: string } | null) : null;
@@ -99,9 +103,20 @@ export function ReminderClockButton() {
       return;
     }
     setTitle("");
+    setEditingId(null);
     setAdding(false);
     setFilter("all");
     void load();
+  };
+
+  const startEdit = (item: Reminder) => {
+    setEditingId(item.id);
+    setTitle(item.title);
+    setKind(item.kind);
+    setDate(ptToday(new Date(item.due_at)));
+    setTime(ptTimeOf(item.due_at));
+    setError(null);
+    setAdding(true);
   };
 
   const now = new Date();
@@ -125,7 +140,7 @@ export function ReminderClockButton() {
         <div role="dialog" aria-label="Reminders" className="absolute right-0 top-full z-50 mt-1 w-[372px] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
           <div className="flex items-center justify-between border-b border-slate-200 px-3.5 py-3">
             <span className="text-[15px] font-semibold text-slate-950">Reminders</span>
-            <button type="button" onClick={() => { setAdding((v) => !v); setError(null); if (!date) setDate(ptToday()); }}
+            <button type="button" onClick={() => { setEditingId(null); setTitle(""); setAdding((v) => !v); setError(null); if (!date) setDate(ptToday()); }}
               className="flex items-center gap-1 rounded-md border border-slate-200 px-2.5 py-1 text-[13px] text-slate-700 hover:bg-slate-50">
               <Plus className="h-3.5 w-3.5" aria-hidden /> New reminder
             </button>
@@ -157,13 +172,25 @@ export function ReminderClockButton() {
                           className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${i.done_at ? "border-[var(--blue)] bg-[var(--blue)] text-white" : "border-slate-300"}`}>
                           {i.done_at ? <Check className="h-3 w-3" strokeWidth={3} aria-hidden /> : null}
                         </button>
-                        <span className={`flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg ${s.tile}`}><Icon className="h-[17px] w-[17px]" aria-hidden /></span>
-                        <span className="min-w-0 flex-1">
-                          <span className={`block truncate ${i.done_at ? "text-slate-400 line-through" : "text-slate-900"}`}>{i.title}</span>
-                          <span className={`block truncate text-[12px] ${late ? "text-red-600" : "text-slate-500"}`}>
-                            {REMINDER_KIND_LABEL[i.kind]}{i.source === "sales" ? " · Sales" : ""}{i.context ? ` · ${i.context}` : ""} · {i.date_only ? dayOnly(formatReminderDue(i.due_at, now)) : formatReminderDue(i.due_at, now)}
-                          </span>
-                        </span>
+                        {(() => {
+                          const body = (
+                            <>
+                              <span className={`flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg ${s.tile}`}><Icon className="h-[17px] w-[17px]" aria-hidden /></span>
+                              <span className="min-w-0 flex-1">
+                                <span className={`block truncate ${i.done_at ? "text-slate-400 line-through" : "text-slate-900"}`}>{i.title}</span>
+                                <span className={`block truncate text-[12px] ${late ? "text-red-600" : "text-slate-500"}`}>
+                                  {REMINDER_KIND_LABEL[i.kind]}{i.source === "sales" ? " · Sales" : ""}{i.context ? ` · ${i.context}` : ""} · {i.date_only ? dayOnly(formatReminderDue(i.due_at, now)) : formatReminderDue(i.due_at, now)}
+                                </span>
+                              </span>
+                            </>
+                          );
+                          const rowCls = "flex min-w-0 flex-1 items-center gap-2.5 text-left";
+                          // A real link, so Cmd or Ctrl click opens the task in a new tab.
+                          if (i.href) return <Link href={i.href} className={rowCls} onClick={() => setOpen(false)}>{body}</Link>;
+                          // Sales tasks with no contact have nowhere to open. Personal reminders open the edit card.
+                          if (i.source === "sales") return <div className={rowCls}>{body}</div>;
+                          return <button type="button" className={rowCls} onClick={() => startEdit(i)} aria-label={`Edit ${i.title}`}>{body}</button>;
+                        })()}
                         {i.source === "sales" ? null : <button type="button" aria-label="Delete reminder" title="Delete" onClick={() => void remove(i)}
                           className="hidden h-6 w-6 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-red-600 group-hover:flex focus:flex">
                           <Trash2 className="h-3.5 w-3.5" aria-hidden />
@@ -197,8 +224,8 @@ export function ReminderClockButton() {
               </div>
               {error ? <p className="mt-1.5 text-[12px] text-red-600">{error}</p> : null}
               <div className="mt-2.5 flex justify-end gap-2">
-                <button type="button" onClick={() => { setAdding(false); setError(null); }} className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-[13px] text-slate-700 hover:bg-slate-50">Cancel</button>
-                <button type="button" onClick={() => void save()} disabled={saving} className="rounded-md bg-slate-900 px-3 py-1.5 text-[13px] text-white hover:bg-slate-800 disabled:opacity-60">{saving ? "Saving…" : "Save reminder"}</button>
+                <button type="button" onClick={() => { setAdding(false); setEditingId(null); setError(null); }} className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-[13px] text-slate-700 hover:bg-slate-50">Cancel</button>
+                <button type="button" onClick={() => void save()} disabled={saving} className="rounded-md bg-slate-900 px-3 py-1.5 text-[13px] text-white hover:bg-slate-800 disabled:opacity-60">{saving ? "Saving…" : editingId ? "Save changes" : "Save reminder"}</button>
               </div>
             </div>
           ) : null}

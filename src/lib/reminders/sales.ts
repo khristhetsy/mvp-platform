@@ -7,7 +7,7 @@ export const SALES_ID_PREFIX = "sales:";
 
 export type SalesTaskRow = {
   id: string; title: string; task_type: string | null; due_date: string | null;
-  status: string | null; done_at: string | null; contact_name: string | null;
+  status: string | null; done_at: string | null; contact_name: string | null; contact_crm_id?: string | null;
 };
 
 function kindFor(taskType: string | null): ReminderKind {
@@ -30,6 +30,10 @@ export function salesTaskToReminder(row: SalesTaskRow): Reminder | null {
     source: "sales",
     date_only: true,
     context: row.contact_name,
+    // Opens the contact Tasks tab with this task highlighted. Tasks with no contact have nowhere to go.
+    href: row.contact_crm_id
+      ? `/admin/sales/contacts/${encodeURIComponent(row.contact_crm_id)}?tab=tasks&task=${encodeURIComponent(row.id)}&from=reminders`
+      : undefined,
   };
 }
 
@@ -39,7 +43,7 @@ export async function listSalesReminders(userId: string, sinceIso: string): Prom
   const db: any = createServiceRoleClient();
   const { data, error } = await db
     .from("sales_tasks")
-    .select("id, title, task_type, due_date, status, done_at, contact_name")
+    .select("id, title, task_type, due_date, status, done_at, contact_name, contact_crm_id")
     .eq("assignee_id", userId)
     .or(`status.eq.open,and(status.eq.done,done_at.gte.${sinceIso})`)
     .order("due_date", { ascending: true })
