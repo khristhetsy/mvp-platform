@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { PLATFORM_TZ, PLATFORM_TZ_LABEL } from "@/lib/time/platform-tz";
+import { AGENT_IDLE_LINES, AGENT_OPTOUT_AFTER, AGENT_OPTOUT_LINES, IDLE_MS, isOptOut, replyPauseMs, typingMs } from "@/lib/chat-agents/presence";
 import { formatSlotWhen, validEmail, type Slot } from "@/lib/jessica/flow";
 import {
   FALLBACK_ASIDE,
@@ -145,18 +146,46 @@ export function MichaelChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
     const fb = (bridge: string): string => fresh([[bridge], ...SPARE_BRIDGES.map((x) => [x])])[0];
     const addMsg = (from: Msg["from"], text: string, extra?: Extra) => setMsgs((m) => [...m, { id: nextId++, from, text, ...extra }]);
 
+    // Like Johnny: never an instant reply, one "Are you still there?" after five quiet minutes,
+    // and a full stop when the visitor asks to be removed.
+    let visitorSpoke = false;
+    let stopped = false;
+    let idleAsked = false;
+    let idleTimer: ReturnType<typeof setTimeout> | null = null;
+    const clearIdle = () => {
+      if (idleTimer) clearTimeout(idleTimer);
+      idleTimer = null;
+    };
+    const armIdle = () => {
+      clearIdle();
+      if (idleAsked || stopped || booked) return;
+      idleTimer = setTimeout(() => {
+        if (busy || stopped || booked) return;
+        idleAsked = true;
+        say([AGENT_IDLE_LINES[0]]);
+      }, IDLE_MS);
+    };
+    const heard = () => {
+      visitorSpoke = true;
+      idleAsked = false;
+      clearIdle();
+    };
+
     const say = (lines: string[], done?: () => void, extra?: Extra) => {
       busy = true;
+      clearIdle();
       lines.forEach((l) => said.add(key(l)));
       void (async () => {
+        if (visitorSpoke) await sleep(replyPauseMs(Math.random()));
         for (let i = 0; i < lines.length; i++) {
           setTyping(true);
-          await sleep(350 + Math.min(lines[i].length * 12, 700));
+          await sleep(typingMs(lines[i].length, !visitorSpoke));
           setTyping(false);
           addMsg("michael", lines[i], i === lines.length - 1 ? extra : undefined);
           await sleep(150);
         }
         busy = false;
+        armIdle();
         done?.();
       })();
     };
@@ -588,8 +617,19 @@ export function MichaelChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
     // ── Input ───────────────────────────────────────────────────────
     submitRef.current = (v: string) => {
       if (busy) return false;
+      heard();
       clr();
       addMsg("you", v);
+      if (stopped) {
+        say([AGENT_OPTOUT_AFTER]);
+        return true;
+      }
+      if (isOptOut(v)) {
+        stopped = true;
+        exp = null;
+        say(AGENT_OPTOUT_LINES);
+        return true;
+      }
       if ((exp === "name" || exp === "name2") && !looksLikeName(v)) {
         exp = null;
         ans(v);
@@ -628,6 +668,7 @@ export function MichaelChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
     };
     chipRef.current = (label: string) => {
       const cb = chipCb;
+      heard();
       clr();
       addMsg("you", label);
       cb?.(label);

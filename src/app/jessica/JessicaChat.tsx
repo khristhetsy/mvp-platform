@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { PLATFORM_TZ, PLATFORM_TZ_LABEL } from "@/lib/time/platform-tz";
+import { AGENT_IDLE_LINES, AGENT_OPTOUT_AFTER, AGENT_OPTOUT_LINES, IDLE_MS, isOptOut, replyPauseMs, typingMs } from "@/lib/chat-agents/presence";
 import {
   JESSICA_AI_CHOICES,
   JESSICA_AI_NO_LINES,
@@ -13,10 +14,16 @@ import {
   JESSICA_COST_CHOICES,
   JESSICA_DISCLAIMER,
   JESSICA_FALLBACK_BRIDGE,
+  JESSICA_FALLBACK_CHIPS,
+  JESSICA_FALLBACK_EXHAUSTED,
   JESSICA_FALLBACK_LINES,
+  JESSICA_FALLBACK_VARIANTS,
+  JESSICA_PATIENCE_LINES,
+  JESSICA_QUALIFY_ASKS,
   JESSICA_SPARE_BRIDGES,
   JESSICA_QUALIFY_FALLBACK,
   JESSICA_SLOT_MINUTES,
+  type JessicaQualifyStep,
 } from "@/lib/jessica/config";
 import {
   aiMode,
@@ -25,6 +32,7 @@ import {
   groupSlotsByDay,
   looksLikeName,
   matchReply,
+  nextQualifyingStep,
   normalizeRole,
   parseAiReply,
   pickWording,
@@ -81,19 +89,47 @@ export function JessicaChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
       setMsgs((list) => [...list, { id, from, text, ...extra }]);
     };
 
+    // Like Johnny: never an instant reply, one "Are you still there?" after five quiet minutes,
+    // and a full stop when the visitor asks to be removed.
+    let visitorSpoke = false;
+    let stopped = false;
+    let idleAsked = false;
+    let idleTimer: ReturnType<typeof setTimeout> | null = null;
+    const clearIdle = () => {
+      if (idleTimer) clearTimeout(idleTimer);
+      idleTimer = null;
+    };
+    const armIdle = () => {
+      clearIdle();
+      if (idleAsked || stopped || booked || cancelled) return;
+      idleTimer = setTimeout(() => {
+        if (cancelled || busy || stopped || booked) return;
+        idleAsked = true;
+        void say([AGENT_IDLE_LINES[0]]);
+      }, IDLE_MS);
+    };
+    const heard = () => {
+      visitorSpoke = true;
+      idleAsked = false;
+      clearIdle();
+    };
+
     const say = async (lines: string[], extra?: LinkExtra) => {
       busy = true;
+      clearIdle();
       lines.forEach((l) => said.add(questionKey(l)));
+      if (visitorSpoke) await sleep(replyPauseMs(Math.random()));
       for (let i = 0; i < lines.length; i++) {
         if (cancelled) return;
         setTyping(true);
-        await sleep(350 + Math.min(lines[i].length * 12, 700));
+        await sleep(typingMs(lines[i].length, !visitorSpoke));
         if (cancelled) return;
         setTyping(false);
         push("jessica", lines[i], i === lines.length - 1 ? extra : undefined);
         await sleep(150);
       }
       busy = false;
+      armIdle();
     };
 
     const show = (next: Replies | null) => {
@@ -102,7 +138,9 @@ export function JessicaChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
     };
 
     let current: Replies | null = null;
-    const ask = (options: string[], main = false, resume?: string) =>
+    /** The time chips on screen when the visitor typed instead of tapping, so a patience reply can restore them. */
+    let heldChips: Replies | null = null;
+    const ask =(options: string[], main = false, resume?: string) =>
       new Promise<string>((resolve) => {
         show({
           options,
@@ -110,6 +148,7 @@ export function JessicaChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
           resume,
           pick: (option) => {
             show(null);
+            heard();
             push("you", option);
             resolve(option);
           },
@@ -209,8 +248,42 @@ export function JessicaChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
       });
     };
 
-    /** The assumptive close: a bridge that fits what was just said, then the real open days. */
-    const offerTimes = async (wanted: string) => {
+    /** Ask one qualifying question with chips and save the answer on the profile. */
+    const askQualifying = async (step: JessicaQualifyStep) => {
+      const ask1 = JESSICA_QUALIFY_ASKS[step];
+      const question = fresh(ask1.questions.map((q) => [q]))[0];
+      await say([question]);
+      if (cancelled) return;
+      const pick = await ask(ask1.options, false, `Back to it: ${question.charAt(0).toLowerCase()}${question.slice(1)}`);
+      sinceNew = 0;
+      if (step === "role") profile.role = normalizeRole(pick);
+      else if (step === "check") profile.checkSize = pick;
+      else if (step === "stage") profile.stage = pick;
+      else if (step === "raise") profile.raise = pick;
+      else profile.timing = pick;
+    };
+
+    /**
+     * The assumptive close: a bridge that fits what was just said, then the real open days.
+     * Throttled: if times were already offered and the visitor typed instead of picking one,
+     * ask the next unanswered qualifying question first, then offer again in new words.
+     * With nothing left to ask, say a patience line and offer nothing; the next reply closes.
+     */
+    const offerTimes = async (wanted: string, throttle = true) => {
+      if (throttle && aiMode({ booked, offered, sinceNew }) === "QUALIFY") {
+        const step = nextQualifyingStep(profile);
+        sinceNew = 2;
+        if (!step) {
+          await say(fresh(JESSICA_PATIENCE_LINES));
+          // The day chips were hidden when the visitor typed; put them back.
+          if (heldChips && !cancelled) show(heldChips);
+          return;
+        }
+        await askQualifying(step);
+        if (cancelled) return;
+        await offerTimes(wanted, false);
+        return;
+      }
       const bridge = freshBridge(wanted);
       const slots = await loadSlots();
       if (cancelled) return;
@@ -331,9 +404,20 @@ export function JessicaChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
       return reply;
     };
 
-    const sideConversation = async (value: string) => {
-      push("you", value);
+    /** The fallback: rotating wording, then chips. Never ends in a time offer. */
+    const fallbackWithChips = async () => {
+      const unused = JESSICA_FALLBACK_VARIANTS.find((w) => !w.some((l) => said.has(questionKey(l))));
+      await say(unused ?? JESSICA_FALLBACK_EXHAUSTED);
+      if (cancelled) return;
+      const pick = await ask(Object.keys(JESSICA_FALLBACK_CHIPS));
+      sinceNew = 0;
+      await sideConversation(JESSICA_FALLBACK_CHIPS[pick], false);
+    };
+
+    const sideConversation = async (value: string, echo = true): Promise<void> => {
+      if (echo) push("you", value);
       const pending = current?.resume ? current : null;
+      heldChips = current?.main ? current : null;
       show(null);
       const scripted = matchReply(value);
 
@@ -418,10 +502,20 @@ export function JessicaChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
       const reply = await askAi(value);
       setTyping(false);
       if (cancelled) return;
-      const lines = reply ? reply.lines : scripted.kind === "fact" ? fresh([scripted.lines, ...scripted.variants]) : JESSICA_FALLBACK_LINES;
+      const unknownNoAi = !reply && scripted.kind === "unknown";
+      const lines = reply
+        ? reply.lines
+        : scripted.kind === "fact"
+          ? fresh([scripted.lines, ...scripted.variants])
+          : fresh(JESSICA_FALLBACK_VARIANTS).slice(0, 1);
       if (mode === "QUALIFY") {
         sinceNew = 2;
         await say([...lines, reply?.question || JESSICA_QUALIFY_FALLBACK]);
+        if (heldChips && !cancelled) show(heldChips);
+        return;
+      }
+      if (unknownNoAi) {
+        await fallbackWithChips();
         return;
       }
       await say(lines);
@@ -430,6 +524,20 @@ export function JessicaChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
 
     submitRef.current = (value) => {
       if (busy || cancelled) return false;
+      heard();
+      if (stopped) {
+        push("you", value);
+        void say([AGENT_OPTOUT_AFTER]);
+        return true;
+      }
+      if (isOptOut(value)) {
+        stopped = true;
+        waiter = null;
+        show(null);
+        push("you", value);
+        void say(AGENT_OPTOUT_LINES);
+        return true;
+      }
       if (waiter) {
         const resolve = waiter;
         waiter = null;
@@ -484,6 +592,7 @@ export function JessicaChat({ hostId, sourceTag }: { hostId: string; sourceTag: 
     return () => {
       cancelled = true;
       clearTimeout(timer);
+      clearIdle();
     };
   }, [hostId, sourceTag]);
 
