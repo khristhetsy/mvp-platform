@@ -166,13 +166,13 @@ export async function POST(req: NextRequest): Promise<Response> {
     const aiRun = await gateAiRun(profile.id, "support_assistant");
     if (aiRun.blocked) return aiRun.blocked;
     let cost: AiCost | null = null;
-    const reply = await claudeComplete(messages, { usage: { category: "founder", feature: "support_assistant" },
+    const reply = await aiRun.run(() => claudeComplete(messages, { usage: { category: "founder", feature: "support_assistant" },
       model: CLAUDE_HAIKU,
       system,
       maxTokens: 700,
       temperature: 0.3,
       onUsage: (u) => (cost = u),
-    });
+    }));
     await aiRun.done();
 
     if (reply.trim().startsWith(HANDOFF_TAG)) {

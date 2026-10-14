@@ -59,6 +59,10 @@ export type AiUsageReport = {
     totalUsd: number;
     unattributedEvents: number;
     unattributedUsd: number;
+    /** Part of the unattributed cost from tools a signed in user runs, so a user should be attached. */
+    userToolUsd: number;
+    /** Part of the unattributed cost with no user to attach (briefings, public chat, admin tools, cron). */
+    systemUsd: number;
     firstAt: string | null;
     lastAt: string | null;
   };
@@ -77,12 +81,26 @@ function emptyReport(error: string | null): AiUsageReport {
     toolsUsed: 0,
     blockedUsers: 0,
     firstUsageAt: null,
-    spend: { events: 0, totalUsd: 0, unattributedEvents: 0, unattributedUsd: 0, firstAt: null, lastAt: null },
+    spend: { events: 0, totalUsd: 0, unattributedEvents: 0, unattributedUsd: 0, userToolUsd: 0, systemUsd: 0, firstAt: null, lastAt: null },
     truncated: false,
     readAt: new Date().toISOString(),
     error,
   };
 }
+
+/**
+ * Spend tags that share another tool's run cap. Market claim grading is billed
+ * as its own spend feature but counts against the pitch deck analyzer's limit,
+ * so its cost belongs on that row.
+ */
+const SPEND_FEATURE_ALIAS: Record<string, string> = { market_claim_grader: "pitch_deck_analyzer" };
+
+/** Spend tags for tools a signed in user triggers. Unattributed cost on these should carry a user. */
+const USER_TOOL_FEATURES = new Set([
+  "diligence_report", "business_plan", "intro_note_drafts", "support_assistant", "ai_coach", "round_health_advisor",
+  "outreach_drafts", "outreach_coach", "founder_ir_agent", "ir_report", "pitch_deck_draft", "pitch_deck_analyzer",
+  "market_claim_grader", "regcf_documents", "valuation_advisor", "watchlist_summary", "class_assistant",
+]);
 
 type EventRow = { profile_id: string | null; feature: string; created_at: string };
 type SpendRow = { profile_id: string | null; feature: string; cost_usd: number | string | null; created_at: string };
@@ -133,15 +151,19 @@ export async function loadAiUsageReport(): Promise<AiUsageReport> {
     let totalUsd = 0;
     let unattributedUsd = 0;
     let unattributedEvents = 0;
+    let userToolUsd = 0;
+    let systemUsd = 0;
     for (const s of spend) {
       const cost = Number(s.cost_usd ?? 0);
       totalUsd += cost;
       if (!s.profile_id) {
         unattributedUsd += cost;
         unattributedEvents += 1;
+        if (USER_TOOL_FEATURES.has(s.feature)) userToolUsd += cost;
+        else systemUsd += cost;
         continue;
       }
-      const k = `${s.profile_id}|${s.feature}`;
+      const k = `${s.profile_id}|${SPEND_FEATURE_ALIAS[s.feature] ?? s.feature}`;
       costByKey.set(k, (costByKey.get(k) ?? 0) + cost);
     }
 
@@ -210,6 +232,8 @@ export async function loadAiUsageReport(): Promise<AiUsageReport> {
         totalUsd,
         unattributedEvents,
         unattributedUsd,
+        userToolUsd,
+        systemUsd,
         firstAt: spend[0]?.created_at ?? null,
         lastAt: spend[spend.length - 1]?.created_at ?? null,
       },

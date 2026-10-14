@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getUserPlan } from "@/lib/subscriptions/get-subscription";
+import { withAiUsage } from "@/lib/ai-budget/context";
 import { checkUsage, recordUsage } from "./service";
 
 export type AiRunGate = {
@@ -10,6 +11,8 @@ export type AiRunGate = {
   blocked: Response | null;
   /** Count the run. Call once, only after the AI call succeeded. */
   done: () => Promise<void>;
+  /** Run the AI call inside this user's context so its cost is logged against them. */
+  run: <T>(fn: () => Promise<T>) => Promise<T>;
 };
 
 export async function gateAiRun(profileId: string, feature: string): Promise<AiRunGate> {
@@ -31,7 +34,12 @@ export async function gateAiRun(profileId: string, feature: string): Promise<AiR
         { status: 429 },
       ),
       done: async () => {},
+      run: (fn) => fn(),
     };
   }
-  return { blocked: null, done: () => recordUsage({ profileId, feature, admin }) };
+  return {
+    blocked: null,
+    done: () => recordUsage({ profileId, feature, admin }),
+    run: (fn) => withAiUsage({ profileId }, fn),
+  };
 }

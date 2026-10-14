@@ -16,7 +16,7 @@ export async function POST(): Promise<Response> {
     // Per-plan run cap (Admin, Feature Controls, AI usage limits).
     const aiRun = await gateAiRun(g.profile.id, "business_plan");
     if (aiRun.blocked) return aiRun.blocked;
-    const result = await generateExecSummary(
+    const result = await aiRun.run(() => generateExecSummary(
       {
         name: g.company.company_name,
         industry: g.company.industry ?? null,
@@ -25,7 +25,7 @@ export async function POST(): Promise<Response> {
         fundingAmount: g.company.funding_amount ?? null,
       },
       plan?.sections ?? {},
-    );
+    ));
     await aiRun.done();
     return NextResponse.json(result);
   } catch (err) {

@@ -37,7 +37,7 @@ export async function POST(request: Request) {
   // Per-plan run cap (Admin, Feature Controls, AI usage limits).
   const aiRun = await gateAiRun(auth.profile.id, "intro_note_drafts");
   if (aiRun.blocked) return aiRun.blocked;
-  const raw = await claudeComplete(
+  const raw = await aiRun.run(() => claudeComplete(
     [
       {
         role: "user",
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
         "Do not invent metrics not implied by the inputs. Return ONLY the note text — no preamble, quotes, or signature.",
       ].join(" "),
     },
-  );
+  ));
   await aiRun.done();
 
   return NextResponse.json({ note: raw.trim() });
