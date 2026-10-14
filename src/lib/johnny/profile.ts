@@ -39,6 +39,23 @@ export interface InvestorProfile {
   thesis?: string;
   /** The investor said Johnny may reach out when a fit comes up. */
   followUp?: boolean;
+  /** Asked once, before the read back. Stored as investor_profiles.accredited_status. */
+  accredited?: AccreditedStatus;
+}
+
+export type AccreditedStatus = "yes" | "no" | "not_sure";
+/** The three buttons on "Are you an accredited investor?". */
+export const ACCREDITED_OPTIONS = ["Yes", "No", "Not sure"] as const;
+const ACCREDITED_LABEL: Record<AccreditedStatus, string> = { yes: "Yes", no: "No", not_sure: "Not sure" };
+
+/** A tapped button or a typed answer to the accredited question. Null when the text says neither. */
+export function readAccredited(text: string): AccreditedStatus | null {
+  const t = text.trim().toLowerCase().replace(/[.!]+$/, "");
+  if (!t || t.includes("?")) return null;
+  if (/\b(not sure|unsure|no idea|don'?t know|do not know|dunno|maybe|i think so|probably)\b/.test(t)) return "not_sure";
+  if (/\b(not|isn'?t|am not|aren'?t|non)[- ]?(an? )?accredited\b/.test(t) || /^(no|nope|nah|not yet|i am not|i'?m not)\b/.test(t)) return "no";
+  if (/^(yes|yeah|yep|yup|i am|i'?m|correct|sure|definitely|absolutely)\b/.test(t) || /\baccredited\b/.test(t)) return "yes";
+  return null;
 }
 
 export const emptyProfile = (): InvestorProfile => ({ sect: [], stage: [], cap: [] });
@@ -313,6 +330,7 @@ export function summaryLine(p: InvestorProfile): string {
   if (p.sect.length) parts.push(p.sect.join(" and "));
   if (p.stage.length) parts.push(p.stage.join(" and "));
   if (p.cap.length) parts.push(p.cap.join(" and "));
+  if (p.accredited === "yes") parts.push("accredited");
   return `So: ${parts.join(", ")}.`;
 }
 
@@ -333,6 +351,8 @@ export function profileAnswers(p: InvestorProfile): Array<{ label: string; value
     ["Industry", p.sect.join(", ")],
     ["Stages", p.stage.join(", ")],
     ["Capital types", p.cap.join(", ")],
+    ["Accredited investor", p.accredited ? ACCREDITED_LABEL[p.accredited] : undefined],
+    ["accredited_status value", p.accredited],
     ["Investment thesis", p.thesis],
     ["Follow up", p.followUp ? "May reach out when a fit comes up" : undefined],
   ];

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireFounderSocial, ownsCampaign } from "@/lib/social/founder-auth";
 import { createCampaign, listCampaigns, setCampaignArchived, updateCampaign } from "@/lib/social/campaigns";
 import { campaignFunnels, periodStart, nextPeriodStart } from "@/lib/social/funnel";
-import { countFounderIntros } from "@/lib/social/founder-intros";
+import { founderIntroBreakdown } from "@/lib/social/founder-intros";
 
 export const dynamic = "force-dynamic";
 
@@ -12,12 +12,15 @@ export async function GET(): Promise<Response> {
   if ("error" in auth) return auth.error;
   const now = new Date();
   const start = periodStart("month", now);
-  const [campaigns, funnels, intros] = await Promise.all([
+  const [campaigns, funnels] = await Promise.all([
     listCampaigns(auth.founderId),
     campaignFunnels("month", now, auth.founderId).catch(() => []),
-    countFounderIntros(auth.founderId, start, nextPeriodStart("month", start)).catch(() => 0),
   ]);
-  return NextResponse.json({ campaigns, funnels, intros });
+  const breakdown = await founderIntroBreakdown(auth.founderId, start, nextPeriodStart("month", start), funnels.map((f) => f.sourceTag)).catch(() => ({ total: 0, fromLinks: 0, byTag: {} as Record<string, number> }));
+  // intros is what the Overview counts: only investors who came through a tracked link.
+  const intros = breakdown.fromLinks;
+  const introsOther = Math.max(0, breakdown.total - breakdown.fromLinks);
+  return NextResponse.json({ campaigns, funnels, intros, introsOther, introsByTag: breakdown.byTag });
 }
 
 export async function POST(req: NextRequest): Promise<Response> {

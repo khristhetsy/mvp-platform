@@ -76,17 +76,19 @@ export function FounderSocialClient({ initialUsage, companyName, initialTab }: {
   const [posts, setPosts] = useState<Post[]>([]);
   const [guideOpen, setGuideOpen] = useState(false);
   const [intros, setIntros] = useState(0);
+  const [introsOther, setIntrosOther] = useState(0);
+  const [introsByTag, setIntrosByTag] = useState<Record<string, number>>({});
 
   const reload = useCallback(async () => {
     const [u, a, c, l] = await Promise.all([
       api<{ usage: SocialUsage }>("/api/founder/social/usage"),
       api<{ accounts: Account[] }>("/api/founder/social/accounts"),
-      api<{ campaigns: Campaign[]; funnels: CampaignFunnel[]; intros?: number }>("/api/founder/social/campaigns"),
+      api<{ campaigns: Campaign[]; funnels: CampaignFunnel[]; intros?: number; introsOther?: number; introsByTag?: Record<string, number> }>("/api/founder/social/campaigns"),
       api<{ posts: Post[] }>("/api/founder/social/library"),
     ]);
     if (u.ok && u.data.usage) setUsage(u.data.usage);
     if (a.ok) setAccounts(a.data.accounts ?? []);
-    if (c.ok) { setCampaigns(c.data.campaigns ?? []); setFunnels(c.data.funnels ?? []); setIntros(c.data.intros ?? 0); }
+    if (c.ok) { setCampaigns(c.data.campaigns ?? []); setFunnels(c.data.funnels ?? []); setIntros(c.data.intros ?? 0); setIntrosOther(c.data.introsOther ?? 0); setIntrosByTag(c.data.introsByTag ?? {}); }
     if (l.ok) setPosts(l.data.posts ?? []);
   }, []);
 
@@ -137,7 +139,7 @@ export function FounderSocialClient({ initialUsage, companyName, initialTab }: {
           </div>
         )}
         {tab === "library" && <Library posts={posts} onChange={reload} />}
-        {tab === "attribution" && <Attribution funnels={funnels} intros={intros} />}
+        {tab === "attribution" && <Attribution funnels={funnels} intros={intros} introsOther={introsOther} introsByTag={introsByTag} />}
         {tab === "settings" && <Settings accounts={accounts} onChange={reload} />}
       </div>
 
@@ -178,7 +180,7 @@ function Overview({ usage, funnels, intros }: { usage: SocialUsage; funnels: Cam
     { label: "Impressions (est.)", actual: outreach.actual * 300, target: outreach.target != null ? outreach.target * 300 : null },
     { label: "Clicks", ...sumStage(funnels, "clicks") },
     { label: "Meetings", ...sumStage(funnels, "meetings") },
-    // Intro requests made through iCapOS this month, from all sources. Not yet traced to a post.
+    // Only intros from investors who came through one of your tracked post links.
     { label: "Investor intros", actual: intros, target: null },
   ];
 
@@ -205,7 +207,7 @@ function Overview({ usage, funnels, intros }: { usage: SocialUsage; funnels: Cam
             })}
           </div>
         )}
-        {funnels.length > 0 && <p className="mt-3 text-[11px] text-slate-500">Investor intros counts every intro request you made through iCapOS this month. It is not yet traced to a single post.</p>}
+        {funnels.length > 0 && <p className="mt-3 text-[11px] text-slate-500">Investor intros counts only investors who reached you through a tracked post link this month.</p>}
         {tip && (
           <div className="mt-4 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-sm text-violet-900">
             <span className="font-semibold">AI agent. </span>{tip}
@@ -298,6 +300,10 @@ function Compose({ usage, accounts, campaigns, companyName, onSaved, goSettings 
   const [repeat, setRepeat] = useState<"none" | "daily" | "weekly" | "monthly">("none");
   const [repeatCount, setRepeatCount] = useState("8");
   const [emailed, setEmailed] = useState(false);
+  const [sendOpen, setSendOpen] = useState(false);
+  const [contacts, setContacts] = useState<{ id: string; name: string; firm: string | null; email: string }[]>([]);
+  const [chosen, setChosen] = useState<string[]>([]);
+  const [emailsLeft, setEmailsLeft] = useState<{ remaining: number | null; limit: number | null }>({ remaining: null, limit: null });
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [dialog, setDialog] = useState(false);
@@ -385,6 +391,30 @@ function Compose({ usage, accounts, campaigns, companyName, onSaved, goSettings 
     setMsg({ ok: true, text: "Saved as a draft in Manual outreach. Open it to choose investors and send. Your plan's email limits apply there." });
   }
 
+  async function openSend() {
+    setMsg(null);
+    if (!body.trim()) { setMsg({ ok: false, text: "Write something first." }); return; }
+    setSendOpen(true);
+    const r = await api<{ contacts: { id: string; name: string; firm: string | null; email: string }[]; remaining: number | null; limit: number | null }>("/api/founder/social/email-send");
+    if (r.ok) { setContacts(r.data.contacts ?? []); setEmailsLeft({ remaining: r.data.remaining ?? null, limit: r.data.limit ?? null }); }
+  }
+
+  async function sendNow() {
+    setMsg(null);
+    if (chosen.length === 0) { setMsg({ ok: false, text: "Choose at least one investor." }); return; }
+    setBusy(true);
+    const r = await api<{ queued?: number; sent?: number; live?: boolean }>("/api/founder/social/email-send", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subject: body.trim().split("\n")[0].slice(0, 80), body, recipientIds: chosen }),
+    });
+    setBusy(false);
+    if (!r.ok) { setMsg({ ok: false, text: r.data.error ?? "Could not send the email." }); return; }
+    setSendOpen(false); setChosen([]);
+    setMsg({ ok: true, text: r.data.live === false
+      ? `Added ${r.data.queued} investor${r.data.queued === 1 ? "" : "s"}. Live email is switched off on this account, so nothing was delivered.`
+      : `Sent to ${r.data.sent ?? 0} of ${r.data.queued} investor${r.data.queued === 1 ? "" : "s"}. Any left over because of your monthly email limit go out after it resets.` });
+  }
+
   return (
     <div className="mx-auto max-w-2xl">
       {local.state === "warn" && (
@@ -462,6 +492,7 @@ function Compose({ usage, accounts, campaigns, companyName, onSaved, goSettings 
             {local.limit === null ? "Unlimited posts" : reached ? `${local.used} of ${local.limit} used` : `${local.remaining} of ${local.limit} posts left this cycle`}
           </span>
           <button type="button" className={btn} disabled={busy} onClick={() => void emailIt()}>Email this</button>
+          <button type="button" className={btn} disabled={busy} onClick={() => void openSend()}>Send now</button>
           <button type="button" className={btn} disabled={busy} onClick={() => void save("draft")}>Save draft</button>
           {reached ? (
             <button type="button" className={btnPrimary} onClick={() => setDialog(true)}>Upgrade to schedule</button>
@@ -472,6 +503,28 @@ function Compose({ usage, accounts, campaigns, companyName, onSaved, goSettings 
             </>
           )}
         </div>
+        {sendOpen && (
+          <div className="mt-3 rounded-lg border border-slate-200 p-3">
+            <div className="text-sm font-semibold text-slate-900">Send this as an email now</div>
+            <p className="mt-1 text-xs text-slate-500">
+              {emailsLeft.remaining != null ? `${emailsLeft.remaining}${emailsLeft.limit != null ? ` of ${emailsLeft.limit}` : ""} emails left this month. ` : ""}Each investor you pick uses one.
+            </p>
+            {contacts.length === 0 ? <p className="mt-2 text-sm text-slate-600">No investors with an email in your list yet. Add them in Manual outreach first.</p> : (
+              <div className="mt-2 max-h-48 overflow-y-auto">
+                {contacts.map((c) => (
+                  <label key={c.id} className="flex items-center gap-2 py-1 text-sm text-slate-800">
+                    <input type="checkbox" checked={chosen.includes(c.id)} onChange={() => setChosen((p) => (p.includes(c.id) ? p.filter((x) => x !== c.id) : [...p, c.id]))} />
+                    <span className="truncate">{c.name}{c.firm ? `, ${c.firm}` : ""}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+            <div className="mt-2 flex gap-2">
+              <button type="button" className={btnPrimary} disabled={busy || chosen.length === 0} onClick={() => void sendNow()}>Send to {chosen.length || "…"} now</button>
+              <button type="button" className={btn} disabled={busy} onClick={() => setSendOpen(false)}>Cancel</button>
+            </div>
+          </div>
+        )}
         {msg && <p className={`mt-2 text-xs ${msg.ok ? "text-emerald-700" : "text-red-700"}`}>{msg.text}</p>}
         {emailed && <Link href="/founder/deploy" className="mt-1 inline-block text-xs font-medium text-[#1A6CE4] hover:underline">Open Manual outreach</Link>}
       </div>
@@ -526,21 +579,26 @@ function Library({ posts, onChange }: { posts: Post[]; onChange: () => Promise<v
 
 // ───────────────────────────── Attribution ─────────────────────────────
 
-function Attribution({ funnels, intros }: { funnels: CampaignFunnel[]; intros: number }) {
+function Attribution({ funnels, intros, introsOther, introsByTag }: { funnels: CampaignFunnel[]; intros: number; introsOther: number; introsByTag: Record<string, number> }) {
   const get = (f: CampaignFunnel, k: StageKey) => f.stages.find((s) => s.stage === k)?.actual ?? 0;
+  const tile = "rounded-lg border border-slate-200 px-3 py-2";
   return (
     <div className={card}>
       <h2 className="text-base font-semibold text-slate-900">Attribution</h2>
-      {funnels.length === 0 ? <p className="mt-2 text-sm text-slate-600">Post in a campaign to see which post led to a click and a meeting.</p> : (
+      <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+        <div className={tile}><div className="text-xl font-semibold text-slate-900">{intros + introsOther}</div><div className="text-[11px] uppercase tracking-wide text-slate-500">Intro requests</div></div>
+        <div className={tile}><div className="text-xl font-semibold text-slate-900">{intros}</div><div className="text-[11px] uppercase tracking-wide text-slate-500">From a post link</div></div>
+        <div className={tile}><div className="text-xl font-semibold text-slate-900">{introsOther}</div><div className="text-[11px] uppercase tracking-wide text-slate-500">Other sources</div></div>
+      </div>
+      {funnels.length === 0 ? <p className="mt-3 text-sm text-slate-600">Post in a campaign to see which campaign led to a click and an investor intro.</p> : (
         <table className="mt-3 w-full text-sm">
           <thead><tr className="text-left text-xs uppercase tracking-wide text-slate-400"><th className="py-2 font-medium">Campaign</th><th className="py-2 font-medium">Clicks</th><th className="py-2 font-medium">Meetings</th><th className="py-2 font-medium">Investor intros</th></tr></thead>
           <tbody>{funnels.map((f) => (
-            <tr key={f.campaignId} className="border-t border-slate-100"><td className="py-2 text-slate-900">{f.name}</td><td className="py-2">{get(f, "clicks")}</td><td className="py-2">{get(f, "meetings")}</td><td className="py-2">{get(f, "conversions")}</td></tr>
+            <tr key={f.campaignId} className="border-t border-slate-100"><td className="py-2 text-slate-900">{f.name}</td><td className="py-2">{get(f, "clicks")}</td><td className="py-2">{get(f, "meetings")}</td><td className="py-2">{introsByTag[f.sourceTag] ?? 0}</td></tr>
           ))}</tbody>
         </table>
       )}
-      <p className="mt-3 text-sm text-slate-700">Investor intro requests this month: <b>{intros}</b></p>
-      <p className="mt-1 text-xs text-slate-500">Intros count every request you made through iCapOS, from all sources. They are not yet traced to a single post. Impressions are estimated (published posts × 300). Clicks come from your tracked links.</p>
+      <p className="mt-3 text-xs text-slate-500">An intro counts toward a campaign only when the investor came through that campaign&rsquo;s tracked link. All other intro requests show under Other sources. Impressions are estimated (published posts × 300). Clicks come from your tracked links.</p>
     </div>
   );
 }
