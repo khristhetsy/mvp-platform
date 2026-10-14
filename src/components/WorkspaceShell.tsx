@@ -10,7 +10,6 @@ import Link from "next/link";
 import { Grip } from "lucide-react";
 import { TopMenuBar, TopMenuInboxButton, WORKSPACE_HOME } from "@/components/nav/TopMenuBar";
 import { AdminHomeGear } from "@/components/nav/AdminHomeGear";
-import { ReminderClockButton } from "@/components/nav/ReminderClockButton";
 import { setWorkspaceClassic, useWorkspaceLayout } from "@/lib/ui/workspace-layout";
 import type { WorkspaceId } from "@/lib/workspace-nav";
 
@@ -93,7 +92,6 @@ export function WorkspaceShell({
             topMenu || adminCompanyLayout ? (
               <>
                 {topMenu ? <TopMenuInboxButton workspace={workspace} /> : null}
-                {topMenu ? <ReminderClockButton /> : null}
                 {workspace === "admin" ? <AdminHomeGear /> : null}
               </>
             ) : undefined

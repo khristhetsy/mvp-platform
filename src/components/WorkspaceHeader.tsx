@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { confirmDialog } from "@/components/ui/ConfirmDialog";
 import { NotificationBellDropdown } from "@/components/NotificationBellDropdown";
+import { ReminderClockButton } from "@/components/nav/ReminderClockButton";
 import { WorkspaceBreadcrumbs } from "@/components/ui/WorkspaceBreadcrumbs";
 import type { WorkspaceId } from "@/lib/workspace-nav";
 import { workspaceLabel, isFounderNavV2Enabled } from "@/lib/workspace-nav";
@@ -375,6 +376,7 @@ export function WorkspaceHeader({ workspace, profileName, profileSubtitle, profi
               <span className="hidden max-w-[160px] truncate rounded-md border border-slate-200 px-2 py-1 text-[12px] text-slate-700 xl:inline" title={companyLabel}>{companyLabel}</span>
             )}
             {extraActions}
+            <ReminderClockButton />
             <NotificationBellDropdown />
             <ProfileDropdown profileName={profileName} profileEmail={profileEmail} profileSubtitle={profileSubtitle} workspace={workspace} layoutSwitch={layoutSwitch} />
           </div>
@@ -437,7 +439,8 @@ export function WorkspaceHeader({ workspace, profileName, profileSubtitle, profi
             </button>
           )}
           {extraActions}
-          <NotificationBellDropdown />
+          <ReminderClockButton />
+            <NotificationBellDropdown />
           <ProfileDropdown
             profileName={profileName}
             profileEmail={profileEmail}
