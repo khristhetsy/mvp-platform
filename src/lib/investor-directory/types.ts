@@ -139,6 +139,28 @@ export type FounderDirectoryAccess = {
   importedToday: number;
 };
 
+/**
+ * A person named on a Form D firm's filing, from the matching Admin Form D
+ * contact (crm_contacts.formd_cik = a vehicle CIK of the firm). The profile
+ * fields describe what the fund is raising, not what it invests in.
+ */
+export type FormdPerson = {
+  name: string;
+  /** Role on the filing, e.g. "Executive Officer, Promoter". */
+  role: string | null;
+  /** Blank on founder screens until the firm is imported. */
+  phone: string | null;
+  hasPhone: boolean;
+  /** The fund's own industry on the filing. */
+  industries: string[];
+  /** Stage the fund is raising at. */
+  stages: string[];
+  /** Amount the fund is raising. */
+  amounts: string[];
+  /** Investor types the fund is raising from. */
+  raisingFrom: string[];
+};
+
 /** investor_directory.source for firms published from the SEC Form D registry. */
 export const FORM_D_SOURCE = "SEC Form D";
 

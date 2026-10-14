@@ -15,7 +15,7 @@ import { FounderToolbar } from "@/components/founder/FounderToolbar";
 import { EMPTY_SEARCH, type SearchState } from "@/components/admin/OdooSearchBar";
 import { OdooPager } from "@/components/admin/OdooPager";
 import { useVocabulary } from "@/lib/vocabulary/provider";
-import { DIRECTORY_DISCLAIMER, FORM_D_SOURCE, type DirectoryTier, type FounderDirectoryAccess } from "@/lib/investor-directory/types";
+import { DIRECTORY_DISCLAIMER, FORM_D_SOURCE, type DirectoryTier, type FormdPerson, type FounderDirectoryAccess } from "@/lib/investor-directory/types";
 import { fmtPT, money } from "@/lib/investor-directory/format";
 
 type Row = {
@@ -24,6 +24,8 @@ type Row = {
   capital_types: string[]; industries: string[]; fund_name: string | null; fund_size: number | null; avg_investment: number | null;
   strategy: string | null; investing_now: boolean | null; source: string; source_url: string | null; verified_at: string | null;
   held: boolean; hasEmail: boolean; hasPhone: boolean; added_at: string; filed_at: string | null;
+  /** Form D firms: people named on the filing (older payloads may omit it). */
+  formd_people?: FormdPerson[];
 };
 type Payload = {
   rows: Row[]; total: number; page: number; pageSize: number; access: FounderDirectoryAccess; tiers: DirectoryTier[];
@@ -248,8 +250,9 @@ export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pi
   const formdTab = pinnedSource === FORM_D_SOURCE;
   // Form D rows are all "SEC Form D", so that tab drops the Source column.
   const visibleCols = COLUMNS.filter((c) => cols.includes(c.key) && !(formdTab && c.key === "source"));
-  const gridCols = `28px minmax(200px,1.6fr) ${visibleCols.map((c) => c.width).join(" ")} 24px`;
-  const tableMinWidth = 300 + visibleCols.length * 120;
+  // The Form D tab adds a fixed Contact column: the person named on the filing.
+  const gridCols = `28px minmax(200px,1.6fr) ${formdTab ? "minmax(140px,1fr) " : ""}${visibleCols.map((c) => c.width).join(" ")} 24px`;
+  const tableMinWidth = 300 + (visibleCols.length + (formdTab ? 1 : 0)) * 120;
   function toggleCol(k: ColKey) {
     setCols((prev) => {
       const next = prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k];
@@ -519,6 +522,7 @@ export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pi
               />
             ) : <span />}
             <span>{formdTab ? "Firm" : "Firm / contact"}</span>
+            {formdTab ? <span>Contact</span> : null}
             {visibleCols.map((c) => c.key === "date" ? (
               formdTab ? <span key={c.key}>Filed</span> : (
                 <button key={c.key} type="button" onClick={() => sortByDate(!sortNewest)} className="text-left font-medium hover:text-slate-800" title={sortNewest ? "Sort by firm name" : "Sort newest first"}>
@@ -568,6 +572,17 @@ export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pi
                           {[r.contact_name, cols.includes("location") ? null : [r.city, r.state].filter(Boolean).join(", ")].filter(Boolean).join(" · ")}
                         </div>
                       </div>
+                      {formdTab ? (() => {
+                        const first = r.formd_people?.[0];
+                        if (!first) return <span className="truncate text-[12.5px] text-slate-400">No person on file</span>;
+                        const more = (r.formd_people?.length ?? 0) - 1;
+                        return (
+                          <div className="min-w-0">
+                            <div className="truncate text-[12.5px] text-slate-800" title={first.name}>{first.name}{more > 0 ? <span className="text-slate-400"> +{more}</span> : null}</div>
+                            {first.role ? <div className="truncate text-[11px] text-slate-500" title={first.role}>{first.role}</div> : null}
+                          </div>
+                        );
+                      })() : null}
                       {visibleCols.map((c) => {
                         if (c.key === "source") {
                           return r.held
@@ -591,6 +606,7 @@ export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pi
                         <span className="text-slate-500">Source</span>
                         <span>{r.source_url ? <a href={r.source_url} target="_blank" rel="noopener noreferrer" className="text-[#1A6CE4]">{r.source}</a> : r.source}</span>
                         <span className="text-slate-500">Verified</span><span>{r.verified_at ? fmtPT(r.verified_at) : "Not yet verified by iCFO"}</span>
+                        {r.source === FORM_D_SOURCE ? <FormdProfile people={r.formd_people ?? []} held={r.held} /> : null}
                       </div>
                     ) : null}
                   </div>
@@ -605,6 +621,30 @@ export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pi
       <p className="px-3 py-3 text-[11.5px] text-slate-500">{DIRECTORY_DISCLAIMER} For your own company&apos;s fundraising only.</p>
 
       {terms ? <TermsDialog onClose={() => setTerms(false)} onAccept={acceptTerms} onAccepted={() => void doImport(true)} /> : null}
+    </div>
+  );
+}
+
+/** People named on a Form D firm's filing, with what the fund is raising. */
+function FormdProfile({ people, held }: Readonly<{ people: FormdPerson[]; held: boolean }>) {
+  const chips = (v: string[]) => (v.length ? v.join(", ") : "—");
+  return (
+    <div className="col-span-2 mt-2 border-t border-slate-200 pt-2">
+      <p className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-slate-500">Form D profile</p>
+      {people.length === 0 ? (
+        <p className="text-slate-500">No person on file for this firm&apos;s filings.</p>
+      ) : people.map((p) => (
+        <div key={p.name} className="mb-2 grid grid-cols-[150px_minmax(0,1fr)] gap-x-3 gap-y-0.5">
+          <span className="text-slate-500">Contact</span><span className="font-medium">{p.name}{p.role ? <span className="font-normal text-slate-600">, {p.role}</span> : null}</span>
+          <span className="text-slate-500">Phone</span><span>{held ? (p.phone ?? "Not in filing") : p.hasPhone ? "On the filing, shown after import" : "Not in filing"}</span>
+          <span className="text-slate-500">Email</span><span className="text-slate-500">Not in filing</span>
+          <span className="text-slate-500">Fund industry (SEC)</span><span>{chips(p.industries)}</span>
+          <span className="text-slate-500">Raising at stage</span><span>{chips(p.stages)}</span>
+          <span className="text-slate-500">Raising amount</span><span>{chips(p.amounts)}</span>
+          <span className="text-slate-500">Raising from</span><span>{chips(p.raisingFrom)}</span>
+        </div>
+      ))}
+      {people.length ? <p className="text-[11px] text-slate-500">From the fund&apos;s own Form D filing: what the fund is raising, not what it invests in.</p> : null}
     </div>
   );
 }
