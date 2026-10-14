@@ -24,6 +24,12 @@ const GROUPS: Array<{ id: ReminderGroup; label: string }> = [
   { id: "future", label: "Future" },
 ];
 
+/** "Oct 16, 9:00 AM PT" becomes "Oct 16". Sales tasks only have a due date. */
+function dayOnly(label: string): string {
+  const at = label.lastIndexOf(", ");
+  return at === -1 ? label : label.slice(0, at);
+}
+
 export function ReminderClockButton() {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Reminder[]>([]);
@@ -154,12 +160,14 @@ export function ReminderClockButton() {
                         <span className={`flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg ${s.tile}`}><Icon className="h-[17px] w-[17px]" aria-hidden /></span>
                         <span className="min-w-0 flex-1">
                           <span className={`block truncate ${i.done_at ? "text-slate-400 line-through" : "text-slate-900"}`}>{i.title}</span>
-                          <span className={`block text-[12px] ${late ? "text-red-600" : "text-slate-500"}`}>{REMINDER_KIND_LABEL[i.kind]} · {formatReminderDue(i.due_at, now)}</span>
+                          <span className={`block truncate text-[12px] ${late ? "text-red-600" : "text-slate-500"}`}>
+                            {REMINDER_KIND_LABEL[i.kind]}{i.source === "sales" ? " · Sales" : ""}{i.context ? ` · ${i.context}` : ""} · {i.date_only ? dayOnly(formatReminderDue(i.due_at, now)) : formatReminderDue(i.due_at, now)}
+                          </span>
                         </span>
-                        <button type="button" aria-label="Delete reminder" title="Delete" onClick={() => void remove(i)}
+                        {i.source === "sales" ? null : <button type="button" aria-label="Delete reminder" title="Delete" onClick={() => void remove(i)}
                           className="hidden h-6 w-6 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-red-600 group-hover:flex focus:flex">
                           <Trash2 className="h-3.5 w-3.5" aria-hidden />
-                        </button>
+                        </button>}
                       </div>
                     );
                   })}

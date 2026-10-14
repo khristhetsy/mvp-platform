@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireApiProfile } from "@/lib/api/auth";
 import { isReminderKind } from "@/lib/reminders/types";
+import { listSalesReminders } from "@/lib/reminders/sales";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,11 @@ export async function GET(): Promise<Response> {
     .order("due_at", { ascending: true })
     .limit(100);
   if (error) return NextResponse.json({ error: "Couldn't load reminders." }, { status: 500 });
-  return NextResponse.json({ reminders: data ?? [] });
+  // Sales staff also see their own open Sales tasks here, so a task added on a contact shows in the clock.
+  const isSalesStaff = auth.profile.role === "admin" || auth.profile.role === "analyst";
+  const sales = isSalesStaff ? await listSalesReminders(auth.profile.id, since) : [];
+  const all = [...(data ?? []), ...sales].sort((a, b) => a.due_at.localeCompare(b.due_at));
+  return NextResponse.json({ reminders: all });
 }
 
 export async function POST(request: Request): Promise<Response> {
