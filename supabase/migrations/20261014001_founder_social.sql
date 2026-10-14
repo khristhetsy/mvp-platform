@@ -21,9 +21,14 @@ create index if not exists social_clicks_owner_idx         on public.social_clic
 -- 2. Account key: a founder may connect a page iCFO already holds without touching the
 --    admin row. NULLS NOT DISTINCT keeps admin rows (owner NULL) unique as before.
 alter table public.social_accounts drop constraint if exists social_accounts_platform_external_member_id_key;
-alter table public.social_accounts
-  add constraint social_accounts_owner_platform_member_key
-  unique nulls not distinct (owner_profile_id, platform, external_member_id);
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'social_accounts_owner_platform_member_key') then
+    alter table public.social_accounts
+      add constraint social_accounts_owner_platform_member_key
+      unique nulls not distinct (owner_profile_id, platform, external_member_id);
+  end if;
+end $$;
 -- NOTE: the four upserts in src/lib/social/accounts.ts must change onConflict to
 -- "owner_profile_id,platform,external_member_id" in the same release.
 
