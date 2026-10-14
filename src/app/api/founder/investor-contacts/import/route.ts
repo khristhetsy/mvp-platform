@@ -4,6 +4,8 @@ import { createFounderInvestorContact, listFounderInvestorContacts } from "@/lib
 import { dedupeImportRows, parseCsvImportRows } from "@/lib/founder-crm/csv-import";
 import { notifyFounderImportCompleted } from "@/lib/notifications/founder-outreach-events";
 import { founderInvestorContactImportSchema } from "@/lib/validation";
+import { founderHoldStatus } from "@/lib/investor-directory/db";
+import { decideAdd } from "@/lib/investor-directory/limits";
 
 export async function POST(request: Request) {
   const auth = await requireFounderInvestorCrmApi();
@@ -21,13 +23,27 @@ export async function POST(request: Request) {
   const existing = await listFounderInvestorContacts(auth.supabase, auth.profile.id, auth.company.id);
   const preview = dedupeImportRows(parseCsvImportRows(parsed.data.rows), existing.data ?? []);
 
+  const hold = await founderHoldStatus(auth.profile.id, auth.company.id);
   if (!parsed.data.confirm) {
     return NextResponse.json({
       preview,
       validCount: preview.filter((row) => row.valid && !row.skipped).length,
       skippedCount: preview.filter((row) => row.skipped).length,
+      hold,
     });
   }
+
+  // One investor limit for every source: import the first rows that fit.
+  const newRows = preview.filter((row) => row.valid && !row.skipped && row.data).length;
+  let room = newRows;
+  if (newRows > 0) {
+    const decision = decideAdd(newRows, hold);
+    if (!decision.ok) {
+      return NextResponse.json({ error: decision.message, reason: "hold_limit", hold }, { status: 403 });
+    }
+    room = decision.allowed;
+  }
+  let overLimit = 0;
 
   let imported = 0;
   let skipped = 0;
@@ -35,6 +51,10 @@ export async function POST(request: Request) {
   for (const row of preview) {
     if (!row.valid || row.skipped || !row.data) {
       skipped += 1;
+      continue;
+    }
+    if (room <= 0) {
+      overLimit += 1;
       continue;
     }
 
@@ -64,6 +84,7 @@ export async function POST(request: Request) {
       skipped += 1;
     } else {
       imported += 1;
+      room -= 1;
     }
   }
 
@@ -73,5 +94,5 @@ export async function POST(request: Request) {
     skipped,
   });
 
-  return NextResponse.json({ imported, skipped, preview });
+  return NextResponse.json({ imported, skipped, overLimit, preview });
 }

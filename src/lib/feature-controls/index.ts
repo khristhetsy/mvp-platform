@@ -48,6 +48,20 @@ export const FEATURES: FeatureDef[] = [
   { key: "investor_crm", label: "Investor CRM", group: "Fundraising & market", hrefs: {
     founder: ["/founder/investor-pipeline"],
   } },
+  { key: "investor_directory", label: "Investor directory", group: "Fundraising & market", hrefs: {
+    founder: ["/founder/investor-directory"],
+    admin: [
+      "/admin/investor-directory",
+      "/admin/investor-directory/records",
+      "/admin/investor-directory/imports",
+      "/admin/investor-directory/verification",
+      "/admin/investor-directory/access",
+      "/admin/investor-directory/usage",
+    ],
+  } },
+  { key: "ir_agent", label: "Founder IR Agent (Build Your Agent)", group: "Fundraising & market", hrefs: {
+    founder: ["/founder/ir-agent"],
+  } },
   { key: "events", label: "Events", group: "Fundraising & market", hrefs: { founder: ["/events", "/founder/events"], investor: ["/events"], admin: ["/admin/events", "/admin/events/applications", "/admin/events/sponsors", "/admin/events/analytics", "/admin/events/gamification"] } },
   { key: "partner_score", label: "Partner Score", group: "Fundraising & market", hrefs: { investor: ["/investor/partner-score"] } },
 

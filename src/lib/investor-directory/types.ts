@@ -65,6 +65,11 @@ export type DirectorySettings = {
   allow_export: boolean;
   stale_days: number;
   terms_version: number;
+  /** Which Investor directory tabs founders see. */
+  tab_directory: boolean;
+  tab_formd: boolean;
+  tab_linkedin: boolean;
+  tab_csv: boolean;
 };
 
 export const DEFAULT_SETTINGS: DirectorySettings = {
@@ -80,7 +85,14 @@ export const DEFAULT_SETTINGS: DirectorySettings = {
   allow_export: false,
   stale_days: 180,
   terms_version: 1,
+  tab_directory: true,
+  tab_formd: true,
+  tab_linkedin: true,
+  tab_csv: true,
 };
+
+/** Feature control key for the founder Investor directory and the admin console. */
+export const INVESTOR_DIRECTORY_FEATURE_KEY = "investor_directory";
 
 /** "No top up". The key stays "free" because the access table defaults to it. */
 export const FREE_TIER: DirectoryTier = { key: "free", label: "No top up", hold_limit: 0, email_limit: 0, show_email: false, can_export: false, price_cents: null, sort: 0 };
@@ -120,9 +132,37 @@ export type FounderDirectoryAccess = {
   statusReason: string | null;
   termsAccepted: boolean;
   termsAcceptedAt: string | null;
+  /** Investors that count toward the plan's limit (every source). */
   held: number;
+  /** Form D firms held with no contact email yet: they don't count. */
+  formdUncounted: number;
   importedToday: number;
 };
+
+/**
+ * A person named on a Form D firm's filing, from the matching Admin Form D
+ * contact (crm_contacts.formd_cik = a vehicle CIK of the firm). The profile
+ * fields describe what the fund is raising, not what it invests in.
+ */
+export type FormdPerson = {
+  name: string;
+  /** Role on the filing, e.g. "Executive Officer, Promoter". */
+  role: string | null;
+  /** Blank on founder screens until the firm is imported. */
+  phone: string | null;
+  hasPhone: boolean;
+  /** The fund's own industry on the filing. */
+  industries: string[];
+  /** Stage the fund is raising at. */
+  stages: string[];
+  /** Amount the fund is raising. */
+  amounts: string[];
+  /** Investor types the fund is raising from. */
+  raisingFrom: string[];
+};
+
+/** investor_directory.source for firms published from the SEC Form D registry. */
+export const FORM_D_SOURCE = "SEC Form D";
 
 /** founder_investor_contacts.source for contacts imported from the directory. */
 export const DIRECTORY_CONTACT_SOURCE = "directory";

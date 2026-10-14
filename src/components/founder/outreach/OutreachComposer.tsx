@@ -12,12 +12,13 @@
 import { useState } from "react";
 import {
   MAX_ATTACHMENT_BYTES,
+  withAgentLink,
   withOnePagerLink,
   type ManualAttachments,
 } from "@/lib/outreach/manual-attachments";
 import type { AttachmentOptions, OutreachContact } from "./types";
 
-const MERGE_FIELDS = ["{{first_name}}", "{{company}}", "{{sector}}", "{{founder_preview}}"];
+const MERGE_FIELDS = ["{{first_name}}", "{{company}}", "{{sector}}", "{{founder_preview}}", "{{ir_agent}}"];
 const TONE_PRESETS = ["Warm", "Direct", "Concise", "Formal", "Storytelling"] as const;
 const DISCLAIMER =
   "This message shares a company's Founder Preview based on stated fit. It is not investment advice, an offer, a solicitation, or a recommendation to buy or sell any security. iCapOS is not a broker-dealer or investment adviser.";
@@ -146,7 +147,8 @@ export function OutreachComposer({
       .replaceAll("{{first_name}}", firstNameOf(preview?.name))
       .replaceAll("{{company}}", companyName ?? "your company")
       .replaceAll("{{sector}}", sector ?? "its sector")
-      .replaceAll("{{founder_preview}}", onePager?.published ? previewLink : "");
+      .replaceAll("{{founder_preview}}", onePager?.published ? previewLink : "")
+      .replaceAll("{{ir_agent}}", options?.agent?.url ?? "(your IR agent link, once live)");
   }
 
   function toggleDoc(id: string) {
@@ -249,7 +251,7 @@ export function OutreachComposer({
             {/* Attachments */}
             <div>
               <p className="mb-1.5 text-xs font-medium text-slate-500">Attachments</p>
-              <div className="grid gap-2 sm:grid-cols-3">
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 <button type="button" className={card(attachments.onePagerPdf)} onClick={() => onAttachments({ ...attachments, onePagerPdf: !attachments.onePagerPdf })} aria-pressed={attachments.onePagerPdf}>
                   <i className="ti ti-file-type-pdf mt-0.5 text-lg text-[#1A6CE4]" aria-hidden="true" />
                   <span className="min-w-0">
@@ -262,6 +264,13 @@ export function OutreachComposer({
                   <span className="min-w-0">
                     <span className="block text-[13px] font-medium text-slate-900">One pager link</span>
                     <span className="block text-[11px] text-slate-500">{onePager?.published ? "Live page, tracks clicks" : "Needs a published profile"}</span>
+                  </span>
+                </button>
+                <button type="button" className={card(attachments.agentLink)} onClick={() => onAttachments({ ...attachments, agentLink: !attachments.agentLink })} aria-pressed={attachments.agentLink}>
+                  <i className="ti ti-message-chatbot mt-0.5 text-lg text-[#1A6CE4]" aria-hidden="true" />
+                  <span className="min-w-0">
+                    <span className="block text-[13px] font-medium text-slate-900">Agent link</span>
+                    <span className="block text-[11px] text-slate-500">{options?.agent ? "Your IR agent, tracks the email channel" : "Go live in My IR Agent first"}</span>
                   </span>
                 </button>
                 <button type="button" className={card(attachments.documentIds.length > 0 || docsOpen)} onClick={() => setDocsOpen((v) => !v)} aria-expanded={docsOpen}>
@@ -369,7 +378,7 @@ export function OutreachComposer({
               <p className="text-[10px] uppercase tracking-wide text-slate-400">Subject</p>
               <p className="mb-2 text-[13px] font-medium text-slate-900">{merge(subject) || `An introduction to ${companyName ?? "your company"}`}</p>
               <div className="whitespace-pre-wrap border-t border-slate-100 pt-2 text-[12.5px] leading-6 text-slate-700">
-                {merge(withOnePagerLink(body, attachments))}
+                {merge(withAgentLink(withOnePagerLink(body, attachments), attachments))}
               </div>
               {(attachments.onePagerPdf && onePager) || chosenDocs.length > 0 ? (
                 <div className="mt-2 flex flex-wrap gap-1 border-t border-slate-100 pt-2">

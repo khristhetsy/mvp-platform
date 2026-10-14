@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/AppShell";
+import { FounderSocialControls } from "@/components/admin/FounderSocialControls";
 import { getTranslations } from "next-intl/server";
 import { DepartmentsControls } from "@/components/admin/DepartmentsControls";
 import { OutreachAutomationToggle } from "@/components/admin/OutreachAutomationToggle";
@@ -6,8 +7,8 @@ import { StageMenuEditor } from "@/components/admin/StageMenuEditor";
 import { AiUsageLimitsControls } from "@/components/admin/AiUsageLimitsControls";
 import { AiBudgetControls } from "@/components/admin/AiBudgetControls";
 import { UploadLimitsControls } from "@/components/admin/UploadLimitsControls";
+import { IrAgentControls } from "@/components/admin/IrAgentControls";
 import { SiteDefaultViewControls } from "@/components/admin/SiteDefaultViewControls";
-import { FounderSocialControls } from "@/components/admin/FounderSocialControls";
 import { requirePermissionPage } from "@/lib/api/permissions";
 
 export const dynamic = "force-dynamic";
@@ -29,8 +30,9 @@ export default async function AdminFeatureControlsPage() {
       <AiBudgetControls />
       <AiUsageLimitsControls />
       <UploadLimitsControls />
-      <FounderSocialControls />
+      <IrAgentControls />
       <StageMenuEditor />
+      <FounderSocialControls />
     </AppShell>
   );
 }

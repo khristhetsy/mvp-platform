@@ -15,12 +15,12 @@ describe("allowances", () => {
     expect(allowanceKeyFor(null)).toBe("founder_free");
   });
   it("uses the stored row, falling back to defaults", () => {
-    expect(pickAllowance([], "founder_basic")).toMatchObject({ contacts: 500, emails_per_month: 1000 });
+    expect(pickAllowance([], "founder_basic")).toMatchObject({ contacts: 100, emails_per_month: 1000 });
     expect(pickAllowance([{ ...DEFAULT_ALLOWANCES[1], contacts: 700 }], "founder_basic").contacts).toBe(700);
   });
   it("adds the top up to the plan", () => {
-    expect(addUp(DEFAULT_ALLOWANCES[1], plus1k)).toEqual({ contacts: 1500, emails: 3000 });
-    expect(addUp(DEFAULT_ALLOWANCES[3], FREE_TIER)).toEqual({ contacts: 20000, emails: 40000 });
+    expect(addUp(DEFAULT_ALLOWANCES[1], plus1k)).toEqual({ contacts: 1100, emails: 3000 });
+    expect(addUp(DEFAULT_ALLOWANCES[3], FREE_TIER)).toEqual({ contacts: 10000, emails: 40000 });
   });
 });
 

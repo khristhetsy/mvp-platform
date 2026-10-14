@@ -1,4 +1,5 @@
 import "server-only";
+import { isFeatureEnabled, loadFeatureFlags } from "@/lib/feature-controls";
 
 /**
  * Investor directory data access. Service role only: every caller is a route
@@ -7,7 +8,7 @@ import "server-only";
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
-import { startOfTodayPT, usageFlag, type UsageFlag } from "@/lib/investor-directory/limits";
+import { holdStatus, startOfTodayPT, usageFlag, type HoldStatus, type UsageFlag } from "@/lib/investor-directory/limits";
 import type { CleanRow } from "@/lib/investor-directory/clean";
 import { loadVocabularies } from "@/lib/vocabulary/store";
 import { getUserPlan } from "@/lib/subscriptions/get-subscription";
@@ -15,9 +16,9 @@ import { founderCapPeriod } from "@/lib/outreach/investor-cap";
 import { DEFAULT_ALLOWANCES, addUp, pickAllowance } from "@/lib/investor-directory/allowance";
 import { labelOf } from "@/lib/vocabulary/lists";
 import {
-  DEFAULT_SETTINGS, DIRECTORY_CONTACT_SOURCE, FREE_TIER,
+  DEFAULT_SETTINGS, DIRECTORY_CONTACT_SOURCE, FORM_D_SOURCE, FREE_TIER, INVESTOR_DIRECTORY_FEATURE_KEY,
   type AccessStatus, type DirectoryPlanAllowance, type DirectoryRecord, type DirectorySettings, type DirectoryTier,
-  type FounderDirectoryAccess, type FounderLimits,
+  type FormdPerson, type FounderDirectoryAccess, type FounderLimits,
 } from "@/lib/investor-directory/types";
 
 function db(): SupabaseClient {
@@ -37,6 +38,12 @@ const OUTREACH_SOURCES = ["founder_outreach", "manual-outreach"];
 export async function loadSettings(): Promise<DirectorySettings> {
   const { data } = await db().from("investor_directory_settings").select("*").eq("id", 1).maybeSingle();
   return { ...DEFAULT_SETTINGS, ...(data ?? {}) } as DirectorySettings;
+}
+
+/** Is the Investor directory switched on for founders (Admin › Feature controls)? */
+export async function founderDirectoryEnabled(): Promise<boolean> {
+  const flags = await loadFeatureFlags(db());
+  return isFeatureEnabled(flags, "founder", INVESTOR_DIRECTORY_FEATURE_KEY);
 }
 
 export async function saveSettings(patch: Partial<DirectorySettings>): Promise<void> {
@@ -80,23 +87,19 @@ export async function emailsSentSince(founderId: string, since: string): Promise
 }
 
 /**
- * The founder's directory contact limit and Manual outreach email cap: plan
- * allowance + top up, with emails used in the current 30 day period.
- * Pass already loaded tiers or the top up key to save a query.
+ * The founder's investor limit and Manual outreach email cap from the plan,
+ * with emails used in the current 30 day period. Top ups are retired; the
+ * options are kept so existing callers still compile.
  */
-export async function founderLimits(founderId: string, opts: { tiers?: DirectoryTier[]; topUpKey?: string | null } = {}): Promise<FounderLimits> {
-  const [plan, allowances, tiers, accessRow, period] = await Promise.all([
+export async function founderLimits(founderId: string, _opts: { tiers?: DirectoryTier[]; topUpKey?: string | null } = {}): Promise<FounderLimits> {
+  const [plan, allowances, period] = await Promise.all([
     getUserPlan(founderId).catch(() => null),
     loadPlanAllowances(),
-    opts.tiers ? Promise.resolve(opts.tiers) : loadTiers(),
-    opts.topUpKey !== undefined
-      ? Promise.resolve({ data: { tier: opts.topUpKey ?? "free" } })
-      : db().from("investor_directory_access").select("tier").eq("founder_id", founderId).maybeSingle(),
     founderCapPeriod(db(), founderId),
   ]);
   const allowance = pickAllowance(allowances, plan);
-  const topKey = (accessRow.data as { tier?: string } | null)?.tier ?? "free";
-  const topUp = tiers.find((t) => t.key === topKey) ?? FREE_TIER;
+  // Top ups are retired: the plan alone sets the limits. A granted top up row is ignored.
+  const topUp = FREE_TIER;
   const total = addUp(allowance, topUp);
   const emailsUsed = await emailsSentSince(founderId, period.start.toISOString());
   return {
@@ -114,6 +117,66 @@ export async function founderLimits(founderId: string, opts: { tiers?: Directory
 
 // ── Founder access ────────────────────────────────────────────────────────
 
+/**
+ * Investors this company holds from every source except iCFO introductions,
+ * not archived. One limit covers them all.
+ */
+export async function heldContactCount(companyId: string): Promise<number> {
+  const [{ count }, formd] = await Promise.all([
+    db()
+      .from("founder_investor_contacts")
+      .select("id", { count: "exact", head: true })
+      .eq("company_id", companyId)
+      .neq("status", "archived")
+      .or("source.is.null,source.not.in.(introduction,intro)"),
+    formdUncountedCount(companyId),
+  ]);
+  return Math.max(0, (count ?? 0) - formd);
+}
+
+/**
+ * Form D firms the company holds with no contact email yet. They don't count
+ * toward the plan's limit; once the founder adds an email, the firm counts.
+ */
+export async function formdUncountedCount(companyId: string): Promise<number> {
+  const { data } = await db()
+    .from("founder_investor_contacts")
+    .select("directory_id")
+    .eq("company_id", companyId)
+    .neq("status", "archived")
+    .not("directory_id", "is", null)
+    .is("email", null);
+  const ids = ((data ?? []) as { directory_id: string }[]).map((r) => r.directory_id);
+  return (await formdIdsAmong(ids)).size;
+}
+
+/** Which of these directory ids are Form D firms. */
+export async function formdIdsAmong(ids: string[]): Promise<Set<string>> {
+  const out = new Set<string>();
+  for (let i = 0; i < ids.length; i += 500) {
+    const { data } = await db().from("investor_directory").select("id").in("id", ids.slice(i, i + 500)).eq("source", FORM_D_SOURCE);
+    for (const r of (data ?? []) as { id: string }[]) out.add(r.id);
+  }
+  return out;
+}
+
+/** Where the founder stands against the one investor limit. */
+export async function founderHoldStatus(founderId: string, companyId: string): Promise<HoldStatus> {
+  const [limits, held, allowances, settings] = await Promise.all([
+    founderLimits(founderId),
+    heldContactCount(companyId),
+    loadPlanAllowances(),
+    loadSettings(),
+  ]);
+  return holdStatus({
+    held,
+    max: limits.contacts,
+    planLabel: limits.planLabel,
+    enforced: settings.block_over_limit,
+    plans: allowances.map((a) => ({ label: a.label, contacts: a.contacts })),
+  });
+}
+
 /** Directory ids this company already holds (not archived). */
 export async function heldDirectoryIds(companyId: string): Promise<Set<string>> {
   const { data } = await db()
@@ -126,17 +189,18 @@ export async function heldDirectoryIds(companyId: string): Promise<Set<string>> 
 }
 
 export async function loadFounderAccess(founderId: string, companyId: string | null): Promise<FounderDirectoryAccess> {
-  const [settings, tiers, accessRow, held, today] = await Promise.all([
+  const [settings, accessRow, held, formdUncounted, today] = await Promise.all([
     loadSettings(),
-    loadTiers(),
     db().from("investor_directory_access").select("*").eq("founder_id", founderId).maybeSingle(),
-    companyId ? heldDirectoryIds(companyId) : Promise.resolve(new Set<string>()),
+    companyId ? heldContactCount(companyId) : Promise.resolve(0),
+    companyId ? formdUncountedCount(companyId) : Promise.resolve(0),
     db().from("investor_directory_events").select("count").eq("founder_id", founderId).eq("kind", "import").gte("created_at", startOfTodayPT()),
   ]);
   const row = accessRow.data as { tier: string; status: AccessStatus; status_reason: string | null; terms_version: number | null; terms_accepted_at: string | null } | null;
-  const tier = tiers.find((t) => t.key === (row?.tier ?? "free")) ?? FREE_TIER;
+  // Top ups are retired, so every founder reads the plan alone.
+  const tier = FREE_TIER;
   const importedToday = ((today.data ?? []) as { count: number }[]).reduce((s, r) => s + (r.count ?? 0), 0);
-  const limits = await founderLimits(founderId, { tiers, topUpKey: row?.tier ?? "free" });
+  const limits = await founderLimits(founderId);
   return {
     tier,
     limits,
@@ -144,7 +208,8 @@ export async function loadFounderAccess(founderId: string, companyId: string | n
     statusReason: row?.status_reason ?? null,
     termsAccepted: Boolean(row?.terms_accepted_at) && (row?.terms_version ?? 0) >= settings.terms_version,
     termsAcceptedAt: row?.terms_accepted_at ?? null,
-    held: held.size,
+    held,
+    formdUncounted,
     importedToday,
   };
 }
@@ -177,15 +242,41 @@ export type DirectoryQuery = {
   investingNow?: boolean;
   hasEmail?: boolean;
   page?: number;
+  /** "newest" sorts by date added, newest first; default is firm name. */
+  sort?: "firm" | "newest";
 };
 
+/** The search filters, shared by the page query and "Select all matching". */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function applyDirectoryFilters<T extends Record<string, any>>(req: T, query: DirectoryQuery): T {
+  let r = req;
+  if (query.q?.trim()) {
+    const t = likeTerm(query.q);
+    r = r.or(`firm.ilike.${t},contact_name.ilike.${t},city.ilike.${t},state.ilike.${t},fund_name.ilike.${t}`);
+  }
+  if (query.types?.length) r = r.overlaps("investor_types", query.types);
+  if (query.stages?.length) r = r.overlaps("funding_stages", query.stages);
+  if (query.industries?.length) r = r.overlaps("industries", query.industries);
+  if (query.states?.length) r = r.in("state", query.states);
+  if (query.sources?.length) r = r.in("source", query.sources);
+  if (query.investingNow) r = r.eq("investing_now", true);
+  if (query.hasEmail) r = r.not("email", "is", null);
+  return r;
+}
+
 const LIST_COLUMNS =
-  "id, firm, contact_name, title, email, phone, website, city, state, investor_types, funding_stages, capital_types, industries, fund_name, fund_size, avg_investment, strategy, investing_now, source, source_url, verified_at, verification";
+  "id, firm, contact_name, title, email, phone, website, city, state, investor_types, funding_stages, capital_types, industries, fund_name, fund_size, avg_investment, strategy, investing_now, source, source_url, verified_at, verification, created_at, notes";
 
 export type FounderDirectoryRow = Omit<DirectoryRecord, "import_id" | "status" | "opted_out_at" | "in_network" | "notes" | "created_at" | "updated_at" | "country"> & {
   held: boolean;
   hasEmail: boolean;
   hasPhone: boolean;
+  /** When the record was added to the directory. */
+  added_at: string;
+  /** Form D firms: the latest SEC filing date. Null for everything else. */
+  filed_at: string | null;
+  /** Form D firms: people named on the firm's filings (empty for everything else). */
+  formd_people: FormdPerson[];
 };
 
 /** Escape a value for a PostgREST ilike pattern inside .or(). */
@@ -199,40 +290,138 @@ function likeTerm(q: string): string {
  */
 export async function searchDirectory(query: DirectoryQuery, companyId: string | null): Promise<{ rows: FounderDirectoryRow[]; total: number; page: number }> {
   const page = Math.max(1, query.page ?? 1);
-  let req = db()
-    .from("investor_directory")
-    .select(LIST_COLUMNS, { count: "exact" })
-    .eq("status", "published")
-    .eq("in_network", false);
-  if (query.q?.trim()) {
-    const t = likeTerm(query.q);
-    req = req.or(`firm.ilike.${t},contact_name.ilike.${t},city.ilike.${t},state.ilike.${t},fund_name.ilike.${t}`);
-  }
-  if (query.types?.length) req = req.overlaps("investor_types", query.types);
-  if (query.stages?.length) req = req.overlaps("funding_stages", query.stages);
-  if (query.industries?.length) req = req.overlaps("industries", query.industries);
-  if (query.states?.length) req = req.in("state", query.states);
-  if (query.sources?.length) req = req.in("source", query.sources);
-  if (query.investingNow) req = req.eq("investing_now", true);
-  if (query.hasEmail) req = req.not("email", "is", null);
+  const req = applyDirectoryFilters(
+    db().from("investor_directory").select(LIST_COLUMNS, { count: "exact" }).eq("status", "published").eq("in_network", false),
+    query,
+  );
   const from = (page - 1) * PAGE_SIZE;
   const [{ data, count, error }, held] = await Promise.all([
-    req.order("firm").range(from, from + PAGE_SIZE - 1),
+    (query.sort === "newest" ? req.order("created_at", { ascending: false }).order("firm") : req.order("firm")).range(from, from + PAGE_SIZE - 1),
     companyId ? heldDirectoryIds(companyId) : Promise.resolve(new Set<string>()),
   ]);
   if (error) throw new Error(error.message);
-  const rows = ((data ?? []) as unknown as DirectoryRecord[]).map((r) => {
+  const records = (data ?? []) as unknown as DirectoryRecord[];
+  const [filed, people] = await Promise.all([formdFilingDates(records), formdPeople(records)]);
+  const rows = records.map((r) => {
     const isHeld = held.has(r.id);
+    const { notes: _notes, created_at, ...rest } = r;
+    void _notes;
     return {
-      ...r,
+      ...rest,
       email: isHeld ? r.email : null,
       phone: isHeld ? r.phone : null,
       held: isHeld,
       hasEmail: Boolean(r.email),
       hasPhone: Boolean(r.phone),
+      added_at: created_at,
+      filed_at: filed.get(r.id) ?? null,
+      // Phones show after import, the same rule as the firm's own phone.
+      formd_people: (people.get(r.id) ?? []).map((p) => ({ ...p, phone: isHeld ? p.phone : null })),
     } as FounderDirectoryRow;
   });
   return { rows, total: count ?? rows.length, page };
+}
+
+/** Latest SEC filing date for Form D rows, read from the Form D registry (notes = "formd-firm:<id>"). */
+async function formdFilingDates(records: DirectoryRecord[]): Promise<Map<string, string>> {
+  const byFirm = new Map<string, string>();
+  for (const r of records) {
+    const m = r.source === FORM_D_SOURCE ? /^formd-firm:(.+)$/.exec(r.notes ?? "") : null;
+    if (m) byFirm.set(m[1], r.id);
+  }
+  const out = new Map<string, string>();
+  if (byFirm.size === 0) return out;
+  const { data } = await db().from("formd_firms").select("id, last_filing_at").in("id", [...byFirm.keys()]);
+  for (const f of (data ?? []) as { id: string; last_filing_at: string | null }[]) {
+    const rowId = byFirm.get(f.id);
+    if (rowId && f.last_filing_at) out.set(rowId, f.last_filing_at);
+  }
+  return out;
+}
+
+const asList = (v: unknown): string[] =>
+  Array.isArray(v) ? v.map((x) => String(x).trim()).filter(Boolean) : typeof v === "string" && v.trim() ? [v.trim()] : [];
+
+/**
+ * People named on each Form D firm's filings: Admin Form D contacts
+ * (crm_contacts.formd_cik) whose CIK is one of the firm's vehicles, with their
+ * role from the filing's related persons. Keyed by directory row id. Read only.
+ */
+export async function formdPeople(records: Pick<DirectoryRecord, "id" | "source" | "notes">[]): Promise<Map<string, FormdPerson[]>> {
+  const out = new Map<string, FormdPerson[]>();
+  const rowByFirm = new Map<string, string>();
+  for (const r of records) {
+    const m = r.source === FORM_D_SOURCE ? /^formd-firm:(.+)$/.exec(r.notes ?? "") : null;
+    if (m) rowByFirm.set(m[1], r.id);
+  }
+  if (rowByFirm.size === 0) return out;
+  try {
+    const { data: vehicles } = await db().from("formd_firm_vehicles").select("firm_id, cik").in("firm_id", [...rowByFirm.keys()]);
+    const firmsByCik = new Map<string, string[]>();
+    for (const v of (vehicles ?? []) as { firm_id: string; cik: string }[]) {
+      const k = String(v.cik);
+      firmsByCik.set(k, [...(firmsByCik.get(k) ?? []), String(v.firm_id)]);
+    }
+    if (firmsByCik.size === 0) return out;
+    const { data: contacts } = await db()
+      .from("crm_contacts")
+      .select("name, phone, formd_cik, formd_accession_no, profile")
+      .in("formd_cik", [...firmsByCik.keys()])
+      .order("name");
+    type C = { name: string | null; phone: string | null; formd_cik: string; formd_accession_no: string | null; profile: Record<string, unknown> | null };
+    const list = ((contacts ?? []) as C[]).filter((c) => c.name);
+    const accessions = [...new Set(list.map((c) => c.formd_accession_no).filter((a): a is string => Boolean(a)))];
+    const roles = new Map<string, string>();
+    if (accessions.length) {
+      const { data: persons } = await db().from("formd_related_persons").select("accession_no, full_name, first_name, last_name, relationships").in("accession_no", accessions);
+      type P = { accession_no: string; full_name: string | null; first_name: string | null; last_name: string | null; relationships: unknown };
+      for (const p of (persons ?? []) as P[]) {
+        const rel = asList(p.relationships).flatMap((x) => x.split(";")).map((x) => x.trim()).filter(Boolean).join(", ");
+        if (!rel) continue;
+        // The contact's name matches either the full name or first + last (no middle name).
+        const short = [p.first_name, p.last_name].map((x) => (x ?? "").trim()).filter(Boolean).join(" ");
+        for (const n of [p.full_name, short]) if (n && n.trim()) roles.set(`${p.accession_no}|${n.trim().toLowerCase()}`, rel);
+      }
+    }
+    for (const c of list) {
+      const extra = (c.profile?.extra ?? {}) as Record<string, unknown>;
+      const person: FormdPerson = {
+        name: c.name as string,
+        role: roles.get(`${c.formd_accession_no}|${(c.name as string).trim().toLowerCase()}`) ?? null,
+        phone: c.phone,
+        hasPhone: Boolean(c.phone),
+        industries: asList(c.profile?.industries),
+        stages: asList(extra["Entrepreneur funding stage?"]),
+        amounts: asList(extra["Entrepreneur seeking amount of capital?"]),
+        raisingFrom: asList(c.profile?.investorTypes),
+      };
+      for (const firmId of firmsByCik.get(String(c.formd_cik)) ?? []) {
+        const rowId = rowByFirm.get(firmId);
+        if (!rowId) continue;
+        const have = out.get(rowId) ?? [];
+        if (!have.some((h) => h.name.toLowerCase() === person.name.toLowerCase())) out.set(rowId, [...have, person]);
+      }
+    }
+  } catch (err) {
+    // The people are extra detail: the directory still loads without them.
+    console.error("[investor-directory] Form D people lookup failed:", err instanceof Error ? err.message : err);
+  }
+  return out;
+}
+
+/**
+ * Every matching directory id the company doesn't hold yet, in list order, for
+ * "Select all matching". Capped at one import's maximum.
+ */
+export async function searchDirectoryIds(query: DirectoryQuery, companyId: string | null, cap = 5000): Promise<string[]> {
+  const [{ data, error }, held] = await Promise.all([
+    applyDirectoryFilters(db().from("investor_directory").select("id").eq("status", "published").eq("in_network", false), query)
+      .order("firm")
+      .limit(cap + 2000),
+    companyId ? heldDirectoryIds(companyId) : Promise.resolve(new Set<string>()),
+  ]);
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as { id: string }[]).map((r) => r.id).filter((id) => !held.has(id)).slice(0, cap);
 }
 
 /** Distinct filter values that exist in the published directory (states, sources). */
@@ -273,14 +462,29 @@ export async function importIntoContacts(input: {
   // Founder contacts store readable labels (the Manual outreach list shows them as text).
   const vocab = await loadVocabularies();
   const labels = (list: keyof typeof vocab, values: string[]) => values.map((v) => labelOf(vocab[list], v)).join(", ") || null;
-  const insert = rows.map((r) => ({
+  // Form D firms carry the person named on the filing (name, phone, role, what the fund is raising).
+  const people = await formdPeople(rows);
+  const formdNote = (p: FormdPerson | undefined) => {
+    if (!p) return "";
+    const parts = [
+      p.role ? `Role on the Form D filing: ${p.role}.` : "",
+      p.industries.length ? `Fund industry: ${p.industries.join(", ")}.` : "",
+      p.stages.length ? `Raising at: ${p.stages.join(", ")}.` : "",
+      p.amounts.length ? `Raising amount: ${p.amounts.join(", ")}.` : "",
+      p.raisingFrom.length ? `Raising from: ${p.raisingFrom.join(", ")}.` : "",
+    ].filter(Boolean);
+    return parts.length ? ` ${parts.join(" ")}` : "";
+  };
+  const insert = rows.map((r) => {
+    const person = people.get(r.id)?.[0];
+    return {
     founder_id: input.founderId,
     company_id: input.companyId,
     directory_id: r.id,
-    investor_name: r.contact_name ?? r.firm,
+    investor_name: r.contact_name ?? person?.name ?? r.firm,
     firm_name: r.firm,
     email: r.email,
-    phone: r.phone,
+    phone: person?.phone ?? r.phone,
     website: r.website,
     investor_type: labels("investor_type", r.investor_types),
     preferred_sectors: labels("industry", r.industries),
@@ -289,11 +493,12 @@ export async function importIntoContacts(input: {
     geography: [r.city, r.state].filter(Boolean).join(", ") || null,
     source: DIRECTORY_CONTACT_SOURCE,
     tags: ["investor-directory"],
-    notes: `From the iCapOS investor directory (${r.source}). Not the iCFO Capital investor network.`,
+    notes: `From the iCapOS investor directory (${r.source}). Not the iCFO Capital investor network.${formdNote(person)}`,
     status: "new",
     created_at: now,
     updated_at: now,
-  }));
+    };
+  });
   const { error } = await db().from("founder_investor_contacts").insert(insert);
   if (error) throw new Error(error.message);
   await logEvent(input.founderId, input.companyId, "import", insert.length);
@@ -619,6 +824,8 @@ export type UsageRow = {
   emailsUsed: number;
   emailCap: number;
   status: AccessStatus;
+  /** Investors that count toward the plan's limit, every source, as the founder sees it. */
+  heldAll: number;
   held: number;
   imports30d: number;
   importsInWindow: number;
@@ -669,9 +876,11 @@ export async function listUsage(settings: DirectorySettings): Promise<UsageRow[]
     const imports = ev.filter((e) => e.kind === "import");
     const p = ((profiles ?? []) as { id: string; full_name: string | null; email: string | null }[]).find((x) => x.id === id);
     const tier = tiers.find((t) => t.key === (a?.tier ?? "free")) ?? FREE_TIER;
-    const [stats, limits] = await Promise.all([
-      sendStats(id, companyOf.get(id) ?? null),
+    const company = companyOf.get(id) ?? null;
+    const [stats, limits, heldAll] = await Promise.all([
+      sendStats(id, company),
       founderLimits(id, { tiers, topUpKey: a?.tier ?? "free" }),
+      company ? heldContactCount(company) : Promise.resolve(0),
     ]);
     const row: Omit<UsageRow, "flag"> = {
       founderId: id,
@@ -685,6 +894,7 @@ export async function listUsage(settings: DirectorySettings): Promise<UsageRow[]
       emailCap: limits.emails,
       status: a?.status ?? "active",
       held: heldOf.get(id) ?? 0,
+      heldAll,
       imports30d: imports.reduce((s, e) => s + e.count, 0),
       importsInWindow: imports.filter((e) => e.created_at >= sinceWindow).reduce((s, e) => s + e.count, 0),
       sent: stats.sent,

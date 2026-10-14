@@ -4,6 +4,7 @@ import { requireApiProfile } from "@/lib/api/auth";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { onePagerFileName } from "@/lib/outreach/one-pager-pdf";
+import { liveAgentEmailUrlForCompany } from "@/lib/ir-agent/links";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,7 @@ export async function GET() {
   if ("error" in auth) return auth.error;
 
   const { company } = await getActiveCompanyForUser(auth.profile);
-  if (!company) return NextResponse.json({ onePager: null, documents: [] });
+  if (!company) return NextResponse.json({ onePager: null, documents: [], agent: null });
 
   const db = createServiceRoleClient() as unknown as SupabaseClient;
   const [{ data: comp }, { data: docs }] = await Promise.all([
@@ -61,5 +62,6 @@ export async function GET() {
         }
       : null,
     documents,
+    agent: await liveAgentEmailUrlForCompany(db, company.id).then((url) => (url ? { url } : null)),
   });
 }

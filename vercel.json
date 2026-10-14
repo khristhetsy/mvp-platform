@@ -163,6 +163,10 @@
     {
       "path": "/api/cron/accounting-daily",
       "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/formd-publish",
+      "schedule": "20 5 * * *"
     }
   ]
 }

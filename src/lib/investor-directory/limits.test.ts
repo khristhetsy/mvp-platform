@@ -9,7 +9,7 @@ const lim = (contacts: number) => ({
   topUp: tier(0), contacts, emails: contacts * 2, emailsUsed: 0, periodStart: "x", periodEnd: "y",
 });
 const acc = (o: Partial<FounderDirectoryAccess> = {}): FounderDirectoryAccess => ({
-  tier: tier(0), limits: lim(1000), status: "active", statusReason: null, termsAccepted: true, termsAcceptedAt: "x", held: 0, importedToday: 0, ...o,
+  tier: tier(0), limits: lim(1000), status: "active", statusReason: null, termsAccepted: true, termsAcceptedAt: "x", held: 0, formdUncounted: 0, importedToday: 0, ...o,
 });
 
 describe("decideImport", () => {

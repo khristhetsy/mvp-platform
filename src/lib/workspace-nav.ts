@@ -344,6 +344,7 @@ export const founderWorkspaceNavSections: WorkspaceNavSection[] = [
       },
       // Outreach & planning relocated into Deploy → Outreach → Manual (single entry point).
       { href: "/founder/investor-directory", label: "Investor directory", minStage: "deploy" },
+      { href: "/founder/ir-agent", label: "My IR Agent", minStage: "deploy" },
       { href: "/events", label: "Events", minStage: "qualify" },
     ],
   },
@@ -478,6 +479,7 @@ export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
           { href: "/founder/matches", label: "Investor matches", minStage: "deploy" },
           { href: "/founder/deploy", label: "Outreach", minStage: "deploy" },
           { href: "/founder/deploy/social", label: "Social media", minStage: "deploy" },
+          { href: "/founder/ir-agent", label: "My IR Agent", minStage: "deploy" },
           { href: "/founder/investor-directory", label: "Investor directory", minStage: "deploy" },
           { href: "/founder/investor-pipeline", label: "Investor CRM", minStage: "deploy" },
           { href: "/founder/events/present", label: "Present at event", minStage: "deploy" },

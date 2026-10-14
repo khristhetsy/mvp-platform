@@ -137,6 +137,7 @@ function Composer({ accounts, googleReady }: { accounts: SocialAccount[]; google
   const [selected, setSelected] = useState<string[]>(() => accounts.filter((a) => a.is_default).map((a) => a.id));   // default account pre-picked
   const [variants, setVariants] = useState<{ accountId: string; body: string }[]>([]);
   const [linkUrl, setLinkUrl] = useState("");
+  const [agentLinks, setAgentLinks] = useState<Array<{ key: string; label: string; url: string }>>([]);
   const [imageUrl, setImageUrl] = useState("");
   const [comment, setComment] = useState("");
   const [schedOn, setSchedOn] = useState(true);
@@ -149,6 +150,7 @@ function Composer({ accounts, googleReady }: { accounts: SocialAccount[]; google
 
    
   useEffect(() => { fetch("/api/admin/social/campaigns").then((r) => (r.ok ? r.json() : { campaigns: [] })).then((d) => setCampaigns((d.campaigns ?? []).map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })))).catch(() => {}); }, []);
+  useEffect(() => { fetch("/api/admin/social/agent-links").then((r) => (r.ok ? r.json() : { links: [] })).then((d) => setAgentLinks(d.links ?? [])).catch(() => {}); }, []);
 
   async function saveNewCampaign() {
     const name = newCampaign.name.trim();
@@ -322,6 +324,27 @@ function Composer({ accounts, googleReady }: { accounts: SocialAccount[]; google
             <input value={comment} onChange={(e) => setComment(e.target.value)} placeholder="CTA text (first comment)" className="rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-indigo-400 focus:outline-none" />
             <input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="CTA link (https://…)" className="rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-indigo-400 focus:outline-none" />
           </div>
+          {/* Agent link: Johnny or a live founder IR agent, with its tracked link. */}
+          {agentLinks.length ? (
+            <div className="mt-2 flex items-center gap-2 text-[12px] text-slate-500">
+              <span>Agent link</span>
+              <select
+                value={agentLinks.find((a) => a.url === linkUrl)?.key ?? ""}
+                onChange={(e) => {
+                  const a = agentLinks.find((x) => x.key === e.target.value);
+                  if (!a) return;
+                  setLinkUrl(a.url);
+                  if (!comment.trim()) setComment("Talk to our investor relations agent, any time →");
+                }}
+                className="rounded-lg border border-slate-200 px-2 py-1 text-[12px] text-slate-700 focus:border-indigo-400 focus:outline-none"
+              >
+                <option value="">Pick an agent…</option>
+                {agentLinks.map((a) => (
+                  <option key={a.key} value={a.key}>{a.label}</option>
+                ))}
+              </select>
+            </div>
+          ) : null}
           {/* Instagram has no text-only posts: a public image URL is required for any Instagram variant. */}
           {(() => {
             const hasIg = selected.some((id) => platformOf(id) === "instagram");

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_ATTACHMENTS, normalizeAttachments, withOnePagerLink } from "./manual-attachments";
+import { DEFAULT_ATTACHMENTS, normalizeAttachments, withAgentLink, withOnePagerLink } from "./manual-attachments";
 import { onePagerFileName, renderOnePagerPdf } from "./one-pager-pdf";
 
 describe("manual outreach attachments", () => {
@@ -9,7 +9,15 @@ describe("manual outreach attachments", () => {
       onePagerPdf: false,
       onePagerLink: true,
       documentIds: ["a", "b"],
+      agentLink: false,
     });
+  });
+
+  it("adds the IR agent line only when asked and not already in the body", () => {
+    const att = { ...DEFAULT_ATTACHMENTS, agentLink: true };
+    expect(withAgentLink("Hi\n", att)).toContain("{{ir_agent}}");
+    expect(withAgentLink("Ask {{ir_agent}}", att)).toBe("Ask {{ir_agent}}");
+    expect(withAgentLink("Hi", DEFAULT_ATTACHMENTS)).toBe("Hi");
   });
 
   it("adds the link line only when asked and not already in the body", () => {

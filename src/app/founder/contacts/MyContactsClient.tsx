@@ -7,7 +7,6 @@ import { FounderToolbar, applySearch, groupRows } from "@/components/founder/Fou
 import { EMPTY_SEARCH, type SearchState } from "@/components/admin/OdooSearchBar";
 import type { MyContactRow } from "@/lib/founder-crm/my-contacts";
 import { contactSourceLabel, contactStatusLabel } from "@/lib/founder-crm/contact-labels";
-import { ContactImportDialog } from "@/components/founder/outreach/ContactImportDialog";
 
 /**
  * Stage 3 → My contacts. Same list pattern as the admin pages: primary action,
@@ -24,25 +23,6 @@ const SOURCE_STYLE: Record<string, string> = {
   "Added by you": "bg-slate-100 text-slate-600",
 };
 
-function csvCell(v: string | null | undefined): string {
-  const s = v ?? "";
-  return /[",\n]/.test(s) ? `"${s.replaceAll('"', '""')}"` : s;
-}
-
-function downloadCsv(rows: MyContactRow[]) {
-  const header = ["name", "firm", "email", "investor_type", "source", "status", "added"];
-  const lines = rows.map((r) =>
-    [r.name, r.firm, r.email, r.investorType, r.source, r.status, r.addedAt.slice(0, 10)].map(csvCell).join(","),
-  );
-  const blob = new Blob([[header.join(","), ...lines].join("\n")], { type: "text/csv" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "my-contacts.csv";
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
 export function MyContactsClient({ initialRows }: Readonly<{ initialRows: MyContactRow[] }>) {
   const router = useRouter();
   const [rows, setRows] = useState<MyContactRow[]>(initialRows);
@@ -50,7 +30,6 @@ export function MyContactsClient({ initialRows }: Readonly<{ initialRows: MyCont
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [panel, setPanel] = useState<"none" | "add">("none");
-  const [importOpen, setImportOpen] = useState(false);
   const [form, setForm] = useState({ name: "", firm: "", email: "", type: "" });
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
@@ -213,16 +192,6 @@ export function MyContactsClient({ initialRows }: Readonly<{ initialRows: MyCont
             { id: "status", label: "Status" },
             { id: "type", label: "Investor type" },
           ]}
-          right={
-            <div className="flex items-center gap-2">
-              <button type="button" onClick={() => setImportOpen(true)} className={btn}>
-                <i className="ti ti-upload" aria-hidden="true" /> Import
-              </button>
-              <button type="button" onClick={() => downloadCsv(filtered)} disabled={filtered.length === 0} className={`${btn} disabled:opacity-50`}>
-                <i className="ti ti-download" aria-hidden="true" /> Export
-              </button>
-            </div>
-          }
         />
 
         {panel === "add" ? (
@@ -262,7 +231,6 @@ export function MyContactsClient({ initialRows }: Readonly<{ initialRows: MyCont
             </button>
             <span className="flex-1" />
             <Link href="/founder/deploy" className={btn}>Add to outreach</Link>
-            <button type="button" onClick={() => downloadCsv(pickedRows)} className={btn}>Export selected</button>
             <button type="button" onClick={() => void archivePicked()} disabled={busy} className={`${btn} disabled:opacity-50`}>Archive</button>
           </div>
         ) : null}
@@ -361,21 +329,10 @@ export function MyContactsClient({ initialRows }: Readonly<{ initialRows: MyCont
         )}
       </div>
 
-      {importOpen ? (
-        <ContactImportDialog
-          existingEmails={rows.map((r) => r.email ?? "").filter(Boolean)}
-          onClose={() => setImportOpen(false)}
-          onImported={async (count) => {
-            setImportOpen(false);
-            setMessage({ tone: "ok", text: `${count.toLocaleString()} contact${count === 1 ? "" : "s"} imported.` });
-            await reload();
-          }}
-        />
-      ) : null}
-
       <p className="text-[11.5px] leading-relaxed text-slate-400">
         Only your own investors appear here. Investors in the iCapOS network stay private until iCFO introduces you. Contacts
-        here are the same list your manual outreach draws from.
+        here are the same list your manual outreach draws from. To bring in more investors, use the{" "}
+        <Link href="/founder/investor-directory" className="font-medium text-[#185FA5] hover:underline">Investor directory</Link>.
       </p>
     </div>
   );

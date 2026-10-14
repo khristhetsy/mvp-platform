@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { InvestorDirectoryClient } from "@/components/founder/investor-directory/InvestorDirectoryClient";
 import { ContactImportDialog } from "@/components/founder/outreach/ContactImportDialog";
+import type { HoldStatus } from "@/lib/investor-directory/limits";
 
 type Tab = "directory" | "linkedin" | "csv" | "formd";
 
@@ -18,9 +19,9 @@ const FORM_D_SOURCE = "SEC Form D";
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: "directory", label: "Directory", icon: "ti-address-book" },
+  { id: "formd", label: "Form D", icon: "ti-file-certificate" },
   { id: "linkedin", label: "LinkedIn", icon: "ti-brand-linkedin" },
   { id: "csv", label: "CSV or Excel", icon: "ti-file-spreadsheet" },
-  { id: "formd", label: "Form D", icon: "ti-file-certificate" },
 ];
 
 function FormDCard({ total }: Readonly<{ total: number | null }>) {
@@ -42,7 +43,8 @@ function FormDCard({ total }: Readonly<{ total: number | null }>) {
       </p>
       <p className="mt-2 text-xs text-slate-500">
         Form D lists firms, not people. These records have a firm name, location, phone and website, but no contact name or
-        email, so they can&apos;t be emailed from Manual outreach until you add one. Not the iCFO Capital investor network.
+        email, so they can&apos;t be emailed from Manual outreach until you add one. Form D firms don&apos;t count toward your
+        investor limit; once you add a contact email to one, it counts. Not the iCFO Capital investor network.
       </p>
     </div>
   );
@@ -65,7 +67,7 @@ const COPY = {
     icon: "ti-file-spreadsheet",
     title: "CSV or Excel file",
     description: "Drop a .csv or .xlsx, or paste rows from a spreadsheet. Map the columns, preview, then import.",
-    note: "Up to 5,000 rows per import. Duplicates of contacts you already hold are skipped.",
+    note: "Up to 5,000 rows per file. Duplicates of contacts you already hold are skipped, and only what fits your plan's limit is imported.",
     button: "Import a file",
     mode: "file" as const,
   },
@@ -74,6 +76,7 @@ const COPY = {
 function ImportConnectorTab({ kind }: Readonly<{ kind: "linkedin" | "csv" }>) {
   const copy = COPY[kind];
   const [contacts, setContacts] = useState<ContactLite[] | null>(null);
+  const [hold, setHold] = useState<HoldStatus | null>(null);
   const [open, setOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -81,8 +84,9 @@ function ImportConnectorTab({ kind }: Readonly<{ kind: "linkedin" | "csv" }>) {
     try {
       const res = await fetch("/api/founder/investor-contacts");
       if (!res.ok) return;
-      const body = (await res.json()) as { contacts?: ContactLite[] };
+      const body = (await res.json()) as { contacts?: ContactLite[]; hold?: HoldStatus | null };
       if (Array.isArray(body.contacts)) setContacts(body.contacts);
+      setHold(body.hold ?? null);
     } catch {
       /* counts stay blank */
     }
@@ -104,15 +108,32 @@ function ImportConnectorTab({ kind }: Readonly<{ kind: "linkedin" | "csv" }>) {
         </button>
       </div>
       <p className="mt-2 text-sm text-slate-600">{copy.description}</p>
-      <div className="mt-3 grid grid-cols-2 gap-2 sm:max-w-md">
+      <div className="mt-3 grid gap-2 sm:grid-cols-3">
         <div className="rounded-lg bg-slate-50 px-3 py-2">
           <span className="block text-xs text-slate-500">Imported from here</span>
           <b className="text-lg font-semibold text-slate-900">{stat(contacts ? mine.length : null)}</b>
+          <span className="block text-[11.5px] text-slate-500">{stat(contacts ? mine.filter((c) => c.email).length : null)} with an email</span>
         </div>
-        <div className="rounded-lg bg-slate-50 px-3 py-2">
-          <span className="block text-xs text-slate-500">With an email</span>
-          <b className="text-lg font-semibold text-slate-900">{stat(contacts ? mine.filter((c) => c.email).length : null)}</b>
-        </div>
+        {hold && hold.enforced ? (
+          <>
+            <div className="rounded-lg bg-slate-50 px-3 py-2">
+              <span className="block text-xs text-slate-500">Investors held</span>
+              <b className={`text-lg font-semibold ${hold.left <= 0 ? "text-[#A32D2D]" : "text-slate-900"}`}>{stat(hold.held)} of {stat(hold.max)}</b>
+              <span className="block text-[11.5px] text-slate-500">All sources · {hold.planLabel} · you can add {stat(hold.left)} more</span>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+              <div className="min-w-0 flex-1">
+                <span className="block text-xs text-slate-500">Need more?</span>
+                <span className="block text-[12.5px] text-slate-800">
+                  {hold.nextPlan ? `${hold.nextPlan.label} holds up to ${stat(hold.nextPlan.contacts)} investors` : `${hold.planLabel} holds up to ${stat(hold.max)} investors`}
+                </span>
+              </div>
+              {hold.nextPlan ? (
+                <Link href="/upgrade" className="rounded-lg bg-[#1A6CE4] px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-[#2E78F5]">Upgrade</Link>
+              ) : null}
+            </div>
+          </>
+        ) : null}
       </div>
       <p className="mt-3 text-xs text-slate-500">{copy.note}</p>
       {notice ? (
@@ -126,6 +147,7 @@ function ImportConnectorTab({ kind }: Readonly<{ kind: "linkedin" | "csv" }>) {
       {open ? (
         <ContactImportDialog
           mode={copy.mode}
+          hold={hold}
           existingEmails={(contacts ?? []).map((c) => c.email ?? "").filter(Boolean)}
           onClose={() => setOpen(false)}
           onImported={async (count) => {
@@ -139,14 +161,16 @@ function ImportConnectorTab({ kind }: Readonly<{ kind: "linkedin" | "csv" }>) {
   );
 }
 
-export function InvestorDirectoryTabs() {
-  const [tab, setTab] = useState<Tab>("directory");
+export function InvestorDirectoryTabs({ enabled }: Readonly<{ enabled?: Partial<Record<Tab, boolean>> }> = {}) {
+  // Tabs an admin switched off in Admin › Investor Directory › Access are hidden.
+  const shown = TABS.filter((t) => enabled?.[t.id] !== false);
+  const [tab, setTab] = useState<Tab>(shown[0]?.id ?? "directory");
   const [formdTotal, setFormdTotal] = useState<number | null>(null);
 
   return (
     <div>
       <div className="mb-4 flex gap-1 border-b border-slate-200" role="tablist" aria-label="Investor directory">
-        {TABS.map(({ id, label, icon }) => (
+        {shown.map(({ id, label, icon }) => (
           <button
             key={id}
             type="button"
@@ -163,7 +187,12 @@ export function InvestorDirectoryTabs() {
         ))}
       </div>
 
-      {tab === "directory" ? (
+      {shown.length === 0 ? (
+        <p className="rounded-xl border border-slate-200 bg-white px-4 py-10 text-center text-sm text-slate-500">
+          No directory sources are available right now. Contact iCFO Capital if you need one.
+        </p>
+      ) : null}
+      {shown.length === 0 ? null : tab === "directory" ? (
         <InvestorDirectoryClient />
       ) : tab === "linkedin" || tab === "csv" ? (
         <ImportConnectorTab kind={tab} />
