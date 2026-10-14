@@ -73,6 +73,10 @@
       "schedule": "*/15 * * * *"
     },
     {
+      "path": "/api/cron/reminder-alerts",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/cron/weekly-funnel-digest",
       "schedule": "0 13 * * 1"
     },
