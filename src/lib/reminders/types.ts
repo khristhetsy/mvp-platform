@@ -21,6 +21,8 @@ export type Reminder = {
   date_only?: boolean;
   /** Who the Sales task is about, shown under the title. */
   context?: string | null;
+  /** Where a click on the row goes (Sales tasks open the contact Tasks tab). */
+  href?: string;
 };
 
 export function isReminderKind(value: unknown): value is ReminderKind {
