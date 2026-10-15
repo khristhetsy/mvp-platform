@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 /**
  * Privacy Policy. Carries the site nav + footer via the marketing route group.
+ * Updated October 15, 2026 (owner approved): fixed the duplicate section number and added the Mobile App section.
  * Updated October 9, 2026 for the Plaid security review: added the connected
  * bank account section (Plaid), specific retention and deletion timelines that
  * match the iCFO Information Security Policy, and removed the counsel-review
@@ -15,7 +16,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/privacy" },
 };
 
-const EFFECTIVE = "October 9, 2026";
+const EFFECTIVE = "October 15, 2026";
 
 export default function PrivacyPage() {
   return (
@@ -61,34 +62,39 @@ export default function PrivacyPage() {
               </p>
             </div>
             <div className="border-t border-site-line pt-8">
-              <h2 className="font-site-display text-xl font-bold text-site-navy">3. Sharing of Information</h2>
+              <h2 className="font-site-display text-xl font-bold text-site-navy">4. Sharing of Information</h2>
               <p className="mt-3 text-[15px] leading-7 text-site-muted">We do not sell your personal information. We may share information with investors you choose to engage with through the Platform, and with service providers who assist us in operating the Platform, subject to confidentiality obligations.</p>
             </div>
             <div className="border-t border-site-line pt-8">
-              <h2 className="font-site-display text-xl font-bold text-site-navy">4. Data Security</h2>
+              <h2 className="font-site-display text-xl font-bold text-site-navy">5. Data Security</h2>
               <p className="mt-3 text-[15px] leading-7 text-site-muted">We use industry-standard security measures including encryption in transit and at rest, role-based access controls, and signed URLs to protect your data. No method of transmission over the internet is 100% secure, and we cannot guarantee absolute security.</p>
             </div>
             <div className="border-t border-site-line pt-8">
-              <h2 className="font-site-display text-xl font-bold text-site-navy">5. Data Retention</h2>
+              <h2 className="font-site-display text-xl font-bold text-site-navy">6. Data Retention</h2>
               <p className="mt-3 text-[15px] leading-7 text-site-muted">We retain your information for as long as your account is active or as needed to provide services. You may request deletion of your account and associated data by contacting us.</p>
             </div>
             <div className="border-t border-site-line pt-8">
-              <h2 className="font-site-display text-xl font-bold text-site-navy">6. Your Rights</h2>
+              <h2 className="font-site-display text-xl font-bold text-site-navy">7. Your Rights</h2>
               <p className="mt-3 text-[15px] leading-7 text-site-muted">
                 Depending on your location, you may have rights to access, correct, delete, or port your personal data. To exercise any of these rights, contact us at{" "}
                 <a href="mailto:privacy@icapos.com" className="text-site-blue underline underline-offset-2 hover:text-site-blue-hi">privacy@icapos.com</a>.
               </p>
             </div>
             <div className="border-t border-site-line pt-8">
-              <h2 className="font-site-display text-xl font-bold text-site-navy">7. Cookies</h2>
+              <h2 className="font-site-display text-xl font-bold text-site-navy">8. Cookies</h2>
               <p className="mt-3 text-[15px] leading-7 text-site-muted">We use essential cookies required for authentication and session management. We do not use tracking or advertising cookies.</p>
             </div>
             <div className="border-t border-site-line pt-8">
-              <h2 className="font-site-display text-xl font-bold text-site-navy">8. Changes to This Policy</h2>
+              <h2 className="font-site-display text-xl font-bold text-site-navy">9. Mobile App</h2>
+              <p className="mt-3 text-[15px] leading-7 text-site-muted">The iCapOS mobile app lets you answer the investor fit questions, see your matches, and book a match review. It sends your answers to our servers and, if you book, your name, email address, phone number, and company name. This is the same information the website collects for these steps, and it is used and protected as described in this Privacy Policy.</p>
+              <p className="mt-3 text-[15px] leading-7 text-site-muted">The app keeps a session cookie so your answers and your booking stay linked. It does not use advertising or tracking tools, does not access your contacts, photos, location, or microphone, and we do not sell your data. Creating an account or upgrading happens on icapos.com.</p>
+            </div>
+            <div className="border-t border-site-line pt-8">
+              <h2 className="font-site-display text-xl font-bold text-site-navy">10. Changes to This Policy</h2>
               <p className="mt-3 text-[15px] leading-7 text-site-muted">We may update this Privacy Policy from time to time. We will notify you of material changes by email or by posting a notice on the Platform.</p>
             </div>
             <div className="border-t border-site-line pt-8">
-              <h2 className="font-site-display text-xl font-bold text-site-navy">9. Contact</h2>
+              <h2 className="font-site-display text-xl font-bold text-site-navy">11. Contact</h2>
               <p className="mt-3 text-[15px] leading-7 text-site-muted">
                 Questions about this Privacy Policy? Contact us at{" "}
                 <a href="mailto:privacy@icapos.com" className="text-site-blue underline underline-offset-2 hover:text-site-blue-hi">privacy@icapos.com</a>.
