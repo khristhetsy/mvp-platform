@@ -49,6 +49,8 @@ export function InvoiceForm({ customers: initialCustomers, initial, presetCustom
   const [entityPicked, setEntityPicked] = useState(false);
   const [issue, setIssue] = useState(initial?.issue_date ?? todayPT());
   const [dueDays, setDueDays] = useState(initial ? daysBetween(initial.issue_date, initial.due_date) : 15);
+  // "Custom date" shows a date picker. A saved draft whose due date is not one of the standard terms opens in it.
+  const [customDue, setCustomDue] = useState(() => (initial ? !TERMS.some((t) => t.days === daysBetween(initial.issue_date, initial.due_date)) : false));
   const [memo, setMemo] = useState(initial?.memo ?? "");
   const [lines, setLines] = useState<LineDraft[]>(
     initial?.lines.length
@@ -127,11 +129,32 @@ export function InvoiceForm({ customers: initialCustomers, initial, presetCustom
             <input type="date" className={inputCls} value={issue} onChange={(e) => setIssue(e.target.value)} />
           </Field>
           <Field label="Payment terms">
-            <select className={inputCls} value={dueDays} onChange={(e) => setDueDays(Number(e.target.value))}>
+            <select
+              className={inputCls}
+              value={customDue ? "custom" : dueDays}
+              onChange={(e) => {
+                if (e.target.value === "custom") { setCustomDue(true); return; }
+                setCustomDue(false);
+                setDueDays(Number(e.target.value));
+              }}
+            >
               {TERMS.map((t) => <option key={t.days} value={t.days}>{t.label}</option>)}
-              {TERMS.some((t) => t.days === dueDays) ? null : <option value={dueDays}>Net {dueDays}</option>}
+              <option value="custom">Custom date</option>
             </select>
           </Field>
+          {customDue ? (
+            <Field label="Due date">
+              <input
+                type="date"
+                className={inputCls}
+                min={issue}
+                max={addDays(issue, 120)}
+                value={addDays(issue, dueDays)}
+                onChange={(e) => { if (e.target.value) setDueDays(Math.max(0, Math.min(120, daysBetween(issue, e.target.value)))); }}
+              />
+              <span className="mt-1 block text-[11.5px] text-slate-500">Net {dueDays} days from the invoice date</span>
+            </Field>
+          ) : null}
         </div>
 
         <div>
