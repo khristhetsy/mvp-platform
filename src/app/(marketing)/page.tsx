@@ -5,7 +5,6 @@ import { home } from "@/content/home";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { ORGANIZATION_JSONLD } from "@/lib/seo/structured-data";
 import { AiModeLauncher } from "@/components/marketing-site/AiModeLauncher";
-import { LogoStrip } from "@/components/marketing-site/LogoStrip";
 import { Reveal } from "@/components/marketing-site/Reveal";
 import { EventGallery } from "@/components/marketing-site/EventGallery";
 import { NetworkSupply } from "@/components/marketing-site/NetworkSupply";
@@ -59,8 +58,6 @@ export default function MarketingHomePage() {
       {/* Network supply — verifiable aggregate figures, above the illustrative cards (brief Step 1) */}
       <NetworkSupply />
 
-      {/* Client logo strip — data-driven from marketing_site_logos (§6, §16) */}
-      <LogoStrip heading={h.logos.heading} caption={h.logos.caption} />
 
       {/* How it works */}
       <section className="bg-site-paper px-6 py-20">
