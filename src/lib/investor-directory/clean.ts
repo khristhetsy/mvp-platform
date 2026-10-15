@@ -68,7 +68,7 @@ const HEADER_ALIASES: Record<string, string[]> = {
   firm: ["firm", "manager", "company", "organization", "organization name", "firm name", "investor firm"],
   contact_name: ["contact", "contact name", "name", "full name", "investor relations name", "investor name"],
   title: ["title", "job title", "role"],
-  email: ["email", "email address", "investor relations email", "e-mail"],
+  email: ["email", "email address", "investor relations email", "e-mail", "public email"],
   phone: ["phone", "phone number", "investor relations phone", "telephone"],
   website: ["website", "url", "web", "site"],
   city: ["city"],
@@ -92,6 +92,17 @@ export function mapHeaders(headers: string[]): Map<string, number> {
   for (const [key, aliases] of Object.entries(HEADER_ALIASES)) {
     const idx = norm.findIndex((h) => aliases.includes(h));
     if (idx >= 0) m.set(key, idx);
+  }
+  // Some files name the firm "Investor Name" and the person "Contact Name". With no firm
+  // header of its own, "Investor Name" is the firm there, not the person. Files that
+  // already have a firm header are untouched.
+  if (!m.has("firm")) {
+    const investorName = norm.indexOf("investor name");
+    const contact = norm.findIndex((h) => h === "contact" || h === "contact name");
+    if (investorName >= 0 && contact >= 0 && investorName !== contact) {
+      m.set("firm", investorName);
+      m.set("contact_name", contact);
+    }
   }
   return m;
 }

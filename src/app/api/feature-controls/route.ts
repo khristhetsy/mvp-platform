@@ -4,6 +4,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { loadFeatureFlags, disabledHrefsFor, type FeatureAudience } from "@/lib/feature-controls";
 import { getFounderNavV2RolloutPct, getFounderStageMenuHidden } from "@/lib/settings/platform-settings";
 import { getAdminHomeSettings } from "@/lib/settings/admin-home";
+import { listFounderSocialLimits } from "@/lib/social/founder-limits";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +51,19 @@ export async function GET(): Promise<Response> {
   // Founder stage-menu editor: hrefs an admin unchecked from a stage are hidden
   // globally, unioned with the feature-toggle hides.
   const disabledHrefs = disabledHrefsFor(flags, audience);
+
+  // Founder social media master switch (Admin > Feature controls > Founder social media).
+  // When it is off, hide the menu item too, not just the page content. Fails open: if the
+  // limits can't be read, the item stays visible.
+  if (audience === "founder") {
+    try {
+      const social = await listFounderSocialLimits();
+      if (!social.master) disabledHrefs.push("/founder/deploy/social");
+    } catch {
+      // leave the menu item visible
+    }
+  }
+
   const merged =
     audience === "founder" ? [...new Set([...disabledHrefs, ...(await getFounderStageMenuHidden())])] : disabledHrefs;
 
