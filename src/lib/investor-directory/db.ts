@@ -654,6 +654,7 @@ export type ImportRow = {
   id: string; name: string; source: string; source_url: string | null; file_name: string | null;
   row_count: number; created_count: number; merged_count: number; invalid_email_count: number;
   status: "cleaned" | "verifying" | "published"; created_at: string; published_at: string | null;
+  archived_at: string | null;
 };
 
 export async function listImports(): Promise<ImportRow[]> {
@@ -725,6 +726,57 @@ export async function publishImport(importId: string): Promise<number> {
     .eq("import_id", importId).eq("status", "draft").neq("verification", "opt_out").select("id");
   await db().from("investor_directory_imports").update({ status: "published", published_at: now }).eq("id", importId);
   return (data ?? []).length;
+}
+
+/**
+ * Edit an import. The name always changes; source and source link change when
+ * given. relabelRecords also rewrites the source label on the import's records.
+ */
+export async function updateImport(
+  importId: string,
+  patch: { name?: string; source?: string; sourceUrl?: string | null; relabelRecords?: boolean },
+): Promise<ImportRow> {
+  const d = db();
+  const set: Record<string, unknown> = {};
+  if (patch.name !== undefined) set.name = patch.name;
+  if (patch.source !== undefined) set.source = patch.source;
+  if (patch.sourceUrl !== undefined) set.source_url = patch.sourceUrl;
+  if (Object.keys(set).length === 0) throw new Error("Nothing to change.");
+  const { data, error } = await d.from("investor_directory_imports").update(set).eq("id", importId).select("*").single();
+  if (error || !data) throw new Error(error?.message ?? "Couldn't update the import.");
+  if (patch.relabelRecords && (patch.source !== undefined || patch.sourceUrl !== undefined)) {
+    const rec: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    if (patch.source !== undefined) rec.source = patch.source;
+    if (patch.sourceUrl !== undefined) rec.source_url = patch.sourceUrl;
+    const { error: e2 } = await d.from("investor_directory").update(rec).eq("import_id", importId);
+    if (e2) throw new Error(e2.message);
+  }
+  return data as ImportRow;
+}
+
+/** Archive hides an import from the Active list. Its records are untouched. */
+export async function setImportArchived(importId: string, archived: boolean): Promise<void> {
+  const { error } = await db().from("investor_directory_imports")
+    .update({ archived_at: archived ? new Date().toISOString() : null }).eq("id", importId);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Delete an import. By default its records stay in the directory (they lose the
+ * link to the import). withRecords also removes the records; founders' own
+ * copies of them are unaffected.
+ */
+export async function deleteImport(importId: string, withRecords: boolean): Promise<{ recordsDeleted: number }> {
+  const d = db();
+  let recordsDeleted = 0;
+  if (withRecords) {
+    const { data, error } = await d.from("investor_directory").delete().eq("import_id", importId).select("id");
+    if (error) throw new Error(error.message);
+    recordsDeleted = (data ?? []).length;
+  }
+  const { error } = await d.from("investor_directory_imports").delete().eq("id", importId);
+  if (error) throw new Error(error.message);
+  return { recordsDeleted };
 }
 
 // ── Admin: access and usage ───────────────────────────────────────────────
