@@ -32,6 +32,26 @@ describe("normalizers", () => {
   });
 });
 
+describe("cleanCsv with Investor Name and Contact Name headers", () => {
+  it("reads Investor Name as the firm and Contact Name as the person", () => {
+    const csv = [
+      "﻿Investor Name,Contact Name,Job Title,Public Email,Investor Type",
+      "10VC,Ben Patterson,,ben@10vc.com,Venture Capital",
+    ].join("\r\n");
+    const r = cleanCsv(csv);
+    expect(r.rows).toHaveLength(1);
+    expect(r.rows[0].firm).toBe("10VC");
+    expect(r.rows[0].contact_name).toBe("Ben Patterson");
+    expect(r.rows[0].email).toBe("ben@10vc.com");
+    expect(r.rows[0].investor_types).toEqual(["venture-capital"]);
+  });
+  it("still treats Investor Name as the person when the file has a Firm column", () => {
+    const r = cleanCsv(["Firm,Investor Name,Email", "Acme Capital,Jane Doe,jane@acme.com"].join("\n"));
+    expect(r.rows[0].firm).toBe("Acme Capital");
+    expect(r.rows[0].contact_name).toBe("Jane Doe");
+  });
+});
+
 describe("cleanCsv", () => {
   it("maps headers, dedupes by email and counts problems", () => {
     const csv = [
