@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { investors } from "@/content/investors";
 import { MandateExplorer } from "@/components/marketing-site/MandateExplorer";
 
@@ -18,39 +19,24 @@ export default function InvestorsPage() {
   const v = investors;
   return (
     <>
-      {/* Hero + volume-cap panel */}
-      <section className="bg-gradient-to-b from-site-navy via-site-navy-2 to-site-navy-3 px-6 pb-16 pt-20 text-white">
-        <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2">
-          <div>
-            <Eyebrow onDark>{v.hero.eyebrow}</Eyebrow>
-            <h1 className="mt-4 font-site-display text-4xl font-extrabold leading-[1.08] tracking-tight sm:text-5xl">{v.hero.title}</h1>
-            <p className="mt-6 max-w-xl text-lg leading-8 text-white/75">{v.hero.sub}</p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link href={v.hero.primaryCta.href} className="rounded-lg bg-site-blue px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi">{v.hero.primaryCta.label}</Link>
-              <Link href={v.hero.secondaryCta.href} className="rounded-lg border border-white/20 px-5 py-3 text-sm font-semibold text-white transition-colors hover:border-site-blue-lt hover:text-site-blue-lt">{v.hero.secondaryCta.label}</Link>
-            </div>
-            <p className="mt-8 max-w-xl font-site-mono text-[11px] leading-5 text-white/45">{v.hero.compliance}</p>
+      {/* Hero banner (artwork carries the headline; real links and compliance text sit beneath it) */}
+      <section className="bg-site-navy text-white">
+        <h1 className="sr-only">{v.hero.title}</h1>
+        <Image
+          src="/marketing/banners/investors-hero.webp"
+          alt="For investors: rated deal flow, at a volume you set. iCapOS AI due diligence, readiness scores and curated deal flow."
+          width={2103}
+          height={748}
+          priority
+          sizes="100vw"
+          className="mx-auto h-auto w-full max-w-[2100px]"
+        />
+        <div className="mx-auto max-w-6xl px-6 pb-12 pt-6">
+          <div className="flex flex-wrap gap-3">
+            <Link href={v.hero.primaryCta.href} className="rounded-lg bg-site-blue px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi">{v.hero.primaryCta.label}</Link>
+            <Link href={v.hero.secondaryCta.href} className="rounded-lg border border-white/20 px-5 py-3 text-sm font-semibold text-white transition-colors hover:border-site-blue-lt hover:text-site-blue-lt">{v.hero.secondaryCta.label}</Link>
           </div>
-
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-white">{v.hero.panel.title}</span>
-              <span className="rounded-full bg-site-blue/20 px-2.5 py-0.5 font-site-mono text-[10px] font-medium text-site-blue-lt">{v.hero.panel.badge}</span>
-            </div>
-            <div className="mt-4 rounded-xl bg-white/[0.03] px-4 py-3">
-              <div className="flex items-center justify-between text-[13px]"><span className="text-white/70">{v.hero.panel.cap.label}</span><span className="font-site-mono text-white/50">{v.hero.panel.cap.max}</span></div>
-              <div className="mt-1 font-site-mono text-[11px] text-white/45">{v.hero.panel.cap.sub}</div>
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-site-blue" style={{ width: "58%" }} /></div>
-            </div>
-            <dl className="mt-3 space-y-2">
-              {v.hero.panel.rows.map((r) => (
-                <div key={r.k} className="flex justify-between gap-4 border-b border-white/5 pb-2 text-[13px] last:border-0">
-                  <dt className="text-white/55">{r.k}</dt><dd className="text-right text-white/85">{r.v}</dd>
-                </div>
-              ))}
-            </dl>
-            <div className="mt-3 flex items-center justify-between font-site-mono text-[10px] text-white/40"><span>{v.hero.panel.footA}</span><span>{v.hero.panel.footB}</span></div>
-          </div>
+          <p className="mt-6 max-w-3xl font-site-mono text-[11px] leading-5 text-white/45">{v.hero.compliance}</p>
         </div>
       </section>
 

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { home } from "@/content/home";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { ORGANIZATION_JSONLD } from "@/lib/seo/structured-data";
@@ -33,44 +34,25 @@ export default function MarketingHomePage() {
     <>
       <JsonLd data={ORGANIZATION_JSONLD} />
 
-      {/* Hero */}
-      <section className="bg-gradient-to-b from-site-navy via-site-navy-2 to-site-navy-3 px-6 pb-20 pt-20 text-white">
-        <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2">
-          <div>
-            <Eyebrow onDark>{h.hero.eyebrow}</Eyebrow>
-            <h1 className="mt-4 font-site-display text-4xl font-extrabold leading-[1.08] tracking-tight sm:text-5xl">{h.hero.title}</h1>
-            <p className="mt-6 max-w-xl text-lg leading-8 text-white/75">{h.hero.sub}</p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link href={h.hero.primaryCta.href} className="rounded-lg bg-site-blue px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi">{h.hero.primaryCta.label}</Link>
-              <Link href={h.hero.secondaryCta.href} className="rounded-lg border border-white/20 px-5 py-3 text-sm font-semibold text-white transition-colors hover:border-site-blue-lt hover:text-site-blue-lt">{h.hero.secondaryCta.label}</Link>
-              <AiModeLauncher />
-            </div>
-            <p className="mt-8 max-w-xl font-site-mono text-[11px] leading-5 text-white/45">{h.hero.compliance}</p>
+      {/* Hero banner (artwork carries the headline; real links and compliance text sit beneath it) */}
+      <section className="bg-site-navy text-white">
+        <h1 className="sr-only">{h.hero.title}</h1>
+        <Image
+          src="/marketing/banners/home-hero.webp"
+          alt="iCapOS, the operating system for capital. AI-powered capital raising for a stronger tomorrow."
+          width={1996}
+          height={788}
+          priority
+          sizes="100vw"
+          className="mx-auto h-auto w-full max-w-[2000px]"
+        />
+        <div className="mx-auto max-w-6xl px-6 pb-12 pt-6">
+          <div className="flex flex-wrap gap-3">
+            <Link href={h.hero.primaryCta.href} className="rounded-lg bg-site-blue px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi">{h.hero.primaryCta.label}</Link>
+            <Link href={h.hero.secondaryCta.href} className="rounded-lg border border-white/20 px-5 py-3 text-sm font-semibold text-white transition-colors hover:border-site-blue-lt hover:text-site-blue-lt">{h.hero.secondaryCta.label}</Link>
+            <AiModeLauncher />
           </div>
-
-          {/* Illustrative matched-investors card (sample data — §13) */}
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
-            <div className="flex items-center justify-between">
-              <span className="font-site-mono text-xs uppercase tracking-wider text-white/60">{h.hero.card.label}</span>
-              <span className="rounded-full bg-site-amber/15 px-2.5 py-0.5 font-site-mono text-[10px] font-medium text-site-amber">{h.hero.card.badge}</span>
-            </div>
-            <ul className="mt-4 space-y-2">
-              {h.hero.card.rows.map((r) => (
-                <li key={r.initials} className="flex items-center gap-3 rounded-xl bg-white/[0.03] px-3 py-2.5">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-site-blue/20 font-site-mono text-xs font-semibold text-site-blue-lt">{r.initials}</span>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium text-white">{r.name}</div>
-                    <div className="truncate text-[11px] text-white/55">{r.detail}</div>
-                  </div>
-                  <span className="font-site-mono text-xs font-semibold text-site-blue-lt">{r.fit}</span>
-                </li>
-              ))}
-            </ul>
-            <div className="mt-4 flex items-center justify-between font-site-mono text-[10px] text-white/40">
-              <span>{h.hero.card.footnoteA}</span>
-              <span>{h.hero.card.footnoteB}</span>
-            </div>
-          </div>
+          <p className="mt-6 max-w-3xl font-site-mono text-[11px] leading-5 text-white/45">{h.hero.compliance}</p>
         </div>
       </section>
 

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { founders } from "@/content/founders";
 import { BookDemoButton } from "@/components/marketing-site/BookDemoButton";
 import { OnePagerDrafter } from "@/components/marketing-site/OnePagerDrafter";
@@ -19,18 +20,23 @@ export default function FoundersPage() {
   const f = founders;
   return (
     <>
-      {/* Hero */}
-      <section className="bg-gradient-to-b from-site-navy to-site-navy-2 px-6 pb-16 pt-20 text-white">
-        <div className="mx-auto max-w-4xl">
-          <Eyebrow onDark>{f.hero.eyebrow}</Eyebrow>
-          <h1 className="mt-4 max-w-3xl font-site-display text-4xl font-extrabold leading-[1.08] tracking-tight sm:text-5xl">{f.hero.title}</h1>
-          <p className="mt-6 max-w-2xl text-lg leading-8 text-white/75">{f.hero.sub}</p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link href={f.hero.primaryCta.href} className="rounded-lg bg-site-blue px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi">{f.hero.primaryCta.label}</Link>
-            <Link href={f.hero.fitCta.href} className="rounded-lg bg-white px-5 py-3 text-sm font-semibold text-site-navy transition-colors hover:bg-white/90">{f.hero.fitCta.label}</Link>
-            <Link href={f.hero.secondaryCta.href} className="rounded-lg border border-white/20 px-5 py-3 text-sm font-semibold text-white transition-colors hover:border-site-blue-lt hover:text-site-blue-lt">{f.hero.secondaryCta.label}</Link>
-            <BookDemoButton variant="onDark" />
-          </div>
+      {/* Hero banner (artwork carries the headline; real links sit beneath it) */}
+      <section className="bg-site-navy text-white">
+        <h1 className="sr-only">{f.hero.title}</h1>
+        <Image
+          src="/marketing/banners/founders-hero.webp"
+          alt="For founders: Prepare. Connect. Raise with confidence. iCapOS AI due diligence, readiness score and investor matching."
+          width={2103}
+          height={748}
+          priority
+          sizes="100vw"
+          className="mx-auto h-auto w-full max-w-[2100px]"
+        />
+        <div className="mx-auto flex max-w-6xl flex-wrap gap-3 px-6 pb-12 pt-6">
+          <Link href={f.hero.primaryCta.href} className="rounded-lg bg-site-blue px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi">{f.hero.primaryCta.label}</Link>
+          <Link href={f.hero.fitCta.href} className="rounded-lg bg-white px-5 py-3 text-sm font-semibold text-site-navy transition-colors hover:bg-white/90">{f.hero.fitCta.label}</Link>
+          <Link href={f.hero.secondaryCta.href} className="rounded-lg border border-white/20 px-5 py-3 text-sm font-semibold text-white transition-colors hover:border-site-blue-lt hover:text-site-blue-lt">{f.hero.secondaryCta.label}</Link>
+          <BookDemoButton variant="onDark" />
         </div>
       </section>
 
