@@ -115,7 +115,7 @@ export async function buildOperationalSnapshot(): Promise<OperationalSystemSnaps
     admin.from("profiles").select("id", { count: "exact", head: true }),
     admin.from("companies").select("id", { count: "exact", head: true }),
     admin.from("documents").select("id", { count: "exact", head: true }),
-    admin.from("notifications").select("id", { count: "exact", head: true }),
+    admin.from("notifications").select("id", { count: "estimated", head: true }),
     admin.from("spv_opportunities").select("id", { count: "exact", head: true }),
     admin
       .from("automation_runs")

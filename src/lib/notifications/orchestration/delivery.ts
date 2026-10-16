@@ -62,6 +62,16 @@ export async function deliverOrchestrationFinding(
 
   const { data, error } = await admin.from("notifications").insert(payload).select("*").single();
 
+  // 23503 = foreign key violation: the recipient no longer exists. Emitting the activity
+  // event as well would fail the same way, so skip it instead of retrying every run.
+  if (error?.code === "23503") {
+    console.error("[capitalos] orchestration notification skipped, recipient missing", {
+      recipient: finding.recipientUserId,
+      dedupeKey: finding.dedupeKey,
+    });
+    return { created: false, notification: null, eventEmitted: false };
+  }
+
   const eventType = mapOrchestrationEventType(finding);
   emitOperationalEvent(admin, {
     eventType,

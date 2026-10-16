@@ -62,7 +62,7 @@ export async function loadAdminAnalytics(): Promise<AdminAnalyticsSnapshot> {
     getFounderOutreachAdminSummary(),
     admin.from("message_threads").select("id", { count: "exact", head: true }),
     admin.from("thread_meetings").select("id", { count: "exact", head: true }).eq("status", "scheduled"),
-    admin.from("notifications").select("id", { count: "exact", head: true }),
+    admin.from("notifications").select("id", { count: "estimated", head: true }),
     admin.from("upgrade_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
     admin.from("subscriptions").select("plan_type"),
     admin
