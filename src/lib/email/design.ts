@@ -17,8 +17,10 @@ export const DESIGN_KEYS = {
   align: "design_align",
   /** Uploaded company logo, used when logo = company. */
   logoImage: "logo_image",
-  /** Banner image, used when banner = image. */
+  /** Banner image, used when banner = image (or as the only banner when the design is off). */
   bannerImage: "banner_image",
+  /** "1" when No design is chosen: the template adds no banner, logo or colored bar. */
+  off: "design_off",
 } as const;
 
 export const NAVY = "#0A1A40";
@@ -31,6 +33,18 @@ const LOGOS: Record<Exclude<LogoChoice, "company">, { light: string; dark: strin
   icfo: { light: `${APP}/email/icfo-logo.png`, dark: `${APP}/email/icfo-logo-white.png` },
   icapos: { light: `${APP}/email-logo.png`, dark: `${APP}/icapos-logo-white.png` },
 };
+
+/** A transparent 1 pixel high image that stands in for the logo when the design is off. */
+const BLANK_LOGO = `${APP}/email/blank.png`;
+
+/** True when No design is chosen. The other design settings are kept so Use a design restores them. */
+export function isDesignOff(values: Record<string, string>): boolean {
+  return values[DESIGN_KEYS.off] === "1";
+}
+
+export function setDesignOff(values: Record<string, string>, off: boolean): Record<string, string> {
+  return { ...values, [DESIGN_KEYS.off]: off ? "1" : "0" };
+}
 
 /** Designs that carry the design settings (their schema locks the design tokens). */
 export function hasDesign(schema: PlaceholderSchema | null | undefined): boolean {
@@ -69,6 +83,11 @@ export function writeDesign(values: Record<string, string>, d: Partial<DesignSet
 /** The tokens the designs read, from the stored settings. */
 export function designTokens(values: Record<string, string>, masterName: string): Record<string, string> {
   const d = readDesign(values, masterName);
+  if (isDesignOff(values)) {
+    // No design: no navy bar, no logo. Only the company's own image (if any) shows above the headline.
+    const own = isHttp(values[DESIGN_KEYS.bannerImage]) ? values[DESIGN_KEYS.bannerImage].trim() : "";
+    return { banner_image: own, banner_bg: "#FFFFFF", banner_text: NAVY, banner_border: "none", banner_align: d.align, logo_url: BLANK_LOGO, accent_color: d.accent };
+  }
   const image = d.banner === "image" && isHttp(values[DESIGN_KEYS.bannerImage]) ? values[DESIGN_KEYS.bannerImage].trim() : "";
   const dark = d.banner !== "none";
   const company = values[DESIGN_KEYS.logoImage];

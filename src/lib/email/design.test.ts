@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { designTokens, dominantColor, hasDesign, mapFounderValues, readDesign, suggestLooks, writeDesign } from "./design";
+import { designTokens, dominantColor, hasDesign, isDesignOff, mapFounderValues, readDesign, setDesignOff, suggestLooks, writeDesign } from "./design";
 import manifest from "./templates/manifest.json";
 import type { PlaceholderSchema } from "./template-schema";
 
@@ -38,6 +38,25 @@ describe("designTokens", () => {
   });
   it("uses an uploaded company logo", () => {
     expect(designTokens(writeDesign({ logo_image: "https://cdn.test/logo.png" }, { logo: "company" }), "Announcement").logo_url).toBe("https://cdn.test/logo.png");
+  });
+});
+
+describe("No design", () => {
+  it("is off by default and toggles without losing the other settings", () => {
+    expect(isDesignOff({})).toBe(false);
+    const kept = writeDesign({}, { banner: "image", logo: "icapos", accent: "#0A1A40" });
+    const off = setDesignOff(kept, true);
+    expect(isDesignOff(off)).toBe(true);
+    expect(readDesign(setDesignOff(off, false), "Announcement")).toMatchObject({ banner: "image", logo: "icapos", accent: "#0A1A40" });
+  });
+  it("adds no navy bar and no logo, and shows only the company's own image", () => {
+    const t = designTokens(setDesignOff({ banner_image: "https://x.test/own.jpg", design_banner: "brand" }, true), "Announcement");
+    expect(t).toMatchObject({ banner_image: "https://x.test/own.jpg", banner_bg: "#FFFFFF", banner_text: "#0A1A40", banner_border: "none" });
+    expect(t.logo_url).toMatch(/blank\.png$/);
+  });
+  it("shows no image when none is set or the link is unsafe", () => {
+    expect(designTokens(setDesignOff({}, true), "Announcement").banner_image).toBe("");
+    expect(designTokens(setDesignOff({ banner_image: "javascript:x" }, true), "Announcement").banner_image).toBe("");
   });
 });
 
