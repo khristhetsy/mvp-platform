@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/cron/social-queue",
-      "schedule": "*/5 * * * *"
+      "schedule": "1-59/5 * * * *"
     },
     {
       "path": "/api/cron/job-dispatcher",
@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/cron/scheduled-reach-outs",
-      "schedule": "*/5 * * * *"
+      "schedule": "2-59/5 * * * *"
     },
     {
       "path": "/api/cron/scheduled-emails",
@@ -22,7 +22,7 @@
     },
     {
       "path": "/api/cron/ir-sequences",
-      "schedule": "*/15 * * * *"
+      "schedule": "9-59/15 * * * *"
     },
     {
       "path": "/api/cron/social-maintenance",
@@ -42,19 +42,19 @@
     },
     {
       "path": "/api/cron/sequence-schedules",
-      "schedule": "*/5 * * * *"
+      "schedule": "3-59/5 * * * *"
     },
     {
       "path": "/api/marketing/process-scheduled",
-      "schedule": "*/15 * * * *"
+      "schedule": "4-59/15 * * * *"
     },
     {
       "path": "/api/cron/match-followups",
-      "schedule": "*/15 * * * *"
+      "schedule": "14-59/15 * * * *"
     },
     {
       "path": "/api/cron/verify-emails",
-      "schedule": "*/15 * * * *"
+      "schedule": "7-59/15 * * * *"
     },
     {
       "path": "/api/cron/learn-domain-patterns",
@@ -130,11 +130,11 @@
     },
     {
       "path": "/api/cron/ai-budget-alerts",
-      "schedule": "*/15 * * * *"
+      "schedule": "13-59/15 * * * *"
     },
     {
       "path": "/api/cron/activity-escalations",
-      "schedule": "*/15 * * * *"
+      "schedule": "11-59/15 * * * *"
     },
     {
       "path": "/api/cron/event-invite-reminders",
@@ -142,7 +142,7 @@
     },
     {
       "path": "/api/cron/event-invitations",
-      "schedule": "*/15 * * * *"
+      "schedule": "6-59/15 * * * *"
     },
     {
       "path": "/api/cron/intro-follow-ups",
@@ -158,7 +158,7 @@
     },
     {
       "path": "/api/cron/support-care",
-      "schedule": "*/15 * * * *"
+      "schedule": "12-59/15 * * * *"
     },
     {
       "path": "/api/cron/wire-invoices",

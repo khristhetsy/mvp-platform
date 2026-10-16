@@ -189,7 +189,7 @@ async function CommandCenterSection({
     supabase.from("upgrade_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
     supabase.from("spv_opportunities").select("id", { count: "exact", head: true }).neq("status", "closed"),
     supabase.from("diligence_reports").select("id", { count: "exact", head: true }),
-    supabase.from("notifications").select("id", { count: "exact", head: true }),
+    supabase.from("notifications").select("id", { count: "estimated", head: true }),
     getAdminOrchestrationCounts(supabase),
     getScheduledOperationalCounts(supabase),
     loadAdminOrchestrationExecutionSummary().catch(() => ({
