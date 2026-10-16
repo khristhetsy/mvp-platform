@@ -14,6 +14,7 @@ import type { PlaceholderSchema, TemplateSlot } from "@/lib/email/template-schem
 import { DEPARTMENTS } from "@/lib/marketing/department-grouping";
 import { TERM_FIELDS, addTermLine, hasTermLine, removeTermLine } from "@/lib/email/founder-fields";
 import { ACCENT_SWATCHES, DESIGN_KEYS, dominantColor, hasDesign, isDesignOff, mapFounderValues, readDesign, setDesignOff, suggestLooks, writeDesign, type DesignSettings, type Look } from "@/lib/email/design";
+import { HTML_SLOTS, htmlKey, htmlToText, isHtmlSlot, textToHtml } from "@/lib/email/safe-html";
 
 type Master = { id: string; name: string; description: string; compiled_html: string; placeholder_schema: PlaceholderSchema };
 type FounderRef = { kind: "project" | "company"; id: string };
@@ -216,10 +217,29 @@ export function BrandedTemplateEditor({ templateId, projectId, founderRef, defau
 
   const set = (k: string, v: string) => setSlots((p) => ({ ...p, [k]: v }));
 
+  // Headline and Body copy can be written as plain text or as HTML.
+  function setFormat(key: string, html: boolean) {
+    if (isHtmlSlot(slots, key) === html) return;
+    const cur = slots[key] ?? "";
+    if (!html && /<[a-z][^>]*>/i.test(cur) && !window.confirm("Switching to Text removes the formatting tags. Continue?")) return;
+    setSlots((p) => ({ ...p, [key]: html ? textToHtml(cur, key) : htmlToText(cur), [htmlKey(key)]: html ? "1" : "0" }));
+  }
+  function wrapSelection(key: string, open: string, close: string) {
+    const el = document.getElementById(`bt-${key}`) as HTMLTextAreaElement | null;
+    if (!el) return;
+    const s = el.selectionStart, e = el.selectionEnd, v = el.value;
+    set(key, v.slice(0, s) + open + v.slice(s, e) + close + v.slice(e));
+    requestAnimationFrame(() => { el.focus(); el.setSelectionRange(s + open.length, e + open.length); });
+  }
+  const HTML_BUTTONS: Record<string, [string, string, string][]> = {
+    headline: [["Bold", "<b>", "</b>"], ["Italic", "<i>", "</i>"], ["Color", '<span style="color:#1A6CE4">', "</span>"], ["Line break", "<br>", ""]],
+    body: [["Bold", "<b>", "</b>"], ["Italic", "<i>", "</i>"], ["Link", '<a href="https://">', "</a>"], ["Bullets", "<ul>\n  <li>", "</li>\n</ul>"], ["Paragraph", "<p>", "</p>"]],
+  };
+
   /** Switch the founder: load their data and refill the content (design settings stay). */
   async function chooseFounder(ref: FounderRef | null) {
     const keepDesign = (v: Record<string, string>) =>
-      Object.fromEntries(Object.entries(v).filter(([k]) => k.startsWith("design_") || k === DESIGN_KEYS.logoImage || k === DESIGN_KEYS.bannerImage));
+      Object.fromEntries(Object.entries(v).filter(([k]) => (k.startsWith("design_") && !k.startsWith("design_html_")) || k === DESIGN_KEYS.logoImage || k === DESIGN_KEYS.bannerImage));
     if (!ref) {
       setPrefill(null);
       setSlots((p) => ({ ...startValues(master?.name ?? "", defaults, null), ...keepDesign(p) }));
@@ -438,14 +458,35 @@ export function BrandedTemplateEditor({ templateId, projectId, founderRef, defau
 
               {fields.map((s) => (
                 <div key={s.key}>
-                  <label htmlFor={`bt-${s.key}`} style={label}>
+                  <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
+                  <label htmlFor={`bt-${s.key}`} style={{ ...label, flex: 1 }}>
                     {s.label}{s.required ? <span style={{ color: "#A32D2D" }}> *</span> : null}
                     {prefill ? <SourceTag source={sourceFor(s.key)} missing={s.key === "hero_image" && !(slots.hero_image ?? "").trim() ? "not in record: upload" : null} /> : null}
                   </label>
+                  {(HTML_SLOTS as readonly string[]).includes(s.key) ? (
+                    <div role="group" aria-label={`${s.label} format`} style={{ display: "flex", gap: 4, margin: "10px 0 4px" }}>
+                      <button type="button" style={chip(!isHtmlSlot(slots, s.key))} onClick={() => setFormat(s.key, false)}>Text</button>
+                      <button type="button" style={chip(isHtmlSlot(slots, s.key))} onClick={() => setFormat(s.key, true)}>HTML</button>
+                    </div>
+                  ) : null}
+                  </div>
                   {prefill && s.key === "terms" && master?.name === "Deal introduction" ? (
                     <div style={{ margin: "0 0 4px" }}><SourceTag source={undefined} missing="not in record: add interest, maturity, discount, warrants as lines" /></div>
                   ) : null}
-                  {s.type === "textarea" || s.type === "richtext" || s.type === "list" || s.type === "terms" ? (
+                  {isHtmlSlot(slots, s.key) ? (
+                    <>
+                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 4 }}>
+                        {(HTML_BUTTONS[s.key] ?? []).map(([name, open, close]) => (
+                          <button key={name} type="button" style={{ ...chip(false), fontSize: 11 }} onClick={() => wrapSelection(s.key, open, close)}>{name}</button>
+                        ))}
+                      </div>
+                      <textarea id={`bt-${s.key}`} value={slots[s.key] ?? ""} onChange={(e) => set(s.key, e.target.value)} onFocus={() => setLastField(s.key)}
+                        rows={s.key === "headline" ? 2 : 9} spellCheck={false} style={{ ...inp, resize: "vertical", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 12 }} />
+                      <p style={{ fontSize: 10.5, color: "var(--muted-foreground)", margin: "3px 0 0" }}>
+                        {s.key === "headline" ? "Allowed: b, i, u, em, strong, br, a, and span with a color." : "Allowed: p, br, b, i, u, a (https links), ul, ol, li. Anything else is removed."}
+                      </p>
+                    </>
+                  ) : s.type === "textarea" || s.type === "richtext" || s.type === "list" || s.type === "terms" ? (
                     <textarea id={`bt-${s.key}`} value={slots[s.key] ?? ""} maxLength={s.max_length} onChange={(e) => set(s.key, e.target.value)} onFocus={() => setLastField(s.key)}
                       rows={s.type === "richtext" ? 9 : s.type === "textarea" ? 3 : 6} style={{ ...inp, resize: "vertical" }} />
                   ) : s.type === "image" ? (

@@ -10,19 +10,20 @@ import type { MarketingTemplate } from "@/lib/marketing/types";
 import { getCopyWithMaster, getMaster, updateCopy, type CopyWithMaster, type EmailMaster } from "./masters-queries";
 import { renderCopyHtml } from "./render-copy";
 import { brandedLink } from "./branded-templates-link";
+import { plainHeadline } from "./safe-html";
 
 export { brandedLink, type BrandedLink } from "./branded-templates-link";
 
 function templateName(master: Pick<EmailMaster, "name">, slots: Record<string, string>): string {
   const company = (slots.company_name ?? "").trim();
   if (master.name === "Deal introduction" && company) return `${company} deal introduction`;
-  return (slots.headline ?? "").trim() || master.name;
+  return plainHeadline(slots) || master.name;
 }
 
 function templateFields(copy: CopyWithMaster) {
   const slots = copy.slot_values ?? {};
   return {
-    subject: (slots.headline ?? "").trim() || copy.name,
+    subject: plainHeadline(slots) || copy.name,
     preview_text: (slots.preheader ?? "").trim() || null,
     html_body: renderCopyHtml(copy, "campaign"),
   };
