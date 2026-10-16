@@ -203,12 +203,12 @@ export function AdminLaunchReadinessPanel({
           <StatusRow
             label={t("failed_automation_runs")}
             ok={operations.failedAutomationRuns === 0}
-            detail={`${operations.failedAutomationRuns} failed`}
+            detail={`${operations.failedAutomationRuns} failed in the last 30 days`}
           />
           <StatusRow
             label={t("failed_orchestration_runs")}
             ok={operations.failedOrchestrationRuns === 0}
-            detail={`${operations.failedOrchestrationRuns} failed`}
+            detail={`${operations.failedOrchestrationRuns} failed in the last 30 days`}
           />
           <StatusRow
             label={t("last_automation_run")}
