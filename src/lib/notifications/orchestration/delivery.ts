@@ -40,6 +40,7 @@ export async function deliverOrchestrationFinding(
     recipientUserId: finding.recipientUserId,
     dedupeKey: finding.dedupeKey,
     withinHours: dedupeHours,
+    skipIfUnread: true,
   });
 
   if (duplicate) {

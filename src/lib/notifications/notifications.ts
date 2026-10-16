@@ -160,8 +160,22 @@ export async function listUserNotifications(userId: string, limit = 50) {
   return (data ?? []) as NotificationRecord[];
 }
 
-export async function countUnreadNotifications(userId: string) {
+export async function countUnreadNotifications(userId: string, options?: { cap?: number }) {
   const supabase = await createServerSupabaseClient();
+  if (options?.cap) {
+    // Stop counting at the cap: a person with thousands unread only needs to see "99+".
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error: capError } = await (supabase.from("notifications") as any)
+      .select("id")
+      .eq("recipient_user_id", userId)
+      .eq("is_read", false)
+      .is("archived_at", null)
+      .limit(options.cap);
+    if (capError) {
+      throw new Error(`Failed to count notifications: ${capError.message}`);
+    }
+    return ((data ?? []) as unknown[]).length;
+  }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { count, error } = await (supabase.from("notifications") as any)
     .select("id", { count: "exact", head: true })
@@ -234,6 +248,8 @@ export async function hasRecentOrchestrationNotification(input: {
   recipientUserId: string;
   dedupeKey: string;
   withinHours?: number;
+  /** Also treat an unread, unarchived copy of any age as a duplicate, so an open alert is not re-sent daily. */
+  skipIfUnread?: boolean;
 }) {
   const admin = createServiceRoleClient();
   const since = new Date(Date.now() - (input.withinHours ?? 24) * 60 * 60 * 1000).toISOString();
@@ -246,7 +262,19 @@ export async function hasRecentOrchestrationNotification(input: {
     .gte("created_at", since)
     .limit(1);
 
-  return (data ?? []).length > 0;
+  if ((data ?? []).length > 0) return true;
+  if (!input.skipIfUnread) return false;
+
+  const { data: unread } = await admin
+    .from("notifications")
+    .select("id")
+    .eq("recipient_user_id", input.recipientUserId)
+    .eq("dedupe_key", input.dedupeKey)
+    .eq("is_read", false)
+    .is("archived_at", null)
+    .limit(1);
+
+  return (unread ?? []).length > 0;
 }
 
 export async function hasRecentNotification(input: {
