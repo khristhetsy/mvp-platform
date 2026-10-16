@@ -13,7 +13,7 @@ import type { CopyWithMaster } from "@/lib/email/masters-queries";
 import type { PlaceholderSchema, TemplateSlot } from "@/lib/email/template-schema";
 import { DEPARTMENTS } from "@/lib/marketing/department-grouping";
 import { TERM_FIELDS, addTermLine, hasTermLine, removeTermLine } from "@/lib/email/founder-fields";
-import { ACCENT_SWATCHES, DESIGN_KEYS, dominantColor, hasDesign, mapFounderValues, readDesign, suggestLooks, writeDesign, type DesignSettings, type Look } from "@/lib/email/design";
+import { ACCENT_SWATCHES, DESIGN_KEYS, dominantColor, hasDesign, isDesignOff, mapFounderValues, readDesign, setDesignOff, suggestLooks, writeDesign, type DesignSettings, type Look } from "@/lib/email/design";
 
 type Master = { id: string; name: string; description: string; compiled_html: string; placeholder_schema: PlaceholderSchema };
 type FounderRef = { kind: "project" | "company"; id: string };
@@ -569,6 +569,7 @@ function DesignPanel({ masterName, company, values, setValues, companyBanner, ba
 }>) {
   const [page, setPage] = useState(0);
   const d = readDesign(values, masterName);
+  const off = isDesignOff(values);
   const hasLogo = !!(values[DESIGN_KEYS.logoImage] ?? "").trim();
   const looks = suggestLooks({ company, hasBanner: !!companyBanner, hasLogo, bannerColor });
   const pages = Math.max(1, Math.ceil(looks.length / 4));
@@ -599,6 +600,21 @@ function DesignPanel({ masterName, company, values, setValues, companyBanner, ba
           </button>
         ) : null}
       </div>
+      <div style={{ display: "flex", gap: 5, marginTop: 8 }}>
+        <button type="button" style={chip(!off)} onClick={() => setValues((v) => setDesignOff(v, false))}>Use a design</button>
+        <button type="button" style={chip(off)} onClick={() => setValues((v) => setDesignOff(v, true))}>No design</button>
+      </div>
+      {off ? (
+        <>
+          <p style={{ fontSize: 10.5, color: "var(--muted-foreground)", margin: "6px 0 0" }}>The template adds no banner, logo or colored bar. Your own image, if you add one, is the only banner.</p>
+          <span style={sub}>Your image <span style={{ fontWeight: 400 }}>· optional</span></span>
+          <div style={{ display: "flex", gap: 6 }}>
+            <input value={values[DESIGN_KEYS.bannerImage] ?? ""} onChange={(e) => setValues((x) => ({ ...x, [DESIGN_KEYS.bannerImage]: e.target.value }))} placeholder="Image link (1200 x 360)" aria-label="Your image link" style={inp} />
+            {upBtn(DESIGN_KEYS.bannerImage)}
+          </div>
+        </>
+      ) : (
+      <>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0,1fr))", gap: 8, marginTop: 8 }}>
         {shown.map((l) => {
           const on = same(l.design, d);
@@ -659,6 +675,8 @@ function DesignPanel({ masterName, company, values, setValues, companyBanner, ba
           <button key={v} type="button" style={chip(d.align === v)} onClick={() => apply({ align: v })}>{t}</button>
         ))}
       </div>
+      </>
+      )}
     </div>
   );
 }
