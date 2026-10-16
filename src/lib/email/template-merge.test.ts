@@ -51,6 +51,28 @@ describe("mergeSlots", () => {
     expect(html).not.toContain("{{");
   });
 
+  it("keeps paragraphs and line breaks in a multi line body", () => {
+    const html = mergeSlots("<div>{{body}}</div>", { body: "One\n\nTwo\nthree <b>" }, schema);
+    expect(html).toContain("<p");
+    expect(html).toContain("Two<br />three &lt;b&gt;");
+    expect(html.match(/<p /g)).toHaveLength(2);
+  });
+
+  it("cleans Headline and Body copy to safe tags when they are switched to HTML", () => {
+    const html = mergeSlots(
+      "<h1>{{headline}}</h1><div>{{body}}</div>",
+      { headline: 'The <span style="color:#1A6CE4">iCapOS</span> <script>x</script>Agent', body: '<p onclick="x">Hi <a href="javascript:x">there</a></p>', design_html_headline: "1", design_html_body: "1" },
+      schema,
+    );
+    expect(html).toContain('<span style="color:#1A6CE4;">iCapOS</span>');
+    expect(html).not.toMatch(/script|onclick|javascript/i);
+    expect(html).toContain("Hi there");
+  });
+
+  it("escapes HTML typed into the headline when the switch is off", () => {
+    expect(mergeSlots("<h1>{{headline}}</h1>", { headline: "<b>x</b>" }, schema)).toBe("<h1>&lt;b&gt;x&lt;/b&gt;</h1>");
+  });
+
   it("blanks a known slot with no value", () => {
     expect(mergeSlots("<h1>{{headline}}</h1>", {}, schema)).toBe("<h1></h1>");
   });

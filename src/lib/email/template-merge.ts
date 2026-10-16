@@ -7,6 +7,7 @@
 // blanked, never rendered as literal braces to the recipient.
 
 import type { PlaceholderSchema, SlotType } from "./template-schema";
+import { BODY_TAGS, HEADLINE_TAGS, isHtmlSlot, sanitizeHtml } from "./safe-html";
 
 function escapeHtml(value: string): string {
   return value
@@ -138,7 +139,13 @@ export function mergeSlots(
     const key = rawKey.toLowerCase();
     if (preserve.has(key)) return `{{${key}}}`;
     if (key in slotValues || typeByKey.has(key)) {
-      return renderSlotValue(slotValues[key] ?? "", typeByKey.get(key) ?? "text");
+      const raw = (slotValues[key] ?? "").trim();
+      const type = typeByKey.get(key) ?? "text";
+      // Headline and Body copy switched to HTML: cleaned to the safe tags.
+      if (raw && isHtmlSlot(slotValues, key)) return sanitizeHtml(raw, key === "headline" ? HEADLINE_TAGS : BODY_TAGS);
+      // A multi line body keeps its paragraphs and line breaks (plain textarea slots collapse them).
+      if (key === "body" && type === "textarea" && raw.includes("\n")) return renderRichText(raw);
+      return renderSlotValue(slotValues[key] ?? "", type);
     }
     // Unknown, non-preserved token → blank rather than literal braces.
     return "";
