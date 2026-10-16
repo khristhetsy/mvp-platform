@@ -39,6 +39,8 @@ export type OperationalSystemSnapshot = {
   storage: {
     buckets: { name: string; public: boolean }[];
     requiredBucketsPresent: Record<string, boolean>;
+    /** True when the bucket check itself timed out or errored, so a "missing" result cannot be trusted. */
+    bucketCheckUnavailable: boolean;
   };
   integrations: {
     googleOAuthConfigured: boolean;
@@ -138,9 +140,25 @@ export async function buildOperationalSnapshot(): Promise<OperationalSystemSnaps
   ]);
 
   const bucketNames = new Set((bucketsRes.data ?? []).map((b) => b.name ?? b.id));
-  const requiredBucketsPresent = Object.fromEntries(
+  let requiredBucketsPresent = Object.fromEntries(
     REQUIRED_STORAGE_BUCKETS.map((name) => [name, bucketNames.has(name)]),
   ) as Record<(typeof REQUIRED_STORAGE_BUCKETS)[number], boolean>;
+  let bucketCheckUnavailable = false;
+
+  // listBuckets can time out on a busy database, which used to report every bucket as missing.
+  // When it fails, check each required bucket by name; only a real "not found" counts as missing.
+  if (bucketsRes.error) {
+    const checks = await Promise.all(
+      REQUIRED_STORAGE_BUCKETS.map(async (name) => {
+        const res = await admin.storage.getBucket(name);
+        if (!res.error) return { name, present: true, unavailable: false };
+        const notFound = /not found/i.test(res.error.message ?? "");
+        return { name, present: false, unavailable: !notFound };
+      }),
+    );
+    requiredBucketsPresent = Object.fromEntries(checks.map((c) => [c.name, c.present])) as typeof requiredBucketsPresent;
+    bucketCheckUnavailable = checks.some((c) => c.unavailable);
+  }
 
   const lastEvents = (backupLogsRes.data ?? []).map((row) => {
     const metadata = (row.metadata ?? {}) as Record<string, unknown>;
@@ -182,6 +200,7 @@ export async function buildOperationalSnapshot(): Promise<OperationalSystemSnaps
         public: b.public ?? false,
       })),
       requiredBucketsPresent,
+      bucketCheckUnavailable,
     },
     integrations: {
       googleOAuthConfigured: isGoogleOAuthConfigured(),

@@ -115,7 +115,7 @@ async function loadOperationalSnapshotSafe(): Promise<OperationalSystemSnapshot>
         googleRedirectHost: null,
       },
       migrations: { latest: null, total: 0, files: [] },
-      storage: { buckets: [], requiredBucketsPresent: {} as never },
+      storage: { buckets: [], requiredBucketsPresent: {} as never, bucketCheckUnavailable: false },
       integrations: { googleOAuthConfigured: false, googleConnectedAccounts: 0 },
       automation: { lastAutomationRun: null, lastOrchestrationRun: null },
       counts: {
@@ -160,8 +160,17 @@ async function loadSupabaseCounts() {
         .select("id", { count: "exact", head: true })
         .neq("status", "fulfilled")
         .neq("status", "cancelled"),
-      admin.from("automation_runs").select("id", { count: "exact", head: true }).eq("status", "failed"),
-      admin.from("orchestration_runs").select("id", { count: "exact", head: true }).eq("status", "failed"),
+      // Only the last 30 days, so old failures from months ago do not keep the card red.
+      admin
+        .from("automation_runs")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "failed")
+        .gte("started_at", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()),
+      admin
+        .from("orchestration_runs")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "failed")
+        .gte("started_at", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()),
       admin.from("profiles").select("id", { count: "exact", head: true }).eq("role", "founder"),
       admin.from("companies").select("id", { count: "exact", head: true }),
       admin.from("investor_profiles").select("id", { count: "exact", head: true }),

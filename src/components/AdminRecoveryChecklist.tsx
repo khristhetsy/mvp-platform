@@ -10,11 +10,14 @@ function StatusRow({
   label,
   ok,
   detail,
-}: Readonly<{ label: string; ok: boolean; detail?: string }>) {
+  statusLabel,
+}: Readonly<{ label: string; ok: boolean; detail?: string; statusLabel?: string }>) {
   return (
     <li className="flex flex-wrap items-start justify-between gap-2 rounded-lg border border-slate-200/80 bg-white px-3 py-2 text-sm">
       <span className="font-medium text-slate-800">{label}</span>
-      <span className={ok ? "text-emerald-700" : "text-amber-800"}>{ok ? "OK" : "Action needed"}</span>
+      <span className={ok ? "text-emerald-700" : "text-amber-800"}>
+        {ok ? "OK" : (statusLabel ?? "Action needed")}
+      </span>
       {detail ? <span className="w-full text-xs text-slate-500">{detail}</span> : null}
     </li>
   );
@@ -67,7 +70,12 @@ export function AdminRecoveryChecklist({
         <StatusRow
           label={t("required_storage_buckets")}
           ok={allRequiredBuckets}
-          detail={JSON.stringify(snapshot.storage.requiredBucketsPresent)}
+          statusLabel={snapshot.storage.bucketCheckUnavailable ? "Checking again" : undefined}
+          detail={
+            snapshot.storage.bucketCheckUnavailable
+              ? "The bucket check timed out, so this is not a confirmed result. Refresh in a minute."
+              : JSON.stringify(snapshot.storage.requiredBucketsPresent)
+          }
         />
         <StatusRow
           label={t("google_oauth_env")}
@@ -77,10 +85,12 @@ export function AdminRecoveryChecklist({
         <StatusRow
           label={t("recent_backup_audit_event")}
           ok={!snapshot.backup.verificationRecommended}
+          statusLabel="Manual only"
           detail={
-            lastBackup
+            (lastBackup
               ? `${lastBackup.action} at ${lastBackup.createdAt}`
-              : "No backup events in audit_logs yet"
+              : "No backup events in audit_logs yet") +
+            ". No automatic app backup runs. Daily database backups are managed in Supabase (Database, Backups)."
           }
         />
       </ul>
