@@ -206,20 +206,36 @@ export async function sendCampaign(campaignId: string, opts?: {
     throw new Error("Email provider not configured — set RESEND_API_KEY in the environment before sending.");
   }
 
-  const { data: members } = await db
-    .from("marketing_list_contacts")
-    .select("contact_id")
-    .eq("list_id", campaign.list_id);
+  // Read the whole list. One select returns at most 1,000 rows, and one .in() with
+  // 1,000+ ids overflows the request URL, so both are paged. Errors are thrown:
+  // before, a failed read returned zeros and a 1,000+ recipient send looked fine
+  // while nothing went out.
+  const contactIds: string[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data: page, error: me } = await db
+      .from("marketing_list_contacts")
+      .select("contact_id")
+      .eq("list_id", campaign.list_id)
+      .order("contact_id")
+      .range(from, from + 999);
+    if (me) throw new Error(`Couldn't read the campaign's list: ${me.message}`);
+    const rows = (page ?? []) as Array<{ contact_id: string }>;
+    for (const m of rows) contactIds.push(m.contact_id);
+    if (rows.length < 1000) break;
+  }
 
-  if (!members || members.length === 0) return { sent: 0, skipped: 0, failed: 0 };
+  if (contactIds.length === 0) return { sent: 0, skipped: 0, failed: 0 };
 
-  const contactIds = members.map((m: { contact_id: string }) => m.contact_id);
-  const { data: contacts } = await db
-    .from("marketing_contacts")
-    .select("*")
-    .in("id", contactIds);
-
-  if (!contacts) return { sent: 0, skipped: 0, failed: 0 };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const contacts: any[] = [];
+  for (let i = 0; i < contactIds.length; i += 200) {
+    const { data: chunk, error: ke } = await db
+      .from("marketing_contacts")
+      .select("*")
+      .in("id", contactIds.slice(i, i + 200));
+    if (ke) throw new Error(`Couldn't load the campaign's contacts: ${ke.message}`);
+    contacts.push(...(chunk ?? []));
+  }
 
   await updateCampaignStatus(campaignId, "sending");
 
