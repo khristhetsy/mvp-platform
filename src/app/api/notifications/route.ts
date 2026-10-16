@@ -9,6 +9,8 @@ import {
   deleteNotifications,
 } from "@/lib/notifications/notifications";
 
+const UNREAD_CAP = 100;
+
 export async function GET(request: Request) {
   const supabase = await createServerSupabaseClient();
   const {
@@ -23,13 +25,16 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const limit = Math.min(Number(url.searchParams.get("limit") ?? "20"), 100);
 
+  // The bell only needs "99+", so it asks for a capped count (?cap=1) instead of an exact one.
+  const capped = url.searchParams.get("cap") === "1";
+
   try {
     const [notifications, unreadCount] = await Promise.all([
       listUserNotifications(user.id, limit),
-      countUnreadNotifications(user.id),
+      countUnreadNotifications(user.id, capped ? { cap: UNREAD_CAP } : undefined),
     ]);
 
-    return NextResponse.json({ notifications, unreadCount });
+    return NextResponse.json({ notifications, unreadCount, ...(capped ? { unreadCapped: unreadCount >= UNREAD_CAP } : {}) });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to load notifications.";
     return NextResponse.json({ error: message }, { status: 400 });

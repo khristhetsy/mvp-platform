@@ -133,7 +133,7 @@ export function NotificationBellDropdown() {
 
   const loadNotifications = useCallback(async () => {
     setLoading(true);
-    const response = await fetch("/api/notifications?limit=12");
+    const response = await fetch("/api/notifications?limit=12&cap=1");
     const body = (await response.json().catch(() => null)) as {
       notifications?: NotificationRecord[];
       unreadCount?: number;
@@ -274,7 +274,7 @@ export function NotificationBellDropdown() {
               Notifications
               {unreadCount > 0 ? (
                 <span className="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-violet-100 px-1.5 text-[10px] font-bold text-violet-700">
-                  {unreadCount}
+                  {unreadCount >= 100 ? "99+" : unreadCount}
                 </span>
               ) : null}
             </p>

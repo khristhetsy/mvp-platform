@@ -48,41 +48,95 @@ function opts(options: Intl.DateTimeFormatOptions | undefined, zone: string | un
   return { ...(options ?? {}), timeZone: zone };
 }
 
+/**
+ * Fields the native Date#toLocale*String methods use when called with no options
+ * (ECMA-402 ToDateTimeOptions: toLocaleString = date + time, toLocaleDateString = date,
+ * toLocaleTimeString = time). Passing these explicitly gives the same output.
+ */
+const DEFAULT_FIELDS = {
+  string: { year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" },
+  date: { year: "numeric", month: "numeric", day: "numeric" },
+  time: { hour: "numeric", minute: "numeric", second: "numeric" },
+} as const satisfies Record<string, Intl.DateTimeFormatOptions>;
+
+type DefaultKind = keyof typeof DEFAULT_FIELDS;
+
+/**
+ * One formatter per (kind, locale, zone), built once. Creating an Intl.DateTimeFormat
+ * costs far more than formatting with one, and the plain `date.toLocaleString()` call
+ * runs for every date on a page. A small cap keeps the map from growing without bound.
+ */
+const formatterCache = new Map<string, Intl.DateTimeFormat>();
+const FORMATTER_CACHE_MAX = 200;
+
+function localeKey(locales: Intl.LocalesArgument | undefined): string {
+  if (locales === undefined) return "";
+  return Array.isArray(locales) ? locales.join(",") : String(locales);
+}
+
+function formatWithDefaults(
+  Ctor: typeof Intl.DateTimeFormat,
+  kind: DefaultKind,
+  locales: Intl.LocalesArgument | undefined,
+  zone: string | undefined,
+  date: Date,
+): string {
+  const key = `${kind}|${localeKey(locales)}|${zone ?? ""}`;
+  let formatter = formatterCache.get(key);
+  if (!formatter) {
+    const options: Intl.DateTimeFormatOptions = zone === undefined ? { ...DEFAULT_FIELDS[kind] } : { ...DEFAULT_FIELDS[kind], timeZone: zone };
+    formatter = new Ctor(locales, options);
+    if (formatterCache.size >= FORMATTER_CACHE_MAX) formatterCache.clear();
+    formatterCache.set(key, formatter);
+  }
+  return formatter.format(date);
+}
+
 export function installPlatformTimeZoneDefaults(): void {
   const g = globalThis as unknown as Record<string, unknown>;
   if (g[FLAG]) return;
   g[FLAG] = true;
 
+  const Orig = Intl.DateTimeFormat;
   const proto = Date.prototype;
   const origString = proto.toLocaleString;
   const origDate = proto.toLocaleDateString;
   const origTime = proto.toLocaleTimeString;
+  // The no-options call is by far the most common, and passing a zone through options makes
+  // the engine build a new formatter on every call. That path uses a cached formatter instead.
+  // Calls with options, and invalid dates, keep the native path.
   proto.toLocaleString = function (this: Date, locales?: Intl.LocalesArgument, options?: Intl.DateTimeFormatOptions) {
     if (options?.timeZone) return origString.call(this, locales, options);
+    if (options === undefined && !Number.isNaN(this.getTime())) return formatWithDefaults(Orig, "string", locales, PLATFORM_TZ, this);
     return origString.call(this, locales, opts(options, zoneFor(this, dateOnly(options, true))));
   };
   proto.toLocaleDateString = function (this: Date, locales?: Intl.LocalesArgument, options?: Intl.DateTimeFormatOptions) {
     if (options?.timeZone) return origDate.call(this, locales, options);
-    return origDate.call(this, locales, opts(options, zoneFor(this, dateOnly(options, false))));
+    const zone = zoneFor(this, dateOnly(options, false));
+    if (options === undefined && !Number.isNaN(this.getTime())) return formatWithDefaults(Orig, "date", locales, zone, this);
+    return origDate.call(this, locales, opts(options, zone));
   };
   proto.toLocaleTimeString = function (this: Date, locales?: Intl.LocalesArgument, options?: Intl.DateTimeFormatOptions) {
     if (options?.timeZone) return origTime.call(this, locales, options);
+    if (options === undefined && !Number.isNaN(this.getTime())) return formatWithDefaults(Orig, "time", locales, PLATFORM_TZ, this);
     return origTime.call(this, locales, opts(options, PLATFORM_TZ));
   };
 
-  const Orig = Intl.DateTimeFormat;
   const Patched = function (this: unknown, locales?: Intl.LocalesArgument, options?: Intl.DateTimeFormatOptions) {
     if (options?.timeZone) return new Orig(locales, options);
     const pt = new Orig(locales, { ...(options ?? {}), timeZone: PLATFORM_TZ });
     if (!dateOnly(options, false)) return pt;
     // Date-only formatter: pick the zone per value so plain dates keep their day.
-    const ptBase = new Orig(locales, { ...(options ?? {}), timeZone: PLATFORM_TZ });
-    const utc = new Orig(locales, { ...(options ?? {}), timeZone: "UTC" });
-    const local = new Orig(locales, options);
+    // The extra formatters are built on first use, not on every construction.
+    let ptBase: Intl.DateTimeFormat | undefined;
+    let utc: Intl.DateTimeFormat | undefined;
+    let local: Intl.DateTimeFormat | undefined;
     const pick = (v?: Date | number) => {
       const d = v === undefined ? new Date() : new Date(v);
       const z = zoneFor(d, true);
-      return z === "UTC" ? utc : z === undefined ? local : ptBase;
+      if (z === "UTC") return (utc ??= new Orig(locales, { ...(options ?? {}), timeZone: "UTC" }));
+      if (z === undefined) return (local ??= new Orig(locales, options));
+      return (ptBase ??= new Orig(locales, { ...(options ?? {}), timeZone: PLATFORM_TZ }));
     };
     Object.defineProperty(pt, "format", { configurable: true, get: () => (v?: Date | number) => pick(v).format(v) });
     Object.defineProperty(pt, "formatToParts", { configurable: true, value: (v?: Date | number) => pick(v).formatToParts(v) });
