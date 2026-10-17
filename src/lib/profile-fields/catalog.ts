@@ -97,6 +97,8 @@ const INV_ONB = "src/components/InvestorOnboardingWizard.tsx";
 // Investor directory (public investor data outside the iCFO network): founder search filters and the admin record editor.
 const DIR = "src/components/founder/investor-directory/InvestorDirectoryClient.tsx";
 const DIR_ADMIN = "src/components/admin/investor-directory/RecordEditor.tsx";
+// Founder My contacts: the contact page asks these as investor preferences.
+const FCP = "src/app/founder/contacts/[id]/page.tsx";
 const ROUTES_COMPANY = ["PATCH /api/founder/onboarding", "PATCH /api/companies/[id]", "PATCH /api/admin/companies/[id]/basics"];
 
 export const FIELD_USAGE: FieldUsage[] = [
@@ -159,21 +161,21 @@ export const FIELD_USAGE: FieldUsage[] = [
     cells: { "Founder onboarding": { kind: "picks", note: "step 8" }, "Founder settings": { kind: "picks" }, Other: { kind: "none", note: "investor one-pager; admin editor" } },
     screens: ["/founder/onboarding step 8", "/founder/settings", "/admin/sales/contacts/[id]", "/f/[slug] investor one-pager"],
     stored: ["companies.annual_revenue_size"], saved: ROUTES_COMPANY, read: ["Not read by any matcher"],
-    optionList: ["revenue_size list on this page"], codeRefs: [ONB, SET, ADM_CONTACT],
+    optionList: ["revenue_size list on this page"], codeRefs: [ONB, SET, ADM_CONTACT, FCP],
   },
   {
     name: "ARR", list: "arr_band", summary: "companies.arr · investor preferred ARR range",
     cells: { "Founder onboarding": { kind: "picks", note: "step 8" }, "Founder settings": { kind: "picks" }, "Investor onboarding": { kind: "picks", note: "preferred ARR range, one or more bands" }, Matching: { kind: "scores", note: "ARR" }, Other: { kind: "none", note: "admin editor" } },
     screens: ["/founder/onboarding step 8", "/founder/settings", "/admin/sales/contacts/[id]", "/investor/onboarding preferred ARR range"],
     stored: ["companies.arr", "investor_profiles.preferred_arr_range"], saved: [...ROUTES_COMPANY, "PATCH /api/investor/onboarding"],
-    read: ["investor-company-matching.ts · ARR"], optionList: ["arr_band list on this page"], codeRefs: [ONB, SET, ADM_CONTACT, INV_ONB],
+    read: ["investor-company-matching.ts · ARR"], optionList: ["arr_band list on this page"], codeRefs: [ONB, SET, ADM_CONTACT, INV_ONB, FCP],
   },
   {
     name: "MRR", list: "mrr_band", summary: "companies.mrr · investor preferred MRR range",
     cells: { "Founder onboarding": { kind: "picks", note: "step 8" }, "Founder settings": { kind: "picks" }, "Investor onboarding": { kind: "picks", note: "preferred MRR range, one or more bands" }, Matching: { kind: "scores", note: "MRR" }, Other: { kind: "none", note: "admin editor" } },
     screens: ["/founder/onboarding step 8", "/founder/settings", "/admin/sales/contacts/[id]", "/investor/onboarding preferred MRR range"],
     stored: ["companies.mrr", "investor_profiles.preferred_mrr_range"], saved: [...ROUTES_COMPANY, "PATCH /api/investor/onboarding"],
-    read: ["investor-company-matching.ts · MRR"], optionList: ["mrr_band list on this page"], codeRefs: [ONB, SET, ADM_CONTACT, INV_ONB],
+    read: ["investor-company-matching.ts · MRR"], optionList: ["mrr_band list on this page"], codeRefs: [ONB, SET, ADM_CONTACT, INV_ONB, FCP],
   },
   {
     name: "Annual EBITDA", list: "money_band", summary: "companies.annual_ebitda",
@@ -189,7 +191,7 @@ export const FIELD_USAGE: FieldUsage[] = [
     stored: ["companies.funding_amount_band", "companies.funding_amount (kept in step by trg_companies_funding_band)", "investor_profiles.check_size_min / max"],
     saved: [...ROUTES_COMPANY, "POST /api/investor/onboarding"],
     read: ["investor-company-matching.ts · check size", "preference-match.ts · CRM check size", "About 90 files read the exact figure (valuation, cap table, pitch deck, business plan)"],
-    optionList: ["money_band list on this page"], codeRefs: [ONB, SET, ADM_CONTACT, ADM_BASICS],
+    optionList: ["money_band list on this page"], codeRefs: [ONB, SET, ADM_CONTACT, ADM_BASICS, FCP],
   },
   {
     name: "Investor type", list: "investor_type", summary: "companies.seeking_investor_types · investor_profiles.investor_type",

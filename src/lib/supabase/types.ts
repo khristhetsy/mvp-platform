@@ -964,6 +964,7 @@ export type Database = {
           source: string;
           tags: string[];
           notes: string | null;
+          investor_profile: Record<string, string>;
           status: string;
           created_at: string;
           updated_at: string;
@@ -990,6 +991,7 @@ export type Database = {
           source?: string;
           tags?: string[];
           notes?: string | null;
+          investor_profile?: Record<string, string>;
           status?: string;
           updated_at?: string;
         };
@@ -1013,6 +1015,7 @@ export type Database = {
           source?: string;
           tags?: string[];
           notes?: string | null;
+          investor_profile?: Record<string, string>;
           status?: string;
           updated_at?: string;
         };

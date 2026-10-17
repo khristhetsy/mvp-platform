@@ -45,6 +45,8 @@ export type FounderInvestorContactRecord = {
   source: string;
   tags: string[];
   notes: string | null;
+  /** Admin style investor profile answers (industry, preferred ranges, bands), keyed by field. */
+  investor_profile?: Record<string, string> | null;
   status: FounderInvestorContactStatus;
   created_at: string;
   updated_at: string;

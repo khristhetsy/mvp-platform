@@ -132,6 +132,7 @@ export async function updateFounderInvestorContact(
       geography: string | null;
       tags: string[];
       notes: string | null;
+      investor_profile: Record<string, string>;
       status: FounderInvestorContactStatus;
     }>;
   },

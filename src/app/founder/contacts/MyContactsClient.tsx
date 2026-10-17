@@ -306,7 +306,11 @@ export function MyContactsClient({ initialRows }: Readonly<{ initialRows: MyCont
                               <input type="checkbox" aria-label={`Select ${r.name}`} checked={picked.has(r.id)} onChange={() => togglePick(r.id)} />
                             </td>
                             <td className="px-2 py-2.5">
-                              <p className="truncate font-medium text-slate-900">{r.name}</p>
+                              {r.kind === "contact" ? (
+                                <Link href={`/founder/contacts/${r.id}`} className="block truncate font-medium text-slate-900 hover:text-[#185FA5] hover:underline">{r.name}</Link>
+                              ) : (
+                                <p className="truncate font-medium text-slate-900">{r.name}</p>
+                              )}
                               {r.firm ? <p className="truncate text-[11.5px] text-slate-400">{r.firm}</p> : null}
                             </td>
                             <td className="hidden truncate px-2 py-2.5 text-slate-600 md:table-cell">
