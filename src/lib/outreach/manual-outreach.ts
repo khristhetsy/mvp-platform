@@ -238,6 +238,85 @@ export async function enrollManualRecipients(companyId: string, contactIds: stri
   }
 }
 
+export type EnrollOneResult = { ok: true; already: boolean } | { ok: false; error: string };
+
+/**
+ * Send only, from the contact page: add ONE contact to the send queue for the first
+ * step of the saved Manual outreach email. Unlike enrollManualRecipients this never
+ * stops anyone else. If the contact was emailed before, this restarts them at step 0
+ * as another one email send.
+ */
+export async function enrollOneManualRecipient(companyId: string, contactId: string): Promise<EnrollOneResult> {
+  const db = client();
+
+  const { data: contactRow } = await db
+    .from("founder_investor_contacts")
+    .select("id, investor_name, email, status")
+    .eq("company_id", companyId)
+    .eq("id", contactId)
+    .maybeSingle();
+  const contact = contactRow as { id: string; investor_name: string | null; email: string | null; status: string } | null;
+  if (!contact || contact.status === "archived") return { ok: false, error: "Contact not found." };
+  const email = contact.email?.trim();
+  if (!email) return { ok: false, error: "This contact has no email address. Add one on the Investor profile tab first." };
+
+  const { data: campaignRow } = await db
+    .from("founder_manual_outreach")
+    .select("status, email_subject, email_body, sequence")
+    .eq("company_id", companyId)
+    .maybeSingle();
+  const campaign = campaignRow as { status: string; email_subject: string | null; email_body: string | null; sequence: ManualSequenceStep[] | null } | null;
+  const steps = campaign && Array.isArray(campaign.sequence) ? campaign.sequence : [];
+  if (!campaign || !campaign.email_subject?.trim() || !campaign.email_body?.trim() || steps.length === 0) {
+    return { ok: false, error: "Write and save your email in Outreach: Manual first. This page sends that email." };
+  }
+
+  // The send pass only looks at queued campaigns. Only enrolled recipients get emailed, so queuing is safe.
+  if (campaign.status !== "queued") {
+    await db.from("founder_manual_outreach").update({ status: "queued" }).eq("company_id", companyId);
+  }
+
+  const nowIso = new Date().toISOString();
+  const { data: existingRow } = await db
+    .from("founder_manual_outreach_recipients")
+    .select("id, status, next_step_index, max_steps")
+    .eq("company_id", companyId)
+    .eq("contact_id", contactId)
+    .maybeSingle();
+  const existing = existingRow as { id: string; status: string; next_step_index: number; max_steps: number | null } | null;
+
+  if (existing) {
+    const limit = existing.max_steps ?? steps.length;
+    if (existing.status === "active" && existing.next_step_index < limit) return { ok: true, already: true };
+    const { error } = await db
+      .from("founder_manual_outreach_recipients")
+      .update({ status: "active", next_step_index: 0, max_steps: 1, enrolled_at: nowIso, updated_at: nowIso, email, name: contact.investor_name })
+      .eq("id", existing.id);
+    return error ? { ok: false, error: "Couldn't queue the email. Try again." } : { ok: true, already: false };
+  }
+
+  const { error } = await db.from("founder_manual_outreach_recipients").insert({
+    company_id: companyId,
+    contact_id: contactId,
+    email,
+    name: contact.investor_name,
+    next_step_index: 0,
+    max_steps: 1,
+    status: "active",
+  });
+  return error ? { ok: false, error: "Couldn't queue the email. Try again." } : { ok: true, already: false };
+}
+
+/** Cancel a queued send for one contact (only while it is still waiting to go out). */
+export async function stopOneManualRecipient(companyId: string, contactId: string): Promise<void> {
+  await client()
+    .from("founder_manual_outreach_recipients")
+    .update({ status: "stopped", updated_at: new Date().toISOString() })
+    .eq("company_id", companyId)
+    .eq("contact_id", contactId)
+    .eq("status", "active");
+}
+
 type CampaignRow = {
   company_id: string;
   email_subject: string | null;
@@ -252,6 +331,8 @@ type RecipientRow = {
   name: string | null;
   next_step_index: number;
   enrolled_at: string;
+  /** Limits this recipient to the first N steps (send only). Null means the whole sequence. */
+  max_steps?: number | null;
 };
 
 /**
@@ -301,7 +382,7 @@ export async function processManualOutreach(onlyCompanyId?: string): Promise<{ s
 
     const { data: recipients } = await db
       .from("founder_manual_outreach_recipients")
-      .select("id, email, name, next_step_index, enrolled_at")
+      .select("id, email, name, next_step_index, enrolled_at, max_steps")
       .eq("company_id", campaign.company_id)
       .eq("status", "active");
 
@@ -336,7 +417,8 @@ export async function processManualOutreach(onlyCompanyId?: string): Promise<{ s
     for (const r of batch) {
       if (budget !== null && budget <= 0) break;
       const stepIndex = r.next_step_index;
-      if (stepIndex >= steps.length) {
+      const stepCount = Math.min(steps.length, r.max_steps ?? steps.length);
+      if (stepIndex >= stepCount) {
         await db.from("founder_manual_outreach_recipients").update({ status: "completed" }).eq("id", r.id);
         continue;
       }
@@ -357,7 +439,7 @@ export async function processManualOutreach(onlyCompanyId?: string): Promise<{ s
         .update({
           next_step_index: nextIndex,
           last_sent_at: nowIso,
-          status: nextIndex >= steps.length ? "completed" : "active",
+          status: nextIndex >= stepCount ? "completed" : "active",
           updated_at: nowIso,
         })
         .eq("id", r.id)
