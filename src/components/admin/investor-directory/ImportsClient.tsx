@@ -1,9 +1,9 @@
 "use client";
 
 /**
- * Imports: Uploaded → Cleaned → Verifying → Published. A new import is a CSV
- * plus where it came from; cleaning runs on the server and the result shows
- * here. Rows stay drafts until the import is published.
+ * Imports: Uploaded → Cleaned → Verifying → Published. A new import is an Excel
+ * or CSV list run through the four step wizard (ImportWizard); cleaning runs on
+ * the server and the result shows here. Rows stay drafts until the import is published.
  *
  * Each row has a ⋯ menu: Rename (in place), Edit details, Archive, Delete.
  * Archived imports move to the Archived tab and can be restored.
@@ -13,6 +13,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { NewButton } from "@/components/admin/ToolbarGear";
 import { Section, Tag, fmtPT, postJson, type Tone } from "@/components/admin/investor-directory/ui";
+import { ImportWizard } from "@/components/admin/investor-directory/ImportWizard";
 import type { ImportRow } from "@/lib/investor-directory/db";
 
 const STAGES: { key: string; label: string }[] = [
@@ -39,12 +40,6 @@ async function deleteJson<T>(url: string, body: unknown): Promise<{ ok: true; da
 export function ImportsClient({ imports, openNew }: Readonly<{ imports: ImportRow[]; openNew: boolean }>) {
   const router = useRouter();
   const [open, setOpen] = useState(openNew);
-  const [name, setName] = useState("");
-  const [source, setSource] = useState("");
-  const [sourceUrl, setSourceUrl] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
   const [publishing, setPublishing] = useState<string | null>(null);
 
@@ -76,22 +71,6 @@ export function ImportsClient({ imports, openNew }: Readonly<{ imports: ImportRo
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
-
-  async function submit() {
-    if (!name.trim() || !source.trim() || !file) { setError("Add a name, a source and a CSV file."); return; }
-    if (!/\.csv$/i.test(file.name)) { setError("Upload a .csv file."); return; }
-    setBusy(true); setError(null);
-    const csv = await file.text();
-    const r = await postJson<{ import: ImportRow; cleaned: { rowCount: number; merged: number; invalidEmails: number; skipped: number } }>(
-      "/api/admin/investor-directory/imports", "POST", { name: name.trim(), source: source.trim(), sourceUrl: sourceUrl.trim(), fileName: file.name, csv },
-    );
-    setBusy(false);
-    if (!r.ok) { setError(r.error); return; }
-    const c = r.data.cleaned;
-    setDone(`${c.rowCount.toLocaleString("en-US")} rows read · ${r.data.import.created_count.toLocaleString("en-US")} new · ${r.data.import.merged_count.toLocaleString("en-US")} merged · ${c.invalidEmails} bad emails · ${c.skipped} skipped (no firm). New rows are drafts until you publish.`);
-    setOpen(false); setName(""); setSource(""); setSourceUrl(""); setFile(null);
-    router.refresh();
-  }
 
   async function publish(id: string) {
     setPublishing(id);
@@ -277,30 +256,10 @@ export function ImportsClient({ imports, openNew }: Readonly<{ imports: ImportRo
       </Section>
 
       {open ? (
-        <div role="dialog" aria-modal="true" aria-label="New import" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setOpen(false)}>
-          <div className="w-full max-w-md rounded-xl bg-white p-5" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-[15px] font-semibold text-slate-900">New import</h2>
-            <p className="mt-1 text-[12.5px] text-slate-500">Public sources only. Never scraped data from LinkedIn, Crunchbase or other sites whose terms forbid it.</p>
-            <label className="mt-4 block text-[12px] text-slate-600">Name
-              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="SBA SBIC directory, Oct 2026" className="mt-1 h-9 w-full rounded-md border border-slate-300 px-2 text-[13px]" />
-            </label>
-            <label className="mt-3 block text-[12px] text-slate-600">Source
-              <input value={source} onChange={(e) => setSource(e.target.value)} placeholder="SBA SBIC Directory (sba.gov)" className="mt-1 h-9 w-full rounded-md border border-slate-300 px-2 text-[13px]" />
-            </label>
-            <label className="mt-3 block text-[12px] text-slate-600">Source link
-              <input value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} placeholder="https://www.sba.gov/…" className="mt-1 h-9 w-full rounded-md border border-slate-300 px-2 text-[13px]" />
-            </label>
-            <label className="mt-3 block text-[12px] text-slate-600">CSV file
-              <input type="file" accept=".csv,text/csv" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="mt-1 block w-full text-[12.5px]" />
-            </label>
-            <p className="mt-2 text-[11.5px] text-slate-500">Columns are matched by name: Firm, Contact, Email, Phone, City, State, Website, Strategy, Style, Industries, Investing Now, Fund Size, Average Investment.</p>
-            {error ? <p className="mt-3 text-[12.5px] text-[#A32D2D]">{error}</p> : null}
-            <div className="mt-4 flex justify-end gap-2">
-              <button type="button" onClick={() => setOpen(false)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-[12.5px]">Cancel</button>
-              <button type="button" disabled={busy} onClick={() => void submit()} className="rounded-lg bg-[#1A6CE4] px-3.5 py-1.5 text-[12.5px] font-semibold text-white hover:bg-[#2E78F5]">{busy ? "Cleaning…" : "Upload and clean"}</button>
-            </div>
-          </div>
-        </div>
+        <ImportWizard
+          onClose={() => setOpen(false)}
+          onDone={(message) => { setOpen(false); setDone(message); router.refresh(); }}
+        />
       ) : null}
 
       {editing ? (
