@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { applyEdits, applyMapping, autoMatch, cellText, parseEdit, parseLocation, suggest } from "@/lib/investor-directory/import-mapping";
+import { applyEdits, applyMapping, autoMatch, cellText, guessCapital, guessEdits, matchIndustry, parseEdit, parseLocation, suggest } from "@/lib/investor-directory/import-mapping";
+import type { CleanRow } from "@/lib/investor-directory/clean";
 
 const headers = [
   "Investor Name", "Contact Name", "Job Title", "Public Email", "Phone", "Investor Type", "Industry Sector",
@@ -107,5 +108,34 @@ describe("review edits", () => {
   it("ignores fields that are not editable", () => {
     const r = applyEdits(base, { "0": { fund_size: "99" } }, []);
     expect(r.rows[0].fund_size).toBeNull();
+  });
+});
+
+describe("guessing missing fields", () => {
+  const base = (o: Partial<CleanRow>): CleanRow => ({
+    firm: "A", contact_name: null, title: null, email: null, phone: null, website: null, city: null, state: null,
+    investor_types: [], funding_stages: [], capital_types: [], industries: [], fund_name: null, fund_size: null, avg_investment: null,
+    strategy: null, investing_now: null, notes: null, ...o,
+  } as CleanRow);
+  it("matches industry names to the directory list", () => {
+    expect(matchIndustry("Cybersecurity")).toEqual(["Cyber Security"]);
+    expect(matchIndustry("Crypto / Web3")).toEqual(["Cryptocurrency", "Blockchain"]);
+    expect(matchIndustry("Real Estate")).toEqual(["Real Estate"]);
+    expect(matchIndustry("Remote Work Tech")).toEqual([]);
+  });
+  it("guesses capital from investor type", () => {
+    expect(guessCapital(["angel-investor"])).toEqual(["equity-capital"]);
+    expect(guessCapital(["lender"])).toEqual(["debt-capital"]);
+    expect(guessCapital(["other"])).toEqual([]);
+  });
+  it("fills empty capital, fixes industries, moves unmatched names to notes, skips edited cells", () => {
+    const rows = [base({ investor_types: ["angel-investor"], industries: ["Cybersecurity", "Remote Work Tech", "Real Estate"], notes: "Past Investments: X" }), base({ investor_types: ["venture-capital"], industries: ["Gaming"] })];
+    const g = guessEdits(rows, { 1: { capital_types: "Debt capital" } });
+    expect(g.edits[0]).toEqual({ capital_types: "Equity capital", industries: "Cyber Security, Real Estate", notes: "Past Investments: X | Industries: Remote Work Tech" });
+    expect(g.edits[1]).toBeUndefined();
+    expect(g.capital).toBe(1);
+    const r = applyEdits(rows, { 0: g.edits[0] }, []);
+    expect(r.rows[0].capital_types).toEqual(["equity-capital"]);
+    expect(r.rows[0].industries).toEqual(["Cyber Security", "Real Estate"]);
   });
 });

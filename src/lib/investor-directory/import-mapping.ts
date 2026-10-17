@@ -393,12 +393,12 @@ export const slugLabel = (slug: string): string => slug.replace(/-/g, " ").repla
 /** The columns of the review table, in order. Each one can be edited before saving. */
 export const EDIT_FIELDS = [
   "firm", "contact_name", "title", "email", "phone", "website", "state", "country",
-  "investor_types", "funding_stages", "industries", "strategy", "notes",
+  "investor_types", "funding_stages", "capital_types", "industries", "strategy", "notes",
 ] as const;
 export type EditField = (typeof EDIT_FIELDS)[number];
 export const EDIT_LABELS: Record<EditField, string> = {
   firm: "Firm", contact_name: "Contact", title: "Title", email: "Email", phone: "Phone", website: "Website", state: "State", country: "Country",
-  investor_types: "Investor types", funding_stages: "Funding stages", industries: "Industries", strategy: "Strategy", notes: "Notes",
+  investor_types: "Investor types", funding_stages: "Funding stages", capital_types: "Capital", industries: "Industries", strategy: "Strategy", notes: "Notes",
 };
 
 /** A cleaned row's value as the text shown in its review cell. */
@@ -420,7 +420,8 @@ export function parseEdit(f: EditField, text: string): Partial<CleanRow> {
     case "country": return { country: t ? normalizeCountry(t) : null };
     case "industries": return { industries: [...new Set(splitList(t))] };
     case "investor_types":
-    case "funding_stages": {
+    case "funding_stages":
+    case "capital_types": {
       const out = new Set<string>();
       for (const item of splitList(t)) {
         const slug = item.toLowerCase().replace(/\s+/g, "-");
@@ -449,4 +450,72 @@ export function applyEdits(rows: CleanRow[], edits: Record<string, Record<string
     if (next.firm) out.push(next);
   });
   return { rows: out, invalidEmails };
+}
+
+/** The industry names on the record page, so imported industries show as selected there. */
+export const DIRECTORY_INDUSTRIES = [
+  "Aerospace", "Agriculture", "AgTech", "AI / ML", "Apparel", "Artificial Intelligence", "Biotechnology/Life Science", "Bitcoin",
+  "Blockchain", "Business Services", "Cannabis", "Cleantech", "Communications", "Computer", "Construction", "Consumer Products",
+  "Cryptocurrency", "Cyber Security", "Data/IoT", "Deep Tech", "Defense", "Digital Health", "E-commerce", "EdTech", "Energy",
+  "Enterprise Software", "Entertainment", "Financial Services", "Fintech", "Food Tech", "Food/Hospitality", "Gaming", "Hardware",
+  "Health & Wellness", "Healthcare", "Industrial", "Insurance", "Logistics", "Manufacturing", "Marketplace", "Materials", "Media",
+  "Medical Devices", "Mining", "Nano Technology", "Nuclear Waste Recycling", "Oil & Gas", "Payment App", "Plastics",
+  "Professional Services", "Real Estate", "Robotics", "SaaS", "SaaS / B2B Software", "Semiconductor", "Software", "Telecom",
+  "Transportation", "Travel", "HealthTech", "Warehousing", "Other",
+];
+const indKey = (v: string) => v.toLowerCase().replace(/\([^)]*\)/g, "").replace(/[^a-z0-9]+/g, "");
+const INDUSTRY_BY_KEY = new Map(DIRECTORY_INDUSTRIES.map((n) => [indKey(n), n]));
+const INDUSTRY_ALIASES: Record<string, string[]> = {
+  cybersecurity: ["Cyber Security"], healthtech: ["HealthTech"], healthtechdigitalhealth: ["Digital Health"],
+  cryptoweb3: ["Cryptocurrency", "Blockchain"], crypto: ["Cryptocurrency"], web3: ["Blockchain"],
+  ai: ["AI / ML"], machinelearning: ["AI / ML"], verticalai: ["AI / ML"], informationtechnology: ["Software"],
+  gamingmediasports: ["Gaming", "Media"], infrastructuredevelopertools: ["Software"], biotech: ["Biotechnology/Life Science"],
+  lifesciences: ["Biotechnology/Life Science"], ecommerce: ["E-commerce"], realestatetech: ["Real Estate"], proptech: ["Real Estate"],
+  foodbeverage: ["Food/Hospitality"], iot: ["Data/IoT"], saas: ["SaaS"], edtech: ["EdTech"], education: ["EdTech"],
+};
+/** Directory industries for one name from a file, or none when nothing fits. */
+export function matchIndustry(name: string): string[] {
+  const k = indKey(name);
+  const exact = INDUSTRY_BY_KEY.get(k);
+  return exact ? [exact] : INDUSTRY_ALIASES[k] ?? [];
+}
+
+const EQUITY_TYPES = new Set(["angel-investor", "venture-capital", "private-equity", "family-office", "hedge-fund"]);
+/** Capital guessed from investor type: equity for investors, debt for lenders. Empty when the type says nothing. */
+export function guessCapital(types: string[]): string[] {
+  const out: string[] = [];
+  if (types.some((t) => EQUITY_TYPES.has(t))) out.push("equity-capital");
+  if (types.includes("lender")) out.push("debt-capital");
+  return out;
+}
+
+/**
+ * Guesses for cells that are still empty or not in the directory list. Returns review edits by row index,
+ * as cell text, never touching a cell the user already edited. Names with no match move to Notes.
+ */
+export function guessEdits(rows: CleanRow[], current: Record<number, Record<string, string>>): { edits: Record<number, Record<string, string>>; capital: number; industries: number } {
+  const edits: Record<number, Record<string, string>> = {};
+  let capital = 0, industries = 0;
+  rows.forEach((row, i) => {
+    const mine: Record<string, string> = {};
+    if (current[i]?.capital_types === undefined && row.capital_types.length === 0) {
+      const g = guessCapital(row.investor_types);
+      if (g.length) { mine.capital_types = g.map(slugLabel).join(", "); capital++; }
+    }
+    if (current[i]?.industries === undefined && row.industries.length) {
+      const kept: string[] = [], left: string[] = [];
+      for (const name of row.industries) {
+        const m = matchIndustry(name);
+        if (m.length) for (const x of m) { if (!kept.includes(x)) kept.push(x); } else left.push(name);
+      }
+      const changed = left.length > 0 || kept.join("|") !== row.industries.join("|");
+      if (changed) {
+        mine.industries = kept.join(", ");
+        if (left.length && current[i]?.notes === undefined) mine.notes = [row.notes, `Industries: ${left.join("; ")}`].filter(Boolean).join(" | ");
+        industries++;
+      }
+    }
+    if (Object.keys(mine).length) edits[i] = mine;
+  });
+  return { edits, capital, industries };
 }
