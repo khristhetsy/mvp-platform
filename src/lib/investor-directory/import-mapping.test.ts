@@ -34,10 +34,10 @@ describe("suggest and autoMatch", () => {
 
 describe("parseLocation", () => {
   it("splits places", () => {
-    expect(parseLocation("California, USA")).toEqual({ city: null, state: "CA", country: "United States" });
-    expect(parseLocation("TX, USA")).toEqual({ city: null, state: "TX", country: "United States" });
-    expect(parseLocation("Massachusetts")).toEqual({ city: null, state: "MA", country: "United States" });
-    expect(parseLocation("Boston, MA")).toEqual({ city: "Boston", state: "MA", country: "United States" });
+    expect(parseLocation("California, USA")).toEqual({ city: null, state: "CA", country: "US" });
+    expect(parseLocation("TX, USA")).toEqual({ city: null, state: "TX", country: "US" });
+    expect(parseLocation("Massachusetts")).toEqual({ city: null, state: "MA", country: "US" });
+    expect(parseLocation("Boston, MA")).toEqual({ city: "Boston", state: "MA", country: "US" });
   });
 });
 
@@ -66,6 +66,10 @@ describe("applyMapping", () => {
     const r = applyMapping(["Firm", "Note"], [["Acme", "Hello"]], { "0": ["firm"], "1": ["notes", "strategy"] });
     expect(r.rows[0].notes).toBe("Note: Hello");
     expect(r.rows[0].strategy).toBe("Hello");
+  });
+  it("stores the United States as US", () => {
+    const r = applyMapping(["Firm", "Country"], [["Acme", "United States"], ["Beta", "Canada"]], { "0": ["firm"], "1": ["country"] });
+    expect(r.rows.map((x) => x.country)).toEqual(["US", "Canada"]);
   });
   it("needs a firm column", () => {
     expect(applyMapping(["A"], [["x"]], { "0": ["notes"] }).missingFirm).toBe(true);
