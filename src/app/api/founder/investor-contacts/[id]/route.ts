@@ -46,6 +46,7 @@ export async function PATCH(request: Request, context: RouteContext) {
           geography: parsed.data.geography,
           tags: parsed.data.tags,
           notes: parsed.data.notes,
+          investor_profile: parsed.data.investor_profile,
           status: parsed.data.status,
         },
       });
