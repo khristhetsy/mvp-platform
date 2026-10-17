@@ -84,9 +84,17 @@ type ApiContact = {
   firm_name: string | null;
   investor_type: string | null;
   preferred_sectors: string | null;
+  preferred_stages?: string | null;
+  phone?: string | null;
+  geography?: string | null;
   source: string;
   status?: string;
 };
+
+// "Seed, Series A" or "Seed; Series A" becomes "Seed · Series A".
+function dotList(v: string | null | undefined): string[] {
+  return (v ?? "").split(/[,;]/).map((x) => x.trim()).filter(Boolean);
+}
 
 async function fetchContacts(): Promise<OutreachContact[] | null> {
   try {
@@ -101,6 +109,9 @@ async function fetchContacts(): Promise<OutreachContact[] | null> {
       firm: c.firm_name,
       investorType: c.investor_type,
       sectors: c.preferred_sectors,
+      phone: c.phone ?? null,
+      stages: c.preferred_stages ?? null,
+      geography: c.geography ?? null,
       source: contactSourceLabel(c.source),
       detail: [c.firm_name, c.investor_type].filter(Boolean).join(" · ") || c.email,
     }));
@@ -154,6 +165,8 @@ export function ManualOutreachBuilder({
   const [contactList, setContactList] = useState<OutreachContact[]>(() => contacts.map(fromAudience));
   const [search, setSearch] = useState<SearchState>({ ...EMPTY_SEARCH, groupBy: "source" });
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  // The one investor whose contact panel is open (click a row to open or close it).
+  const [openId, setOpenId] = useState<string | null>(null);
   const [savedLists, setSavedLists] = useState<{ id: string; name: string; contactIds: string[] }[]>([]);
   const [activeListId, setActiveListId] = useState<string | null>(null);
 
@@ -760,6 +773,7 @@ export function ManualOutreachBuilder({
                 <th className="hidden w-32 px-2 py-2 font-medium lg:table-cell">Type</th>
                 <th className="hidden w-32 px-2 py-2 font-medium sm:table-cell">Source</th>
                 <th className="w-32 px-2 py-2 font-medium">Outreach</th>
+                <th className="w-8 px-2 py-2" aria-label="Contact details" />
               </tr>
             </thead>
             <tbody>
@@ -769,7 +783,7 @@ export function ManualOutreachBuilder({
                   <Fragment key={g.label || "all"}>
                     {g.label ? (
                       <tr className="bg-slate-50">
-                        <td colSpan={6} className="px-4 py-1.5">
+                        <td colSpan={7} className="px-4 py-1.5">
                           <button
                             type="button"
                             onClick={() =>
@@ -795,9 +809,15 @@ export function ManualOutreachBuilder({
                           const on = selected.has(r.id);
                           const st = r.email ? statusByEmail.get(r.email.trim().toLowerCase()) : undefined;
                           const stage = st ? stageOf(st) : null;
+                          const isOpen = openId === r.id;
+                          const invests = [r.investorType, ...dotList(r.stages), ...dotList(r.sectors)].filter(Boolean).join(" · ");
                           return (
-                            <tr key={r.id} className={`border-b border-slate-100 last:border-b-0 ${on ? "bg-blue-50/40" : "hover:bg-slate-50/60"}`}>
-                              <td className="px-4 py-2.5">
+                            <Fragment key={r.id}>
+                            <tr
+                              onClick={() => setOpenId(isOpen ? null : r.id)}
+                              className={`cursor-pointer border-b border-slate-100 last:border-b-0 ${on ? "bg-blue-50/40" : "hover:bg-slate-50/60"}`}
+                            >
+                              <td className="px-4 py-2.5" onClick={(e) => e.stopPropagation()}>
                                 <input type="checkbox" aria-label={`Select ${r.name}`} checked={on} onChange={() => toggle(r.id)} />
                               </td>
                               <td className="px-2 py-2.5">
@@ -818,7 +838,35 @@ export function ManualOutreachBuilder({
                                   <span className="text-[12px] text-slate-400">Not contacted</span>
                                 )}
                               </td>
+                              <td className="px-2 py-2.5 text-center">
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); setOpenId(isOpen ? null : r.id); }}
+                                  aria-expanded={isOpen}
+                                  aria-label={`${isOpen ? "Hide" : "Show"} contact details for ${r.name}`}
+                                  className="text-slate-400 hover:text-slate-600"
+                                >
+                                  <i className={`ti ti-chevron-${isOpen ? "up" : "down"}`} aria-hidden="true" />
+                                </button>
+                              </td>
                             </tr>
+                            {isOpen ? (
+                              <tr className="border-b border-slate-100 bg-slate-50">
+                                <td colSpan={7} className="px-4 pb-3 pl-14 pt-1">
+                                  <div className="grid grid-cols-[100px_minmax(0,1fr)] gap-x-3 gap-y-1 text-[12.5px]">
+                                    <span className="text-slate-500">Contact</span><span>{r.name}</span>
+                                    <span className="text-slate-500">Email</span><span>{r.email ?? "Not provided"}</span>
+                                    <span className="text-slate-500">Phone</span><span>{r.phone || "Not provided"}</span>
+                                    <span className="text-slate-500">Invests in</span><span>{invests || "Not provided"}</span>
+                                    <span className="text-slate-500">Source</span><span>{r.source}</span>
+                                    {r.source === "From investor directory" ? (
+                                      <><span className="text-slate-500">Verified</span><span>Not yet verified by iCFO</span></>
+                                    ) : null}
+                                  </div>
+                                </td>
+                              </tr>
+                            ) : null}
+                            </Fragment>
                           );
                         })}
                   </Fragment>

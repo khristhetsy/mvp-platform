@@ -9,6 +9,10 @@ export type OutreachContact = {
   investorType: string | null;
   sectors: string | null;
   source: MyContactSource;
+  /** Shown in the expanded contact panel. */
+  phone?: string | null;
+  stages?: string | null;
+  geography?: string | null;
   /** Short line under the name (firm · type), kept for older callers. */
   detail?: string | null;
 };
