@@ -11,7 +11,16 @@ import { MyContactsClient } from "./MyContactsClient";
 
 export const dynamic = "force-dynamic";
 
-export default async function FounderMyContactsPage() {
+const CONTACT_FILTERS = ["introduced", "imported", "added", "has_email"];
+
+export default async function FounderMyContactsPage({
+  searchParams,
+}: Readonly<{ searchParams?: Promise<{ filter?: string; deleted?: string }> }>) {
+  const query = await searchParams;
+  const filter = query?.filter;
+  // After a contact is deleted from its page, the list opens with a short confirmation.
+  const deleted = query?.deleted?.trim().slice(0, 80);
+  const initialQuick = filter && CONTACT_FILTERS.includes(filter) ? [filter] : [];
   const profile = await requireRole(["founder"]);
   const { company } = await getActiveCompanyForUser(profile);
   const rows = company ? await loadMyContacts(company.id, profile.id) : [];
@@ -29,7 +38,7 @@ export default async function FounderMyContactsPage() {
               title="My contacts"
               description="Your own investors: the ones you imported, the ones iCapOS introduced you to, and the ones you added."
             />
-            {company ? <MyContactsClient initialRows={rows} /> : <DealCompanyEmptyState />}
+            {company ? <MyContactsClient initialRows={rows} initialQuick={initialQuick} initialNotice={deleted ? `${deleted} was deleted.` : undefined} /> : <DealCompanyEmptyState />}
           </WorkspacePageContainer>
         </FounderFeatureGate>
       </FounderJourneyGate>

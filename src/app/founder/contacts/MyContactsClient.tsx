@@ -23,16 +23,16 @@ const SOURCE_STYLE: Record<string, string> = {
   "Added by you": "bg-slate-100 text-slate-600",
 };
 
-export function MyContactsClient({ initialRows }: Readonly<{ initialRows: MyContactRow[] }>) {
+export function MyContactsClient({ initialRows, initialQuick = [], initialNotice }: Readonly<{ initialRows: MyContactRow[]; initialQuick?: string[]; initialNotice?: string }>) {
   const router = useRouter();
   const [rows, setRows] = useState<MyContactRow[]>(initialRows);
-  const [search, setSearch] = useState<SearchState>({ ...EMPTY_SEARCH, groupBy: "source" });
+  const [search, setSearch] = useState<SearchState>({ ...EMPTY_SEARCH, groupBy: "source", quick: initialQuick });
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [panel, setPanel] = useState<"none" | "add">("none");
   const [form, setForm] = useState({ name: "", firm: "", email: "", type: "" });
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
+  const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(initialNotice ? { tone: "ok", text: initialNotice } : null);
 
   const filtered = applySearch(rows, search, {
     text: (r) => [r.name, r.firm ?? "", r.email ?? "", r.investorType ?? "", r.sectors ?? ""].join(" "),
