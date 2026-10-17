@@ -7,6 +7,7 @@ import { DealCompanyEmptyState } from "@/components/founder/DealCompanyEmptyStat
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { requireRole } from "@/lib/supabase/auth";
 import { loadContactDetail } from "@/lib/founder-crm/contact-detail";
+import { getManualOutreach } from "@/lib/outreach/manual-outreach";
 import { loadVocabularies } from "@/lib/vocabulary/store";
 import { offered } from "@/lib/vocabulary/lists";
 import { ContactDetailClient } from "./ContactDetailClient";
@@ -19,6 +20,16 @@ export default async function FounderContactPage({ params }: Readonly<{ params: 
   const { company } = await getActiveCompanyForUser(profile);
   const detail = company ? await loadContactDetail(company.id, profile.id, id) : null;
   if (company && !detail) notFound();
+
+  // The saved Manual outreach email, shown on the Send email tab (this page sends that email).
+  const campaign = company ? await getManualOutreach(company.id).catch(() => null) : null;
+  const email = {
+    subject: campaign?.emailSubject ?? "",
+    body: campaign?.emailBody ?? "",
+    ready: Boolean(campaign?.emailSubject?.trim() && campaign?.emailBody?.trim() && (campaign?.sequence?.length ?? 0) > 0),
+    companyName: company?.company_name ?? "",
+    sector: (company as { industry?: string | null } | null)?.industry ?? "",
+  };
 
   // The same option lists the rest of iCapOS uses (investor type, funding stage,
   // industry). Stored values are labels, as the directory import writes them.
@@ -50,6 +61,7 @@ export default async function FounderContactPage({ params }: Readonly<{ params: 
                 pager={detail.pager}
                 engagement={detail.engagement}
                 options={options}
+                email={email}
               />
             ) : (
               <DealCompanyEmptyState />

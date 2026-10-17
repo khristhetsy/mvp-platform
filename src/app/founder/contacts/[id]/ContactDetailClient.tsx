@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { OdooPager } from "@/components/admin/OdooPager";
@@ -30,6 +30,8 @@ type Options = {
   arrBands: string[];
   mrrBands: string[];
 };
+
+type EmailInfo = { subject: string; body: string; ready: boolean; companyName: string; sector: string };
 
 type Pager = { index: number; total: number; prevId: string | null; nextId: string | null };
 
@@ -161,7 +163,7 @@ function toValues(c: FounderInvestorContactRecord): Values {
 }
 
 const TABS = [
-  { id: "email", label: "Send email", soon: true },
+  { id: "email", label: "Send email", soon: false },
   { id: "note", label: "Note log", soon: true },
   { id: "profile", label: "Investor profile", soon: false },
   { id: "tasks", label: "Tasks", soon: true },
@@ -317,11 +319,13 @@ export function ContactDetailClient({
   pager,
   engagement,
   options,
+  email,
 }: Readonly<{
   initialContact: FounderInvestorContactRecord;
   pager: Pager;
   engagement: ManualRecipientStatus | null;
   options: Options;
+  email: EmailInfo;
 }>) {
   const router = useRouter();
   const [contact, setContact] = useState(initialContact);
@@ -332,6 +336,9 @@ export function ContactDetailClient({
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sendMsg, setSendMsg] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
+  const [emailCap, setEmailCap] = useState<{ cap: number; used: number; resetsLabel: string } | null>(null);
   const [confirmArchive, setConfirmArchive] = useState(false);
 
   const closeMenu = useCallback(() => setMenuOpen(false), []);
@@ -403,6 +410,50 @@ export function ContactDetailClient({
       setMessage({ tone: "error", text: "Network error. Try again." });
     } finally {
       setSaving(false);
+    }
+  }
+
+  // Plan email limit, for the Send email tab. Quiet if it can't load; the send itself still enforces it.
+  useEffect(() => {
+    if (tab !== "email" || emailCap) return;
+    void fetch("/api/founder/outreach/email-cap")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { cap: number; used: number; resetsLabel?: string } | null) => {
+        if (d && typeof d.cap === "number") setEmailCap({ cap: d.cap, used: d.used, resetsLabel: d.resetsLabel ?? "" });
+      })
+      .catch(() => undefined);
+  }, [tab, emailCap]);
+
+  async function sendEmail() {
+    setSending(true);
+    setSendMsg(null);
+    try {
+      const res = await fetch(`/api/founder/investor-contacts/${contact.id}/send`, { method: "POST" });
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      if (!res.ok) {
+        setSendMsg({ tone: "error", text: data?.error ?? "Couldn't queue the email. Try again." });
+        return;
+      }
+      setSendMsg({ tone: "ok", text: "Queued. It goes out on the next send pass." });
+      router.refresh();
+    } catch {
+      setSendMsg({ tone: "error", text: "Network error. Try again." });
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function cancelSend() {
+    setSending(true);
+    setSendMsg(null);
+    try {
+      await fetch(`/api/founder/investor-contacts/${contact.id}/send`, { method: "DELETE" });
+      setSendMsg({ tone: "ok", text: "Send cancelled." });
+      router.refresh();
+    } catch {
+      setSendMsg({ tone: "error", text: "Network error. Try again." });
+    } finally {
+      setSending(false);
     }
   }
 
@@ -575,6 +626,19 @@ export function ContactDetailClient({
         </div>
 
         <div className="min-h-[260px] px-6 pb-7 pt-4">
+          {tab === "email" ? (
+            <SendEmailTab
+              contact={contact}
+              engagement={engagement}
+              email={email}
+              emailCap={emailCap}
+              sending={sending}
+              message={sendMsg}
+              onSend={() => void sendEmail()}
+              onCancel={() => void cancelSend()}
+            />
+          ) : null}
+
           {tab === "profile" ? (
             <div>
               <p className="mb-1 text-[12px] text-slate-500">Click any value to edit it.</p>
@@ -655,6 +719,118 @@ function ChipPicker({
           </button>
         );
       })}
+    </div>
+  );
+}
+
+function fillMerge(template: string, firstName: string, company: string, sector: string): string {
+  return template
+    .replace(/\{\{\s*first_name\s*\}\}/g, firstName || "there")
+    .replace(/\{\{\s*company\s*\}\}/g, company || "our company")
+    .replace(/\{\{\s*sector\s*\}\}/g, sector || "your focus area");
+}
+
+function SendEmailTab({
+  contact,
+  engagement,
+  email,
+  emailCap,
+  sending,
+  message,
+  onSend,
+  onCancel,
+}: Readonly<{
+  contact: FounderInvestorContactRecord;
+  engagement: ManualRecipientStatus | null;
+  email: EmailInfo;
+  emailCap: { cap: number; used: number; resetsLabel: string } | null;
+  sending: boolean;
+  message: { tone: "ok" | "error"; text: string } | null;
+  onSend: () => void;
+  onCancel: () => void;
+}>) {
+  const firstName = contact.investor_name.trim().split(/\s+/)[0] ?? "";
+  const subject = fillMerge(email.subject, firstName, email.companyName, email.sector);
+  const body = fillMerge(email.body, firstName, email.companyName, email.sector);
+  const active = engagement?.status === "active";
+  const queued = active && !engagement?.sentAt;
+  const inSequence = active && Boolean(engagement?.sentAt);
+  const atLimit = emailCap !== null && emailCap.cap > 0 && emailCap.used >= emailCap.cap;
+
+  return (
+    <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_280px]">
+      <div>
+        <div className="mb-2.5 flex flex-wrap items-center gap-2">
+          <span className="text-[13px] font-semibold text-slate-900">Email to {contact.investor_name}</span>
+          <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] text-[#185FA5]">One email only, no follow ups</span>
+        </div>
+        {!email.ready ? (
+          <p className="rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-3 text-[12.5px] text-slate-600">
+            You have not saved a Manual outreach email yet. Write it in <Link href="/founder/deploy" className="text-[#1A6CE4] hover:underline">Outreach: Manual</Link>, then come back to send it here.
+          </p>
+        ) : (
+          <div className="rounded-lg border border-slate-200 p-3.5">
+            <div className="grid grid-cols-[64px_minmax(0,1fr)] gap-x-2.5 gap-y-2 border-b border-slate-100 pb-2.5 text-[13px]">
+              <span className="text-slate-500">To</span>
+              <span className="break-words">{contact.investor_name}{contact.email ? ` <${contact.email}>` : ""}</span>
+              <span className="text-slate-500">Subject</span>
+              <span className="font-semibold">{subject}</span>
+            </div>
+            <p className="whitespace-pre-wrap pt-3 text-[13px] leading-relaxed text-slate-800">{body}</p>
+          </div>
+        )}
+        <p className="mt-2 text-[12px] text-slate-500">
+          The wording is your Manual outreach email, with any attachments you set there. To change it, edit it in <Link href="/founder/deploy" className="text-[#1A6CE4] hover:underline">Outreach: Manual</Link>.
+        </p>
+
+        <div className="mt-3.5 flex flex-wrap items-center gap-2">
+          {!queued && !inSequence ? (
+            <>
+              <button
+                type="button"
+                onClick={onSend}
+                disabled={sending || !email.ready || !contact.email || atLimit}
+                className="cap-btn-primary rounded-lg px-4 py-2 text-[13px] font-semibold disabled:opacity-50"
+              >
+                {sending ? "Queuing…" : engagement?.sentAt ? "Send again" : "Send email"}
+              </button>
+              <span className="text-[12px] text-slate-500">
+                {contact.email ? "It goes out on the next send pass. Replies come to your inbox and show on Activity." : "Add an email address on the Investor profile tab first."}
+              </span>
+            </>
+          ) : null}
+          {queued ? (
+            <>
+              <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[12px] font-semibold text-amber-800">Queued</span>
+              <span className="text-[13px]">Your email to {firstName || "this contact"} is queued. It shows on Activity once it is sent.</span>
+              <button type="button" onClick={onCancel} disabled={sending} className={btn}>Cancel send</button>
+            </>
+          ) : null}
+          {inSequence ? (
+            <span className="text-[13px] text-slate-700">{firstName || "This contact"} is in your Manual outreach sequence, with follow ups still to come. You can send again once it finishes.</span>
+          ) : null}
+        </div>
+        {message ? <p className={`mt-2 text-[12px] ${message.tone === "ok" ? "text-emerald-700" : "text-red-600"}`} role="status">{message.text}</p> : null}
+      </div>
+
+      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3.5 text-[12.5px]">
+        <p className="mb-1.5 text-[13px] font-semibold text-slate-900">Send only</p>
+        <p className="leading-relaxed text-slate-700">One email to this contact. No follow ups are scheduled. Send again from here any time.</p>
+        <div className="my-3 border-t border-slate-200" />
+        <p className="mb-1.5 text-[13px] font-semibold text-slate-900">Your plan limit</p>
+        {emailCap ? (
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-y-1">
+            <span className="text-slate-500">Emails this period</span>
+            <span>{emailCap.used} of {emailCap.cap}</span>
+            {emailCap.resetsLabel ? (<><span className="text-slate-500">Resets</span><span>{emailCap.resetsLabel}</span></>) : null}
+          </div>
+        ) : (
+          <p className="text-slate-400">Loading…</p>
+        )}
+        <p className="mt-2 text-[12px] text-slate-500">
+          {atLimit ? "You have reached the limit for this period. It resets on the date above." : "Free plans can read the email but not send. Basic and above can send."}
+        </p>
+      </div>
     </div>
   );
 }
