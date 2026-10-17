@@ -699,8 +699,11 @@ export async function createImport(input: {
       await d.from("investor_directory").update(patch).eq("id", prev.id);
       continue;
     }
+    // country is NOT NULL with a default of US: leave it out when the row has none so the default applies.
+    const { country, ...rest } = r;
     fresh.push({
-      ...r,
+      ...rest,
+      ...(country ? { country } : {}),
       source: input.source,
       source_url: r.source_url ?? input.sourceUrl,
       import_id: (imp as ImportRow).id,

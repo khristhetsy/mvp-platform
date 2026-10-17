@@ -227,16 +227,23 @@ export function parseLocation(v: string | null | undefined): { city: string | nu
     const up = p.toUpperCase();
     return STATE_CODES.has(up) ? up : null;
   };
-  if (parts.length && US_NAMES.has(parts[parts.length - 1].toLowerCase())) { country = "United States"; parts.pop(); }
+  if (parts.length && US_NAMES.has(parts[parts.length - 1].toLowerCase())) { country = "US"; parts.pop(); }
   if (parts.length) {
     const last = asState(parts[parts.length - 1]);
-    if (last) { state = last; if (!country) country = "United States"; parts.pop(); }
+    if (last) { state = last; if (!country) country = "US"; parts.pop(); }
   }
   if (parts.length) {
     if (!state && !country && parts.length === 1) city = normalizeName(parts[0]);
     else city = normalizeName(parts.join(", "));
   }
   return { city, state, country };
+}
+
+/** The directory stores the United States as "US"; other countries are kept as written. */
+function normalizeCountry(v: string): string | null {
+  const t = tidy(v);
+  if (!t) return null;
+  return US_NAMES.has(t.toLowerCase()) ? "US" : normalizeName(t);
 }
 
 const VOCAB_FIELDS = new Set<FieldKey>(["investor_types", "funding_stages", "capital_types"]);
@@ -324,7 +331,7 @@ export function applyMapping(headers: string[], rows: string[][], mapping: Mappi
       website: tidy(text.website),
       city: text.city ? normalizeName(text.city) : loc.city,
       state,
-      country: text.country ? normalizeName(text.country) : loc.country,
+      country: text.country ? normalizeCountry(text.country) : loc.country,
       investor_types: [...lists.investor_types],
       funding_stages: [...lists.funding_stages],
       capital_types: [...lists.capital_types],
