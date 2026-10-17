@@ -7,6 +7,7 @@ import { DealCompanyEmptyState } from "@/components/founder/DealCompanyEmptyStat
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { requireRole } from "@/lib/supabase/auth";
 import { loadContactDetail } from "@/lib/founder-crm/contact-detail";
+import { loadContactNotes, loadContactTasks } from "@/lib/founder-crm/contact-notes";
 import { getManualOutreach } from "@/lib/outreach/manual-outreach";
 import { loadVocabularies } from "@/lib/vocabulary/store";
 import { offered } from "@/lib/vocabulary/lists";
@@ -14,12 +15,25 @@ import { ContactDetailClient } from "./ContactDetailClient";
 
 export const dynamic = "force-dynamic";
 
-export default async function FounderContactPage({ params }: Readonly<{ params: Promise<{ id: string }> }>) {
+const TAB_IDS = ["email", "note", "profile", "tasks", "activity"] as const;
+
+export default async function FounderContactPage({
+  params,
+  searchParams,
+}: Readonly<{ params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string }> }>) {
   const { id } = await params;
+  // The clock menu opens a task's contact with ?tab=tasks.
+  const { tab } = await searchParams;
+  const initialTab = (TAB_IDS as readonly string[]).includes(tab ?? "") ? (tab as (typeof TAB_IDS)[number]) : "profile";
   const profile = await requireRole(["founder"]);
   const { company } = await getActiveCompanyForUser(profile);
   const detail = company ? await loadContactDetail(company.id, profile.id, id) : null;
   if (company && !detail) notFound();
+
+  // Note log and Tasks for this contact. Both are private to this founder.
+  const [notes, tasks] = detail
+    ? await Promise.all([loadContactNotes(profile.id, id), loadContactTasks(profile.id, id)])
+    : [[], []];
 
   // The saved Manual outreach email, shown on the Send email tab (this page sends that email).
   const campaign = company ? await getManualOutreach(company.id).catch(() => null) : null;
@@ -62,6 +76,9 @@ export default async function FounderContactPage({ params }: Readonly<{ params: 
                 engagement={detail.engagement}
                 options={options}
                 email={email}
+                notes={notes}
+                tasks={tasks}
+                initialTab={initialTab}
               />
             ) : (
               <DealCompanyEmptyState />

@@ -8,14 +8,18 @@ import { useDismiss } from "@/lib/ui/use-dismiss";
 import { contactSourceLabel, contactStatusLabel } from "@/lib/founder-crm/contact-labels";
 import type { FounderInvestorContactRecord } from "@/lib/founder-crm/types";
 import type { ManualRecipientStatus } from "@/lib/outreach/manual-outreach";
+import type { ContactNote, ContactTask } from "@/lib/founder-crm/contact-notes-types";
+import { ContactNotesTab } from "./ContactNotesTab";
+import { ContactTasksTab } from "./ContactTasksTab";
 
 /**
  * Stage 3 → My contacts → one contact. Modeled on the Admin contact page:
  * header with actions, summary tiles, Details, then tabs.
  *
- * Step 1 ships Investor profile (read and edit, with the same option lists the
- * rest of iCapOS uses), Activity (from Manual outreach), and Archive. Send
- * email, Note log and Tasks are shown as coming next and are not clickable.
+ * Tabs: Send email (send only), Note log (private notes), Investor profile (read
+ * and edit, with the same option lists the rest of iCapOS uses), Tasks (the
+ * founder's clock reminders linked to this contact), and Activity (from Manual
+ * outreach). Archive is in the Actions menu.
  */
 
 type Options = {
@@ -164,9 +168,9 @@ function toValues(c: FounderInvestorContactRecord): Values {
 
 const TABS = [
   { id: "email", label: "Send email", soon: false },
-  { id: "note", label: "Note log", soon: true },
+  { id: "note", label: "Note log", soon: false },
   { id: "profile", label: "Investor profile", soon: false },
-  { id: "tasks", label: "Tasks", soon: true },
+  { id: "tasks", label: "Tasks", soon: false },
   { id: "activity", label: "Activity", soon: false },
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
@@ -320,16 +324,22 @@ export function ContactDetailClient({
   engagement,
   options,
   email,
+  notes,
+  tasks,
+  initialTab = "profile",
 }: Readonly<{
   initialContact: FounderInvestorContactRecord;
   pager: Pager;
   engagement: ManualRecipientStatus | null;
   options: Options;
   email: EmailInfo;
+  notes: ContactNote[];
+  tasks: ContactTask[];
+  initialTab?: TabId;
 }>) {
   const router = useRouter();
   const [contact, setContact] = useState(initialContact);
-  const [tab, setTab] = useState<TabId>("profile");
+  const [tab, setTab] = useState<TabId>(initialTab);
   const [orig, setOrig] = useState<Values>(() => toValues(initialContact));
   const [draft, setDraft] = useState<Values>(() => toValues(initialContact));
   const [editingKey, setEditingKey] = useState<string | null>(null);
@@ -349,6 +359,9 @@ export function ContactDetailClient({
   const stage = stageOf(engagement);
   const sentOn = day(engagement?.sentAt);
   const lastActivity = day(engagement?.repliedAt ?? engagement?.clickedAt ?? engagement?.openedAt ?? engagement?.sentAt);
+
+  // The tab count follows what the server sent; a tab's own edits show after the next refresh.
+  const openTaskCount = tasks.filter((t) => !t.done_at).length;
 
   const changedKeys = ALL_FIELDS.filter((f) => (draft[f.key] ?? "") !== (orig[f.key] ?? "")).map((f) => f.key);
 
@@ -620,6 +633,8 @@ export function ContactDetailClient({
                 className={`border-b-2 py-3 text-[13px] ${tab === t.id ? "border-[#185FA5] font-semibold text-[#185FA5]" : "border-transparent text-slate-700 hover:text-slate-900"}`}
               >
                 {t.label}
+                {t.id === "note" && notes.length > 0 ? ` (${notes.length})` : ""}
+                {t.id === "tasks" && openTaskCount > 0 ? ` (${openTaskCount})` : ""}
               </button>
             ),
           )}
@@ -637,6 +652,14 @@ export function ContactDetailClient({
               onSend={() => void sendEmail()}
               onCancel={() => void cancelSend()}
             />
+          ) : null}
+
+          {tab === "note" ? (
+            <ContactNotesTab contactId={contact.id} firstName={contact.investor_name.trim().split(/\s+/)[0] ?? ""} initialNotes={notes} />
+          ) : null}
+
+          {tab === "tasks" ? (
+            <ContactTasksTab contactId={contact.id} contactName={contact.investor_name} initialTasks={tasks} />
           ) : null}
 
           {tab === "profile" ? (
