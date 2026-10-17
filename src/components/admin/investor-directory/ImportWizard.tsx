@@ -11,7 +11,7 @@
  */
 import { useMemo, useState } from "react";
 import {
-  EDIT_FIELDS, EDIT_LABELS, FIELDS, VOCAB_SLUGS, applyMapping, autoMatch, cellText, fieldLabel, filledCount, mapLabel,
+  EDIT_FIELDS, EDIT_LABELS, FIELDS, VOCAB_SLUGS, applyMapping, autoMatch, cellText, fieldLabel, filledCount, guessEdits, mapLabel,
   parseEdit, sampleColumns, slugLabel, valueCounts,
   type EditField, type FieldKey, type Mapping, type Suggestion, type ValueMap,
 } from "@/lib/investor-directory/import-mapping";
@@ -100,6 +100,7 @@ export function ImportWizard({ onClose, onDone }: Readonly<{ onClose: () => void
   const [over, setOver] = useState(false);
   const [hrow, setHrow] = useState(1);
   const [renamed, setRenamed] = useState<Record<number, string>>({});
+  const [custom, setCustom] = useState<Set<number>>(new Set());
   const [memory, setMemory] = useState<Record<string, FieldKey[]>>({});
   const [choice, setChoice] = useState<Record<number, string[]>>({});
   const [confirmed, setConfirmed] = useState<Set<number>>(new Set());
@@ -112,6 +113,8 @@ export function ImportWizard({ onClose, onDone }: Readonly<{ onClose: () => void
   const [rowEdits, setRowEdits] = useState<Record<number, Record<string, string>>>({});
   const [excluded, setExcluded] = useState<Set<number>>(new Set());
   const [editSig, setEditSig] = useState("");
+  const [undoGuess, setUndoGuess] = useState<Record<number, Record<string, string>> | null>(null);
+  const [guessInfo, setGuessInfo] = useState<{ capital: number; industries: number } | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
   const [page, setPage] = useState(0);
   const [done, setDone] = useState<{ imp: ImportRow; skipped: number; invalid: number; rowCount: number } | null>(null);
@@ -223,7 +226,7 @@ export function ImportWizard({ onClose, onDone }: Readonly<{ onClose: () => void
   /* Review and save */
   function toReview() {
     if (pending > 0) { setShowErr(true); return; }
-    if (editSig !== sig) { setRowEdits({}); setExcluded(new Set()); setPage(0); setFilter("all"); setEditSig(sig); }
+    if (editSig !== sig) { setRowEdits({}); setExcluded(new Set()); setPage(0); setFilter("all"); setUndoGuess(null); setGuessInfo(null); setEditSig(sig); }
     setStep(5);
   }
   const cleaned = result?.rows ?? [];
@@ -237,6 +240,18 @@ export function ImportWizard({ onClose, onDone }: Readonly<{ onClose: () => void
   const noInd = useMemo(() => cleaned.filter((_, i) => !(rowEdits[i]?.industries ?? cellText(cleaned[i], "industries")).trim()).length, [cleaned, rowEdits]);
   const pages = Math.max(1, Math.ceil(visible.length / PAGE));
   const pageRows = visible.slice(page * PAGE, page * PAGE + PAGE);
+  const preview = useMemo(() => guessEdits(cleaned, rowEdits), [cleaned, rowEdits]);
+  function applyGuess() {
+    const g = guessEdits(cleaned, rowEdits);
+    setUndoGuess(rowEdits);
+    setRowEdits((cur) => {
+      const n: Record<number, Record<string, string>> = { ...cur };
+      for (const [k, e] of Object.entries(g.edits)) n[Number(k)] = { ...(n[Number(k)] ?? {}), ...e };
+      return n;
+    });
+    setGuessInfo({ capital: g.capital, industries: g.industries });
+  }
+  function undoGuesses() { if (undoGuess) { setRowEdits(undoGuess); setUndoGuess(null); setGuessInfo(null); } }
   function editCell(i: number, f: EditField, text: string) {
     setRowEdits((all) => {
       const next = { ...all, [i]: { ...(all[i] ?? {}) } };
@@ -350,7 +365,7 @@ export function ImportWizard({ onClose, onDone }: Readonly<{ onClose: () => void
         {step === 2 && data ? (
           <div>
             <h2 className="text-[16px] font-semibold text-slate-900">Headers found in {data.sheet === "CSV" ? data.fileName : data.sheet}</h2>
-            <p className="mb-3 text-[12.5px] text-slate-500">{headers.length} columns, {total.toLocaleString("en-US")} rows. Check that the first values look right. Edit a header name if it is wrong; the match and notes use the name you set.</p>
+            <p className="mb-3 text-[12.5px] text-slate-500">{headers.length} columns, {total.toLocaleString("en-US")} rows. Check that the first values look right. Pick a better header name from the list if one is wrong, or choose Type a custom name. Picking a directory field name also sets that match in step 3.</p>
             <div className="mb-2.5 flex items-center gap-3 text-[12.5px] text-slate-600">
               <label className="flex items-center gap-2">Headers are in row
                 <select value={hrow} onChange={(e) => { setHrow(Number(e.target.value)); resetAnswers(); }} className="h-8 w-16 rounded-lg border border-slate-300 px-1.5 text-[13px]">
@@ -367,8 +382,35 @@ export function ImportWizard({ onClose, onDone }: Readonly<{ onClose: () => void
                   <tr key={i}>
                     <td className={td}>{i + 1}</td>
                     <td className={td}>
-                      <input aria-label={`Header ${i + 1}`} value={renamed[i] ?? baseHeaders[i]} onChange={(e) => setRenamed((r) => ({ ...r, [i]: e.target.value }))}
-                        className="h-8 w-full rounded-md border border-slate-200 px-2 text-[13px] font-medium" />
+                      {(() => {
+                        const cur = renamed[i];
+                        const asField = FIELDS.find((f) => f.label === cur);
+                        const mode = custom.has(i) ? "__c" : cur === undefined || cur === baseHeaders[i] ? "__o" : asField ? asField.key : "__c";
+                        return (
+                          <>
+                            <select aria-label={`Header ${i + 1}`} value={mode}
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                if (v === "__c") { setCustom((c) => new Set(c).add(i)); return; }
+                                setCustom((c) => { const n = new Set(c); n.delete(i); return n; });
+                                if (v === "__o") { setRenamed((r) => { const n = { ...r }; delete n[i]; return n; }); return; }
+                                const f = FIELDS.find((x) => x.key === v);
+                                if (f) { setRenamed((r) => ({ ...r, [i]: f.label })); setColumn(i, [f.key]); }
+                              }}
+                              className="h-8 w-full rounded-md border border-slate-200 px-2 text-[13px] font-medium">
+                              <option value="__o">{baseHeaders[i]} (as in your file)</option>
+                              <optgroup label="Directory field names">
+                                {FIELDS.filter((f) => f.label !== baseHeaders[i]).map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
+                              </optgroup>
+                              <option value="__c">Type a custom name...</option>
+                            </select>
+                            {mode === "__c" ? (
+                              <input aria-label={`Custom header ${i + 1}`} placeholder="Custom header name" value={cur ?? ""} onChange={(e) => setRenamed((r) => ({ ...r, [i]: e.target.value }))}
+                                className="mt-1.5 h-8 w-full rounded-md border border-slate-200 px-2 text-[13px]" />
+                            ) : null}
+                          </>
+                        );
+                      })()}
                     </td>
                     <td className={`${td} truncate text-slate-600`}>{examples[i]?.[0] ?? <span className="text-slate-400">Empty</span>}</td>
                     <td className={td}>{filledCount(rows, i).toLocaleString("en-US")} of {total.toLocaleString("en-US")}</td>
@@ -477,6 +519,14 @@ export function ImportWizard({ onClose, onDone }: Readonly<{ onClose: () => void
               {[["Rows read", result.rowCount], ["Records after cleaning", cleaned.length], ["Merged by email", result.merged], ["Bad emails", result.invalidEmails]].map(([l, n]) => (
                 <div key={String(l)} className="rounded-lg bg-slate-100 px-3 py-2.5"><b className="block text-[20px] font-semibold">{Number(n).toLocaleString("en-US")}</b><span className="text-[12px] text-slate-500">{l}</span></div>
               ))}
+            </div>
+            <div className="mb-3 rounded-lg bg-[#E6F1FB] p-3 text-[12.5px] text-slate-700">
+              <b className="text-slate-900">Guess missing fields.</b> Capital comes from Investor type: venture, angel, family office and private equity give Equity capital, lenders give Debt capital. Industry names are matched to the directory list, so &quot;Cybersecurity&quot; becomes &quot;Cyber Security&quot;; names with no match move to Notes as &quot;Industries: ...&quot;. Guesses show with an amber border, you can edit any of them, and nothing is saved until you click Save import.
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <button type="button" onClick={applyGuess} disabled={!preview.capital && !preview.industries} className="rounded-lg bg-[#1A6CE4] px-3 py-1.5 text-[12.5px] font-medium text-white disabled:opacity-40">Guess missing fields</button>
+                <button type="button" onClick={undoGuesses} disabled={!undoGuess} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[12.5px] disabled:opacity-40">Undo guesses</button>
+                <span className="text-slate-600">{guessInfo ? `Filled ${guessInfo.capital} Capital cells and fixed ${guessInfo.industries} industry cells.` : `Fills ${preview.capital} empty Capital cells and fixes ${preview.industries} industry cells.`}</span>
+              </div>
             </div>
             <div className="mb-2 flex flex-wrap items-center gap-2">
               {([["all", "All records"], ["noind", `Needs industries ${noInd}`], ["edited", `Edited ${editedCount}`]] as [Filter, string][]).map(([k, l]) => (
