@@ -25,6 +25,10 @@ export type CleanRow = {
   avg_investment: number | null;
   strategy: string | null;
   investing_now: boolean | null;
+  /** Set by the mapped import flow; the CSV path leaves these unset. */
+  country?: string | null;
+  notes?: string | null;
+  source_url?: string | null;
 };
 
 export type CleanResult = {
@@ -107,7 +111,7 @@ export function mapHeaders(headers: string[]): Map<string, number> {
   return m;
 }
 
-const tidy = (v: string | undefined | null): string | null => {
+export const tidy = (v: string | undefined | null): string | null => {
   const t = (v ?? "").replace(/\s+/g, " ").trim();
   return t ? t : null;
 };
@@ -146,14 +150,14 @@ export function normalizeName(v: string | null | undefined): string | null {
   return t.replace(/\b([a-z])/g, (c) => c.toUpperCase());
 }
 
-const num = (v: string | null | undefined): number | null => {
+export const num = (v: string | null | undefined): number | null => {
   const t = (v ?? "").replace(/[$,\s]/g, "");
   if (!t) return null;
   const n = Number(t);
   return Number.isFinite(n) ? n : null;
 };
 
-const list = (v: string | null | undefined): string[] =>
+export const list = (v: string | null | undefined): string[] =>
   (v ?? "").split(/[;|]/).map((x) => x.trim()).filter(Boolean);
 
 /**
@@ -194,7 +198,7 @@ export function mapCapitalTypes(style: string | null, strategy: string | null): 
   return [...out];
 }
 
-function yesNo(v: string | null): boolean | null {
+export function yesNo(v: string | null): boolean | null {
   const t = (v ?? "").trim().toLowerCase();
   if (["yes", "y", "true", "1"].includes(t)) return true;
   if (["no", "n", "false", "0"].includes(t)) return false;
@@ -257,7 +261,7 @@ export function cleanCsv(text: string): CleanResult {
 }
 
 /** Keep what the first row has, fill its gaps, union the lists. */
-function mergeInto(prev: CleanRow, row: CleanRow): void {
+export function mergeInto(prev: CleanRow, row: CleanRow): void {
   const p = prev as Record<string, unknown>;
   for (const [k, nv] of Object.entries(row)) {
     const pv = p[k];

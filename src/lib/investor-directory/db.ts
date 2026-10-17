@@ -702,7 +702,7 @@ export async function createImport(input: {
     fresh.push({
       ...r,
       source: input.source,
-      source_url: input.sourceUrl,
+      source_url: r.source_url ?? input.sourceUrl,
       import_id: (imp as ImportRow).id,
       status: "draft",
       verification: r.industries.length ? "unverified" : "needs_input",
