@@ -499,8 +499,35 @@ export async function importIntoContacts(input: {
     updated_at: now,
     };
   });
-  const { error } = await db().from("founder_investor_contacts").insert(insert);
-  if (error) throw new Error(error.message);
+  // An investor the founder archived earlier still has a row (and the unique email index
+  // covers it), so bring that row back instead of inserting a duplicate.
+  const { data: archivedRows } = await db()
+    .from("founder_investor_contacts")
+    .select("id, directory_id, email")
+    .eq("company_id", input.companyId)
+    .eq("status", "archived");
+  const archived = (archivedRows ?? []) as { id: string; directory_id: string | null; email: string | null }[];
+  const toRestore: string[] = [];
+  const toInsert = insert.filter((row) => {
+    const email = row.email?.trim().toLowerCase() ?? null;
+    const match = archived.find(
+      (a) => a.directory_id === row.directory_id || (email && a.email?.trim().toLowerCase() === email),
+    );
+    if (!match) return true;
+    toRestore.push(match.id);
+    return false;
+  });
+  if (toRestore.length > 0) {
+    const { error: restoreError } = await db()
+      .from("founder_investor_contacts")
+      .update({ status: "new", updated_at: now })
+      .in("id", toRestore);
+    if (restoreError) throw new Error(restoreError.message);
+  }
+  if (toInsert.length > 0) {
+    const { error } = await db().from("founder_investor_contacts").insert(toInsert);
+    if (error) throw new Error(error.message);
+  }
   await logEvent(input.founderId, input.companyId, "import", insert.length);
   return { imported: insert.length, alreadyHeld, unavailable };
 }
