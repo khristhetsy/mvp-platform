@@ -8,6 +8,7 @@ import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { requireRole } from "@/lib/supabase/auth";
 import { loadContactDetail } from "@/lib/founder-crm/contact-detail";
 import { loadContactNotes, loadContactTasks } from "@/lib/founder-crm/contact-notes";
+import { contactHasSentEmail } from "@/lib/founder-crm/contact-delete";
 import { getManualOutreach } from "@/lib/outreach/manual-outreach";
 import { loadVocabularies } from "@/lib/vocabulary/store";
 import { offered } from "@/lib/vocabulary/lists";
@@ -34,6 +35,9 @@ export default async function FounderContactPage({
   const [notes, tasks] = detail
     ? await Promise.all([loadContactNotes(profile.id, id), loadContactTasks(profile.id, id)])
     : [[], []];
+
+  // Delete is offered only when no email has gone to this contact.
+  const canDelete = detail && company ? !(await contactHasSentEmail(company.id, id, detail.contact.email)) : false;
 
   // The saved Manual outreach email, shown on the Send email tab (this page sends that email).
   const campaign = company ? await getManualOutreach(company.id).catch(() => null) : null;
@@ -79,6 +83,7 @@ export default async function FounderContactPage({
                 notes={notes}
                 tasks={tasks}
                 initialTab={initialTab}
+                canDelete={canDelete}
               />
             ) : (
               <DealCompanyEmptyState />

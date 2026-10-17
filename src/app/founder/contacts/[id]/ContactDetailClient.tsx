@@ -327,6 +327,7 @@ export function ContactDetailClient({
   notes,
   tasks,
   initialTab = "profile",
+  canDelete = false,
 }: Readonly<{
   initialContact: FounderInvestorContactRecord;
   pager: Pager;
@@ -336,6 +337,8 @@ export function ContactDetailClient({
   notes: ContactNote[];
   tasks: ContactTask[];
   initialTab?: TabId;
+  /** No email has gone to this contact, so it can be deleted. Otherwise it can only be archived. */
+  canDelete?: boolean;
 }>) {
   const router = useRouter();
   const [contact, setContact] = useState(initialContact);
@@ -350,6 +353,7 @@ export function ContactDetailClient({
   const [sendMsg, setSendMsg] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
   const [emailCap, setEmailCap] = useState<{ cap: number; used: number; resetsLabel: string } | null>(null);
   const [confirmArchive, setConfirmArchive] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const closeMenu = useCallback(() => setMenuOpen(false), []);
   const menuRef = useDismiss(menuOpen, closeMenu);
@@ -494,6 +498,31 @@ export function ContactDetailClient({
     }
   }
 
+  async function deleteContact() {
+    setSaving(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/founder/contact-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contactId: contact.id }),
+      });
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      if (!res.ok) {
+        setMessage({ tone: "error", text: data?.error ?? "Couldn't delete the contact. Try again." });
+        setConfirmDelete(false);
+        return;
+      }
+      router.push(`/founder/contacts?deleted=${encodeURIComponent(contact.investor_name)}`);
+      router.refresh();
+    } catch {
+      setMessage({ tone: "error", text: "Network error. Try again." });
+      setConfirmDelete(false);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   const activity: { when: string; text: string }[] = [];
   activity.push({ when: contact.created_at, text: `Added to My contacts (${source})` });
   if (engagement?.sentAt) activity.push({ when: engagement.sentAt, text: "Email sent" });
@@ -548,11 +577,23 @@ export function ContactDetailClient({
                   </button>
                   <button
                     type="button"
-                    onClick={() => { setMenuOpen(false); setConfirmArchive(true); }}
+                    onClick={() => { setMenuOpen(false); setConfirmDelete(false); setConfirmArchive(true); }}
                     className="flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-[12.5px] text-slate-700 hover:bg-slate-50"
                   >
                     <i className="ti ti-archive text-base text-slate-500" aria-hidden="true" /> Archive
                   </button>
+                  <div className="my-1 border-t border-slate-100" />
+                  <button
+                    type="button"
+                    disabled={!canDelete}
+                    onClick={() => { setMenuOpen(false); setConfirmArchive(false); setConfirmDelete(true); }}
+                    className={`flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-[12.5px] ${canDelete ? "text-red-700 hover:bg-slate-50" : "cursor-not-allowed text-slate-400"}`}
+                  >
+                    <i className="ti ti-trash text-base" aria-hidden="true" /> Delete
+                  </button>
+                  {!canDelete ? (
+                    <p className="px-3 pb-1.5 text-[11.5px] leading-snug text-slate-500">Emails were sent to this contact, so it can only be archived.</p>
+                  ) : null}
                 </div>
               ) : null}
             </div>
@@ -569,6 +610,21 @@ export function ContactDetailClient({
               <button type="button" onClick={() => setConfirmArchive(false)} className={btn} disabled={saving}>Cancel</button>
               <button type="button" onClick={() => void archive()} disabled={saving} className="cap-btn-primary rounded-lg px-3 py-1.5 text-[12.5px] font-semibold disabled:opacity-50">
                 {saving ? "Archiving…" : "Archive contact"}
+              </button>
+            </span>
+          </div>
+        ) : null}
+
+        {confirmDelete ? (
+          <div className="mx-6 mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-[12.5px] text-slate-700">
+            <span className="max-w-3xl">
+              <strong>Delete {contact.investor_name}?</strong> This permanently removes the contact with its profile, {notes.length} note{notes.length === 1 ? "" : "s"} and {tasks.length} task{tasks.length === 1 ? "" : "s"}.
+              It cannot be undone. If you import this investor from the directory again, they come back as a new contact with an empty profile.
+            </span>
+            <span className="flex gap-2">
+              <button type="button" onClick={() => setConfirmDelete(false)} className={btn} disabled={saving}>Cancel</button>
+              <button type="button" onClick={() => void deleteContact()} disabled={saving} className="rounded-lg bg-red-700 px-3 py-1.5 text-[12.5px] font-semibold text-white hover:bg-red-800 disabled:opacity-50">
+                {saving ? "Deleting…" : "Delete contact"}
               </button>
             </span>
           </div>
