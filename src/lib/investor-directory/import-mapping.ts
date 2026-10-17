@@ -199,6 +199,18 @@ export function distinctValues(rows: string[][], col: number, split = true): str
   return [...seen.entries()].sort((a, b) => b[1] - a[1]).map(([v]) => v);
 }
 
+/** Distinct raw values of a column with how many rows carry each, most common first. */
+export function valueCounts(rows: string[][], col: number): { value: string; count: number }[] {
+  const seen = new Map<string, number>();
+  for (const r of rows) for (const v of splitList(tidy(r[col]))) seen.set(v, (seen.get(v) ?? 0) + 1);
+  return [...seen.entries()].sort((a, b) => b[1] - a[1]).map(([value, count]) => ({ value, count }));
+}
+
+/** How many rows have something in this column. */
+export function filledCount(rows: string[][], col: number): number {
+  return rows.filter((r) => tidy(r[col])).length;
+}
+
 export const splitList = (v: string | null | undefined): string[] =>
   (v ?? "").split(/[;|,]/).map((x) => x.trim()).filter(Boolean);
 
