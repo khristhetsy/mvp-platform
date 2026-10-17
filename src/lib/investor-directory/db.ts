@@ -699,11 +699,10 @@ export async function createImport(input: {
       await d.from("investor_directory").update(patch).eq("id", prev.id);
       continue;
     }
-    // country is NOT NULL with a default of US: leave it out when the row has none so the default applies.
-    const { country, ...rest } = r;
+    // country is NOT NULL, and a bulk insert sends a missing key as null instead of the column default, so set it here.
     fresh.push({
-      ...rest,
-      ...(country ? { country } : {}),
+      ...r,
+      country: r.country || "US",
       source: input.source,
       source_url: r.source_url ?? input.sourceUrl,
       import_id: (imp as ImportRow).id,
@@ -713,7 +712,12 @@ export async function createImport(input: {
   }
   for (let i = 0; i < fresh.length; i += 500) {
     const { error: e } = await d.from("investor_directory").insert(fresh.slice(i, i + 500));
-    if (e) throw new Error(e.message);
+    if (e) {
+      // Do not leave an empty import behind (or half of its records) when the insert fails.
+      await d.from("investor_directory").delete().eq("import_id", (imp as ImportRow).id);
+      await d.from("investor_directory_imports").delete().eq("id", (imp as ImportRow).id);
+      throw new Error(e.message);
+    }
   }
   await d.rpc("investor_directory_refresh_network");
   const { data: done } = await d.from("investor_directory_imports")
