@@ -81,10 +81,9 @@ export async function POST(req: Request) {
     }
 
     if (grid.length < 2) return NextResponse.json({ error: "The sheet needs a header row and at least one data row." }, { status: 400 });
-    const headers = grid[0].map((h, i) => (h && h.trim()) || `Column ${i + 1}`);
-    const rows = grid.slice(1).filter((r) => r.some((c) => c && c.trim()));
-    if (rows.length > MAX_ROWS) return NextResponse.json({ error: `That sheet has more than ${MAX_ROWS.toLocaleString("en-US")} rows. Split it and import in parts.` }, { status: 400 });
-    return NextResponse.json({ fileName: file.name, sheets, sheet, headers, rows });
+    if (grid.length - 1 > MAX_ROWS) return NextResponse.json({ error: `That sheet has more than ${MAX_ROWS.toLocaleString("en-US")} rows. Split it and import in parts.` }, { status: 400 });
+    // The whole grid goes back so the screen can change which row holds the headers.
+    return NextResponse.json({ fileName: file.name, sheets, sheet, grid });
   } catch (err) {
     return failed(err, "Could not read that file.");
   }

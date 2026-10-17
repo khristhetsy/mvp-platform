@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyMapping, autoMatch, parseLocation, suggest } from "@/lib/investor-directory/import-mapping";
+import { applyEdits, applyMapping, autoMatch, cellText, parseEdit, parseLocation, suggest } from "@/lib/investor-directory/import-mapping";
 
 const headers = [
   "Investor Name", "Contact Name", "Job Title", "Public Email", "Phone", "Investor Type", "Industry Sector",
@@ -77,5 +77,35 @@ describe("applyMapping", () => {
   it("applies chosen values over the built-in mapping", () => {
     const r = applyMapping(["Firm", "Type"], [["Acme", "Syndicate"]], { "0": ["firm"], "1": ["investor_types"] }, { "1": { Syndicate: ["other"] } });
     expect(r.rows[0].investor_types).toEqual(["other"]);
+  });
+});
+
+describe("review edits", () => {
+  const base = applyMapping(["Firm", "Email", "Type", "Stage"], [["Acme", "a@acme.com", "Venture Capital", "Seed"], ["Beta", "b@beta.com", "Angel", ""]],
+    { "0": ["firm"], "1": ["email"], "2": ["investor_types"], "3": ["funding_stages"] }).rows;
+  it("shows lists as labels", () => {
+    expect(cellText(base[0], "investor_types")).toBe("Venture capital");
+    expect(cellText(base[0], "funding_stages")).toBe("Seed");
+  });
+  it("turns edited labels back into option slugs", () => {
+    expect(parseEdit("investor_types", "Venture capital, Family office")).toEqual({ investor_types: ["venture-capital", "family-office"] });
+    expect(parseEdit("funding_stages", "Series A, nonsense")).toEqual({ funding_stages: ["series-a"] });
+    expect(parseEdit("state", "Texas")).toEqual({ state: "TX" });
+    expect(parseEdit("country", "United States")).toEqual({ country: "US" });
+  });
+  it("applies edits by row index and drops excluded rows", () => {
+    const r = applyEdits(base, { "0": { firm: "Acme Capital", email: "new@acme.com" } }, [1]);
+    expect(r.rows).toHaveLength(1);
+    expect(r.rows[0].firm).toBe("Acme Capital");
+    expect(r.rows[0].email).toBe("new@acme.com");
+  });
+  it("drops a bad edited email and counts it", () => {
+    const r = applyEdits(base, { "0": { email: "not an email" } }, []);
+    expect(r.rows[0].email).toBeNull();
+    expect(r.invalidEmails).toBe(1);
+  });
+  it("ignores fields that are not editable", () => {
+    const r = applyEdits(base, { "0": { fund_size: "99" } }, []);
+    expect(r.rows[0].fund_size).toBeNull();
   });
 });

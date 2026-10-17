@@ -380,3 +380,73 @@ export function fieldCoverage(result: CleanResult): { field: FieldKey; filled: n
     }).length,
   }));
 }
+
+
+/** Platform option slugs for the three fixed lists (vocabulary_options). */
+export const VOCAB_SLUGS: Record<"investor_types" | "funding_stages" | "capital_types", string[]> = {
+  investor_types: ["angel-investor", "venture-capital", "private-equity", "family-office", "hedge-fund", "lender", "other"],
+  funding_stages: ["pre-seed", "seed", "series-a", "series-b", "growth", "other"],
+  capital_types: ["equity-capital", "debt-capital"],
+};
+export const slugLabel = (slug: string): string => slug.replace(/-/g, " ").replace(/^./, (c) => c.toUpperCase());
+
+/** The columns of the review table, in order. Each one can be edited before saving. */
+export const EDIT_FIELDS = [
+  "firm", "contact_name", "title", "email", "phone", "website", "state", "country",
+  "investor_types", "funding_stages", "industries", "strategy", "notes",
+] as const;
+export type EditField = (typeof EDIT_FIELDS)[number];
+export const EDIT_LABELS: Record<EditField, string> = {
+  firm: "Firm", contact_name: "Contact", title: "Title", email: "Email", phone: "Phone", website: "Website", state: "State", country: "Country",
+  investor_types: "Investor types", funding_stages: "Funding stages", industries: "Industries", strategy: "Strategy", notes: "Notes",
+};
+
+/** A cleaned row's value as the text shown in its review cell. */
+export function cellText(row: CleanRow, f: EditField): string {
+  const v = row[f];
+  if (Array.isArray(v)) return (f === "industries" ? v : v.map(slugLabel)).join(", ");
+  return v ?? "";
+}
+
+/** Turn edited cell text back into the stored value. Lists are matched to the platform options. */
+export function parseEdit(f: EditField, text: string): Partial<CleanRow> {
+  const t = tidy(text);
+  switch (f) {
+    case "firm": return { firm: normalizeName(t) ?? "" };
+    case "contact_name": return { contact_name: normalizeName(t) };
+    case "email": return { email: normalizeEmail(t).email };
+    case "phone": return { phone: normalizePhone(t) };
+    case "state": return { state: t ? (STATES[t.toLowerCase()] ?? t.toUpperCase()) : null };
+    case "country": return { country: t ? normalizeCountry(t) : null };
+    case "industries": return { industries: [...new Set(splitList(t))] };
+    case "investor_types":
+    case "funding_stages": {
+      const out = new Set<string>();
+      for (const item of splitList(t)) {
+        const slug = item.toLowerCase().replace(/\s+/g, "-");
+        if (VOCAB_SLUGS[f].includes(slug)) out.add(slug);
+        else for (const m of mapLabel(f, item)) out.add(m);
+      }
+      return { [f]: [...out] };
+    }
+    default: return { [f]: t } as Partial<CleanRow>;
+  }
+}
+
+/** Apply review edits (by row index) and exclusions to cleaned rows. Rows left without a firm are dropped. */
+export function applyEdits(rows: CleanRow[], edits: Record<string, Record<string, string>>, exclude: number[]): { rows: CleanRow[]; invalidEmails: number } {
+  const out: CleanRow[] = [];
+  const skip = new Set(exclude);
+  let invalidEmails = 0;
+  rows.forEach((row, i) => {
+    if (skip.has(i)) return;
+    const next: CleanRow = { ...row };
+    for (const [f, text] of Object.entries(edits[String(i)] ?? {})) {
+      if (!(EDIT_FIELDS as readonly string[]).includes(f)) continue;
+      if (f === "email" && tidy(text) && normalizeEmail(text).invalid) { invalidEmails++; next.email = null; continue; }
+      Object.assign(next, parseEdit(f as EditField, text));
+    }
+    if (next.firm) out.push(next);
+  });
+  return { rows: out, invalidEmails };
+}

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { directoryAdmin, failed } from "@/lib/investor-directory/admin-auth";
 import { createImport } from "@/lib/investor-directory/db";
-import { applyMapping } from "@/lib/investor-directory/import-mapping";
+import { applyEdits, applyMapping } from "@/lib/investor-directory/import-mapping";
 
 export const runtime = "nodejs";
 
@@ -21,6 +21,8 @@ const body = z.object({
   rows: z.array(z.array(z.string())).min(1).max(20000),
   mapping: z.record(z.string(), z.array(FIELD)),
   valueMap: z.record(z.string(), z.record(z.string(), z.array(z.string()))).optional(),
+  edits: z.record(z.string(), z.record(z.string(), z.string().max(4000))).optional(),
+  exclude: z.array(z.number().int().min(0)).max(20000).optional(),
 });
 
 /** Apply the confirmed column mapping, then hand the clean rows to the existing import. */
@@ -34,15 +36,18 @@ export async function POST(req: Request) {
     const cleaned = applyMapping(b.headers, b.rows, b.mapping, b.valueMap ?? {});
     if (cleaned.missingFirm) return NextResponse.json({ error: "Choose a column for Firm before importing." }, { status: 400 });
     if (!cleaned.rows.length) return NextResponse.json({ error: "No rows had a firm name, so nothing was imported." }, { status: 400 });
+    // Review edits and exclusions are by row position in the cleaned list, which the screen and this route build the same way.
+    const final = applyEdits(cleaned.rows, b.edits ?? {}, b.exclude ?? []);
+    if (!final.rows.length) return NextResponse.json({ error: "Every record was excluded or left without a firm, so nothing was imported." }, { status: 400 });
     const imp = await createImport({
       name: b.name,
       source: b.source,
       sourceUrl: b.sourceUrl || null,
       fileName: b.fileName ?? null,
-      rows: cleaned.rows,
+      rows: final.rows,
       rowCount: cleaned.rowCount,
       mergedInFile: cleaned.merged,
-      invalidEmails: cleaned.invalidEmails,
+      invalidEmails: cleaned.invalidEmails + final.invalidEmails,
       adminId: auth.adminId,
     });
     return NextResponse.json({ import: imp, skipped: cleaned.skipped });
