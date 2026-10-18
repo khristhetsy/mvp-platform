@@ -16,6 +16,12 @@ import { listLessonProgressForCompany } from "@/lib/learning/lesson-progress";
 import { getAICoachRecommendations } from "@/lib/learning/recommendations";
 import { listPublishedAdminCourses } from "@/lib/learning/admin-courses";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { getCoachAccess } from "@/lib/learning/coach/access";
+import { getCoachCourse, getCoachLesson } from "@/lib/learning/coach/courses";
+import { buildCoachPromptAddendum } from "@/lib/learning/coach/ir-coach";
+import { formatSnapshotForPrompt } from "@/lib/learning/coach/data-reads";
+import { loadCoachSnapshot } from "@/lib/learning/coach/snapshot-loader";
 
 export async function POST(request: Request) {
   const auth = await requireApiProfile(["founder"]);
@@ -87,7 +93,46 @@ export async function POST(request: Request) {
     });
   }
 
-  const resolved = resolveCoachLesson(courseSlug, lessonSlug);
+  // Coach format courses are not in the public catalog. They resolve only while the AI IR Coach
+  // is active for this founder, and the coach style rides along on the same prompt.
+  let resolved = resolveCoachLesson(courseSlug, lessonSlug);
+  let coachAddendum: string | null = null;
+  let coachTone: Awaited<ReturnType<typeof getCoachAccess>>["tone"] | null = null;
+  if (getCoachCourse(courseSlug) || resolved) {
+    const access = await getCoachAccess(auth.supabase as unknown as SupabaseClient, {
+      founderId: auth.profile.id,
+      companyId: company?.id ?? null,
+      courseSlug,
+    });
+    if (access.active) {
+      const coachLesson = lessonSlug ? getCoachLesson(courseSlug, lessonSlug) : null;
+      const stepIndex = typeof body.stepIndex === "number" && Number.isInteger(body.stepIndex) ? body.stepIndex : 0;
+      coachAddendum = buildCoachPromptAddendum({
+        tone: access.tone,
+        step: coachLesson?.steps[stepIndex] ?? null,
+        lessonTitle: coachLesson?.lesson.title ?? null,
+      });
+      coachTone = access.tone;
+      // Real data reads: the coach sees the founder's own rating, fix list, outreach, calendar and
+      // progress, and is told which of them are empty or could not be read.
+      const coachCourse = getCoachCourse(courseSlug);
+      if (coachCourse) {
+        const snapshot = await loadCoachSnapshot({
+          supabase: auth.supabase,
+          founderId: auth.profile.id,
+          companyId: company?.id ?? null,
+          course: coachCourse,
+        });
+        coachAddendum = `${coachAddendum}\n${formatSnapshotForPrompt(snapshot)}`;
+      }
+      if (!resolved) {
+        const course = getCoachCourse(courseSlug);
+        const lesson = coachLesson?.lesson ?? null;
+        const section = course?.sections.find((s) => s.lessons.some((l) => l.slug === lessonSlug)) ?? null;
+        if (course) resolved = { course, lesson, sectionTitle: section?.title ?? null };
+      }
+    }
+  }
   if (!resolved) {
     return NextResponse.json({ error: "Course or lesson not found." }, { status: 404 });
   }
@@ -101,6 +146,8 @@ export async function POST(request: Request) {
     progressRows,
     gapBasedRecommendations,
   });
+  ctx.coachAddendum = coachAddendum;
+  ctx.coachTone = coachTone;
 
   // Per-plan run cap (Admin, Feature Controls, AI usage limits).
   const aiRun = await gateAiRun(auth.profile.id, "class_assistant");
