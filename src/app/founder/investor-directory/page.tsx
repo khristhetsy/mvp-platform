@@ -11,6 +11,8 @@ import { loadVocabularies } from "@/lib/vocabulary/store";
 import { InvestorDirectoryTabs } from "@/components/founder/investor-directory/InvestorDirectoryTabs";
 import { InvestorDirectoryGuide } from "@/components/founder/investor-directory/InvestorDirectoryGuide";
 import { founderDirectoryEnabled, heldDirectoryIds, loadPlanAllowances, loadSettings } from "@/lib/investor-directory/db";
+import { getServerLocale } from "@/lib/i18n/locale";
+import { UpdateNoteBanner, UpdateNoteShowLink } from "@/components/founder/investor-directory/DirectoryUpdateNote";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +20,7 @@ export const dynamic = "force-dynamic";
 export default async function FounderInvestorDirectoryPage() {
   const profile = await requireRole(["founder"]);
   const { company } = await getActiveCompanyForUser(profile);
+  const locale = await getServerLocale();
   // The guide stays open until the first directory import; its limits come from the live plan table.
   const [held, allowances, settings, enabled] = await Promise.all([
     company ? heldDirectoryIds(company.id) : Promise.resolve(new Set<string>()),
@@ -58,6 +61,8 @@ export default async function FounderInvestorDirectoryPage() {
                 defaultOpen={held.size === 0}
                 limits={{ basic: holds("founder_basic"), professional: holds("founder_professional"), premium: holds("founder_premium") }}
               />
+              <UpdateNoteShowLink locale={locale} />
+              <UpdateNoteBanner locale={locale} />
               <InvestorDirectoryTabs enabled={tabs} />
             </VocabularyProvider>
           ) : (
