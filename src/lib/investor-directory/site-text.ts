@@ -34,11 +34,10 @@ function toText(html: string): string {
   const pick = (re: RegExp) => (re.exec(html)?.[1] ?? "").trim();
   const title = pick(/<title[^>]*>([\s\S]*?)<\/title>/i);
   const meta = pick(/<meta[^>]+name=["']description["'][^>]*content=["']([^"']*)["']/i) || pick(/<meta[^>]+content=["']([^"']*)["'][^>]*name=["']description["']/i);
-  const heads = [...html.matchAll(/<h[1-3][^>]*>([\s\S]*?)<\/h[1-3]>/gi)].slice(0, 12).map((m) => m[1]);
-  const body = html.replace(/<(script|style|noscript)[\s\S]*?<\/\1>/gi, " ").replace(/<[^>]+>/g, " ");
+  const heads = [...html.matchAll(/<h[1-3][^>]*>([\s\S]*?)<\/h[1-3]>/gi)].slice(0, 8).map((m) => m[1]);
   const clean = (s: string) => s.replace(/<[^>]+>/g, " ").replace(/&nbsp;|&amp;|&#\d+;/g, " ").replace(/\s+/g, " ").trim();
-  const lead = clean(body).slice(0, 600);
-  return clean([title, meta, heads.join(". "), lead].filter(Boolean).join(". ")).slice(0, 1500);
+  // Title, description and headings only. Body text and menus mention too many unrelated industries.
+  return clean([title, meta, heads.join(". ")].filter(Boolean).join(". ")).slice(0, 900);
 }
 
 export async function fetchSiteText(website: string): Promise<{ url: string; text: string }> {
