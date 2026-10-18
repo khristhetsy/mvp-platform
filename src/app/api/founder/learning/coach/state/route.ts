@@ -5,6 +5,8 @@ import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { getCoachAccess } from "@/lib/learning/coach/access";
 import { getCoachLesson } from "@/lib/learning/coach/courses";
 import { DEFAULT_COACH_TONE, isCoachTone } from "@/lib/learning/coach/tones";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { founderVisible, type ScreenshotRow } from "@/lib/learning/coach/screenshots";
 
 const loose = (c: unknown) => c as SupabaseClient;
 
@@ -40,6 +42,33 @@ export async function GET(request: Request) {
     doneIndexes = [...new Set(((data ?? []) as Array<{ step_index: number }>).map((r) => r.step_index))].sort((a, b) => a - b);
   }
 
+  // Approved screenshots for this lesson. Only images of screens that have not changed since staff
+  // approved them. Read with the service role because rows hold internal staff notes.
+  const screenshots: Record<number, { url: string; capturedAt: string | null; pinned: boolean }> = {};
+  if (access.active && found) {
+    try {
+      const admin = createServiceRoleClient() as unknown as SupabaseClient;
+      const { data } = await admin
+        .from("coach_screenshots")
+        .select("*")
+        .eq("course_slug", courseSlug)
+        .eq("lesson_id", lessonSlug)
+        .not("approved_image_path", "is", null);
+      const visible = ((data ?? []) as ScreenshotRow[]).filter(founderVisible);
+      const paths = visible.map((r) => r.approved_image_path as string);
+      if (paths.length) {
+        const { data: signed } = await admin.storage.from("coach-screenshots").createSignedUrls(paths, 3600);
+        const urlByPath = new Map((signed ?? []).map((x) => [x.path, x.signedUrl]));
+        for (const r of visible) {
+          const url = urlByPath.get(r.approved_image_path as string);
+          if (url) screenshots[r.step_index] = { url, capturedAt: r.approved_captured_at, pinned: r.pinned };
+        }
+      }
+    } catch {
+      // No image is better than a broken one. The written steps still show.
+    }
+  }
+
   return NextResponse.json({
     active: access.active,
     courseEnabled: access.courseEnabled,
@@ -47,6 +76,7 @@ export async function GET(request: Request) {
     tone: access.tone,
     steps: access.active && found ? found.steps : [],
     doneIndexes,
+    screenshots,
   });
 }
 

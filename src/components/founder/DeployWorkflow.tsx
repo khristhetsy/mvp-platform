@@ -423,6 +423,7 @@ export function DeployWorkflow({
               <button
                 key={t.id}
                 type="button"
+                data-learning-id={t.id}
                 title={t.title}
                 onClick={() => {
                   if (t.mode) chooseMode(t.mode);

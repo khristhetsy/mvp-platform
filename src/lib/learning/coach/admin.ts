@@ -2,6 +2,7 @@ import { FOUNDER_COURSES } from "@/lib/learning/courses";
 import { COACH_COURSES } from "@/lib/learning/coach/courses";
 import { isInternalAccount } from "@/lib/notifications/internal-accounts";
 import type { CoachTone } from "@/lib/learning/coach/tones";
+import { currentReviewHash, reviewState, type ReviewState } from "@/lib/learning/coach/review-pack";
 
 /** A course is ready for the coach only when it is in the coach format: every lesson has steps. */
 export function isCoachReady(courseKey: string): boolean {
@@ -20,27 +21,44 @@ export type CoachCourseRow = {
   tone: string | null;
   /** Why the switch is disabled, shown next to it. */
   blocker: string | null;
+  /** Counsel review of the wording that is live now. */
+  review: ReviewState;
+  reviewer: string | null;
+  reviewedOn: string | null;
 };
 
-type Config = { course_key: string; enabled: boolean; tone: string | null };
+type Config = { course_key: string; enabled: boolean; tone: string | null; reviewed_hash?: string | null };
+export type LatestReview = { course_key: string; reviewer_name: string; reviewed_on: string };
 
 /**
  * Every course the coach could apply to. Courses outside the coach format are listed so the
  * gap is visible, but their switch stays off with the reason: never a control that cannot run.
  */
-export function buildCoachCourseRows(configs: Config[]): CoachCourseRow[] {
+export function buildCoachCourseRows(configs: Config[], reviews: LatestReview[] = []): CoachCourseRow[] {
   const byKey = new Map(configs.map((c) => [c.course_key, c]));
   const rows: CoachCourseRow[] = [];
   for (const c of COACH_COURSES) {
     const cfg = byKey.get(c.slug);
+    const review = reviewState({ currentHash: currentReviewHash(c.slug), reviewedHash: cfg?.reviewed_hash });
+    const last = reviews.find((r) => r.course_key === c.slug) ?? null;
+    const ready = isCoachReady(c.slug);
     rows.push({
       key: c.slug,
       title: c.title,
       source: "Coach format",
-      ready: isCoachReady(c.slug),
+      ready: ready && review === "reviewed",
       enabled: cfg?.enabled === true,
       tone: cfg?.tone ?? null,
-      blocker: isCoachReady(c.slug) ? null : "Some lessons have no steps",
+      blocker: !ready
+        ? "Some lessons have no steps"
+        : review === "not_reviewed"
+          ? "Counsel has not reviewed this wording"
+          : review === "changed"
+            ? "Wording changed since counsel review"
+            : null,
+      review,
+      reviewer: last?.reviewer_name ?? null,
+      reviewedOn: last?.reviewed_on ?? null,
     });
   }
   for (const c of FOUNDER_COURSES) {
@@ -53,6 +71,9 @@ export function buildCoachCourseRows(configs: Config[]): CoachCourseRow[] {
       enabled: false,
       tone: null,
       blocker: "Lessons need steps first",
+      review: "not_reviewed",
+      reviewer: null,
+      reviewedOn: null,
     });
   }
   return rows;

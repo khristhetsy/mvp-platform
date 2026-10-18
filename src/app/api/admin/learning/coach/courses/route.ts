@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireApiProfile } from "@/lib/api/auth";
 import { isCoachReady } from "@/lib/learning/coach/admin";
 import { isCoachTone } from "@/lib/learning/coach/tones";
+import { currentReviewHash, reviewState } from "@/lib/learning/coach/review-pack";
 
 /**
  * PUT: switch the AI IR Coach on or off for one course. Staff only.
@@ -28,6 +29,16 @@ export async function PUT(request: Request) {
   }
 
   const client = auth.supabase as unknown as SupabaseClient;
+  if (body.enabled) {
+    const { data: cfg } = await client.from("course_coach_config").select("reviewed_hash").eq("course_key", courseKey).maybeSingle();
+    const state = reviewState({ currentHash: currentReviewHash(courseKey), reviewedHash: (cfg as { reviewed_hash: string | null } | null)?.reviewed_hash });
+    if (state !== "reviewed") {
+      return NextResponse.json(
+        { error: state === "changed" ? "The wording changed since counsel reviewed it. Counsel must review the new wording first." : "Counsel has not reviewed this wording yet." },
+        { status: 409 },
+      );
+    }
+  }
   const { error } = await client.from("course_coach_config").upsert(
     {
       course_key: courseKey,

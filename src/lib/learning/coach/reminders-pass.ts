@@ -17,7 +17,9 @@ import { NOT_A_BROKER_DEALER, renderEmail } from "@/lib/email/layout";
 import { isInternalAccount } from "@/lib/notifications/internal-accounts";
 import { isQuietNow, loadNotificationPrefs } from "@/lib/notifications/preferences";
 import { coerceCoachTone, type CoachTone } from "@/lib/learning/coach/tones";
+import { reviewedEnabledCourses } from "@/lib/learning/coach/review-pack";
 import {
+  COACH_EMAIL_REASON,
   coachMessageCopy,
   planCoachMessages,
   type OpenCommitment,
@@ -41,8 +43,7 @@ export function coachReminderEmail(input: { firstName: string; title: string; me
     intro: `Hi ${input.firstName}, ${input.message}`,
     primary: { label: "Open my next step", url: `${SITE_URL}${LEARNING_PATH}` },
     footer: {
-      reason:
-        "You're receiving this because you are enrolled in AI IR Coach coaching. You can pause the coach inside any coached lesson, or change your alerts in notification settings.",
+      reason: COACH_EMAIL_REASON,
       preferencesUrl: `${SITE_URL}/founder/settings`,
       lines: [NOT_A_BROKER_DEALER],
     },
@@ -57,8 +58,9 @@ export async function runCoachReminderPass(limit = 300, now: Date = new Date()):
     const db = createServiceRoleClient() as unknown as SupabaseClient;
 
     // The coach is off until an admin enables at least one course.
-    const { data: cfg } = await db.from("course_coach_config").select("course_key").eq("enabled", true);
-    const enabledCourses = ((cfg ?? []) as Array<{ course_key: string }>).map((r) => r.course_key);
+    // A course only counts when counsel has reviewed its exact current wording.
+    const { data: cfg } = await db.from("course_coach_config").select("course_key, reviewed_hash").eq("enabled", true);
+    const enabledCourses = reviewedEnabledCourses((cfg ?? []) as Array<{ course_key: string; reviewed_hash: string | null }>);
     if (enabledCourses.length === 0) return out;
 
     const { data: enr } = await db

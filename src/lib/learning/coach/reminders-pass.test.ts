@@ -58,6 +58,7 @@ vi.mock("@/lib/notifications/preferences", async (orig) => ({
 }));
 
 import { runCoachReminderPass } from "@/lib/learning/coach/reminders-pass";
+import { currentReviewHash } from "@/lib/learning/coach/review-pack";
 
 const NOW = new Date("2026-10-26T18:00:00Z"); // Monday 11:00 PT
 const DAY = 86_400_000;
@@ -65,7 +66,7 @@ const DAY = 86_400_000;
 function seed(opts: { email?: string; role?: string; idleDays?: number; coachOn?: boolean } = {}) {
   for (const k of Object.keys(tables)) delete tables[k];
   inserted.length = 0;
-  tables.course_coach_config = opts.coachOn === false ? [] : [{ course_key: "investor-outreach-playbook", enabled: true }];
+  tables.course_coach_config = opts.coachOn === false ? [] : [{ course_key: "investor-outreach-playbook", enabled: true, reviewed_hash: currentReviewHash("investor-outreach-playbook") }];
   tables.coach_enrollments = [
     { founder_id: "f1", company_id: "c1", tone: "driven", status: "active", started_at: new Date(NOW.getTime() - (opts.idleDays ?? 8) * DAY).toISOString() },
   ];

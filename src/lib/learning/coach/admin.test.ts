@@ -8,6 +8,7 @@ import {
   type FounderForEnrollment,
 } from "./admin";
 import { OUTREACH_PLAYBOOK_SLUG } from "@/lib/learning/outreach-playbook";
+import { currentReviewHash } from "./review-pack";
 
 const founder = (id: string, o: Partial<FounderForEnrollment> = {}): FounderForEnrollment => ({
   id,
@@ -23,7 +24,11 @@ describe("coach course rows", () => {
     expect(isCoachReady("no-such-course")).toBe(false);
     const rows = buildCoachCourseRows([]);
     const playbook = rows.find((r) => r.key === OUTREACH_PLAYBOOK_SLUG)!;
-    expect(playbook.ready).toBe(true);
+    expect(isCoachReady(OUTREACH_PLAYBOOK_SLUG)).toBe(true);
+    // Steps are ready, but counsel has not reviewed the wording, so it cannot be switched on yet.
+    expect(playbook.review).toBe("not_reviewed");
+    expect(playbook.ready).toBe(false);
+    expect(playbook.blocker).toBe("Counsel has not reviewed this wording");
     expect(playbook.enabled).toBe(false);
     const others = rows.filter((r) => r.key !== OUTREACH_PLAYBOOK_SLUG);
     expect(others.length).toBeGreaterThan(0);
@@ -35,6 +40,18 @@ describe("coach course rows", () => {
       { course_key: OUTREACH_PLAYBOOK_SLUG, enabled: true, tone: "driven" },
     ]);
     expect(rows.find((r) => r.key === OUTREACH_PLAYBOOK_SLUG)!.enabled).toBe(true);
+  });
+
+  it("can be switched on once counsel reviewed the current wording, and not after it changes", () => {
+    const hash = currentReviewHash(OUTREACH_PLAYBOOK_SLUG)!;
+    const ok = buildCoachCourseRows(
+      [{ course_key: OUTREACH_PLAYBOOK_SLUG, enabled: false, tone: null, reviewed_hash: hash }],
+      [{ course_key: OUTREACH_PLAYBOOK_SLUG, reviewer_name: "Counsel A", reviewed_on: "2026-10-20" }],
+    ).find((r) => r.key === OUTREACH_PLAYBOOK_SLUG)!;
+    expect(ok).toMatchObject({ review: "reviewed", ready: true, blocker: null, reviewer: "Counsel A", reviewedOn: "2026-10-20" });
+
+    const changed = buildCoachCourseRows([{ course_key: OUTREACH_PLAYBOOK_SLUG, enabled: true, tone: null, reviewed_hash: "old" }]).find((r) => r.key === OUTREACH_PLAYBOOK_SLUG)!;
+    expect(changed).toMatchObject({ review: "changed", ready: false, enabled: true, blocker: "Wording changed since counsel review" });
   });
 });
 

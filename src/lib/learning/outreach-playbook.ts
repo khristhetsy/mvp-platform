@@ -121,10 +121,11 @@ export const OUTREACH_PLAYBOOK: Course = {
             }),
             step({
               title: "Send from Outreach",
-              instruction: "Open Outreach, choose the Manual tab, and send your first messages. The AI drafts, you review and send.",
+              instruction: "Open Outreach, choose the Outreach: Manual tab, and send your first messages. The AI drafts, you review and send.",
               menuPath: [STAGE3, "Outreach"],
               href: "/founder/deploy",
-              control: "Manual tab",
+              control: "Outreach: Manual",
+              learningId: "outreach-manual",
               minutes: 10,
               commonMistake: "Sending a long generic message. Lead with why this investor, in two sentences.",
             }),
@@ -174,7 +175,8 @@ export const OUTREACH_PLAYBOOK: Course = {
               instruction: "Open Outreach and read whether automated outreach is open or paused for your rating.",
               menuPath: [STAGE3, "Outreach"],
               href: "/founder/deploy",
-              control: "Automated tab",
+              control: "Outreach: Automated",
+              learningId: "outreach-automated",
               minutes: 4,
             }),
             step({

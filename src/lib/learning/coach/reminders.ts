@@ -144,3 +144,7 @@ export function coachMessageCopy(
   };
   return t[tone];
 }
+
+/** The reason line every coach email carries. One string, shared by the sender and the counsel review pack. */
+export const COACH_EMAIL_REASON =
+  "You're receiving this because you are enrolled in AI IR Coach coaching. You can pause the coach inside any coached lesson, or change your alerts in notification settings.";

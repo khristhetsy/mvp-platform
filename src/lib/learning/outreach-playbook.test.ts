@@ -40,4 +40,14 @@ describe("outreach playbook", () => {
     const text = JSON.stringify(OUTREACH_PLAYBOOK).toLowerCase();
     expect(text).not.toMatch(/guarantee|will raise|assured/);
   });
+
+  it("gives every step that names a control a learning id, and names the control as the app does", () => {
+    for (const s of steps) {
+      if (s.control) expect(s.learningId, `${s.title} needs a learningId`).toBeTruthy();
+      if (s.learningId) expect(s.control, `${s.title} needs a control label`).toBeTruthy();
+    }
+    // The Outreach tabs read "Outreach: Manual" and "Outreach: Automated" on screen.
+    const labels = steps.map((x) => x.control).filter(Boolean);
+    expect(labels).toEqual(["Outreach: Manual", "Outreach: Automated"]);
+  });
 });

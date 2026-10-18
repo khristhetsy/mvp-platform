@@ -5,6 +5,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PageSection, WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { CoachCourseSwitch } from "@/components/admin/learning/CoachCourseSwitch";
 import { CoachFoundersPanel } from "@/components/admin/learning/CoachFoundersPanel";
+import { ScreenshotStudio } from "@/components/admin/learning/ScreenshotStudio";
+import { CounselReviewPanel } from "@/components/admin/learning/CounselReviewPanel";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import {
@@ -12,17 +14,23 @@ import {
   buildCoachFounderRows,
   type EnrollmentSource,
   type FounderSource,
+  type LatestReview,
 } from "@/lib/learning/coach/admin";
+import { buildPilot, pilotSizing, type PilotEnrollment, type PilotRecipient } from "@/lib/learning/coach/pilot";
+import { COACH_COURSES } from "@/lib/learning/coach/courses";
+import { buildCaptureTargets, syncRow, type ScreenshotRow } from "@/lib/learning/coach/screenshots";
 
 export const dynamic = "force-dynamic";
 
 type SearchParams = Promise<{ tab?: string }>;
-type Tab = "courses" | "founders" | "log";
+type Tab = "courses" | "founders" | "log" | "screenshots" | "pilot";
 
 const TABS: Array<{ id: Tab; label: string }> = [
   { id: "courses", label: "Courses" },
   { id: "founders", label: "Founders" },
   { id: "log", label: "Activity log" },
+  { id: "screenshots", label: "Screenshots" },
+  { id: "pilot", label: "Pilot results" },
 ];
 
 type MessageRow = {
@@ -60,13 +68,13 @@ function when(iso: string): string {
 export default async function AdminCoachPage({ searchParams }: Readonly<{ searchParams: SearchParams }>) {
   const profile = await requireRole(["admin", "analyst"]);
   const params = await searchParams;
-  const tab: Tab = params.tab === "founders" || params.tab === "log" ? params.tab : "courses";
+  const tab: Tab = params.tab === "founders" || params.tab === "log" || params.tab === "screenshots" || params.tab === "pilot" ? params.tab : "courses";
 
   // New coach tables are not in the hand maintained types file yet.
   const admin = createServiceRoleClient() as unknown as SupabaseClient;
 
-  const [{ data: cfgRaw }, { data: foundersRaw }, { data: enrRaw }, { data: msgRaw }, { data: stepRaw }] = await Promise.all([
-    admin.from("course_coach_config").select("course_key, enabled, tone"),
+  const [{ data: cfgRaw }, { data: foundersRaw }, { data: enrRaw }, { data: msgRaw }, { data: stepRaw }, { data: reviewRaw }] = await Promise.all([
+    admin.from("course_coach_config").select("course_key, enabled, tone, reviewed_hash"),
     admin.from("profiles").select("id, full_name, email").eq("role", "founder").order("full_name", { ascending: true }).limit(1000),
     admin.from("coach_enrollments").select("founder_id, company_id, status, tone, source, started_at"),
     admin
@@ -75,6 +83,7 @@ export default async function AdminCoachPage({ searchParams }: Readonly<{ search
       .order("created_at", { ascending: false })
       .limit(100),
     admin.from("coach_step_events").select("founder_id, created_at").order("created_at", { ascending: false }).limit(5000),
+    admin.from("coach_counsel_reviews").select("course_key, reviewer_name, reviewed_on, created_at").order("created_at", { ascending: false }).limit(50),
   ]);
 
   const founders = (foundersRaw ?? []) as FounderSource[];
@@ -92,7 +101,11 @@ export default async function AdminCoachPage({ searchParams }: Readonly<{ search
     if (!lastStepAt.has(s.founder_id)) lastStepAt.set(s.founder_id, s.created_at); // newest first
   }
 
-  const courseRows = buildCoachCourseRows((cfgRaw ?? []) as Array<{ course_key: string; enabled: boolean; tone: string | null }>);
+  // Newest first, so the first match per course is the latest review.
+  const courseRows = buildCoachCourseRows(
+    (cfgRaw ?? []) as Array<{ course_key: string; enabled: boolean; tone: string | null; reviewed_hash: string | null }>,
+    (reviewRaw ?? []) as LatestReview[],
+  );
   const founderRows = buildCoachFounderRows({
     founders,
     companyByFounder,
@@ -101,7 +114,40 @@ export default async function AdminCoachPage({ searchParams }: Readonly<{ search
     now: new Date(),
   });
   const messages = (msgRaw ?? []) as MessageRow[];
+
+  // Screenshots tab: keep the work list in step with the course, then read it with signed image links.
+  let shotRows: ScreenshotRow[] = [];
+  const shotUrls: Record<string, string> = {};
+  if (tab === "screenshots") {
+    const targets = COACH_COURSES.flatMap((c) => buildCaptureTargets(c));
+    if (targets.length) await admin.from("coach_screenshots").upsert(targets.map(syncRow), { onConflict: "step_key" });
+    const { data: shotRaw } = await admin.from("coach_screenshots").select("*");
+    const byKey = new Map(((shotRaw ?? []) as ScreenshotRow[]).map((r) => [r.step_key, r]));
+    // Course order, and only steps the course still has.
+    shotRows = targets.map((t) => byKey.get(t.stepKey)).filter((r): r is ScreenshotRow => Boolean(r));
+    const paths = [...new Set(shotRows.map((r) => r.image_path).filter((p): p is string => Boolean(p)))];
+    if (paths.length) {
+      const { data: signed } = await admin.storage.from("coach-screenshots").createSignedUrls(paths, 3600);
+      for (const item of signed ?? []) if (item.path && item.signedUrl) shotUrls[item.path] = item.signedUrl;
+    }
+  }
   const nameById = new Map(founderRows.map((r) => [r.id, r.name]));
+
+  // Pilot tab: aggregates only. Recipients are read for counting and never shown.
+  const pilot = tab === "pilot" ? await loadPilot() : null;
+  async function loadPilot() {
+    const companyIds = [...companyByFounder.values()].map((c) => c.id);
+    const { data: recRaw } = companyIds.length
+      ? await admin.from("founder_manual_outreach_recipients").select("company_id, enrolled_at, last_sent_at, replied_at").in("company_id", companyIds).limit(20000)
+      : { data: [] };
+    return buildPilot({
+      founders: founders.map((f) => ({ id: f.id, email: f.email })),
+      companyByFounder,
+      enrollments: (enrRaw ?? []) as PilotEnrollment[],
+      recipients: (recRaw ?? []) as PilotRecipient[],
+      now: new Date(),
+    });
+  }
 
   const active = founderRows.filter((r) => r.status === "active").length;
   const paused = founderRows.filter((r) => r.status === "paused").length;
@@ -156,7 +202,7 @@ export default async function AdminCoachPage({ searchParams }: Readonly<{ search
         </nav>
 
         {tab === "courses" ? (
-          <PageSection title="Courses" subtitle="A course can only be switched on once every lesson has coach steps.">
+          <PageSection title="Courses" subtitle="A course can only be switched on once every lesson has coach steps and counsel has reviewed its wording.">
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
               <table className="w-full text-left text-sm">
                 <thead className="bg-slate-50 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
@@ -176,6 +222,14 @@ export default async function AdminCoachPage({ searchParams }: Readonly<{ search
                   ))}
                 </tbody>
               </table>
+            </div>
+            <div className="mt-6 space-y-3">
+              <h3 className="text-sm font-semibold text-slate-900">Counsel review</h3>
+              {courseRows
+                .filter((r) => r.source === "Coach format")
+                .map((r) => (
+                  <CounselReviewPanel key={r.key} row={r} canRecord={profile.role === "admin"} today={new Date().toISOString().slice(0, 10)} />
+                ))}
             </div>
           </PageSection>
         ) : null}
@@ -230,6 +284,64 @@ export default async function AdminCoachPage({ searchParams }: Readonly<{ search
                 </tbody>
               </table>
             </div>
+          </PageSection>
+        ) : null}
+
+        {tab === "screenshots" ? (
+          <PageSection title="Screenshot studio" subtitle="Course images are captured from the running app with a demo founder account, and approved here before founders see them.">
+            <ScreenshotStudio rows={shotRows} urls={shotUrls} />
+          </PageSection>
+        ) : null}
+
+        {tab === "pilot" && pilot ? (
+          <PageSection title="Pilot results" subtitle="Coached founders compared with eligible founders who were not enrolled. Counts only, no names.">
+            {!pilot.started ? (
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600">
+                <p>{pilotSizing(pilot.eligible).line}</p>
+                <p className="mt-2">Enroll founders on the Founders tab to start. Results appear here from the first enrollment date.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-xs text-slate-500">
+                  Week {Math.min(pilot.weeksElapsed, pilot.weeksTotal)} of {pilot.weeksTotal}, counting from {when(pilot.startedAt!)} Pacific.
+                </p>
+                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-slate-50 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+                      <tr>
+                        <th className="px-5 py-3">Since the pilot began</th>
+                        <th className="px-5 py-3">Coached</th>
+                        <th className="px-5 py-3">Not coached</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {[
+                        ["Founders", pilot.coached.founders, pilot.comparison.founders],
+                        ["Founders who sent a contact", pilot.coached.foundersWhoSent, pilot.comparison.foundersWhoSent],
+                        ["Contacts added to outreach", pilot.coached.contactsAdded, pilot.comparison.contactsAdded],
+                        ["Contacts sent", pilot.coached.contactsSent, pilot.comparison.contactsSent],
+                        ["Median contacts sent per founder", pilot.coached.medianSentPerFounder, pilot.comparison.medianSentPerFounder],
+                        ["Replies logged (small numbers, read with care)", pilot.coached.replies, pilot.comparison.replies],
+                      ].map(([label, a, b]) => (
+                        <tr key={String(label)}>
+                          <td className="px-5 py-3 text-slate-600">{label}</td>
+                          <td className="px-5 py-3 font-semibold text-slate-900">{a}</td>
+                          <td className="px-5 py-3 font-semibold text-slate-900">{b}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-xs text-slate-500">
+                  How coached founders got in: {pilot.selection.handPicked} chosen by us, {pilot.selection.optedIn} opted in, {pilot.selection.allFounders} enrolled as part of everyone.
+                </p>
+                <ul className="list-disc space-y-1 pl-5 text-sm text-slate-600">
+                  {pilot.notes.map((n) => (
+                    <li key={n}>{n}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </PageSection>
         ) : null}
       </WorkspacePageContainer>

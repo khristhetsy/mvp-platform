@@ -20,6 +20,11 @@ export type CoachStep = {
   href: string;
   /** Visible label of the control the founder should use on that screen. */
   control?: string;
+  /**
+   * Stable id on that control, set in the app as data-learning-id. The Screenshot studio finds the
+   * control by it, so a layout change does not break the pin. Required whenever `control` is set.
+   */
+  learningId?: string;
   /** A common mistake on this step. */
   commonMistake?: string;
   /** A short example the founder can copy. */
