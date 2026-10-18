@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   buildReviewPack,
+  COUNSEL_REVIEW_REQUIRED,
   currentReviewHash,
+  reviewAllowsCoach,
   reviewFingerprint,
   reviewState,
   reviewedEnabledCourses,
@@ -36,27 +38,52 @@ describe("review pack", () => {
   });
 });
 
-describe("review state", () => {
+describe("review state when review is required", () => {
   const current = "abc";
   it("is not reviewed with no recorded hash", () => {
-    expect(reviewState({ currentHash: current, reviewedHash: null })).toBe("not_reviewed");
-    expect(reviewState({ currentHash: current, reviewedHash: undefined })).toBe("not_reviewed");
+    expect(reviewState({ currentHash: current, reviewedHash: null, required: true })).toBe("not_reviewed");
+    expect(reviewState({ currentHash: current, reviewedHash: undefined, required: true })).toBe("not_reviewed");
   });
   it("is reviewed only when the hashes match", () => {
-    expect(reviewState({ currentHash: current, reviewedHash: "abc" })).toBe("reviewed");
-    expect(reviewState({ currentHash: current, reviewedHash: "old" })).toBe("changed");
+    expect(reviewState({ currentHash: current, reviewedHash: "abc", required: true })).toBe("reviewed");
+    expect(reviewState({ currentHash: current, reviewedHash: "old", required: true })).toBe("changed");
   });
   it("never counts a course that has no fingerprint", () => {
-    expect(reviewState({ currentHash: null, reviewedHash: "abc" })).toBe("changed");
+    expect(reviewState({ currentHash: null, reviewedHash: "abc", required: true })).toBe("changed");
+  });
+});
+
+describe("review state when review is not required", () => {
+  it("ships with review not required, because the course is education only", () => {
+    expect(COUNSEL_REVIEW_REQUIRED).toBe(false);
+    expect(reviewState({ currentHash: "abc", reviewedHash: null })).toBe("waived");
+  });
+  it("waives the review for a coach format course whatever was recorded", () => {
+    for (const reviewedHash of [null, "abc", "old"]) {
+      expect(reviewState({ currentHash: "abc", reviewedHash, required: false })).toBe("waived");
+    }
+  });
+  it("still never counts a course that has no fingerprint", () => {
+    expect(reviewState({ currentHash: null, reviewedHash: "abc", required: false })).toBe("not_reviewed");
+  });
+  it("lets the coach run only for reviewed or waived", () => {
+    expect(reviewAllowsCoach("reviewed")).toBe(true);
+    expect(reviewAllowsCoach("waived")).toBe(true);
+    expect(reviewAllowsCoach("not_reviewed")).toBe(false);
+    expect(reviewAllowsCoach("changed")).toBe(false);
   });
 });
 
 describe("enabled courses that count", () => {
-  it("keeps only courses whose current wording was reviewed", () => {
+  it("when review is required, keeps only courses whose current wording was reviewed", () => {
     const hash = currentReviewHash(OUTREACH_PLAYBOOK_SLUG)!;
-    expect(reviewedEnabledCourses([{ course_key: OUTREACH_PLAYBOOK_SLUG, reviewed_hash: hash }])).toEqual([OUTREACH_PLAYBOOK_SLUG]);
-    expect(reviewedEnabledCourses([{ course_key: OUTREACH_PLAYBOOK_SLUG, reviewed_hash: "stale" }])).toEqual([]);
-    expect(reviewedEnabledCourses([{ course_key: OUTREACH_PLAYBOOK_SLUG, reviewed_hash: null }])).toEqual([]);
-    expect(reviewedEnabledCourses([{ course_key: "other", reviewed_hash: hash }])).toEqual([]);
+    expect(reviewedEnabledCourses([{ course_key: OUTREACH_PLAYBOOK_SLUG, reviewed_hash: hash }], true)).toEqual([OUTREACH_PLAYBOOK_SLUG]);
+    expect(reviewedEnabledCourses([{ course_key: OUTREACH_PLAYBOOK_SLUG, reviewed_hash: "stale" }], true)).toEqual([]);
+    expect(reviewedEnabledCourses([{ course_key: OUTREACH_PLAYBOOK_SLUG, reviewed_hash: null }], true)).toEqual([]);
+    expect(reviewedEnabledCourses([{ course_key: "other", reviewed_hash: hash }], true)).toEqual([]);
+  });
+  it("when review is not required, counts every enabled coach format course and nothing else", () => {
+    expect(reviewedEnabledCourses([{ course_key: OUTREACH_PLAYBOOK_SLUG, reviewed_hash: null }])).toEqual([OUTREACH_PLAYBOOK_SLUG]);
+    expect(reviewedEnabledCourses([{ course_key: "other", reviewed_hash: null }])).toEqual([]);
   });
 });

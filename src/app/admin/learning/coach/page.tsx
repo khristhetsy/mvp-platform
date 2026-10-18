@@ -7,6 +7,7 @@ import { CoachCourseSwitch } from "@/components/admin/learning/CoachCourseSwitch
 import { CoachFoundersPanel } from "@/components/admin/learning/CoachFoundersPanel";
 import { ScreenshotStudio } from "@/components/admin/learning/ScreenshotStudio";
 import { CounselReviewPanel } from "@/components/admin/learning/CounselReviewPanel";
+import { COUNSEL_REVIEW_REQUIRED } from "@/lib/learning/coach/review-pack";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import {
@@ -202,7 +203,7 @@ export default async function AdminCoachPage({ searchParams }: Readonly<{ search
         </nav>
 
         {tab === "courses" ? (
-          <PageSection title="Courses" subtitle="A course can only be switched on once every lesson has coach steps and counsel has reviewed its wording.">
+          <PageSection title="Courses" subtitle={COUNSEL_REVIEW_REQUIRED ? "A course can only be switched on once every lesson has coach steps and counsel has reviewed its wording." : "A course can be switched on once every lesson has coach steps."}>
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
               <table className="w-full text-left text-sm">
                 <thead className="bg-slate-50 text-[10px] font-semibold uppercase tracking-widest text-slate-500">

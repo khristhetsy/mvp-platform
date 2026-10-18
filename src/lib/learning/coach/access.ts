@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { type CoachTone, coerceCoachTone, DEFAULT_COACH_TONE } from "@/lib/learning/coach/tones";
-import { currentReviewHash, reviewState } from "@/lib/learning/coach/review-pack";
+import { currentReviewHash, reviewAllowsCoach, reviewState } from "@/lib/learning/coach/review-pack";
 
 export type CoachEnrollment = {
   id: string;
@@ -19,7 +19,8 @@ export type CoachAccess = {
 
 /**
  * The coach is off unless all are true: the founder has an active enrollment, an admin enabled the
- * coach for this course, and counsel has reviewed the course's current wording. Read with the founder's own session, so RLS applies.
+ * coach for this course, and counsel review either is not required or covers the course's current wording
+ * (see COUNSEL_REVIEW_REQUIRED). Read with the founder's own session, so RLS applies.
  */
 export async function getCoachAccess(
   client: SupabaseClient,
@@ -43,10 +44,10 @@ export async function getCoachAccess(
   const enrollment: CoachEnrollment | null = row
     ? { id: row.id, status: row.status, tone: coerceCoachTone(row.tone), source: row.source }
     : null;
-  // On only while counsel has reviewed the exact wording that is live now.
+  // When counsel review is required, on only while counsel has reviewed the exact wording that is live now.
   const courseEnabled =
     config?.enabled === true &&
-    reviewState({ currentHash: currentReviewHash(input.courseSlug), reviewedHash: config.reviewed_hash }) === "reviewed";
+    reviewAllowsCoach(reviewState({ currentHash: currentReviewHash(input.courseSlug), reviewedHash: config.reviewed_hash }));
 
   return {
     enrollment,

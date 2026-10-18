@@ -10,9 +10,11 @@ const REVIEW_LABEL: Record<CoachCourseRow["review"], string> = {
   not_reviewed: "Not reviewed by counsel",
   reviewed: "Reviewed by counsel",
   changed: "Wording changed since counsel review",
+  waived: "Counsel review not required",
 };
 
 const CHIP: Record<CoachCourseRow["review"], string> = {
+  waived: "bg-slate-100 text-slate-600",
   reviewed: "bg-green-50 text-green-700",
   not_reviewed: "bg-amber-50 text-amber-700",
   changed: "bg-red-50 text-red-600",
@@ -54,7 +56,9 @@ export function CounselReviewPanel({ row, canRecord, today }: Readonly<{ row: Co
         <div>
           <p className="text-sm font-semibold text-slate-900">{row.title}</p>
           <p className="mt-1 text-xs text-slate-500">
-            {row.review === "reviewed" && row.reviewer
+            {row.review === "waived"
+              ? "This course is education only, so the coach does not wait for a counsel sign off. The review pack stays available to read."
+              : row.review === "reviewed" && row.reviewer
               ? `Reviewed by ${row.reviewer} on ${row.reviewedOn}.`
               : row.review === "changed"
                 ? "The wording changed after the last review. The coach is off for founders until counsel reviews it again."
@@ -69,7 +73,7 @@ export function CounselReviewPanel({ row, canRecord, today }: Readonly<{ row: Co
           >
             Open review pack
           </Link>
-          {canRecord && row.review !== "reviewed" ? (
+          {canRecord && (row.review === "not_reviewed" || row.review === "changed") ? (
             <button
               type="button"
               onClick={() => setOpen((v) => !v)}

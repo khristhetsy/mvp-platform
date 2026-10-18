@@ -67,17 +67,40 @@ export function currentReviewHash(courseKey: string): string | null {
   return course ? reviewFingerprint(buildReviewPack(course)) : null;
 }
 
-export type ReviewState = "not_reviewed" | "reviewed" | "changed";
+/**
+ * Whether the coach waits for a counsel sign off before it can be switched on.
+ * Khris decided (Oct 18, 2026) that the course is education only and counsel review is not required.
+ * Set this to true to bring the gate back: nothing else changes, the fingerprint, the review pack page,
+ * the Record review form and the review trail all stay in place.
+ */
+export const COUNSEL_REVIEW_REQUIRED = false;
 
-export function reviewState(input: { currentHash: string | null; reviewedHash: string | null | undefined }): ReviewState {
+export type ReviewState = "not_reviewed" | "reviewed" | "changed" | "waived";
+
+export function reviewState(input: {
+  currentHash: string | null;
+  reviewedHash: string | null | undefined;
+  /** Defaults to COUNSEL_REVIEW_REQUIRED. Tests pass it to check both modes. */
+  required?: boolean;
+}): ReviewState {
+  const required = input.required ?? COUNSEL_REVIEW_REQUIRED;
+  // A course with no fingerprint is not a coach format course. It never counts, required or not.
+  if (!required) return input.currentHash === null ? "not_reviewed" : "waived";
   if (!input.reviewedHash) return "not_reviewed";
   return input.currentHash !== null && input.reviewedHash === input.currentHash ? "reviewed" : "changed";
 }
 
+/** True when the review state lets the coach run: reviewed, or review not required. */
+export function reviewAllowsCoach(state: ReviewState): boolean {
+  return state === "reviewed" || state === "waived";
+}
 
-/** Enabled courses whose current wording counsel has reviewed. Used by the reminder pass. */
-export function reviewedEnabledCourses(rows: Array<{ course_key: string; reviewed_hash: string | null }>): string[] {
+/** Enabled coach format courses that may run: reviewed when review is required, otherwise all of them. Used by the reminder pass. */
+export function reviewedEnabledCourses(
+  rows: Array<{ course_key: string; reviewed_hash: string | null }>,
+  required: boolean = COUNSEL_REVIEW_REQUIRED,
+): string[] {
   return rows
-    .filter((r) => reviewState({ currentHash: currentReviewHash(r.course_key), reviewedHash: r.reviewed_hash }) === "reviewed")
+    .filter((r) => reviewAllowsCoach(reviewState({ currentHash: currentReviewHash(r.course_key), reviewedHash: r.reviewed_hash, required })))
     .map((r) => r.course_key);
 }

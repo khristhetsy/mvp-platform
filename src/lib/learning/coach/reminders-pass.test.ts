@@ -91,6 +91,13 @@ describe("runCoachReminderPass", () => {
     expect(sendEmail).not.toHaveBeenCalled();
   });
 
+  it("does not wait for a counsel sign off, because review is not required for this education course", async () => {
+    seed();
+    tables.course_coach_config = [{ course_key: "investor-outreach-playbook", enabled: true, reviewed_hash: null }];
+    const r = await runCoachReminderPass(300, NOW);
+    expect(r.sent).toBe(2);
+  });
+
   it("sends the in app nudge and the email to a founder idle for 8 days", async () => {
     seed();
     const r = await runCoachReminderPass(300, NOW);

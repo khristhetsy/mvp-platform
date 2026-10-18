@@ -2,7 +2,7 @@ import { FOUNDER_COURSES } from "@/lib/learning/courses";
 import { COACH_COURSES } from "@/lib/learning/coach/courses";
 import { isInternalAccount } from "@/lib/notifications/internal-accounts";
 import type { CoachTone } from "@/lib/learning/coach/tones";
-import { currentReviewHash, reviewState, type ReviewState } from "@/lib/learning/coach/review-pack";
+import { currentReviewHash, reviewAllowsCoach, reviewState, type ReviewState } from "@/lib/learning/coach/review-pack";
 
 /** A course is ready for the coach only when it is in the coach format: every lesson has steps. */
 export function isCoachReady(courseKey: string): boolean {
@@ -34,19 +34,19 @@ export type LatestReview = { course_key: string; reviewer_name: string; reviewed
  * Every course the coach could apply to. Courses outside the coach format are listed so the
  * gap is visible, but their switch stays off with the reason: never a control that cannot run.
  */
-export function buildCoachCourseRows(configs: Config[], reviews: LatestReview[] = []): CoachCourseRow[] {
+export function buildCoachCourseRows(configs: Config[], reviews: LatestReview[] = [], required?: boolean): CoachCourseRow[] {
   const byKey = new Map(configs.map((c) => [c.course_key, c]));
   const rows: CoachCourseRow[] = [];
   for (const c of COACH_COURSES) {
     const cfg = byKey.get(c.slug);
-    const review = reviewState({ currentHash: currentReviewHash(c.slug), reviewedHash: cfg?.reviewed_hash });
+    const review = reviewState({ currentHash: currentReviewHash(c.slug), reviewedHash: cfg?.reviewed_hash, required });
     const last = reviews.find((r) => r.course_key === c.slug) ?? null;
     const ready = isCoachReady(c.slug);
     rows.push({
       key: c.slug,
       title: c.title,
       source: "Coach format",
-      ready: ready && review === "reviewed",
+      ready: ready && reviewAllowsCoach(review),
       enabled: cfg?.enabled === true,
       tone: cfg?.tone ?? null,
       blocker: !ready
