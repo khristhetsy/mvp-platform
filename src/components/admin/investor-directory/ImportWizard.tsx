@@ -590,6 +590,7 @@ export function ImportWizard({ onClose, onDone }: Readonly<{ onClose: () => void
               ))}
             </div>
             <div className="mt-3 rounded-lg bg-slate-50 p-3 text-[12.5px] text-slate-600">New rows are drafts until you publish. Rows with the same email merge into the existing record, filling gaps and combining lists.</div>
+            <div className="mt-2 rounded-lg bg-[#E6F1FB] p-3 text-[12.5px] text-slate-700"><b className="text-slate-900">Next: verification.</b> Verification checks each email&apos;s format, marks records Verified or Needs input, and holds back opt outs and bounces before you publish. The button opens the Verification page for this import only.</div>
           </div>
         ) : null}
 
@@ -614,7 +615,8 @@ export function ImportWizard({ onClose, onDone }: Readonly<{ onClose: () => void
           </div>
         ) : (
           <div className="mt-5 flex justify-end gap-2">
-            <button type="button" onClick={finish} className={btnPri}>Open Imports</button>
+            <button type="button" onClick={finish} className={btn}>Open Imports</button>
+            {done ? <a href={`/admin/investor-directory/verification?importId=${encodeURIComponent(done.imp.id)}`} className={`${btnPri} inline-block`}>Continue to verification</a> : null}
           </div>
         )}
       </div>
