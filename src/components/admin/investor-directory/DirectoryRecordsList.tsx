@@ -167,7 +167,7 @@ export function DirectoryRecordsList({
       website: d.website || (f.website?.values[0] ?? ""),
       investor_types: [...new Set([...d.investor_types, ...(f.investor_types?.values ?? [])])],
       capital_types: [...new Set([...d.capital_types, ...(f.capital_types?.values ?? [])])],
-      industries: [...new Set([...d.industries, ...(f.industries?.values ?? [])])],
+      industries: [...new Set([...d.industries, ...(f.industries?.values ?? [])])].slice(0, 3),
     }));
     setKeep((k) => ({ website: k.website || !!f.website, investor_types: k.investor_types || !!f.investor_types, capital_types: k.capital_types || !!f.capital_types, industries: k.industries || !!f.industries }));
   }

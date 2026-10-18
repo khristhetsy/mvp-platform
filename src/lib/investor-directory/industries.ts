@@ -86,12 +86,12 @@ export type Suggestion = {
 
 /** Keyword stems and the industries they point at. Stems are matched at the start of a word. */
 const KEYWORDS: [RegExp, string[]][] = [
-  [/\b(cyber|infosec|security)/, ["cyber-security"]], [/\b(fintech|payments?|lending|banking)/, ["fintech"]],
+  [/\b(cyber|infosec|information security|app(lication)? security|zero trust)/, ["cyber-security"]], [/\b(fintech|payments?|lending|banking)/, ["fintech"]],
   [/\b(health|medic|clinic|hospital|pharma|therapeutic)/, ["healthtech", "healthcare"]], [/\b(biotech|bio\b|life ?science|genom)/, ["biotechnology-life-science"]],
   [/\b(crypto|bitcoin|web3|defi)/, ["cryptocurrency"]], [/\bblockchain/, ["blockchain"]], [/\b(artificial intelligence|machine learning|\bai\b|\bml\b)/, ["ai-ml"]],
-  [/\b(saas|b2b software)/, ["saas"]], [/\b(software|cloud|developer tools?)/, ["software"]], [/\benterprise/, ["enterprise-software"]],
+  [/\b(saas|b2b software)/, ["saas"]], [/\b(software|developer tools?)/, ["software"]], [/\benterprise/, ["enterprise-software"]],
   [/\b(agri|farm|agtech)/, ["agriculture"]], [/\b(food|beverage|restaurant)/, ["food-tech"]], [/\b(clean ?tech|climate|solar|renewable|carbon)/, ["cleantech"]],
-  [/\b(energy|battery|batteries)/, ["energy"]], [/\b(aerospace|space|satellite)/, ["aerospace"]], [/\bdefense/, ["defense"]], [/\b(edtech|education|learning)/, ["edtech"]],
+  [/\b(energy|battery|batteries)/, ["energy"]], [/\b(aerospace|satellites?|space ?tech|spacecraft|launch vehicles?)/, ["aerospace"]], [/\bdefense/, ["defense"]], [/\b(edtech|education|e-?learning|online learning)/, ["edtech"]],
   [/\b(real estate|proptech|property)/, ["real-estate"]], [/\b(gaming|games?|esports)/, ["gaming"]], [/\b(media|entertainment)/, ["media"]],
   [/\brobot/, ["robotics"]], [/\b(semiconductor|chips?)\b/, ["semiconductor"]], [/\b(hardware|devices?)\b/, ["hardware"]], [/\b(logistics|supply chain)/, ["logistics"]],
   [/\b(e-?commerce|retail)/, ["ecommerce"]], [/\bmarketplace/, ["marketplace"]], [/\binsur/, ["insurance"]], [/\b(manufactur|industrial)/, ["manufacturing"]],
@@ -131,7 +131,7 @@ export function suggestIndustries(input: { firm: string; website?: string | null
   if (input.siteText) scan(input.siteText, "website", signals);
   const by = new Map<string, Set<SignalSource>>();
   for (const s of signals) { if (!by.has(s.slug)) by.set(s.slug, new Set()); by.get(s.slug)!.add(s.source); }
-  const ranked = [...by.entries()].sort((a, b) => b[1].size - a[1].size).slice(0, 4);
+  const ranked = [...by.entries()].sort((a, b) => b[1].size - a[1].size).slice(0, 3);
   const slugs = ranked.map(([slug]) => slug);
   const level = ranked.length === 0 ? "none" : ranked.some(([, src]) => src.size >= 2) ? "strong" : "possible";
   return { slugs, level, signals: signals.filter((s) => slugs.includes(s.slug)) };
