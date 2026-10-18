@@ -5,7 +5,7 @@ import { staleCutoff } from "@/lib/investor-directory/limits";
 
 export const dynamic = "force-dynamic";
 
-type SP = Promise<{ q?: string; verification?: string; source?: string; page?: string }>;
+type SP = Promise<{ q?: string; verification?: string; source?: string; page?: string; importId?: string }>;
 
 /** Unverified, missing industries, bounced, and stale records, oldest first. */
 export default async function InvestorDirectoryVerificationPage({ searchParams }: Readonly<{ searchParams: SP }>) {
@@ -13,7 +13,7 @@ export default async function InvestorDirectoryVerificationPage({ searchParams }
   const sp = await searchParams;
   const settings = await loadSettings();
   const [list, sources] = await Promise.all([
-    listRecords({ q: sp.q, verification: sp.verification, source: sp.source, queue: !sp.verification, page: Number(sp.page ?? 1) || 1 }, settings),
+    listRecords({ q: sp.q, verification: sp.verification, source: sp.source, importId: sp.importId, queue: !sp.verification, page: Number(sp.page ?? 1) || 1 }, settings),
     allSources(),
   ]);
   return (
@@ -30,7 +30,7 @@ export default async function InvestorDirectoryVerificationPage({ searchParams }
         pageSize={PAGE_SIZE}
         sources={sources}
         staleBefore={staleCutoff(settings.stale_days)}
-        initial={{ q: sp.q ?? "", status: "", verification: sp.verification ?? "", source: sp.source ?? "" }}
+        initial={{ q: sp.q ?? "", status: "", verification: sp.verification ?? "", source: sp.source ?? "", importId: sp.importId ?? "" }}
       />
     </div>
   );

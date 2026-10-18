@@ -641,6 +641,10 @@ export async function updateRecord(id: string, patch: RecordPatch, action: "save
     if (industries.length === 0) throw new Error("Pick at least one industry before verifying.");
     Object.assign(row, { verification: "verified", verified_at: now, verified_by: adminId });
   }
+  if (action === "save" && (patch.industries?.length ?? 0) > 0 && (await getRecord(id))?.verification === "needs_input") {
+    // The record was waiting only for industries; with some filled in it is back to unverified.
+    row.verification = "unverified";
+  }
   if (action === "publish") row.status = "published";
   if (action === "unpublish") row.status = "draft";
   if (action === "suppress") row.status = "suppressed";

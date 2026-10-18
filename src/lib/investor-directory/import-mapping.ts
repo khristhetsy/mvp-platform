@@ -8,6 +8,7 @@
  * same CleanRow shape the CSV pipeline produces, with the same normalizing and
  * dedupe. A column can feed several fields, and several columns can feed one.
  */
+import { industryLabel, industrySlugs, toIndustrySlugs } from "@/lib/investor-directory/industries";
 import {
   type CleanResult,
   type CleanRow,
@@ -44,7 +45,7 @@ export const FIELDS: { key: FieldKey; label: string; hint: string }[] = [
   { key: "investor_types", label: "Investor type", hint: "Matched to the platform list." },
   { key: "funding_stages", label: "Funding stage", hint: "Matched to the platform list." },
   { key: "capital_types", label: "Capital type", hint: "Equity or debt." },
-  { key: "industries", label: "Industries", hint: "Kept as written, split on commas and semicolons." },
+  { key: "industries", label: "Industries", hint: "Matched to the directory list; names that do not match are kept as written." },
   { key: "fund_name", label: "Fund name", hint: "" },
   { key: "fund_size", label: "Fund size", hint: "A number." },
   { key: "avg_investment", label: "Average investment", hint: "A number." },
@@ -314,7 +315,15 @@ export function applyMapping(headers: string[], rows: string[][], mapping: Mappi
           loc = { city: loc.city ?? p.city, state: loc.state ?? p.state, country: loc.country ?? p.country };
           continue;
         }
-        if (f === "industries") { for (const v of splitList(cell)) lists.industries.add(valueMap[i]?.[v]?.[0] ?? v); continue; }
+        if (f === "industries") {
+          for (const v of splitList(cell)) {
+            const chosen = valueMap[i]?.[v]?.[0];
+            if (chosen) { lists.industries.add(chosen); continue; }
+            const m = industrySlugs(v);
+            if (m.length) m.forEach((s) => lists.industries.add(s)); else lists.industries.add(v);
+          }
+          continue;
+        }
         if (VOCAB_FIELDS.has(f)) {
           const target = lists[f as "investor_types" | "funding_stages" | "capital_types"];
           let kept = 0;
@@ -404,7 +413,7 @@ export const EDIT_LABELS: Record<EditField, string> = {
 /** A cleaned row's value as the text shown in its review cell. */
 export function cellText(row: CleanRow, f: EditField): string {
   const v = row[f];
-  if (Array.isArray(v)) return (f === "industries" ? v : v.map(slugLabel)).join(", ");
+  if (Array.isArray(v)) return (f === "industries" ? v.map(industryLabel) : v.map(slugLabel)).join(", ");
   return v ?? "";
 }
 
@@ -418,7 +427,10 @@ export function parseEdit(f: EditField, text: string): Partial<CleanRow> {
     case "phone": return { phone: normalizePhone(t) };
     case "state": return { state: t ? (STATES[t.toLowerCase()] ?? t.toUpperCase()) : null };
     case "country": return { country: t ? normalizeCountry(t) : null };
-    case "industries": return { industries: [...new Set(splitList(t))] };
+    case "industries": {
+      const { slugs, leftover } = toIndustrySlugs(splitList(t));
+      return { industries: [...slugs, ...leftover] };
+    }
     case "investor_types":
     case "funding_stages":
     case "capital_types": {
@@ -434,11 +446,15 @@ export function parseEdit(f: EditField, text: string): Partial<CleanRow> {
   }
 }
 
-/** Apply review edits (by row index) and exclusions to cleaned rows. Rows left without a firm are dropped. */
-export function applyEdits(rows: CleanRow[], edits: Record<string, Record<string, string>>, exclude: number[]): { rows: CleanRow[]; invalidEmails: number } {
+/**
+ * Apply review edits (by row index) and exclusions to cleaned rows. Rows left without a firm are dropped.
+ * Edits can make two records share an email: those are merged into the first, filling its gaps, the same way cleaning does.
+ */
+export function applyEdits(rows: CleanRow[], edits: Record<string, Record<string, string>>, exclude: number[]): { rows: CleanRow[]; invalidEmails: number; mergedByEdit: number } {
   const out: CleanRow[] = [];
   const skip = new Set(exclude);
-  let invalidEmails = 0;
+  const byEmail = new Map<string, CleanRow>();
+  let invalidEmails = 0, mergedByEdit = 0;
   rows.forEach((row, i) => {
     if (skip.has(i)) return;
     const next: CleanRow = { ...row };
@@ -447,37 +463,14 @@ export function applyEdits(rows: CleanRow[], edits: Record<string, Record<string
       if (f === "email" && tidy(text) && normalizeEmail(text).invalid) { invalidEmails++; next.email = null; continue; }
       Object.assign(next, parseEdit(f as EditField, text));
     }
-    if (next.firm) out.push(next);
+    if (!next.firm) return;
+    const key = next.email ? next.email.toLowerCase() : "";
+    const prev = key ? byEmail.get(key) : undefined;
+    if (prev) { mergeInto(prev, next); mergedByEdit++; return; }
+    if (key) byEmail.set(key, next);
+    out.push(next);
   });
-  return { rows: out, invalidEmails };
-}
-
-/** The industry names on the record page, so imported industries show as selected there. */
-export const DIRECTORY_INDUSTRIES = [
-  "Aerospace", "Agriculture", "AgTech", "AI / ML", "Apparel", "Artificial Intelligence", "Biotechnology/Life Science", "Bitcoin",
-  "Blockchain", "Business Services", "Cannabis", "Cleantech", "Communications", "Computer", "Construction", "Consumer Products",
-  "Cryptocurrency", "Cyber Security", "Data/IoT", "Deep Tech", "Defense", "Digital Health", "E-commerce", "EdTech", "Energy",
-  "Enterprise Software", "Entertainment", "Financial Services", "Fintech", "Food Tech", "Food/Hospitality", "Gaming", "Hardware",
-  "Health & Wellness", "Healthcare", "Industrial", "Insurance", "Logistics", "Manufacturing", "Marketplace", "Materials", "Media",
-  "Medical Devices", "Mining", "Nano Technology", "Nuclear Waste Recycling", "Oil & Gas", "Payment App", "Plastics",
-  "Professional Services", "Real Estate", "Robotics", "SaaS", "SaaS / B2B Software", "Semiconductor", "Software", "Telecom",
-  "Transportation", "Travel", "HealthTech", "Warehousing", "Other",
-];
-const indKey = (v: string) => v.toLowerCase().replace(/\([^)]*\)/g, "").replace(/[^a-z0-9]+/g, "");
-const INDUSTRY_BY_KEY = new Map(DIRECTORY_INDUSTRIES.map((n) => [indKey(n), n]));
-const INDUSTRY_ALIASES: Record<string, string[]> = {
-  cybersecurity: ["Cyber Security"], healthtech: ["HealthTech"], healthtechdigitalhealth: ["Digital Health"],
-  cryptoweb3: ["Cryptocurrency", "Blockchain"], crypto: ["Cryptocurrency"], web3: ["Blockchain"],
-  ai: ["AI / ML"], machinelearning: ["AI / ML"], verticalai: ["AI / ML"], informationtechnology: ["Software"],
-  gamingmediasports: ["Gaming", "Media"], infrastructuredevelopertools: ["Software"], biotech: ["Biotechnology/Life Science"],
-  lifesciences: ["Biotechnology/Life Science"], ecommerce: ["E-commerce"], realestatetech: ["Real Estate"], proptech: ["Real Estate"],
-  foodbeverage: ["Food/Hospitality"], iot: ["Data/IoT"], saas: ["SaaS"], edtech: ["EdTech"], education: ["EdTech"],
-};
-/** Directory industries for one name from a file, or none when nothing fits. */
-export function matchIndustry(name: string): string[] {
-  const k = indKey(name);
-  const exact = INDUSTRY_BY_KEY.get(k);
-  return exact ? [exact] : INDUSTRY_ALIASES[k] ?? [];
+  return { rows: out, invalidEmails, mergedByEdit };
 }
 
 const EQUITY_TYPES = new Set(["angel-investor", "venture-capital", "private-equity", "family-office", "hedge-fund"]);
@@ -503,15 +496,11 @@ export function guessEdits(rows: CleanRow[], current: Record<number, Record<stri
       if (g.length) { mine.capital_types = g.map(slugLabel).join(", "); capital++; }
     }
     if (current[i]?.industries === undefined && row.industries.length) {
-      const kept: string[] = [], left: string[] = [];
-      for (const name of row.industries) {
-        const m = matchIndustry(name);
-        if (m.length) for (const x of m) { if (!kept.includes(x)) kept.push(x); } else left.push(name);
-      }
-      const changed = left.length > 0 || kept.join("|") !== row.industries.join("|");
+      const { slugs, leftover } = toIndustrySlugs(row.industries);
+      const changed = leftover.length > 0 || slugs.join("|") !== row.industries.join("|");
       if (changed) {
-        mine.industries = kept.join(", ");
-        if (left.length && current[i]?.notes === undefined) mine.notes = [row.notes, `Industries: ${left.join("; ")}`].filter(Boolean).join(" | ");
+        mine.industries = slugs.map(industryLabel).join(", ");
+        if (leftover.length && current[i]?.notes === undefined) mine.notes = [row.notes, `Industries: ${leftover.join("; ")}`].filter(Boolean).join(" | ");
         industries++;
       }
     }
