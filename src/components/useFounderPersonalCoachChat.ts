@@ -8,9 +8,12 @@ export type CoachChatEntry = { role: "user" | "assistant"; text: string };
 export function useFounderPersonalCoachChat({
   courseSlug,
   lessonSlug,
+  stepIndex,
 }: Readonly<{
   courseSlug?: string;
   lessonSlug?: string;
+  /** The coach step the founder is looking at, so the coach answers about that step. */
+  stepIndex?: number;
 }>) {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<CoachChatEntry[]>([]);
@@ -38,6 +41,7 @@ export function useFounderPersonalCoachChat({
         body: JSON.stringify({
           courseSlug: courseSlug ?? undefined,
           lessonSlug: lessonSlug ?? undefined,
+          stepIndex: typeof stepIndex === "number" ? stepIndex : undefined,
           message: trimmed,
           history,
         }),
@@ -69,7 +73,7 @@ export function useFounderPersonalCoachChat({
       const disclaimer = body.disclaimer ?? COACH_DISCLAIMER;
       setMessages((prev) => [...prev, { role: "assistant", text: `${body.reply}\n\n${disclaimer}` }]);
     },
-    [courseSlug, lessonSlug, loading, messages],
+    [courseSlug, lessonSlug, stepIndex, loading, messages],
   );
 
   const send = useCallback(() => void sendMessage(message), [message, sendMessage]);

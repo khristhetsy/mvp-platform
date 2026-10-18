@@ -94,6 +94,7 @@ export type JobTier = "instant" | "digest" | "weekly" | "none";
 export const JOB_DELIVERY: Array<{ path: string; name: string; tier: JobTier; note: string }> = [
   { path: "/api/cron/scheduled-reach-outs", name: "Scheduled reach outs", tier: "instant", note: "Founder picked the send time" },
   { path: "/api/cron/founder-nudges", name: "Founder nudges", tier: "digest", note: "Held for the digest; repeats of the same reminder stop after the limit" },
+  { path: "/api/cron/coach-reminders", name: "AI IR Coach commitment checks", tier: "digest", note: "In app check at the promised time; the email is held for the digest" },
   { path: "/api/cron/ir-summaries", name: "Founder summaries", tier: "digest", note: "Held for the digest" },
   { path: "/api/cron/run-orchestration", name: "Orchestration (match notices)", tier: "digest", note: "Founder emails held for the digest; investor sends unchanged" },
   { path: "/api/cron/intro-follow-ups", name: "Intro follow ups", tier: "digest", note: "Founder side held; investor side unchanged" },

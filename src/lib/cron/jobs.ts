@@ -13,6 +13,7 @@ type Label = { name: string; group: CronGroup; description?: string };
 
 const LABELS: Record<string, Label> = {
   "/api/cron/founder-nudges": { name: "Founder nudges", group: "Founders", description: "Data room reminders, journey nudges and stage gate reminders" },
+  "/api/cron/coach-reminders": { name: "AI IR Coach commitment checks", group: "Founders", description: "Checks the times founders promised to do a coach step, every 15 minutes. Does nothing until the coach is on for a course" },
   "/api/cron/scheduled-reach-outs": { name: "Scheduled reach outs", group: "Founders", description: "Sends Reach out to founder emails at their scheduled time" },
   "/api/cron/scheduled-emails": { name: "Scheduled emails", group: "Sales", description: "Sends emails staff scheduled from Contracts, Gmail, Draft email, Investor Relations, Sales chatter and Mass email" },
   "/api/cron/founder-digest": { name: "Founder digest", group: "Founders", description: "One daily or weekly email with each founder's held updates, at their own hour" },

@@ -1,0 +1,69 @@
+name: AI IR Coach screenshots (nightly)
+
+# Re-captures the course screens for the AI IR Coach every night from the running app, using a DEMO
+# founder account (an @myicfos.com address; the script refuses any other account). A screen that changed
+# shows as Stale in Admin, Learning, AI IR Coach, Screenshots. Founders keep seeing the last approved
+# image until a person approves the new one, so this never changes what founders see on its own.
+#
+# Nothing runs until these repository secrets exist (Settings, Secrets and variables, Actions):
+#   COACH_DEMO_BASE_URL            e.g. https://icapos.com (the app the demo account signs in to)
+#   COACH_DEMO_EMAIL               a demo founder account, @myicfos.com
+#   COACH_DEMO_PASSWORD            that account's password
+#   NEXT_PUBLIC_SUPABASE_URL       the Supabase project where images and rows are written
+#   SUPABASE_SERVICE_ROLE_KEY      its service role key
+# Without all five the job skips with a notice instead of failing.
+#
+# The work list is the coach_screenshots table, which fills when staff open the Screenshots tab, so a
+# new lesson step is captured the night after someone opens that tab.
+
+on:
+  schedule:
+    # 10:30 UTC, about 3:30 AM Pacific.
+    - cron: "30 10 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coach-screenshots
+  cancel-in-progress: false
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    # Secrets cannot be read in a step level `if:`, so the ones we branch on become job level env vars.
+    env:
+      COACH_DEMO_BASE_URL: ${{ secrets.COACH_DEMO_BASE_URL }}
+      COACH_DEMO_EMAIL: ${{ secrets.COACH_DEMO_EMAIL }}
+      COACH_DEMO_PASSWORD: ${{ secrets.COACH_DEMO_PASSWORD }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      COACH_APP_VERSION: ${{ github.sha }}
+    steps:
+      - name: Skip notice (secrets not set)
+        if: ${{ env.COACH_DEMO_BASE_URL == '' || env.COACH_DEMO_EMAIL == '' || env.COACH_DEMO_PASSWORD == '' || env.NEXT_PUBLIC_SUPABASE_URL == '' || env.SUPABASE_SERVICE_ROLE_KEY == '' }}
+        run: echo "One or more coach screenshot secrets are not set. Nothing to do. See the comment at the top of this workflow."
+
+      - uses: actions/checkout@v5
+        if: ${{ env.COACH_DEMO_BASE_URL != '' && env.COACH_DEMO_EMAIL != '' && env.COACH_DEMO_PASSWORD != '' && env.NEXT_PUBLIC_SUPABASE_URL != '' && env.SUPABASE_SERVICE_ROLE_KEY != '' }}
+
+      - uses: actions/setup-node@v5
+        if: ${{ env.COACH_DEMO_BASE_URL != '' && env.COACH_DEMO_EMAIL != '' && env.COACH_DEMO_PASSWORD != '' && env.NEXT_PUBLIC_SUPABASE_URL != '' && env.SUPABASE_SERVICE_ROLE_KEY != '' }}
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        if: ${{ env.COACH_DEMO_BASE_URL != '' && env.COACH_DEMO_EMAIL != '' && env.COACH_DEMO_PASSWORD != '' && env.NEXT_PUBLIC_SUPABASE_URL != '' && env.SUPABASE_SERVICE_ROLE_KEY != '' }}
+        run: npm ci
+
+      - name: Install Playwright and Chromium
+        if: ${{ env.COACH_DEMO_BASE_URL != '' && env.COACH_DEMO_EMAIL != '' && env.COACH_DEMO_PASSWORD != '' && env.NEXT_PUBLIC_SUPABASE_URL != '' && env.SUPABASE_SERVICE_ROLE_KEY != '' }}
+        # --no-save: Playwright is only needed for this job, so package.json stays unchanged.
+        run: npm i --no-save playwright && npx playwright install --with-deps chromium
+
+      - name: Capture course screens
+        if: ${{ env.COACH_DEMO_BASE_URL != '' && env.COACH_DEMO_EMAIL != '' && env.COACH_DEMO_PASSWORD != '' && env.NEXT_PUBLIC_SUPABASE_URL != '' && env.SUPABASE_SERVICE_ROLE_KEY != '' }}
+        run: node scripts/coach-screenshots.mjs

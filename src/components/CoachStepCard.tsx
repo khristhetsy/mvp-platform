@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { CoachStep } from "@/lib/learning/course-types";
 import type { CoachSnapshot } from "@/lib/learning/coach/data-reads";
 import { COACH_TONES, type CoachTone, TONE_LABELS } from "@/lib/learning/coach/tones";
+import { calendarBody, taskBody } from "@/lib/learning/coach/plan-items";
 
 type CoachState = {
   active: boolean;
@@ -14,15 +15,21 @@ type CoachState = {
   screenshots?: Record<number, { url: string; capturedAt: string | null; pinned: boolean }>;
 };
 
+type PlanStatus = "idle" | "saving" | "added" | "failed";
 type DueChoice = "today" | "tomorrow" | "this_week";
 const DUE_LABELS: Record<DueChoice, string> = { today: "Today", tomorrow: "Tomorrow", this_week: "This week" };
 
 /**
  * The AI IR Coach step card, shown inside the existing floating coach. It renders nothing unless
  * the coach is active for this founder and course, so every other lesson looks exactly as before.
- * Check ins save to the founder's own rows. Nothing goes to Tasks or Calendar from here.
+ * Check ins save to the founder's own rows. A Task or Calendar item is created only when the founder
+ * presses its button after choosing a time, through the platform's existing Tasks and Calendar routes.
  */
-export function CoachStepCard({ courseSlug, lessonSlug }: Readonly<{ courseSlug: string; lessonSlug: string }>) {
+export function CoachStepCard({
+  courseSlug,
+  lessonSlug,
+  onStepChange,
+}: Readonly<{ courseSlug: string; lessonSlug: string; onStepChange?: (index: number) => void }>) {
   const [state, setState] = useState<CoachState | null>(null);
   const [index, setIndex] = useState(0);
   const [reply, setReply] = useState<string | null>(null);
@@ -33,6 +40,9 @@ export function CoachStepCard({ courseSlug, lessonSlug }: Readonly<{ courseSlug:
   const [reads, setReads] = useState<CoachSnapshot | null>(null);
   const [readsOpen, setReadsOpen] = useState(false);
   const [readsFailed, setReadsFailed] = useState(false);
+  // After "Not now" with a time: the founder may put that time on their Tasks and Calendar.
+  // Each is its own click. Nothing is created until the founder presses the button.
+  const [plan, setPlan] = useState<{ index: number; stepTitle: string; dueAt: string; task: PlanStatus; event: PlanStatus } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -51,6 +61,11 @@ export function CoachStepCard({ courseSlug, lessonSlug }: Readonly<{ courseSlug:
     };
   }, [courseSlug, lessonSlug]);
 
+  // Tell the chat which step is showing, once the steps have loaded.
+  useEffect(() => {
+    if (state) onStepChange?.(index);
+  }, [state, index, onStepChange]);
+
   async function checkIn(event: "done" | "stuck" | "skipped", dueChoice?: DueChoice) {
     if (busy) return;
     setBusy(true);
@@ -66,14 +81,27 @@ export function CoachStepCard({ courseSlug, lessonSlug }: Readonly<{ courseSlug:
       setError(body.error ?? "Could not save. Try again.");
       return;
     }
-    const body = (await res.json()) as { reply: string; nextStepIndex: number };
+    const body = (await res.json()) as { reply: string; nextStepIndex: number; dueAt?: string | null };
     setReply(body.reply);
+    setPlan(event === "skipped" && body.dueAt && state ? { index, stepTitle: state.steps[index].title, dueAt: body.dueAt, task: "idle", event: "idle" } : null);
     setSaved(true);
     setChoosingTime(false);
     if (event === "done") {
       setState((s) => (s ? { ...s, doneIndexes: [...new Set([...s.doneIndexes, index])] } : s));
       setIndex(body.nextStepIndex);
     }
+  }
+
+  async function addToPlan(kind: "task" | "event") {
+    if (!plan || plan[kind] === "saving" || plan[kind] === "added") return;
+    const set = (status: PlanStatus) => setPlan((p) => (p ? { ...p, [kind]: status } : p));
+    set("saving");
+    const res = await fetch(kind === "task" ? "/api/tasks" : "/api/calendar/events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(kind === "task" ? taskBody(plan) : calendarBody(plan)),
+    }).catch(() => null);
+    set(res?.ok ? "added" : "failed");
   }
 
   async function toggleReads() {
@@ -223,6 +251,30 @@ export function CoachStepCard({ courseSlug, lessonSlug }: Readonly<{ courseSlug:
         <p className="mt-2.5 whitespace-pre-wrap rounded-lg bg-white px-3 py-2 text-xs leading-5 text-slate-800 ring-1 ring-indigo-100">
           {reply}
         </p>
+      ) : null}
+      {plan && plan.index === index ? (
+        <div className="mt-2 rounded-lg bg-white px-3 py-2 ring-1 ring-indigo-100">
+          <p className="text-[11px] font-medium text-slate-700">Put this on your plan? Nothing is added unless you press a button.</p>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {([
+              ["task", "Add to Tasks", "Added to Tasks"],
+              ["event", "Add to Calendar", "Added to Calendar"],
+            ] as const).map(([kind, label, done]) => (
+              <button
+                key={kind}
+                type="button"
+                disabled={plan[kind] === "saving" || plan[kind] === "added"}
+                onClick={() => void addToPlan(kind)}
+                className="rounded-full border border-indigo-200 bg-white px-2.5 py-1 text-[11px] font-medium text-indigo-700 hover:bg-indigo-50 disabled:opacity-60"
+              >
+                {plan[kind] === "added" ? done : plan[kind] === "saving" ? "Adding…" : label}
+              </button>
+            ))}
+          </div>
+          {plan.task === "failed" || plan.event === "failed" ? (
+            <p className="mt-1 text-[11px] text-red-600">Could not add that. Your coach commitment is still saved. Try again.</p>
+          ) : null}
+        </div>
       ) : null}
       {error ? <p className="mt-2 text-[11px] text-red-600">{error}</p> : null}
 

@@ -152,4 +152,33 @@ describe("runCoachReminderPass", () => {
     expect(r.kept).toBe(1);
     expect(createNotification).not.toHaveBeenCalled();
   });
+
+  describe("commitment checks only (the 15 minute job)", () => {
+    it("sends nothing for a quiet founder, which stays on the daily run", async () => {
+      seed({ idleDays: 8 });
+      const r = await runCoachReminderPass(300, NOW, ["commitment_check"]);
+      expect(r.sent).toBe(0);
+      expect(createNotification).not.toHaveBeenCalled();
+      expect(sendEmail).not.toHaveBeenCalled();
+      expect(inserted).toHaveLength(0);
+    });
+
+    it("sends the check for a commitment that is due, once", async () => {
+      seed({ idleDays: 1 });
+      tables.coach_commitments = [
+        { id: "c9", founder_id: "f1", company_id: "c1", course_slug: "investor-outreach-playbook", lesson_id: "l", step_index: 0, title: "Send wave 1", due_at: new Date(NOW.getTime() - 10 * 60_000).toISOString(), status: "open", created_at: new Date(NOW.getTime() - DAY).toISOString() },
+      ];
+      const first = await runCoachReminderPass(300, NOW, ["commitment_check"]);
+      expect(first.sent).toBe(1);
+      expect(createNotification).toHaveBeenCalledTimes(1);
+      expect(inserted.find((m) => m.table === "coach_messages")).toMatchObject({ kind: "commitment_check", channel: "in_app", status: "sent" });
+
+      // The next 15 minute run sees the recorded message and does not send it again.
+      tables.coach_messages = inserted.filter((m) => m.table === "coach_messages").map((m) => ({ ...m, created_at: NOW.toISOString() }));
+      createNotification.mockClear();
+      const second = await runCoachReminderPass(300, new Date(NOW.getTime() + 15 * 60_000), ["commitment_check"]);
+      expect(second.sent).toBe(0);
+      expect(createNotification).not.toHaveBeenCalled();
+    });
+  });
 });

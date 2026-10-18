@@ -7,7 +7,7 @@
 //   2. Internal and staff accounts are skipped, never emailed (repo rule).
 //   3. Notification settings win: pause all, in app off, email off. Email also waits out quiet hours.
 //   4. Every message that is sent or held back is written to coach_messages, which also prevents repeats.
-// Nothing here writes to Tasks or Calendar. Best effort: never throws into the cron.
+// Nothing here writes to Tasks or Calendar (the founder does that from the step card). Best effort: never throws into the cron.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -52,7 +52,17 @@ export function coachReminderEmail(input: { firstName: string; title: string; me
 
 export type CoachReminderResult = { sent: number; suppressed: number; failed: number; missed: number; kept: number; skippedInternal: number };
 
-export async function runCoachReminderPass(limit = 300, now: Date = new Date()): Promise<CoachReminderResult> {
+/**
+ * `only` limits which kinds of message this run may send. The 15 minute job passes ["commitment_check"]
+ * so a promised time is met closely, while quiet founder nudges stay on the daily run. Marking
+ * commitments kept or missed always happens. Repeats are impossible either way, because every message
+ * is recorded in coach_messages and planned only once.
+ */
+export async function runCoachReminderPass(
+  limit = 300,
+  now: Date = new Date(),
+  only?: ReadonlyArray<PlannedMessage["kind"]>,
+): Promise<CoachReminderResult> {
   const out: CoachReminderResult = { sent: 0, suppressed: 0, failed: 0, missed: 0, kept: 0, skippedInternal: 0 };
   try {
     const db = createServiceRoleClient() as unknown as SupabaseClient;
@@ -138,12 +148,13 @@ export async function runCoachReminderPass(limit = 300, now: Date = new Date()):
         await db.from("coach_commitments").update({ status: "missed", resolved_at: now.toISOString() }).eq("id", id);
         out.missed += 1;
       }
-      if (plan.send.length === 0) continue;
+      const toSend = only ? plan.send.filter((m) => only.includes(m.kind)) : plan.send;
+      if (toSend.length === 0) continue;
 
       const prefs = await loadNotificationPrefs(e.founder_id);
       const firstName = (p.full_name ?? "").split(" ")[0] || "there";
 
-      for (const msg of plan.send) {
+      for (const msg of toSend) {
         const record = async (status: "sent" | "suppressed" | "failed", extra: Row = {}) => {
           await db.from("coach_messages").insert({
             founder_id: e.founder_id,

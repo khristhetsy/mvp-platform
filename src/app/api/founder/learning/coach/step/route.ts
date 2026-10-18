@@ -11,7 +11,7 @@ const loose = (c: unknown) => c as SupabaseClient;
 /**
  * POST: a step check in (I did it, I am stuck, Not now). Deterministic, no AI call.
  * "Not now" with a chosen time records a commitment. That click is the founder's confirmation.
- * Nothing is written to Tasks or Calendar here.
+ * Nothing is written to Tasks or Calendar here; the step card does that when the founder presses a button.
  */
 export async function POST(request: Request) {
   const auth = await requireApiProfile(["founder"]);

@@ -117,6 +117,10 @@
       "schedule": "0 9 * * *"
     },
     {
+      "path": "/api/cron/coach-reminders",
+      "schedule": "8-59/15 * * * *"
+    },
+    {
       "path": "/api/cron/points-expiry",
       "schedule": "0 9 * * *"
     },

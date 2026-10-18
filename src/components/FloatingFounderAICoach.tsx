@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { COACH_DISCLAIMER } from "@/lib/learning/class-assistant-guardrails";
 import { CoachStepCard } from "@/components/CoachStepCard";
@@ -45,6 +45,12 @@ export function FloatingFounderAICoach({
   const t = useTranslations("sharedCmp");
   const [open, setOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  // The step the founder is on, reported by the step card. Tied to the lesson, so a stale index from
+  // another lesson is never sent.
+  const lessonKey = `${courseSlug ?? ""}/${lessonSlug ?? ""}`;
+  const [step, setStep] = useState<{ key: string; index: number } | null>(null);
+  const onStepChange = useCallback((index: number) => setStep({ key: lessonKey, index }), [lessonKey]);
+  const stepIndex = step && step.key === lessonKey ? step.index : undefined;
   const {
     message,
     setMessage,
@@ -54,7 +60,7 @@ export function FloatingFounderAICoach({
     claudeAvailable,
     send,
     sendPrompt,
-  } = useFounderPersonalCoachChat({ courseSlug, lessonSlug });
+  } = useFounderPersonalCoachChat({ courseSlug, lessonSlug, stepIndex });
 
   const quickPrompts = getCoachQuickPrompts({ courseSlug, lessonSlug });
 
@@ -129,7 +135,7 @@ export function FloatingFounderAICoach({
           ) : null}
 
           <div ref={scrollRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3">
-            {courseSlug && lessonSlug ? <CoachStepCard courseSlug={courseSlug} lessonSlug={lessonSlug} /> : null}
+            {courseSlug && lessonSlug ? <CoachStepCard courseSlug={courseSlug} lessonSlug={lessonSlug} onStepChange={onStepChange} /> : null}
             {messages.length === 0 ? (
               <div className="rounded-xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
                 <p className="text-xs leading-5 text-slate-600">
