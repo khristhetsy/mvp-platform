@@ -13,6 +13,8 @@ import {
   getCourseBySlug,
 } from "@/lib/learning/courses";
 import type { Course, CourseLesson } from "@/lib/learning/course-types";
+import { enforceCoachRules } from "@/lib/learning/coach/ir-coach";
+import type { CoachTone } from "@/lib/learning/coach/tones";
 import type { AICoachRecommendation, FounderLessonProgressRecord } from "@/lib/learning/types";
 
 export { COACH_DISCLAIMER, isQuizAnswerRequest, isRestrictedAdviceRequest, QUIZ_REFUSAL_REPLY };
@@ -34,6 +36,10 @@ export type PersonalCoachContext = {
   nextStudySuggestion: string | null;
   curriculumOutline: string;
   gapBasedRecommendations: AICoachRecommendation[];
+  /** Set only when the AI IR Coach is active for this founder and course. Appended to the system prompt. */
+  coachAddendum?: string | null;
+  /** Coaching style, used to keep model output inside the coach rules. */
+  coachTone?: CoachTone | null;
 };
 
 export type PersonalCoachResult = {
@@ -167,7 +173,7 @@ ${ctx.lessonKeyPoints.length ? `\nKey points:\n${ctx.lessonKeyPoints.map((p) => 
 Founder readiness gap recommendations (reference when asked what to study or how to improve):
 ${formatGapRecommendationsForPrompt(ctx.gapBasedRecommendations)}
 
-End every reply with a brief reminder that this is educational support only. Do not repeat the full disclaimer verbatim if already clear.`;
+End every reply with a brief reminder that this is educational support only. Do not repeat the full disclaimer verbatim if already clear.${ctx.coachAddendum ? `\n${ctx.coachAddendum}` : ""}`;
 }
 
 function sanitizeCoachReply(text: string, ctx: PersonalCoachContext) {
@@ -306,7 +312,8 @@ export async function runPersonalCoach(input: {
 
   try {
     const raw = await callClaudeCoach(input.ctx, input.message, input.history ?? []);
-    const reply = sanitizeCoachReply(raw || buildFallbackCoachReply({ message: input.message, ctx: input.ctx }), input.ctx);
+    const safe = sanitizeCoachReply(raw || buildFallbackCoachReply({ message: input.message, ctx: input.ctx }), input.ctx);
+    const reply = input.ctx.coachAddendum && input.ctx.coachTone ? enforceCoachRules(safe, input.ctx.coachTone) : safe;
     return { reply, disclaimer, mode: "claude" };
   } catch {
     return {

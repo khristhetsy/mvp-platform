@@ -11,6 +11,7 @@ import { runDataRoomReminderPass } from "@/lib/data-room/reminder-pass";
 import { nudgeStalledJourneyFounders } from "@/lib/notifications/founder-nudges";
 import { runStageGateReminderPass } from "@/lib/notifications/stage-gate-reminders";
 import { runManualOutreachReminderPass } from "@/lib/notifications/manual-outreach-reminders";
+import { runCoachReminderPass } from "@/lib/learning/coach/reminders-pass";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -42,8 +43,10 @@ async function handle(request: Request) {
   const journeyNudges = await safe("journey_nudges", nudgeStalledJourneyFounders);
   const gateReminders = await safe("stage_gate_reminders", runStageGateReminderPass);
   const manualOutreachReminders = await safe("manual_outreach_reminders", runManualOutreachReminderPass);
+  // AI IR Coach: does nothing until an admin enables the coach for a course and founders are enrolled.
+  const coachReminders = await safe("coach_reminders", () => runCoachReminderPass());
 
-  return NextResponse.json({ ok: true, dataRoomReminders, journeyNudges, gateReminders, manualOutreachReminders });
+  return NextResponse.json({ ok: true, dataRoomReminders, journeyNudges, gateReminders, manualOutreachReminders, coachReminders });
 }
 
 async function scheduledGET(request: Request) {

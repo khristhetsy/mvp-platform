@@ -225,6 +225,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/learning",          label: "Overview"       },
           { href: "/admin/learning/courses",  label: "Courses"        },
           { href: "/admin/learning/founders", label: "Founder roster" },
+          { href: "/admin/learning/coach",    label: "AI IR Coach"    },
         ],
       },
       { href: "/admin/manual", label: "Operations Manual", requiredPermission: "view_admin_dashboard" },

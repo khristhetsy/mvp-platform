@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { getTranslations } from "next-intl/server";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -71,6 +72,18 @@ export default async function AdminLearningFoundersPage() {
           .in("user_id", founderIds)
       : Promise.resolve({ data: [] }),
   ]);
+
+  // Coach status (read only). The coach tables are new, so cast past the hand maintained types.
+  const { data: coachRaw } = founderIds.length
+    ? await (admin as unknown as SupabaseClient).from("coach_enrollments").select("founder_id, status").in("founder_id", founderIds)
+    : { data: [] };
+  const coachByFounder = new Map<string, string>();
+  for (const e of (coachRaw ?? []) as Array<{ founder_id: string; status: string }>) {
+    // Active beats paused beats ended when a founder has several rows.
+    const rank = (x: string) => (x === "active" ? 3 : x === "paused" ? 2 : 1);
+    const prev = coachByFounder.get(e.founder_id);
+    if (!prev || rank(e.status) > rank(prev)) coachByFounder.set(e.founder_id, e.status);
+  }
 
   const allProgress = (rawProgress ?? []) as ProgressRow[];
   const allOverrides = (rawOverrides ?? []) as OverrideRow[];
@@ -203,7 +216,7 @@ export default async function AdminLearningFoundersPage() {
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50">
-                  {["Founder", "Company", "Stage", "Progress", "Rating", "Lessons done", "Risk"].map((h) => (
+                  {["Founder", "Company", "Stage", "Progress", "Rating", "Lessons done", "Risk", "Coach"].map((h) => (
                     <th key={h} className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400">
                       {h}
                     </th>
@@ -257,6 +270,7 @@ export default async function AdminLearningFoundersPage() {
                           {riskConfig.label}
                         </span>
                       </td>
+                      <td className="px-5 py-4 text-xs capitalize text-slate-600">{coachByFounder.get(row.id) ?? "Off"}</td>
                       <td className="px-5 py-4">
                         <Link
                           href={`/admin/learning/founders/${row.id}`}
@@ -270,7 +284,7 @@ export default async function AdminLearningFoundersPage() {
                 })}
                 {founderRows.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="px-6 py-8 text-center text-sm text-slate-400">
+                    <td colSpan={9} className="px-6 py-8 text-center text-sm text-slate-400">
                       No founders enrolled in the learning program yet.
                     </td>
                   </tr>

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { COACH_DISCLAIMER } from "@/lib/learning/class-assistant-guardrails";
+import { CoachStepCard } from "@/components/CoachStepCard";
 import {
   getCoachQuickPrompts,
   useFounderPersonalCoachChat,
@@ -128,6 +129,7 @@ export function FloatingFounderAICoach({
           ) : null}
 
           <div ref={scrollRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3">
+            {courseSlug && lessonSlug ? <CoachStepCard courseSlug={courseSlug} lessonSlug={lessonSlug} /> : null}
             {messages.length === 0 ? (
               <div className="rounded-xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
                 <p className="text-xs leading-5 text-slate-600">
