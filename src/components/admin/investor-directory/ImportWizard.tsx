@@ -600,7 +600,7 @@ export function ImportWizard({ onClose, onDone }: Readonly<{ onClose: () => void
           <div className="mt-5 flex items-center justify-between">
             <button type="button" disabled={busy} onClick={() => (step === 1 ? onClose() : setStep((s) => (s - 1) as Step))} className={btn}>{step === 1 ? "Cancel" : "Back"}</button>
             <span className="text-[12px] text-slate-500">
-              {step === 4 ? (pending ? `${pending} ${pending === 1 ? "answer" : "answers"} needed` : `All set. Ready to clean ${total.toLocaleString("en-US")} rows.`)
+              {step === 4 ? (pending ? `${pending} ${pending === 1 ? "answer" : "answers"} needed` : result?.missingFirm ? "Choose a column for Firm to continue." : `All set. Ready to clean ${total.toLocaleString("en-US")} rows.`)
                 : step === 5 ? (editedCount || excluded.size ? `${editedCount} ${editedCount === 1 ? "edit" : "edits"}${excluded.size ? `, ${excluded.size} excluded` : ""}. Nothing is saved yet.` : "No edits yet. Nothing is saved.")
                 : `Step ${step} of 4`}
             </span>
