@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { applyEdits, applyMapping, autoMatch, cellText, guessCapital, guessEdits, matchIndustry, parseEdit, parseLocation, suggest } from "@/lib/investor-directory/import-mapping";
+import { applyEdits, applyMapping, autoMatch, cellText, guessCapital, guessEdits, parseEdit, parseLocation, suggest } from "@/lib/investor-directory/import-mapping";
 import type { CleanRow } from "@/lib/investor-directory/clean";
+import { industrySlugs, suggestIndustries, toIndustrySlugs } from "@/lib/investor-directory/industries";
 
 const headers = [
   "Investor Name", "Contact Name", "Job Title", "Public Email", "Phone", "Investor Type", "Industry Sector",
@@ -54,14 +55,14 @@ describe("applyMapping", () => {
     expect(a.state).toBe("CA");
     expect(a.funding_stages).toEqual(["seed", "series-a"]);
     expect(a.investor_types).toEqual(["venture-capital"]);
-    expect(a.industries).toEqual(["Healthtech / Digital Health", "Cybersecurity"]);
+    expect(a.industries).toEqual(["healthtech", "digital-health", "cyber-security"]);
     expect(a.strategy).toBe("Lead");
     expect(a.source_url).toBe("https://src.example/a");
     expect(a.notes).toContain("Verification Status: Verified by hand");
     expect(a.notes).toContain("Investment Size: $1m–$10m");
     const b = r.rows[1];
     expect(b.website).toBe("https://beta.com"); // gap filled from the duplicate
-    expect(b.industries).toEqual(["AI"]);
+    expect(b.industries).toEqual(["ai-ml"]);
   });
   it("lets one column feed several fields", () => {
     const r = applyMapping(["Firm", "Note"], [["Acme", "Hello"]], { "0": ["firm"], "1": ["notes", "strategy"] });
@@ -118,10 +119,12 @@ describe("guessing missing fields", () => {
     strategy: null, investing_now: null, notes: null, ...o,
   } as CleanRow);
   it("matches industry names to the directory list", () => {
-    expect(matchIndustry("Cybersecurity")).toEqual(["Cyber Security"]);
-    expect(matchIndustry("Crypto / Web3")).toEqual(["Cryptocurrency", "Blockchain"]);
-    expect(matchIndustry("Real Estate")).toEqual(["Real Estate"]);
-    expect(matchIndustry("Remote Work Tech")).toEqual([]);
+    expect(industrySlugs("Cybersecurity")).toEqual(["cyber-security"]);
+    expect(industrySlugs("Crypto / Web3")).toEqual(["cryptocurrency", "blockchain"]);
+    expect(industrySlugs("Real Estate")).toEqual(["real-estate"]);
+    expect(industrySlugs("Oil and Gas")).toEqual(["oil-gas"]);
+    expect(industrySlugs("Remote Work Tech")).toEqual([]);
+    expect(industrySlugs("Real Estate / Remote Work Tech")).toEqual(["real-estate"]);
   });
   it("guesses capital from investor type", () => {
     expect(guessCapital(["angel-investor"])).toEqual(["equity-capital"]);
@@ -129,13 +132,62 @@ describe("guessing missing fields", () => {
     expect(guessCapital(["other"])).toEqual([]);
   });
   it("fills empty capital, fixes industries, moves unmatched names to notes, skips edited cells", () => {
-    const rows = [base({ investor_types: ["angel-investor"], industries: ["Cybersecurity", "Remote Work Tech", "Real Estate"], notes: "Past Investments: X" }), base({ investor_types: ["venture-capital"], industries: ["Gaming"] })];
+    const rows = [base({ investor_types: ["angel-investor"], industries: ["Cybersecurity", "Remote Work Tech", "Real Estate"], notes: "Past Investments: X" }), base({ investor_types: ["venture-capital"], industries: ["gaming"] })];
     const g = guessEdits(rows, { 1: { capital_types: "Debt capital" } });
     expect(g.edits[0]).toEqual({ capital_types: "Equity capital", industries: "Cyber Security, Real Estate", notes: "Past Investments: X | Industries: Remote Work Tech" });
     expect(g.edits[1]).toBeUndefined();
     expect(g.capital).toBe(1);
     const r = applyEdits(rows, { 0: g.edits[0] }, []);
     expect(r.rows[0].capital_types).toEqual(["equity-capital"]);
-    expect(r.rows[0].industries).toEqual(["Cyber Security", "Real Estate"]);
+    expect(r.rows[0].industries).toEqual(["cyber-security", "real-estate"]);
+  });
+});
+
+describe("duplicate emails created by edits", () => {
+  const mk = (o: Partial<CleanRow>): CleanRow => ({
+    firm: "A", contact_name: null, title: null, email: null, phone: null, website: null, city: null, state: null,
+    investor_types: [], funding_stages: [], capital_types: [], industries: [], fund_name: null, fund_size: null, avg_investment: null,
+    strategy: null, investing_now: null, notes: null, ...o,
+  } as CleanRow);
+  it("merges records that end up sharing an email and fills gaps", () => {
+    const rows = [mk({ firm: "One", email: "a@x.com", industries: ["SaaS"] }), mk({ firm: "Two", email: "b@x.com", phone: "(555) 111-2222", industries: ["Fintech"] }), mk({ firm: "Three", email: "c@x.com" })];
+    const r = applyEdits(rows, { 1: { email: "A@X.com" } }, []);
+    expect(r.mergedByEdit).toBe(1);
+    expect(r.rows).toHaveLength(2);
+    expect(r.rows[0].firm).toBe("One");
+    expect(r.rows[0].phone).toBe("(555) 111-2222");
+    expect(r.rows[0].industries).toEqual(["SaaS", "Fintech"]);
+  });
+  it("does not merge records with no email", () => {
+    const r = applyEdits([mk({ firm: "One" }), mk({ firm: "Two" })], {}, []);
+    expect(r.rows).toHaveLength(2);
+    expect(r.mergedByEdit).toBe(0);
+  });
+});
+
+describe("industries stored as directory codes", () => {
+  it("maps a file's industry names to codes on import and keeps unmatched names", () => {
+    const out = applyMapping(["Investor", "Industries"], [["Fund A", "Cybersecurity; Remote Work Tech, Real Estate"]], { "0": ["firm"], "1": ["industries"] }, {});
+    expect(out.rows[0].industries).toEqual(["cyber-security", "Remote Work Tech", "real-estate"]);
+  });
+  it("shows codes as labels on the review screen and reads labels back as codes", () => {
+    const row = { industries: ["cyber-security", "Remote Work Tech"] } as never;
+    expect(cellText(row, "industries")).toBe("Cyber Security, Remote Work Tech");
+    expect(parseEdit("industries", "Cyber Security, SaaS").industries).toEqual(["cyber-security", "saas"]);
+  });
+  it("splits a list into codes and leftovers", () => {
+    expect(toIndustrySlugs(["fintech", "Healthtech / Digital Health", "Women Founded"])).toEqual({ slugs: ["fintech", "healthtech", "digital-health"], leftover: ["Women Founded"] });
+  });
+});
+
+describe("industry suggestions for the verification queue", () => {
+  it("is strong when two sources agree", () => {
+    const s = suggestIndustries({ firm: "Acme Cyber Fund", website: "https://acmecyber.com", siteText: "We back security startups" });
+    expect(s.level).toBe("strong");
+    expect(s.slugs).toContain("cyber-security");
+  });
+  it("is possible with one source and none with nothing", () => {
+    expect(suggestIndustries({ firm: "Pear VC", siteText: "invests in software companies" }).level).toBe("possible");
+    expect(suggestIndustries({ firm: "SeedFolio", website: "seedfolio.com" })).toMatchObject({ level: "none", slugs: [] });
   });
 });

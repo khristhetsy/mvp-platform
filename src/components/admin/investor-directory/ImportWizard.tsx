@@ -39,6 +39,21 @@ function writeMemory(next: Record<string, FieldKey[]>) {
   try { window.localStorage.setItem(MEMORY_KEY, JSON.stringify(next)); } catch { /* storage can be off; answers just are not remembered */ }
 }
 
+/** Answers saved to the admin's account, so they follow them to any browser. Falls back to this browser when the server is unreachable. */
+async function loadServerMemory(): Promise<Record<string, FieldKey[]> | null> {
+  try {
+    const res = await fetch("/api/admin/investor-directory/imports/answers");
+    if (!res.ok) return null;
+    const body = (await res.json()) as { answers?: Record<string, FieldKey[]> };
+    return body.answers ?? null;
+  } catch { return null; }
+}
+function saveServerMemory(answers: Record<string, FieldKey[]>) {
+  void fetch("/api/admin/investor-directory/imports/answers", {
+    method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ answers }),
+  }).catch(() => undefined);
+}
+
 const VOCAB: Partial<Record<FieldKey, Opt[]>> = {
   investor_types: VOCAB_SLUGS.investor_types.map((s) => ({ value: s, label: slugLabel(s) })),
   funding_stages: VOCAB_SLUGS.funding_stages.map((s) => ({ value: s, label: slugLabel(s) })),
@@ -134,6 +149,7 @@ export function ImportWizard({ onClose, onDone }: Readonly<{ onClose: () => void
       const body = (await res.json().catch(() => ({}))) as Sheet & { error?: string };
       if (!res.ok) { setError(body.error ?? "Could not read that file."); setData(null); return; }
       setFile(f); setData(body); setHrow(1); setMemory(readMemory()); resetAnswers();
+      void loadServerMemory().then((server) => { if (server) setMemory((m) => ({ ...server, ...m })); });
       if (!name.trim()) setName(f.name.replace(/\.[^.]+$/, "").replace(/_+/g, " ").trim());
     } catch {
       setError("Couldn't reach the server. Try again.");
@@ -195,6 +211,20 @@ export function ImportWizard({ onClose, onDone }: Readonly<{ onClose: () => void
 
   const result = useMemo(() => (data ? applyMapping(headers, rows, mapping, valueMap) : null), [data, headers, rows, mapping, valueMap]);
   const sig = useMemo(() => JSON.stringify([data?.sheet, hrow, headers, mapping, valueMap]), [data?.sheet, hrow, headers, mapping, valueMap]);
+
+  /* The column most likely to hold the firm name, used by the Firm error. */
+  const likelyFirm = useMemo(() => {
+    if (!result?.missingFirm) return -1;
+    const score = (h: string) => { const n = h.toLowerCase(); return /(firm|company|organi[sz]ation|fund|investor|institution|entity)/.test(n) ? 2 : /\bname\b/.test(n) && !/(contact|first|last|full|person)/.test(n) ? 1 : 0; };
+    let best = -1; let top = 0;
+    headers.forEach((h, i) => { const sc = score(h); if (sc > top && (examples[i]?.length ?? 0) > 0) { top = sc; best = i; } });
+    return best;
+  }, [result?.missingFirm, headers, examples]);
+  const cellProblem = (f: string, v: string): string | null => {
+    if (f === "firm" && !parseEdit("firm", v).firm) return "Firm is required. Type the firm name or tick Exclude.";
+    if (f === "email" && v.trim() !== "" && normalizeEmail(v).invalid) return "This email isn't valid. Fix it or clear it.";
+    return null;
+  };
 
   function setColumn(i: number, v: string[]) {
     setShowErr(false);
@@ -279,8 +309,10 @@ export function ImportWizard({ onClose, onDone }: Readonly<{ onClose: () => void
     if (!r.ok) { setError(r.error); return; }
     if (remember) {
       const mem = readMemory();
-      for (const i of needs) mem[normHeader(headers[i])] = mapping[String(i)] ?? [];
+      const mine: Record<string, FieldKey[]> = {};
+      for (const i of needs) { mem[normHeader(headers[i])] = mapping[String(i)] ?? []; mine[normHeader(headers[i])] = mapping[String(i)] ?? []; }
       writeMemory(mem);
+      saveServerMemory(mine);
     }
     setDone({ imp: r.data.import, skipped: r.data.skipped, invalid: result.invalidEmails, rowCount: result.rowCount });
     setStep(6);
@@ -434,9 +466,15 @@ export function ImportWizard({ onClose, onDone }: Readonly<{ onClose: () => void
                 {headers.map((h, i) => {
                   const b = badge(i);
                   return (
-                    <tr key={i}>
+                    <tr key={i} id={i === likelyFirm ? "firm-problem" : undefined} className={i === likelyFirm ? "bg-[#FCEBEB]/40" : undefined}>
                       <td className={`${td} font-medium`}>{h}</td><td className={td}>→</td>
-                      <td className={td}>{picker(i)}<p className="mt-1.5 text-[12px] text-slate-500">{reason(i)}</p></td>
+                      <td className={td}>
+                        <div className={i === likelyFirm ? "rounded-md ring-1 ring-[#A32D2D]" : undefined}>{picker(i)}</div>
+                        {i === likelyFirm ? (
+                          <p className="mt-1.5 text-[12px] text-[#791F1F]">Firm is not assigned to any column. This one looks like the firm name.{" "}
+                            <button type="button" onClick={() => setColumn(i, ["firm"])} className="font-semibold underline">Use Firm for this column</button></p>
+                        ) : <p className="mt-1.5 text-[12px] text-slate-500">{reason(i)}</p>}
+                      </td>
                       <td className={td}><span className={`rounded-md px-2 py-0.5 text-[11px] ${b.cls}`}>{b.text}</span></td>
                     </tr>
                   );
@@ -448,6 +486,13 @@ export function ImportWizard({ onClose, onDone }: Readonly<{ onClose: () => void
 
         {step === 4 && data ? (
           <div>
+            {result?.missingFirm ? (
+              <div role="alert" className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-[#A32D2D] bg-[#FCEBEB] px-3 py-2 text-[12.5px] text-[#791F1F]">
+                <b>1 problem to fix before you can continue.</b>
+                <span>No column is assigned to Firm. Every record needs a firm name.</span>
+                <button type="button" onClick={() => document.getElementById("firm-problem")?.scrollIntoView({ behavior: "smooth", block: "center" })} className="ml-auto font-semibold underline">Go to it</button>
+              </div>
+            ) : null}
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-[16px] font-semibold text-slate-900">Select what field to use</h2>
@@ -460,12 +505,12 @@ export function ImportWizard({ onClose, onDone }: Readonly<{ onClose: () => void
               Also show the {headers.length - needs.length} columns that matched on their own, so I can change any of them
             </label>
 
-            {needs.length || showAll ? (
+            {needs.length || showAll || likelyFirm >= 0 ? (
               <table className="w-full table-fixed text-[13px]">
                 <colgroup><col style={{ width: "20%" }} /><col style={{ width: "26%" }} /><col style={{ width: "54%" }} /></colgroup>
                 <thead><tr><th className={th}>Header</th><th className={th}>Values in your file</th><th className={th}>Field to use</th></tr></thead>
                 <tbody>
-                  {headers.map((h, i) => (info[i].ask || showAll ? (
+                  {headers.map((h, i) => (info[i].ask || showAll || i === likelyFirm ? (
                     <tr key={i}>
                       <td className={`${td} font-medium`}>{h}</td>
                       <td className={`${td} text-slate-600`}>{examples[i]?.length ? examples[i].map((v) => <div key={v} className="truncate">{v}</div>) : <span className="text-slate-400">Empty</span>}</td>
@@ -562,6 +607,7 @@ export function ImportWizard({ onClose, onDone }: Readonly<{ onClose: () => void
                             <td key={f} className={td}>
                               <input aria-label={`${EDIT_LABELS[f]} for record ${i + 1}`} value={v} onChange={(e) => editCell(i, f, e.target.value)}
                                 className={`h-8 w-full ${w} rounded-md border px-1.5 text-[13px] ${bad ? "border-[#A32D2D] bg-[#FCEBEB]" : changed ? "border-[#8a5a07] bg-[#FDF1DC]" : "border-transparent hover:border-slate-300"} focus:border-[#1A6CE4] focus:outline-none`} />
+                              {bad ? <p role="alert" className="mt-0.5 text-[11.5px] text-[#A32D2D]">{cellProblem(f, v)}</p> : null}
                             </td>
                           );
                         })}
@@ -601,7 +647,7 @@ export function ImportWizard({ onClose, onDone }: Readonly<{ onClose: () => void
           <div className="mt-5 flex items-center justify-between">
             <button type="button" disabled={busy} onClick={() => (step === 1 ? onClose() : setStep((s) => (s - 1) as Step))} className={btn}>{step === 1 ? "Cancel" : "Back"}</button>
             <span className="text-[12px] text-slate-500">
-              {step === 4 ? (pending ? `${pending} ${pending === 1 ? "answer" : "answers"} needed` : result?.missingFirm ? "Choose a column for Firm to continue." : `All set. Ready to clean ${total.toLocaleString("en-US")} rows.`)
+              {step === 4 ? (pending ? `${pending} ${pending === 1 ? "answer" : "answers"} needed` : result?.missingFirm ? "1 problem: choose a column for Firm to continue." : `All set. Ready to clean ${total.toLocaleString("en-US")} rows.`)
                 : step === 5 ? (editedCount || excluded.size ? `${editedCount} ${editedCount === 1 ? "edit" : "edits"}${excluded.size ? `, ${excluded.size} excluded` : ""}. Nothing is saved yet.` : "No edits yet. Nothing is saved.")
                 : `Step ${step} of 4`}
             </span>
