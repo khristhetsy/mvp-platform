@@ -10,6 +10,8 @@ type CoachState = {
   tone: CoachTone;
   steps: CoachStep[];
   doneIndexes: number[];
+  /** Approved screenshots by step index. Missing entries simply show no image. */
+  screenshots?: Record<number, { url: string; capturedAt: string | null; pinned: boolean }>;
 };
 
 type DueChoice = "today" | "tomorrow" | "this_week";
@@ -147,6 +149,21 @@ export function CoachStepCard({ courseSlug, lessonSlug }: Readonly<{ courseSlug:
             <p className="mt-1 text-[11px] text-slate-600">
               <span className="font-semibold">Common mistake:</span> {step.commonMistake}
             </p>
+          ) : null}
+          {state.screenshots?.[index] ? (
+            <figure className="mt-2">
+              {/* Signed link to a private bucket, so next/image optimisation does not apply. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={state.screenshots[index].url}
+                alt={`Screenshot of ${step.title}${state.screenshots[index].pinned ? ". The numbered pin marks the control to use." : ""}`}
+                className="w-full rounded-lg ring-1 ring-indigo-100"
+                loading="lazy"
+              />
+              <figcaption className="mt-0.5 text-[10px] text-slate-500">
+                Demo account, no real data{state.screenshots[index].capturedAt ? `. Captured ${new Date(state.screenshots[index].capturedAt as string).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}.` : "."}
+              </figcaption>
+            </figure>
           ) : null}
           {step.example ? (
             <p className="mt-1 text-[11px] text-slate-600">
