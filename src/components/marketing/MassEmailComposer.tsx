@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { TemplatePicker } from "@/components/marketing/TemplatePicker";
+import { EmailImagePickerModal } from "@/components/marketing/EmailImagePicker";
+import { buildImgTag, insertIntoHtml } from "@/lib/email-images";
 import { OdooPager } from "@/components/admin/OdooPager";
 import { ScheduleSendMenu } from "@/components/email/ScheduleSend";
 import { formatSendAt } from "@/lib/scheduled-emails/time";
@@ -59,7 +61,7 @@ const inp: React.CSSProperties = { fontSize: 12.5, padding: "7px 9px", borderRad
  * `resolveShares` turns into real per-recipient links right before a send or test.
  * Without them it behaves exactly as before.
  */
-export function MassEmailComposer({ source, selection, defaultEmail, onClose, noun = "contact", extraMerge, previewAs, initialMode = "once", renderSequence, onSent, defaultDepartment, onePager, allowAttachments = false, notice, shares, resolveShares, brandedProjectId, brandedFounderRef }: {
+export function MassEmailComposer({ source, selection, defaultEmail, onClose, noun = "contact", extraMerge, previewAs, initialMode = "once", renderSequence, onSent, defaultDepartment, onePager, allowAttachments = false, notice, shares, resolveShares, brandedProjectId, brandedFounderRef, showImagePicker = true }: {
   source: "contacts" | "opportunities" | "companies"; selection: SelectionPayload; defaultEmail?: string; onClose: () => void;
   noun?: string; extraMerge?: Record<string, string>; previewAs?: PreviewRecipient[]; initialMode?: "once" | "sequence";
   renderSequence?: (done: (message: string) => void) => ReactNode; onSent?: (sent: number) => void; defaultDepartment?: string;
@@ -70,6 +72,8 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
   brandedProjectId?: string;
   /** "company:<id>": a new branded template is filled from this company (the Companies list). */
   brandedFounderRef?: string;
+  /** Shows the Insert image button next to the body (the email images library). On unless false. */
+  showImagePicker?: boolean;
 }) {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [sequences, setSequences] = useState<Sequence[]>([]);
@@ -91,6 +95,16 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
   const [uploading, setUploading] = useState(false);
   const [fileErr, setFileErr] = useState<string | null>(null);
   const [sharePicked, setSharePicked] = useState<Set<string>>(new Set());
+  const [pickingImage, setPickingImage] = useState(false);
+  /** Where the cursor last was in the body, so an inserted image lands there. */
+  const caretRef = useRef<number | null>(null);
+
+  function insertImage(url: string, alt: string) {
+    const tag = buildImgTag(url, alt);
+    setHtml((cur) => insertIntoHtml(cur, tag, caretRef.current));
+    caretRef.current = null;
+    setPickingImage(false);
+  }
 
   useEffect(() => {
     fetch("/api/marketing/templates").then((r) => (r.ok ? r.json() : { templates: [] })).then((d) => setTemplates(d.templates ?? d ?? [])).catch(() => {});
@@ -99,6 +113,7 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
 
   function pickTemplate(id: string, list: Template[] = templates) {
     setTemplateId(id);
+    caretRef.current = null;
     const t = list.find((x) => x.id === id);
     if (t) { setSubject(t.subject); setHtml(t.html_body); }
   }
@@ -190,6 +205,12 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
 
   const chip = (active: boolean): React.CSSProperties => ({ fontSize: 12.5, fontWeight: active ? 600 : 400, color: active ? "#fff" : "var(--muted-foreground)", background: active ? "#2E78F5" : "transparent", border: "none", padding: "6px 13px", cursor: "pointer" });
 
+  const imageButton = showImagePicker ? (
+    <button type="button" onClick={() => setPickingImage(true)} style={{ fontSize: 11.5, padding: "3px 10px", border: "1px solid #B5D4F4", borderRadius: 7, background: "#EEF4FE", cursor: "pointer", color: "#185FA5", fontWeight: 600 }}>
+      <i className="ti ti-photo" aria-hidden="true" /> Insert image
+    </button>
+  ) : null;
+
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 70, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
       <div onClick={(e) => e.stopPropagation()} style={{ background: "var(--background, #fff)", borderRadius: 12, padding: 16, width: 560, maxWidth: "100%", maxHeight: "90vh", overflow: "auto", boxShadow: "0 20px 48px rgba(0,0,0,.2)" }}>
@@ -243,6 +264,7 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
                 {previewAs?.length ? (
                   <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 0 4px" }}>
                     <p style={{ fontSize: 10.5, color: "var(--muted-foreground)", margin: 0 }}>Body</p>
+                    {imageButton}
                     <button type="button" onClick={() => setFullView(true)} disabled={!html.trim()} style={{ marginLeft: "auto", fontSize: 11.5, padding: "3px 10px", border: "0.5px solid #cdd9ec", borderRadius: 7, background: "transparent", cursor: html.trim() ? "pointer" : "default", color: "var(--muted-foreground)" }}>
                       <i className="ti ti-arrows-maximize" aria-hidden="true" /> Expand
                     </button>
@@ -250,7 +272,12 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
                       {(["preview", "html"] as const).map((v) => <button key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)} style={{ fontSize: 11.5, padding: "3px 10px", border: "none", cursor: "pointer", background: view === v ? "#E6F1FB" : "transparent", color: view === v ? "#0C447C" : "var(--muted-foreground)", fontWeight: view === v ? 600 : 400 }}>{v === "preview" ? "Preview" : "HTML"}</button>)}
                     </div>
                   </div>
-                ) : <p style={{ fontSize: 10.5, color: "var(--muted-foreground)", margin: "0 0 3px" }}>Body (HTML) · merge: {"{{first_name}}"} {"{{company}}"}</p>}
+                ) : (
+                  <div style={{ display: "flex", alignItems: "center", margin: "0 0 3px" }}>
+                    <p style={{ fontSize: 10.5, color: "var(--muted-foreground)", margin: 0 }}>Body (HTML) · merge: {"{{first_name}}"} {"{{company}}"}</p>
+                    <span style={{ marginLeft: "auto" }}>{imageButton}</span>
+                  </div>
+                )}
                 {previewAs?.length && view === "preview" ? (
                   <>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "var(--muted-foreground)", margin: "0 0 4px" }}>
@@ -267,7 +294,7 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
                       : <div style={{ border: "0.5px dashed var(--border)", borderRadius: 8, padding: "28px 12px", textAlign: "center", fontSize: 12, color: "var(--muted-foreground)", marginBottom: 4 }}>Pick a template, or <button type="button" onClick={() => setView("html")} style={{ border: "none", background: "none", color: "#185FA5", cursor: "pointer", padding: 0, fontSize: 12 }}>write the HTML</button>.</div>}
                   </>
                 ) : (
-                  <textarea value={html} onChange={(e) => setHtml(e.target.value)} rows={previewAs?.length ? 10 : 6} placeholder="<p>Hi {{first_name}},</p>…" style={{ ...inp, width: "100%", boxSizing: "border-box", fontFamily: "var(--font-mono)", resize: "vertical", marginBottom: previewAs?.length ? 4 : 10 }} />
+                  <textarea value={html} onChange={(e) => setHtml(e.target.value)} onSelect={(e) => { caretRef.current = e.currentTarget.selectionStart; }} rows={previewAs?.length ? 10 : 6} placeholder="<p>Hi {{first_name}},</p>…" style={{ ...inp, width: "100%", boxSizing: "border-box", fontFamily: "var(--font-mono)", resize: "vertical", marginBottom: previewAs?.length ? 4 : 10 }} />
                 )}
                 {previewAs?.length ? <p style={{ fontSize: 10.5, color: "var(--muted-foreground)", margin: "0 0 10px" }}>Merge: {["first_name", "company", ...Object.keys(extraMerge ?? {})].map((k) => `{{${k}}}`).join(" ")}</p> : null}
 
@@ -360,6 +387,7 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
           </>
         )}
       </div>
+      {pickingImage ? <EmailImagePickerModal onInsert={(img, alt) => insertImage(img.public_url, alt)} onClose={() => setPickingImage(false)} /> : null}
       {fullView && who ? (
         <FullView doc={previewDoc} title={templates.find((t) => t.id === templateId)?.name ?? (subject || "Email")} who={who.label}
           idx={Math.min(previewIdx, (previewAs?.length ?? 1) - 1)} total={previewAs?.length ?? 1} files={files.map((f) => f.name)}
