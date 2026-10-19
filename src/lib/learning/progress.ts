@@ -411,7 +411,7 @@ async function loadLastActivityByCompany(
     if (Number.isFinite(t) && t > (map.get(companyId) ?? 0)) map.set(companyId, t);
   };
 
-  const rpc = admin.rpc as unknown as AggregateRpc;
+  const rpc = admin.rpc.bind(admin) as unknown as AggregateRpc;
   const agg = await rpc<{ company_id: string; last_activity: string | null }>("learning_company_last_activity");
   if (!agg.error && agg.data) {
     for (const row of agg.data) bump(row.company_id, row.last_activity);
@@ -501,7 +501,7 @@ export async function getLeaderboard(companyId: string) {
   const stats = new Map<string, Stat>();
 
   // Fast path: per-company stats via the aggregate RPC (migration 20260708008).
-  const rpc = admin.rpc as unknown as AggregateRpc;
+  const rpc = admin.rpc.bind(admin) as unknown as AggregateRpc;
   const [statsRes, { data: modules }] = await Promise.all([
     rpc<{ company_id: string; modules_completed: number; sum_percent: number; badges: number }>("learning_leaderboard_stats"),
     admin.from("learning_modules").select("id").eq("is_published", true),
@@ -578,7 +578,7 @@ export async function getGlobalModuleEngagementCounts() {
   const admin = createServiceRoleClient();
 
   // Fast path: server-side aggregation (migration 20260708008).
-  const rpc = admin.rpc as unknown as AggregateRpc;
+  const rpc = admin.rpc.bind(admin) as unknown as AggregateRpc;
   const agg = await rpc<{ module_id: string; cnt: number }>("learning_module_engagement_counts");
   if (!agg.error && agg.data) {
     const counts = new Map<string, number>();
