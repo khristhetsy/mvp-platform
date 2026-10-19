@@ -103,7 +103,7 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
   const [via, setVia] = useState<Via>("icapos");
   const [note, setNote] = useState("");
   const [syncOdoo, setSyncOdoo] = useState(true);
-  const [task, setTask] = useState({ title: "", taskType: taskTypes[0] ?? "Call", dueDate: "", assigneeId: "" });
+  const [task, setTask] = useState({ title: "", taskType: taskTypes[0] ?? "Call", dueDate: "", assigneeId: "", note: "" });
 
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
   const [undo, setUndo] = useState<Undo | null>(null);
@@ -291,10 +291,10 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
     try {
       const res = await fetch("/api/sales/tasks", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: task.title.trim(), taskType: task.taskType, dueDate: task.dueDate || null, assigneeId: task.assigneeId || null, opportunityId: opportunityId ?? null, contactCrmId: contactCrmId ?? null, contactName: contactName ?? null }),
+        body: JSON.stringify({ title: task.title.trim(), taskType: task.taskType, summary: task.note.trim() || null, dueDate: task.dueDate || null, assigneeId: task.assigneeId || null, opportunityId: opportunityId ?? null, contactCrmId: contactCrmId ?? null, contactName: contactName ?? null }),
       });
       if (!res.ok) { flash("err", "Couldn't create activity."); return; }
-      setTask({ title: "", taskType: taskTypes[0] ?? "Call", dueDate: "", assigneeId: "" });
+      setTask({ title: "", taskType: taskTypes[0] ?? "Call", dueDate: "", assigneeId: "", note: "" });
       flash("ok", "Activity scheduled."); await load();
     } finally { setBusy(false); }
   }
@@ -404,6 +404,7 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
                 {staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
+            <textarea value={task.note} onChange={(e) => setTask({ ...task, note: e.target.value })} placeholder="Add a note to this task (optional)" aria-label="Task note" rows={3} maxLength={2000} style={{ ...field, background: "#fff" }} />
             <div style={{ display: "flex", justifyContent: "flex-end" }}><button type="button" onClick={addTask} disabled={busy || !task.title.trim()} style={{ ...primary, opacity: busy || !task.title.trim() ? 0.5 : 1 }}>Add task</button></div>
           </>
         )}
