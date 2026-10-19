@@ -431,7 +431,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
   // Surfaced when a save/edit/task action fails, so buttons don't silently no-op.
   const [actionErr, setActionErr] = useState<string | null>(null);
   const [showTask, setShowTask] = useState(false);
-  const [task, setTask] = useState({ title: "", taskType: "Call", dueDate: "", assigneeId: "" });
+  const [task, setTask] = useState({ title: "", taskType: "Call", dueDate: "", assigneeId: "", note: "" });
   const [contactTasks, setContactTasks] = useState<{ id: string; title: string; task_type: string; due_date: string | null; status: string; assignee_name: string | null; opportunity_id?: string | null }[]>([]);
   const [tasksLoaded, setTasksLoaded] = useState(false);
   const [taskView, setTaskView] = useState<"all" | "opps" | "pipeline">("all");
@@ -683,9 +683,9 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
     if (!task.title.trim()) return;
     setBusy(true); setActionErr(null);
     try {
-      const res = await fetch("/api/sales/tasks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: task.title, taskType: task.taskType, dueDate: task.dueDate || null, assigneeId: task.assigneeId || null, contactCrmId: contact.id, contactName: contact.name }) });
+      const res = await fetch("/api/sales/tasks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: task.title, taskType: task.taskType, summary: task.note.trim() || null, dueDate: task.dueDate || null, assigneeId: task.assigneeId || null, contactCrmId: contact.id, contactName: contact.name }) });
       if (!res.ok) { setActionErr((await res.json().catch(() => ({})))?.error || "Couldn’t create the task."); return; }
-      setShowTask(false); setTask({ title: "", taskType: "Call", dueDate: "", assigneeId: "" });
+      setShowTask(false); setTask({ title: "", taskType: "Call", dueDate: "", assigneeId: "", note: "" });
       await loadContactTasks();
     } catch { setActionErr("Network error — couldn’t create the task."); } finally { setBusy(false); }
   }
@@ -1157,6 +1157,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                         <select value={task.taskType} onChange={(e) => setTask({ ...task, taskType: e.target.value })} style={inp}>{["Call", "Email", "Demo", "Follow-up", "Proposal"].map((t) => <option key={t}>{t}</option>)}</select>
                         <input type="date" value={task.dueDate} onChange={(e) => setTask({ ...task, dueDate: e.target.value })} style={inp} />
                         <select value={task.assigneeId} onChange={(e) => setTask({ ...task, assigneeId: e.target.value })} style={inp}><option value="">Assign to me</option>{assignableStaff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
+                        <textarea value={task.note} onChange={(e) => setTask({ ...task, note: e.target.value })} placeholder="Add a note to this task (optional)" aria-label="Task note" rows={3} maxLength={2000} style={{ ...inp, gridColumn: "1 / -1", resize: "vertical", fontFamily: "inherit" }} />
                         <div style={{ gridColumn: "1 / -1" }}>
                           <button type="button" onClick={createTask} disabled={busy || !task.title.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 14px", cursor: "pointer", opacity: busy || !task.title.trim() ? 0.5 : 1 }}>Add task</button>
                         </div>
@@ -1326,6 +1327,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
               <button type="button" onClick={createTask} disabled={busy || !task.title.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 12px", cursor: "pointer", opacity: busy || !task.title.trim() ? 0.5 : 1 }}>Add</button>
               <button type="button" onClick={() => setShowTask(false)} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-x" aria-hidden="true" /></button>
             </div>
+            <textarea value={task.note} onChange={(e) => setTask({ ...task, note: e.target.value })} placeholder="Add a note to this task (optional)" aria-label="Task note" rows={3} maxLength={2000} style={{ ...inp, gridColumn: "1 / -1", resize: "vertical", fontFamily: "inherit" }} />
           </div>
         )}
 
