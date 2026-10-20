@@ -18,6 +18,10 @@ import {
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { CoachedCourseCard } from "@/components/coach/CoachedCourseCard";
 import { loadCoachedCourseSummary } from "@/lib/learning/coach/program-summary";
+import { LearningPromoBanner } from "@/components/learning/LearningPromoBanner";
+import { LearningTabs, type LearningTab } from "@/components/learning/LearningTabs";
+import { buildPromoSlides } from "@/lib/learning/overview-programs";
+import { OUTREACH_PLAYBOOK } from "@/lib/learning/outreach-playbook";
 
 export const dynamic = "force-dynamic";
 
@@ -169,6 +173,284 @@ export default async function FounderLearningPage() {
     stagePercents.stage_3 * 0.15,
   );
 
+  const allStageLessons = activeModules.reduce((n, m) => n + m.lessons.length, 0);
+  const coachedLessonTitles = OUTREACH_PLAYBOOK.sections.flatMap((s) => s.lessons.map((l) => l.title));
+  const slides = buildPromoSlides({
+    coached,
+    coachedLessonTitles,
+    activeStage,
+    activeStagePercent: stagePercents[activeStage],
+    activeStageLessonCount: allStageLessons,
+    stages: STAGES.map((s) => ({
+      label: CAPITAL_STAGE_META[s].label,
+      subtitle: CAPITAL_STAGE_META[s].subtitle,
+      active: s === activeStage,
+    })),
+    courses: publishedCourses,
+  });
+  const nextLesson = weekLessons.find((l) => !l.done) ?? weekLessons[0];
+
+  const stageBadge: Record<string, { label: string; bg: string; text: string }> = {
+    stage_0: { label: "Stage 0", bg: "#EFF6FF", text: "#1D4ED8" },
+    stage_1: { label: "Stage 1", bg: "#F0FDF4", text: "#15803D" },
+    stage_2: { label: "Stage 2", bg: "#FFF7ED", text: "#C2410C" },
+    stage_3: { label: "Stage 3", bg: "#FAF5FF", text: "#7E22CE" },
+  };
+
+  const overview = (
+    <div className="space-y-6">
+      <div>
+        <LearningPromoBanner slides={slides} />
+        <p className="mt-2 text-[11px] text-slate-400">
+          iCFO Capital Global, Inc. does not solicit securities and is not an investment adviser. This content is for educational purposes only.
+        </p>
+      </div>
+
+      <section aria-label="Continue learning">
+        <h2 className="mb-3 text-sm font-semibold text-slate-900">Continue learning</h2>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {nextLesson && (
+            <ContinueCard
+              href={`/founder/learning/stages/${activeStage}#${nextLesson.lesson.id}`}
+              icon="ti-player-play"
+              tone="bg-indigo-50 text-indigo-600"
+              title={nextLesson.lesson.title}
+              sub={`${CAPITAL_STAGE_META[activeStage].label}, ${stagePercents[activeStage]}% complete`}
+              pct={stagePercents[activeStage]}
+            />
+          )}
+          {coached && (
+            <ContinueCard
+              href={coached.href}
+              icon="ti-target-arrow"
+              tone="bg-violet-50 text-violet-600"
+              title={coached.nextLessonTitle}
+              sub={`Outreach playbook, about ${coached.nextMinutes} min`}
+              pct={Math.round((coached.lessonsDone / Math.max(coached.lessonCount, 1)) * 100)}
+            />
+          )}
+          <ContinueCard
+            href="/founder/learning/plan"
+            icon="ti-bulb"
+            tone="bg-amber-50 text-amber-600"
+            title="My AI learning plan"
+            sub="See what to learn next"
+          />
+        </div>
+      </section>
+
+      <section aria-label="Your programs">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-900">Your programs</h2>
+          {publishedCourses.length > 0 && (
+            <Link href="/founder/learning/courses" className="text-xs font-semibold text-indigo-600 hover:underline">
+              Browse all {publishedCourses.length} courses →
+            </Link>
+          )}
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <ProgramCard
+            href={`/founder/learning/stages/${activeStage}`}
+            icon="ti-stack-2"
+            tone="bg-amber-50 text-amber-600"
+            title="Capital readiness"
+            sub={`${STAGES.length} stages`}
+            pct={stagePercents[activeStage]}
+          />
+          {coached && (
+            <ProgramCard
+              href={coached.href}
+              icon="ti-send"
+              tone="bg-indigo-50 text-indigo-600"
+              title="Investor outreach"
+              sub={`${coached.lessonsDone} of ${coached.lessonCount} modules done`}
+              pct={Math.round((coached.lessonsDone / Math.max(coached.lessonCount, 1)) * 100)}
+            />
+          )}
+          {publishedCourses.slice(0, 4).map((course) => {
+            const badge = course.readiness_focus ? stageBadge[course.readiness_focus] : null;
+            return (
+              <ProgramCard
+                key={course.id}
+                href={`/founder/learning/courses/${course.id}`}
+                icon="ti-school"
+                tone="bg-slate-100 text-slate-600"
+                title={course.title}
+                sub={badge ? badge.label : course.difficulty ?? "Course"}
+              />
+            );
+          })}
+        </div>
+      </section>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 text-center">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Capital readiness rating</p>
+          <div
+            className="mx-auto my-4 flex h-20 w-20 items-center justify-center rounded-full"
+            style={{ background: `conic-gradient(#2E78F5 0% ${rating}%, #F1F5F9 ${rating}% 100%)` }}
+          >
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white">
+              <span className="text-xl font-bold text-indigo-700">{rating}</span>
+            </div>
+          </div>
+          <p className="text-2xl font-bold text-slate-900">{rating} / 100</p>
+          <p className="mt-1 text-xs text-slate-500">{rating >= 80 ? "Investor ready" : rating >= 50 ? "On track" : "Building foundations"}</p>
+          {rating < 100 && (
+            <p className="mt-3 rounded-lg bg-indigo-50 px-3 py-2 text-xs text-indigo-700">Complete more lessons to increase your rating</p>
+          )}
+        </div>
+
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+          <div className="border-b border-slate-100 bg-slate-50 px-5 py-3.5">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">{t("quick_actions")}</p>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {(
+              [
+                { href: "/founder/learning/plan", svgIcon: <IconBrain color="#2E78F5" />, label: "My AI learning plan", bg: "#EEEDFB" },
+                { href: "/founder/learning/schedule", svgIcon: <IconCalendarDays color="#3B6D11" />, label: "View my schedule", bg: "#EAF3DE" },
+                { href: "/founder/learning/progress", svgIcon: <IconBarChart color="#92400E" />, label: "Progress & badges", bg: "#FEF3C7" },
+              ]
+            ).map((link) => (
+              <Link key={link.href} href={link.href} className="group flex items-center gap-3 px-5 py-3.5 transition hover:bg-slate-50">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg" style={{ background: link.bg }}>
+                  {link.svgIcon}
+                </div>
+                <span className="text-sm font-medium text-slate-800">{link.label}</span>
+                <span className="ml-auto text-xs text-indigo-600 opacity-0 transition group-hover:opacity-100">→</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const capitalPanel = (
+    <div className="space-y-4">
+      {/* Stage ladder */}
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <div className="border-b border-slate-100 bg-slate-50 px-6 py-4">
+          <h2 className="text-sm font-semibold text-slate-900">{t("capital_readiness_stages")}</h2>
+          <p className="mt-0.5 text-xs text-slate-500">{t("complete_each_stage_at_80_to_unlock_the_next")}</p>
+        </div>
+        <div className="divide-y divide-slate-100">
+          {STAGES.map((stage) => {
+            const meta = CAPITAL_STAGE_META[stage];
+            const pct = stagePercents[stage];
+            const unlocked = stageAccess[stage];
+            return (
+              <Link
+                key={stage}
+                href={`/founder/learning/stages/${stage}`}
+                className="group flex items-center gap-4 px-6 py-4 transition hover:bg-slate-50"
+              >
+                <div
+                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg"
+                  style={{ background: unlocked ? meta.bgColor : "#F1F5F9" }}
+                >
+                  {unlocked ? stageIcon(stage) : <IconLock />}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-slate-900">{meta.label}</p>
+                  <p className="text-xs text-slate-500">{meta.subtitle}</p>
+                </div>
+                {unlocked ? (
+                  <>
+                    <div className="w-24">
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{ width: `${pct}%`, background: pct >= 80 ? "#3B6D11" : "#2E78F5" }}
+                        />
+                      </div>
+                    </div>
+                    <span className="w-10 text-right text-xs font-semibold" style={{ color: pct >= 80 ? "#3B6D11" : "#2E78F5" }}>
+                      {pct}%
+                    </span>
+                  </>
+                ) : (
+                  <span className="rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Locked</span>
+                )}
+                <span className="text-xs text-indigo-600 opacity-0 transition group-hover:opacity-100">→</span>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Lessons in active stage */}
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <div className="border-b border-slate-100 bg-slate-50 px-6 py-4">
+          <h2 className="text-sm font-semibold text-slate-900">Lessons in {CAPITAL_STAGE_META[activeStage].label}</h2>
+          <p className="mt-0.5 text-xs text-slate-500">{t("your_current_stage_pick_up_where_you_left_off")}</p>
+        </div>
+        <div className="divide-y divide-slate-100">
+          {weekLessons.map(({ moduleSlug: _moduleSlug, lesson, done }, idx) => (
+            <Link
+              key={lesson.id}
+              href={`/founder/learning/stages/${activeStage}#${lesson.id}`}
+              className="group flex items-center gap-4 px-6 py-3.5 transition hover:bg-slate-50"
+            >
+              <div
+                className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                  done ? "bg-green-100 text-green-700" : idx === firstIncompleteIdx ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-400"
+                }`}
+              >
+                {done ? <i className="ti ti-check" aria-hidden="true" /> : idx + 1}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className={`text-sm font-medium ${done ? "text-slate-400 line-through" : "text-slate-900"}`}>{lesson.title}</p>
+              </div>
+              <span className="text-xs text-slate-400">{lesson.durationMinutes} min</span>
+              <span
+                className={`rounded-md px-2 py-0.5 text-[10px] font-semibold ${
+                  done ? "bg-green-50 text-green-700" : idx === firstIncompleteIdx ? "bg-indigo-50 text-indigo-700" : "bg-slate-50 text-slate-500"
+                }`}
+              >
+                {done ? "Done" : idx === firstIncompleteIdx ? "Go →" : "—"}
+              </span>
+            </Link>
+          ))}
+          {weekLessons.length === 0 && <p className="px-6 py-4 text-sm text-slate-400">{t("no_lessons_available_for_this_stage_yet")}</p>}
+        </div>
+        <div className="border-t border-slate-100 px-6 py-3">
+          <Link href={`/founder/learning/stages/${activeStage}`} className="text-xs font-semibold text-indigo-700 hover:underline">
+            View all {CAPITAL_STAGE_META[activeStage].label} lessons →
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+
+  const outreachPanel = coached ? (
+    <div className="space-y-4">
+      <CoachedCourseCard summary={coached} />
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <div className="border-b border-slate-100 bg-slate-50 px-6 py-4">
+          <h2 className="text-sm font-semibold text-slate-900">What you will learn</h2>
+          <p className="mt-0.5 text-xs text-slate-500">{coached.lessonCount} modules, in the order of your menu.</p>
+        </div>
+        <ol className="divide-y divide-slate-100">
+          {OUTREACH_PLAYBOOK.sections.flatMap((s) => s.lessons).map((lesson, i) => (
+            <li key={lesson.slug} className="flex items-center gap-4 px-6 py-3">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[10px] font-bold text-slate-500">{i + 1}</span>
+              <span className="min-w-0 flex-1 text-sm font-medium text-slate-900">{lesson.title}</span>
+              <span className="text-xs text-slate-400">{lesson.durationMinutes} min</span>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </div>
+  ) : null;
+
+  const tabs: LearningTab[] = [
+    { key: "overview", label: "Overview", panel: overview },
+    { key: "capital", label: "Capital readiness", badge: `${STAGES.length} stages`, panel: capitalPanel },
+    ...(outreachPanel ? [{ key: "outreach", label: "Investor outreach", badge: `${coached?.lessonCount ?? 0} modules`, panel: outreachPanel }] : []),
+  ];
+
   return (
     <FounderAppShell
       profileName={profile.full_name ?? profile.email ?? "Founder"}
@@ -181,246 +463,62 @@ export default async function FounderLearningPage() {
             title={t("learning_overview")}
             description={t("track_your_capital_readiness_journey_across_al")}
           />
-
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            {/* Left: Stage ladder + this week */}
-            <div className="space-y-4 lg:col-span-2">
-              {coached ? <CoachedCourseCard summary={coached} /> : null}
-              {/* Stage ladder */}
-              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-                <div className="border-b border-slate-100 bg-slate-50 px-6 py-4">
-                  <h2 className="text-sm font-semibold text-slate-900">{t("capital_readiness_stages")}</h2>
-                  <p className="mt-0.5 text-xs text-slate-500">{t("complete_each_stage_at_80_to_unlock_the_next")}</p>
-                </div>
-                <div className="divide-y divide-slate-100">
-                  {STAGES.map((stage) => {
-                    const meta = CAPITAL_STAGE_META[stage];
-                    const pct = stagePercents[stage];
-                    const unlocked = stageAccess[stage];
-                    return (
-                      <Link
-                        key={stage}
-                        href={`/founder/learning/stages/${stage}`}
-                        className="group flex items-center gap-4 px-6 py-4 transition hover:bg-slate-50"
-                      >
-                        <div
-                          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg"
-                          style={{ background: unlocked ? meta.bgColor : "#F1F5F9" }}
-                        >
-                          {unlocked ? stageIcon(stage) : <IconLock />}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-slate-900">{meta.label}</p>
-                          <p className="text-xs text-slate-500">{meta.subtitle}</p>
-                        </div>
-                        {unlocked ? (
-                          <>
-                            <div className="w-24">
-                              <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-                                <div
-                                  className="h-full rounded-full transition-all"
-                                  style={{ width: `${pct}%`, background: pct >= 80 ? "#3B6D11" : "#2E78F5" }}
-                                />
-                              </div>
-                            </div>
-                            <span
-                              className="w-10 text-right text-xs font-semibold"
-                              style={{ color: pct >= 80 ? "#3B6D11" : "#2E78F5" }}
-                            >
-                              {pct}%
-                            </span>
-                          </>
-                        ) : (
-                          <span className="rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
-                            Locked
-                          </span>
-                        )}
-                        <span className="text-xs text-indigo-600 opacity-0 transition group-hover:opacity-100">→</span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Lessons in active stage */}
-              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-                <div className="border-b border-slate-100 bg-slate-50 px-6 py-4">
-                  <h2 className="text-sm font-semibold text-slate-900">
-                    Lessons in {CAPITAL_STAGE_META[activeStage].label}
-                  </h2>
-                  <p className="mt-0.5 text-xs text-slate-500">{t("your_current_stage_pick_up_where_you_left_off")}</p>
-                </div>
-                <div className="divide-y divide-slate-100">
-                  {weekLessons.map(({ moduleSlug: _moduleSlug, lesson, done }, idx) => (
-                    <Link
-                      key={lesson.id}
-                      href={`/founder/learning/stages/${activeStage}#${lesson.id}`}
-                      className="group flex items-center gap-4 px-6 py-3.5 transition hover:bg-slate-50"
-                    >
-                      <div
-                        className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
-                          done
-                            ? "bg-green-100 text-green-700"
-                            : idx === firstIncompleteIdx
-                              ? "bg-indigo-600 text-white"
-                              : "bg-slate-100 text-slate-400"
-                        }`}
-                      >
-                        {done ? <i className="ti ti-check" aria-hidden="true" /> : idx + 1}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p
-                          className={`text-sm font-medium ${done ? "text-slate-400 line-through" : "text-slate-900"}`}
-                        >
-                          {lesson.title}
-                        </p>
-                      </div>
-                      <span className="text-xs text-slate-400">{lesson.durationMinutes} min</span>
-                      <span
-                        className={`rounded-md px-2 py-0.5 text-[10px] font-semibold ${
-                          done
-                            ? "bg-green-50 text-green-700"
-                            : idx === firstIncompleteIdx
-                              ? "bg-indigo-50 text-indigo-700"
-                              : "bg-slate-50 text-slate-500"
-                        }`}
-                      >
-                        {done ? "Done" : idx === firstIncompleteIdx ? "Go →" : "—"}
-                      </span>
-                    </Link>
-                  ))}
-                  {weekLessons.length === 0 && (
-                    <p className="px-6 py-4 text-sm text-slate-400">{t("no_lessons_available_for_this_stage_yet")}</p>
-                  )}
-                </div>
-                <div className="border-t border-slate-100 px-6 py-3">
-                  <Link
-                    href={`/founder/learning/stages/${activeStage}`}
-                    className="text-xs font-semibold text-indigo-700 hover:underline"
-                  >
-                    View all {CAPITAL_STAGE_META[activeStage].label} lessons →
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-            {/* Right: rating ring + quick links */}
-            <div className="space-y-4">
-              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 text-center">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
-                  Capital readiness rating
-                </p>
-                <div
-                  className="mx-auto my-4 flex h-20 w-20 items-center justify-center rounded-full"
-                  style={{
-                    background: `conic-gradient(#2E78F5 0% ${rating}%, #F1F5F9 ${rating}% 100%)`,
-                  }}
-                >
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white">
-                    <span className="text-xl font-bold text-indigo-700">{rating}</span>
-                  </div>
-                </div>
-                <p className="text-2xl font-bold text-slate-900">{rating} / 100</p>
-                <p className="mt-1 text-xs text-slate-500">
-                  {rating >= 80 ? "Investor ready" : rating >= 50 ? "On track" : "Building foundations"}
-                </p>
-                {rating < 100 && (
-                  <p className="mt-3 rounded-lg bg-indigo-50 px-3 py-2 text-xs text-indigo-700">
-                    Complete more lessons to increase your rating
-                  </p>
-                )}
-              </div>
-
-              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-                <div className="border-b border-slate-100 bg-slate-50 px-5 py-3.5">
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">{t("quick_actions")}</p>
-                </div>
-                <div className="divide-y divide-slate-100">
-                  {(
-                    [
-                      { href: "/founder/learning/plan",     svgIcon: <IconBrain color="#2E78F5" />,          label: "My AI learning plan", bg: "#EEEDFB" },
-                      { href: "/founder/learning/schedule", svgIcon: <IconCalendarDays color="#3B6D11" />,   label: "View my schedule",    bg: "#EAF3DE" },
-                      { href: "/founder/learning/progress", svgIcon: <IconBarChart color="#92400E" />,        label: "Progress & badges",   bg: "#FEF3C7" },
-                    ]
-                  ).map((link) => (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      className="group flex items-center gap-3 px-5 py-3.5 transition hover:bg-slate-50"
-                    >
-                      <div
-                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
-                        style={{ background: link.bg }}
-                      >
-                        {link.svgIcon}
-                      </div>
-                      <span className="text-sm font-medium text-slate-800">{link.label}</span>
-                      <span className="ml-auto text-xs text-indigo-600 opacity-0 transition group-hover:opacity-100">
-                        →
-                      </span>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-          {/* Course library teaser */}
-          {publishedCourses.length > 0 && (
-            <div className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white">
-              <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-6 py-4">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">{t("library")}</p>
-                  <h2 className="mt-0.5 text-sm font-semibold text-slate-900">{t("course_catalog")}</h2>
-                </div>
-                <Link
-                  href="/founder/learning/courses"
-                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition"
-                >
-                  Browse all {publishedCourses.length} courses →
-                </Link>
-              </div>
-              <div className="grid grid-cols-1 divide-y divide-slate-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-                {publishedCourses.slice(0, 3).map((course) => {
-                  const stageBadge: Record<string, { label: string; bg: string; text: string }> = {
-                    stage_0: { label: "Stage 0", bg: "#EFF6FF", text: "#1D4ED8" },
-                    stage_1: { label: "Stage 1", bg: "#F0FDF4", text: "#15803D" },
-                    stage_2: { label: "Stage 2", bg: "#FFF7ED", text: "#C2410C" },
-                    stage_3: { label: "Stage 3", bg: "#FAF5FF", text: "#7E22CE" },
-                  };
-                  const badge = course.readiness_focus ? stageBadge[course.readiness_focus] : null;
-                  return (
-                    <Link
-                      key={course.id}
-                      href={`/founder/learning/courses/${course.id}`}
-                      className="group flex flex-col gap-2 px-5 py-4 transition hover:bg-slate-50"
-                    >
-                      <div className="flex flex-wrap gap-1.5">
-                        {badge && (
-                          <span
-                            className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                            style={{ background: badge.bg, color: badge.text }}
-                          >
-                            {badge.label}
-                          </span>
-                        )}
-                        {course.difficulty && (
-                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] capitalize text-slate-500">
-                            {course.difficulty}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm font-semibold leading-snug text-slate-900">{course.title}</p>
-                      <p className="line-clamp-2 text-xs leading-relaxed text-slate-500">{course.description}</p>
-                      <span className="text-[11px] font-semibold text-indigo-600 group-hover:underline">{t("view")}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+          <LearningTabs tabs={tabs} />
         </WorkspacePageContainer>
       </FounderFeatureGate>
       <FloatingFounderAICoach />
     </FounderAppShell>
+  );
+}
+
+function ContinueCard({
+  href,
+  icon,
+  tone,
+  title,
+  sub,
+  pct,
+}: Readonly<{ href: string; icon: string; tone: string; title: string; sub: string; pct?: number }>) {
+  return (
+    <Link href={href} className="group overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:border-indigo-300">
+      <div className={`flex h-[72px] items-center justify-center text-2xl ${tone}`}>
+        <i className={`ti ${icon}`} aria-hidden="true" />
+      </div>
+      <div className="px-3 py-2.5">
+        <p className="text-sm font-semibold leading-snug text-slate-900">{title}</p>
+        <p className="mt-0.5 text-xs text-slate-500">{sub}</p>
+        {pct !== undefined && (
+          <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-slate-100">
+            <div className="h-full rounded-full bg-[#2E78F5]" style={{ width: `${pct}%` }} />
+          </div>
+        )}
+      </div>
+    </Link>
+  );
+}
+
+function ProgramCard({
+  href,
+  icon,
+  tone,
+  title,
+  sub,
+  pct,
+}: Readonly<{ href: string; icon: string; tone: string; title: string; sub: string; pct?: number }>) {
+  return (
+    <Link href={href} className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 transition hover:border-indigo-300">
+      <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-xl ${tone}`}>
+        <i className={`ti ${icon}`} aria-hidden="true" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold text-slate-900">{title}</p>
+        <p className="text-xs text-slate-500">{sub}</p>
+        {pct !== undefined && (
+          <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-slate-100">
+            <div className="h-full rounded-full bg-[#2E78F5]" style={{ width: `${pct}%` }} />
+          </div>
+        )}
+      </div>
+    </Link>
   );
 }
