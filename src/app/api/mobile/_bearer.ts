@@ -4,14 +4,14 @@
 // helper built on it (getActiveCompanyForUser, crrFor and so on) act as the
 // founder without a cookie. New file, nothing existing is changed.
 import "server-only";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseBrowserEnv } from "@/lib/supabase/env";
 import { runAsActingUser } from "@/lib/scheduled-emails/acting-user";
 import type { Profile } from "@/lib/supabase/types";
 
 // The website's own handlers call supabase.auth.getUser() and getSession() with no argument, which needs a
 // stored session. The phone sends only an access token, so answer those two calls from the token.
-function withTokenAuth<C extends ReturnType<typeof createClient>>(client: C, token: string, user: unknown): C {
+function withTokenAuth<C extends SupabaseClient>(client: C, token: string, user: unknown): C {
   const auth = new Proxy(client.auth, {
     get(target, prop) {
       if (prop === "getUser") return (jwt?: string) => target.getUser(jwt ?? token);
@@ -32,7 +32,7 @@ function withTokenAuth<C extends ReturnType<typeof createClient>>(client: C, tok
 
 export async function withBearerFounder<T>(
   req: Request,
-  fn: (ctx: { profile: Profile; email: string; client: ReturnType<typeof createClient> }) => Promise<T>,
+  fn: (ctx: { profile: Profile; email: string; client: SupabaseClient }) => Promise<T>,
 ): Promise<{ ok: true; value: T } | { ok: false; status: number }> {
   const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
   if (!token) return { ok: false, status: 401 };
