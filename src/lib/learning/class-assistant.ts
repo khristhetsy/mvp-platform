@@ -10,7 +10,7 @@ import {
   findCourseLesson,
   flattenCourseLessons,
   FOUNDER_COURSES,
-  getCourseBySlug,
+  getFounderOrCoachCourse,
 } from "@/lib/learning/courses";
 import type { Course, CourseLesson } from "@/lib/learning/course-types";
 import { enforceCoachRules } from "@/lib/learning/coach/ir-coach";
@@ -360,7 +360,7 @@ export function buildClassAssistantReply(input: {
 }
 
 export function resolveCoachLesson(courseSlug: string, lessonSlug: string | null) {
-  const course = getCourseBySlug(courseSlug);
+  const course = getFounderOrCoachCourse(courseSlug);
   if (!course) return null;
   if (!lessonSlug) {
     return { course, lesson: null as CourseLesson | null, sectionTitle: null as string | null };

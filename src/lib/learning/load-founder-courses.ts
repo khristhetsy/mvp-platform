@@ -7,6 +7,10 @@ import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import type { Profile } from "@/lib/supabase/types";
 import type { Course } from "@/lib/learning/course-types";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { COACH_COURSES } from "@/lib/learning/coach/courses";
+import { getCoachAccess } from "@/lib/learning/coach/access";
+import { coachLessonHref } from "@/lib/learning/coach/program-links";
 
 export type FounderCourseCatalogItem = Course & {
   lessonCount: number;
@@ -15,6 +19,8 @@ export type FounderCourseCatalogItem = Course & {
   continueHref: string | null;
   hasStarted: boolean;
   href: string;
+  /** True for a coach format course the founder is enrolled in: it opens the coached lesson page. */
+  coached?: boolean;
 };
 
 export async function loadFounderCourseCatalog(profile: Profile) {
@@ -49,6 +55,28 @@ export async function loadFounderCourseCatalog(profile: Profile) {
 
   const adminPrograms = await listPublishedAdminCourses().catch(() => []);
   const supabase = await createServerSupabaseClient();
+
+  // Coach format courses appear only while the coach is active for this founder (enrolled, course on).
+  // They stay out of the overall progress average, which is computed over the core and admin courses.
+  const coachedCourses: FounderCourseCatalogItem[] = [];
+  for (const course of COACH_COURSES) {
+    const access = await getCoachAccess(supabase as unknown as SupabaseClient, { founderId: profile.id, companyId: company.id, courseSlug: course.slug }).catch(() => null);
+    if (!access?.active) continue;
+    const percentComplete = computeCoursePercentComplete(course, progressList);
+    const cont = findContinueCourseLesson(course, progressList);
+    const nextLesson = cont?.lesson.slug ?? course.sections[0]?.lessons[0]?.slug ?? "";
+    coachedCourses.push({
+      ...course,
+      category: "Coached",
+      lessonCount: courseLessonCount(course),
+      durationLabel: formatCourseDuration(courseDurationMinutes(course)),
+      percentComplete,
+      continueHref: coachLessonHref(course.slug, nextLesson),
+      hasStarted: progressList.some((r) => r.module_slug === course.slug),
+      href: coachLessonHref(course.slug, nextLesson),
+      coached: true,
+    });
+  }
   const { data: adminProgressRows } = adminPrograms.length
     ? await supabase
         .from("learning_course_progress")
@@ -100,11 +128,12 @@ export async function loadFounderCourseCatalog(profile: Profile) {
     };
   });
 
-  const courses = [...coreCourses.map((c) => ({ ...c, category: `iCapOS Core · ${c.category}` })), ...adminCourses];
+  const graded = [...coreCourses.map((c) => ({ ...c, category: `iCapOS Core · ${c.category}` })), ...adminCourses];
   const overallPercent =
-    courses.length > 0
-      ? Math.round(courses.reduce((sum, c) => sum + c.percentComplete, 0) / courses.length)
+    graded.length > 0
+      ? Math.round(graded.reduce((sum, c) => sum + c.percentComplete, 0) / graded.length)
       : 0;
+  const courses = [...coachedCourses, ...graded];
 
   const categories = [...new Set(courses.map((c) => c.category))].sort();
 

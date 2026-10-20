@@ -50,6 +50,8 @@ import { FounderInvestorEngagementTimeline } from "@/components/founder/FounderI
 import { DealCompanyEmptyState } from "@/components/founder/DealCompanyEmptyState";
 import { ListingChecklistCard } from "@/components/founder/listing/ListingChecklistCard";
 import { loadListingChecklist } from "@/lib/listing/listing-server";
+import { CoachedCourseStrip } from "@/components/coach/CoachedCourseCard";
+import { loadCoachedCourseSummary } from "@/lib/learning/coach/program-summary";
 
 export const dynamic = "force-dynamic";
 
@@ -184,6 +186,7 @@ export default async function FounderDashboardPage() {
     (investorActivity?.introRequests.length ?? 0) +
     (investorActivity?.savedDeals.length ?? 0);
   const raiseProgress = company?.is_published ? "Published" : "Not published";
+  const coached = learningAccess.allowed ? await loadCoachedCourseSummary({ profile, company }) : null;
   const journeyOverview = company
     ? await getJourneyOverview(supabase, profile.id, {
         outreachReady: crrResult.outreachReady,
@@ -256,6 +259,12 @@ export default async function FounderDashboardPage() {
         />
 
         <StageUnlockBanner />
+
+        {coached ? (
+          <div className="mb-4">
+            <CoachedCourseStrip summary={coached} />
+          </div>
+        ) : null}
 
         {/* Focused top: next action → journey → raise at a glance. */}
         {journeyOverview ? (

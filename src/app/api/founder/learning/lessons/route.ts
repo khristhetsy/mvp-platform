@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireApiProfile } from "@/lib/api/auth";
-import { findCourseLesson, getCourseBySlug } from "@/lib/learning/courses";
+import { findCourseLesson, getFounderOrCoachCourse } from "@/lib/learning/courses";
 import { decodeLessonKey } from "@/lib/learning/lesson-keys";
 import { enrichLesson } from "@/lib/learning/lesson-enrichment";
 import { completeLesson, recordQuizAttempt } from "@/lib/learning/lesson-progress";
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
   const lessonSlug = typeof body.lessonSlug === "string" ? body.lessonSlug : null;
 
   if (courseSlug && lessonSlug) {
-    const course = getCourseBySlug(courseSlug);
+    const course = getFounderOrCoachCourse(courseSlug);
     const found = course ? findCourseLesson(course, lessonSlug) : null;
     if (!course || !found) {
       return NextResponse.json({ error: "Lesson not found." }, { status: 404 });

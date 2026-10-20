@@ -5,7 +5,7 @@ import { FounderCourseLanding } from "@/components/FounderCourseLanding";
 import { FounderLearningModuleViewer } from "@/components/FounderLearningModuleViewer";
 import { FounderLearningProgramView } from "@/components/FounderLearningProgramView";
 import { getProgramBySlug } from "@/lib/learning/catalog";
-import { getCourseBySlug } from "@/lib/learning/courses";
+import { getFounderOrCoachCourse } from "@/lib/learning/courses";
 import { loadFounderLearningWorkspace } from "@/lib/learning/load-founder-learning";
 import { listLessonProgressForCompany } from "@/lib/learning/lesson-progress";
 import { getModuleContent } from "@/lib/learning/modules";
@@ -51,7 +51,7 @@ export default async function FounderLearningSlugPage({
     );
   }
 
-  const course = getCourseBySlug(slug);
+  const course = getFounderOrCoachCourse(slug);
   if (course) {
     const lessonProgress = await listLessonProgressForCompany(profile.id, company.id);
 

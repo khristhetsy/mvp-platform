@@ -8,6 +8,8 @@ import { requireRole } from "@/lib/supabase/auth";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { listPublishedAdminCourses } from "@/lib/learning/admin-courses";
 import { CAPITAL_STAGE_MODULES, CAPITAL_STAGE_META, type CapitalStage } from "@/lib/learning/capital-stages";
+import { CoachedCourseCard } from "@/components/coach/CoachedCourseCard";
+import { loadCoachedCourseSummary } from "@/lib/learning/coach/program-summary";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +59,8 @@ export default async function BrowseCoursesPage({ searchParams }: PageProps) {
   const t = await getTranslations("appPages");
   const { company } = await getActiveCompanyForUser(profile);
   const { stage: stageFilter = "", difficulty: difficultyFilter = "" } = await searchParams;
+
+  const coached = await loadCoachedCourseSummary({ profile, company });
 
   // DB courses
   const dbCourses = await listPublishedAdminCourses();
@@ -128,6 +132,12 @@ export default async function BrowseCoursesPage({ searchParams }: PageProps) {
               ← Learning
             </Link>
           </div>
+
+          {coached && !stageFilter && !difficultyFilter ? (
+            <div className="mb-6">
+              <CoachedCourseCard summary={coached} />
+            </div>
+          ) : null}
 
           {/* Filters */}
           <div className="mb-6 flex flex-wrap items-center gap-4">

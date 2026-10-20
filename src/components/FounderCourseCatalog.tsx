@@ -198,7 +198,7 @@ export function FounderCourseCatalog({
                     <p className="truncate text-xs font-medium text-slate-700">
                       {formatCategoryLabel(course.category)}
                     </p>
-                    <p className="text-[11px] text-slate-400">iCapOS Core</p>
+                    <p className="text-[11px] text-slate-400">{course.coached ? "Coached · your AI IR Coach checks every step" : "iCapOS Core"}</p>
                   </div>
                 </div>
 
@@ -243,21 +243,23 @@ export function FounderCourseCatalog({
                           href={course.continueHref}
                           className="flex-1 rounded-md bg-[#2563eb] px-3 py-2 text-center text-xs font-semibold text-white hover:bg-[#1d4ed8]"
                         >
-                          Continue
+                          {course.coached ? "Continue with your coach" : "Continue"}
                         </Link>
-                        <Link
-                          href={course.href}
-                          className="rounded-md border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                        >
-                          Course page
-                        </Link>
+                        {course.coached ? null : (
+                          <Link
+                            href={course.href}
+                            className="rounded-md border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                          >
+                            Course page
+                          </Link>
+                        )}
                       </>
                     ) : (
                       <Link
                         href={course.href}
                         className="flex-1 rounded-md bg-[#2563eb] px-3 py-2 text-center text-xs font-semibold text-white hover:bg-[#1d4ed8]"
                       >
-                        Start course
+                        {course.coached ? "Start with your coach" : "Start course"}
                       </Link>
                     )}
                   </div>

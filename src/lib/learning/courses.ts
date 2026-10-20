@@ -1,5 +1,6 @@
 import type { Course, CourseLesson, CourseSection } from "@/lib/learning/course-types";
 import type { LearningQuizQuestion } from "@/lib/learning/types";
+import { getCoachCourse } from "@/lib/learning/coach/courses";
 
 function lesson(
   slug: string,
@@ -439,6 +440,15 @@ export const FOUNDER_COURSES: Course[] = [
 
 export function getCourseBySlug(slug: string) {
   return FOUNDER_COURSES.find((c) => c.slug === slug) ?? null;
+}
+
+/**
+ * A core course or a coach format course (the Investor Outreach Playbook). Coach courses stay out of
+ * FOUNDER_COURSES so they do not change every founder's overall progress average; founder lesson
+ * routes and the lesson completion API use this lookup so a playbook lesson resolves.
+ */
+export function getFounderOrCoachCourse(slug: string) {
+  return getCourseBySlug(slug) ?? getCoachCourse(slug);
 }
 
 export function listCourseCategories() {

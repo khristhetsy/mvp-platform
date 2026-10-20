@@ -7,7 +7,7 @@ import {
   buildCourseCurriculumProgress,
   resolveCourseNavigation,
 } from "@/lib/learning/course-progress";
-import { findCourseLesson, getCourseBySlug } from "@/lib/learning/courses";
+import { findCourseLesson, getFounderOrCoachCourse } from "@/lib/learning/courses";
 import { decodeLessonKey, lessonHref } from "@/lib/learning/lesson-keys";
 import {
   lessonProgressKey,
@@ -39,7 +39,7 @@ export default async function FounderLearningLessonPage({
     notFound();
   }
 
-  const course = getCourseBySlug(courseSlug);
+  const course = getFounderOrCoachCourse(courseSlug);
   if (course) {
     const found = findCourseLesson(course, lessonSlug);
     if (!found) {

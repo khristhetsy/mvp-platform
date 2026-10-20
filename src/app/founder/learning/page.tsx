@@ -16,6 +16,8 @@ import {
   type CapitalStage,
 } from "@/lib/learning/capital-stages";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { CoachedCourseCard } from "@/components/coach/CoachedCourseCard";
+import { loadCoachedCourseSummary } from "@/lib/learning/coach/program-summary";
 
 export const dynamic = "force-dynamic";
 
@@ -158,6 +160,8 @@ export default async function FounderLearningPage() {
     .order("order_index", { ascending: true });
   const publishedCourses = (rawPublishedCourses ?? []) as PublishedCourse[];
 
+  const coached = await loadCoachedCourseSummary({ profile, company });
+
   const rating = Math.round(
     stagePercents.stage_0 * 0.25 +
     stagePercents.stage_1 * 0.35 +
@@ -181,6 +185,7 @@ export default async function FounderLearningPage() {
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             {/* Left: Stage ladder + this week */}
             <div className="space-y-4 lg:col-span-2">
+              {coached ? <CoachedCourseCard summary={coached} /> : null}
               {/* Stage ladder */}
               <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
                 <div className="border-b border-slate-100 bg-slate-50 px-6 py-4">
