@@ -28,7 +28,7 @@ jobs:
     timeout-minutes: 10
     env:
       SB_URL: https://raowjbhbtmwkycmwvavd.supabase.co
-      SB_KEY: sb_publishable_lWJHBTGBiQDyvyP623Nyiw_SvAANeS2
+      SB_KEY: ${{ secrets.SB_SERVICE_KEY }}
       DEV_PATCH_KEY: ${{ secrets.DEV_PATCH_KEY }}
     steps:
       - name: Check for pending patches
