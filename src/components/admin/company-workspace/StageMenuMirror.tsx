@@ -3,6 +3,8 @@ import { getStageMirror, stageLabel, type MirrorItemStatus } from "@/lib/admin/s
 import { ReachOutPanel } from "@/components/admin/company-workspace/ReachOutPanel";
 import { StageItemDrawer } from "@/components/admin/company-workspace/StageItemDrawer";
 import type { StageDiagnosis } from "@/lib/admin/stage-diagnosis";
+import type { AdminOutreachSummary } from "@/lib/admin/company-workspace-types";
+import { automatedStatusLine, manualResultsLine } from "@/lib/founder/outreach-status-lines";
 
 const STATUS_META: Record<MirrorItemStatus, { label: string; chip: string; icon: string; iconColor: string }> = {
   done: { label: "Done", chip: "bg-emerald-50 text-emerald-700", icon: "ti-circle-check", iconColor: "text-emerald-600" },
@@ -12,6 +14,45 @@ const STATUS_META: Record<MirrorItemStatus, { label: string; chip: string; icon:
   todo: { label: "Open", chip: "bg-slate-100 text-slate-500", icon: "ti-circle", iconColor: "text-slate-400" },
   locked: { label: "Not started", chip: "bg-slate-100 text-slate-400", icon: "ti-lock", iconColor: "text-slate-300" },
 };
+
+/** The two channels Outreach is made of, one line each. Both must be under way for
+ *  Outreach to be done, so a channel that has not started reads as needing attention. */
+function OutreachChannels({ outreach }: Readonly<{ outreach: AdminOutreachSummary }>) {
+  const auto = outreach.automated;
+  const manualStarted = outreach.manual.started;
+  const channels = [
+    {
+      key: "automated",
+      icon: "ti-robot",
+      label: "Automated outreach",
+      detail: automatedStatusLine(outreach),
+      chip: auto.state === "running" ? "Running" : auto.state === "paused" ? "Paused" : "Not started",
+      tone: auto.state === "running" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700",
+    },
+    {
+      key: "manual",
+      icon: "ti-mail",
+      label: "Manual outreach",
+      detail: manualStarted ? manualResultsLine(outreach) : "No email sent yet",
+      chip: manualStarted ? "Started" : "Not started",
+      tone: manualStarted ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700",
+    },
+  ];
+  return (
+    <ul className="divide-y divide-slate-100 border-t border-slate-100 bg-slate-50/60">
+      {channels.map((c) => (
+        <li key={c.key} className="flex items-center gap-3 py-2 pl-11 pr-3.5">
+          <i className={`ti ${c.icon} text-[16px] text-slate-400`} aria-hidden="true" />
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[12.5px] font-medium text-slate-700">{c.label}</span>
+            <span className="block truncate text-[11px] text-slate-500">{c.detail}</span>
+          </span>
+          <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${c.tone}`}>{c.chip}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 /**
  * Founder-menu mirror for one stage tab: a recommendation strip plus the founder's
@@ -31,6 +72,7 @@ export function StageMenuMirror({
   founderEmail = null,
   reachOutHref,
   diagnosis = null,
+  outreach = null,
 }: Readonly<{
   journey: FounderJourneyState;
   stage: JourneyStage;
@@ -44,6 +86,9 @@ export function StageMenuMirror({
    *  `diagnoseStage` and threaded through the workspace loader, because the
    *  parent workspace is a client component and cannot render an async child. */
   diagnosis?: StageDiagnosis | null;
+  /** Where the company stands on automated and manual outreach. When set, the
+   *  Outreach row lists both channels beneath it. Marketing stage only. */
+  outreach?: AdminOutreachSummary | null;
 }>) {
   const mirror = getStageMirror(journey, stage);
   const pendingItems = mirror.items.filter((i) => i.status === "attention" || i.status === "missing").map((i) => i.label);
@@ -118,6 +163,9 @@ export function StageMenuMirror({
                   ) : null}
                   <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${meta.chip}`}>{meta.label}</span>
                 </StageItemDrawer>
+                {item.label === "Outreach" && outreach && mirror.reached ? (
+                  <OutreachChannels outreach={outreach} />
+                ) : null}
               </li>
             );
           })}

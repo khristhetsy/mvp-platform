@@ -314,7 +314,7 @@ export function AdminCompanyWorkspace({
       {tab === "deploy" ? (
         <div className="space-y-6">
           <StageStepper journey={data.journey} viewedStage="deploy" />
-          <StageMenuMirror journey={data.journey} stage="deploy" diagnosis={data.stageDiagnosis?.deploy ?? null} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
+          <StageMenuMirror journey={data.journey} stage="deploy" diagnosis={data.stageDiagnosis?.deploy ?? null} outreach={data.outreach} companyId={companyId} founderName={founderName} founderEmail={founderEmail} />
 
           {investablePanel}
           {investorActivity}

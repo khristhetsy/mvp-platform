@@ -492,6 +492,8 @@ export async function diagnoseStage(
     });
     byHref["/founder/matches"] = browseOnly("Investor matches");
     byHref["/founder/matching"] = browseOnly("The Matching Center");
+    byHref["/founder/deploy/social"] = unmeasured("accounts connected? posts published?", "Read the founder's connected social accounts and published posts.");
+    byHref["/founder/ir-agent"] = unmeasured("agent set up? drafts awaiting confirmation?", "Read the founder's IR agent setup and its pending drafts.");
     byHref["/founder/events/present"] = unmeasured("applied? presented?", "Read event applications for this company.");
     byHref["/founder/private-market"] = unmeasured("campaign published?", "Read the marketplace campaign's published flag.");
   }
