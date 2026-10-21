@@ -156,12 +156,27 @@ export default async function FounderLearningPage() {
     difficulty: string | null;
     readiness_focus: string | null;
     banner_image_url: string | null;
+    promo_headline?: string | null;
+    promo_blurb?: string | null;
+    promo_cta_label?: string | null;
+    show_in_banner?: boolean | null;
   };
-  const { data: rawPublishedCourses } = await admin
+  // The promo columns come from a migration. If it has not been applied yet, fall back to the original
+  // columns so the page keeps listing every published course.
+  const withPromo = await admin
     .from("learning_programs")
-    .select("id, title, description, difficulty, readiness_focus, banner_image_url")
+    .select("id, title, description, difficulty, readiness_focus, banner_image_url, promo_headline, promo_blurb, promo_cta_label, show_in_banner")
     .eq("is_published", true)
     .order("order_index", { ascending: true });
+  const rawPublishedCourses = withPromo.error
+    ? (
+        await admin
+          .from("learning_programs")
+          .select("id, title, description, difficulty, readiness_focus, banner_image_url")
+          .eq("is_published", true)
+          .order("order_index", { ascending: true })
+      ).data
+    : withPromo.data;
   const publishedCourses = (rawPublishedCourses ?? []) as PublishedCourse[];
 
   const coached = await loadCoachedCourseSummary({ profile, company });
