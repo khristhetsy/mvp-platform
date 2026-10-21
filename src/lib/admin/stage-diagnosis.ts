@@ -10,7 +10,7 @@
 //
 // Server only — reads the engine through crrFor.
 
-import { menuLabelForHref } from "@/lib/admin/stage-menu-mirror";
+import { getStageMirror, menuLabelForHref } from "@/lib/admin/stage-menu-mirror";
 import { crrFor, type Crr } from "@/lib/crr/crr-for";
 import { allGaps } from "@/lib/crr/dimension-detail";
 import { loadActiveSet } from "@/lib/crr/weight-sets-db";
@@ -561,6 +561,13 @@ export async function diagnoseAllStages(
         ...d.fixes.filter((f) => f.impact).map((f) => `Fix (${f.impact}) [${f.who ?? "Founder"}${at}]: ${f.text}`),
       ];
     });
+    // Items with no wired signal never reach `byHref` as measured, so the draft
+    // never heard about them. They are not marked done on the founder's menu, so
+    // they go in as open steps in the same Fix shape the brief reads, with no
+    // figure: "still open", never "not started".
+    getStageMirror(journey, stage)
+      .items.filter((it) => it.status === "todo")
+      .forEach((it) => facts.push(`Fix (open) [Founder @ ${it.label}]: Finish ${it.label}.`));
     out[stage] = { byHref, situation, summary, facts };
   });
   return out;

@@ -107,7 +107,7 @@ export function blockingFallbackBody(first: string, brief: ReachOutBrief, stage:
   const holding = brief.actions.length === 1 ? "One thing is holding" : `${brief.actions.length || "A few"} things are holding`;
   lines.push(`${holding} your ${stage} stage.`, "", "What needs to get done");
   if (brief.actions.length) {
-    brief.actions.forEach((a, i) => lines.push(`${i + 1}. ${imperative(a.text)}.${a.where ? ` Where: ${a.where}.` : ""} Worth: ${a.impact}.`));
+    brief.actions.forEach((a, i) => lines.push(`${i + 1}. ${imperative(a.text)}.${a.where ? ` Where: ${a.where}.` : ""}${a.impact === "open" ? "" : ` Worth: ${a.impact}.`}`));
   } else {
     lines.push("1. Finish the remaining steps in this stage.");
   }
@@ -129,7 +129,7 @@ export function blockingPrompt(input: {
 }): string {
   const { brief } = input;
   const actions = brief.actions.length
-    ? brief.actions.map((a, i) => `${i + 1}. ${a.text}${a.where ? ` (where: ${a.where})` : ""} (worth: ${a.impact})`).join("\n")
+    ? brief.actions.map((a, i) => `${i + 1}. ${a.text}${a.where ? ` (where: ${a.where})` : ""}${a.impact === "open" ? " (still open, no figure; give no worth)" : ` (worth: ${a.impact})`}`).join("\n")
     : "none listed";
   return (
     `Write an email to ${input.founderName} at ${input.companyName}, a founder on the iCapOS fundraising platform. Stage: ${input.stage}. The stage is blocking.\n\n` +
