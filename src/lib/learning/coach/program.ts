@@ -26,7 +26,9 @@ export type ProgramQuestion = {
 export type ProgramCase = { title: string; setup: string; lines: string[]; rule: string };
 
 /** Which live read the Do step counts. */
-export type ProgramMetric = "contacts_ready" | "intro_requests" | "social" | "automated" | "ir_agent" | "events" | "sends" | "tasks";
+export type ProgramMetric =
+  | "contacts_ready" | "intro_requests" | "social" | "automated" | "ir_agent" | "events" | "sends" | "tasks"
+  | "deal_rooms" | "documents" | "room_check" | "offering_attested" | "checklist" | "pledges" | "updates_30d" | "milestone_tasks" | "self_report";
 
 export type ProgramScreen = { path: string; title: string; href: string };
 
@@ -54,6 +56,37 @@ export type ProgramModule = {
   tests: ProgramQuestion[];
   commitHint: string;
   commitDone: string;
+  /** Questions founders ask the coach on this module, with the answer from the lesson and their data. */
+  faq?: Array<[string, string]>;
+  /** What the coach says after "I am stuck": the exact menu path and click for this module. */
+  stuckHelp?: string;
+};
+
+export type ProgramReview = {
+  lessonSlug: string;
+  shortTitle: string;
+  minutes: number;
+  intro: string;
+  recall: ProgramQuestion[];
+  companyQuestion: string;
+  companyOptions: ProgramChoice[];
+  companyFollowUp: string;
+  companyFollowUpReply: string;
+  commitHint: string;
+  commitDone: string;
+  faq?: Array<[string, string]>;
+};
+
+export type ProgramBenchmark = { key: string; label: string; lessonTarget: string; stage: string; industry: string };
+
+/** One coached course: its weekly modules, the review that follows them, and the benchmarks for its panel. */
+export type ProgramDefinition = {
+  courseSlug: string;
+  title: string;
+  modules: ProgramModule[];
+  review: ProgramReview;
+  benchmarks: ProgramBenchmark[];
+  sources: string[];
 };
 
 export const PROGRAM_MINUTES_PER_PHASE = 7;
@@ -108,6 +141,12 @@ export const PROGRAM_MODULES: ProgramModule[] = [
     ],
     commitHint: "send first messages to my ready contacts from Outreach: Manual",
     commitDone: "Module 1 is done. The sending happens on your date, and that is what I check first next week.",
+    faq: [
+      ["Why count ready contacts before setting the target?", "Because the target is only real if you can send it. 6 of 15 ready means 10 a week needs 4 more contacts made ready first, which is this week's Do step."],
+      ["What if 10 a week is too many?", "Then pick a number you will hit and write it down. A kept 5 beats a missed 10; raise it when you have two weeks of hits."],
+      ["Which tools are open to me?", "Outreach: Manual, matches and social are open from the start. Automated outreach opens when your rating clears the gate; the IR Agent when it is enabled for your account."],
+    ],
+    stuckHelp: "Open Stage 1 Onboarding › My Progress and read which tools are open. Then Stage 3 Marketing › My contacts: add an email or a note to the contacts missing one. Four of them gets you to ten.",
   },
   {
     lessonSlug: "matches-introductions",
@@ -152,6 +191,12 @@ export const PROGRAM_MODULES: ProgramModule[] = [
     ],
     commitHint: "request three fitted introductions with a reason each",
     commitDone: "Saved. Next week I open by reading your request count and what happened to them.",
+    faq: [
+      ["Why were my requests dismissed?", "I can see the status, not the reason. Dismissed in bulk usually means the fit was off: stage, sector or check size. Read the match reason before the next three."],
+      ["How many requests should I send?", "Three this week, each with one line on why the fit is real. The plan cap is on the matches page; three fitted beats the cap unfitted."],
+      ["Can I message the investor directly instead?", "Introductions are brokered through iCFO so the investor sees a vetted request. A fitted request is the shortest route."],
+    ],
+    stuckHelp: "Open Stage 3 Marketing › Investor matches, read the reason on each card, and press Request introduction on three whose stage and sector fit. One line each on why.",
   },
   {
     lessonSlug: "manual-outreach",
@@ -196,6 +241,12 @@ export const PROGRAM_MODULES: ProgramModule[] = [
     ],
     commitHint: "send a follow up with one new fact to everyone I messaged",
     commitDone: "Saved. Next week I open with your follow up count.",
+    faq: [
+      ["What goes in the first two sentences?", "Why this investor: the sector or stage they back and the one thing about you that fits it. The AI drafts it from your contact note; you review and send."],
+      ["When do I follow up?", "5 business days after the first message, with one new fact. That is where most replies come from."],
+      ["What counts as a send?", "A message that went out from Outreach: Manual. Opens can be automatic, so I count sends and replies, not opens."],
+    ],
+    stuckHelp: "Open Stage 3 Marketing › Outreach, choose the Outreach: Manual tab, pick your ready contacts, let the AI draft, review each, send. Then Tasks: a follow up per message, 5 business days out.",
   },
   {
     lessonSlug: "social-media",
@@ -240,6 +291,12 @@ export const PROGRAM_MODULES: ProgramModule[] = [
     ],
     commitHint: "publish one post about a real milestone",
     commitDone: "Saved. Next week I check whether the post went out.",
+    faq: [
+      ["Which account first?", "The one your investors read. For B2B, LinkedIn. One account, a rhythm you can keep."],
+      ["What if I have nothing to post?", "A fact with a number: a pilot, a hire, a user count. Progress, not hype, and never a raise outcome."],
+      ["How many posts a month?", "Half your plan limit until the habit holds. Four posts you publish beat eight you schedule and miss."],
+    ],
+    stuckHelp: "Open Stage 3 Marketing › Social media, connect one account, then write one post about a real milestone and schedule it for a day you can keep.",
   },
   {
     lessonSlug: "automated-outreach",
@@ -284,6 +341,12 @@ export const PROGRAM_MODULES: ProgramModule[] = [
     ],
     commitHint: "read and answer outreach replies every morning",
     commitDone: "Saved. Next week I check your reply handling.",
+    faq: [
+      ["Why is it locked for me?", "Your Capital Readiness Rating is under the outreach gate of 65. The fix list on your rating page names the items that move it most."],
+      ["What do I approve?", "Only the contacts you would write to yourself. Ranked is not the same as right."],
+      ["Who answers replies?", "You do. The AI drafts; you confirm. A daily reply check in Tasks is the habit."],
+    ],
+    stuckHelp: "Open Stage 3 Marketing › Outreach, choose Outreach: Automated and read the gate status. If open, approve only the contacts you would write to yourself.",
   },
   {
     lessonSlug: "ir-agent",
@@ -328,6 +391,12 @@ export const PROGRAM_MODULES: ProgramModule[] = [
     ],
     commitHint: "review every IR Agent conversation and confirm meetings myself",
     commitDone: "Saved. Next week I check your review count.",
+    faq: [
+      ["What should the agent say first?", "Your real stage, sector and what the raise funds, in your words. The default text is the common mistake."],
+      ["What must it never say?", "Revenue figures and valuation unless you set them. Set the limits before it talks to anyone."],
+      ["Who confirms a meeting?", "You do, every time. The agent books; you confirm."],
+    ],
+    stuckHelp: "Open Stage 3 Marketing › My IR Agent, rewrite the introduction with your stage, sector and use of funds, and set what it must not say.",
   },
   {
     lessonSlug: "events",
@@ -372,6 +441,12 @@ export const PROGRAM_MODULES: ProgramModule[] = [
     ],
     commitHint: "send every event follow up within two days",
     commitDone: "Saved. Next week I check your follow ups against the event date.",
+    faq: [
+      ["Which event?", "The one matching your stage. A seed evening beats a growth showcase, however big the room."],
+      ["What is the one ask?", "One sentence naming the stage and the sector: two seed investors who know your market."],
+      ["When do I follow up?", "Within two days. Block it on Calendar before the event, not after."],
+    ],
+    stuckHelp: "Open Stage 3 Marketing › Present at event, pick the one that matches your stage, then Workspace › Calendar: the event and a follow up block two days after.",
   },
   {
     lessonSlug: "plan-goals",
@@ -416,6 +491,12 @@ export const PROGRAM_MODULES: ProgramModule[] = [
     ],
     commitHint: "run my 15 minute outreach review every Monday at 9am",
     commitDone: "Saved. From here the review repeats weekly, and I open each one with your numbers.",
+    faq: [
+      ["What do I review first?", "Inputs: sends, follow ups, requests. The actions you control. Replies and meetings are tracked, not graded."],
+      ["What if a week missed?", "Change the habit, not the target. The weeks that miss are usually the ones with no Calendar block."],
+      ["How long is the review?", "Fifteen minutes on Monday. Numbers, one fix, next week in Tasks with dates."],
+    ],
+    stuckHelp: "Open Workspace › Tasks and list next week's outreach actions with due dates. Then Workspace › Calendar: one weekly outreach block you will protect.",
   },
 ];
 
@@ -440,8 +521,18 @@ export const MONDAY_REVIEW = {
   commitDone: "Next Monday I open with whether this one was met.",
 };
 
-export function getProgramModule(lessonSlug: string): ProgramModule | null {
-  return PROGRAM_MODULES.find((m) => m.lessonSlug === lessonSlug) ?? null;
+/** The outreach program as one definition; PROGRAM_MODULES and the other exports above remain its parts. */
+export const OUTREACH_PROGRAM: ProgramDefinition = {
+  courseSlug: "investor-outreach-playbook",
+  title: "Investor Outreach Playbook",
+  modules: PROGRAM_MODULES,
+  review: MONDAY_REVIEW as ProgramReview,
+  benchmarks: [],
+  sources: [],
+};
+
+export function getProgramModule(lessonSlug: string, program: ProgramDefinition = OUTREACH_PROGRAM): ProgramModule | null {
+  return program.modules.find((m) => m.lessonSlug === lessonSlug) ?? null;
 }
 
 export type EncouragementKey = "read" | "company" | "why" | "done" | "test3" | "test2" | "test1" | "commit" | "recall2" | "recall1" | "recall0";
@@ -528,3 +619,6 @@ export const PROGRAM_BENCHMARK_SOURCES = [
 
 /** How many founders in the same industry must have four weeks of playbook data before their median replaces the estimates. */
 export const INDUSTRY_MEDIAN_MIN_FOUNDERS = 10;
+
+OUTREACH_PROGRAM.benchmarks = PROGRAM_BENCHMARKS;
+OUTREACH_PROGRAM.sources = PROGRAM_BENCHMARK_SOURCES;

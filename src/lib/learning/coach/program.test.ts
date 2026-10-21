@@ -2,6 +2,31 @@ import { describe, expect, it } from "vitest";
 import { OUTREACH_PLAYBOOK } from "@/lib/learning/outreach-playbook";
 import { COACH_TONES } from "@/lib/learning/coach/tones";
 import { ENCOURAGEMENT, MONDAY_REVIEW, PROGRAM_BENCHMARKS, PROGRAM_MODULES, encouragement, getProgramModule, recallEncouragement, testEncouragement } from "@/lib/learning/coach/program";
+import { CLOSING_PROGRAM } from "@/lib/learning/coach/program-closing";
+import { CLOSING_PLAYBOOK } from "@/lib/learning/closing-playbook";
+
+describe("closing program content", () => {
+  const closingSlugs = CLOSING_PLAYBOOK.sections.flatMap((s) => s.lessons.map((l) => l.slug));
+
+  it("covers every closing lesson exactly once, in order", () => {
+    expect(CLOSING_PROGRAM.modules.map((m) => m.lessonSlug)).toEqual(closingSlugs);
+    expect(CLOSING_PROGRAM.modules).toHaveLength(12);
+  });
+
+  it("gives each module three option questions, valid tests, coach questions and stuck help", () => {
+    for (const m of CLOSING_PROGRAM.modules) {
+      expect(m.faq?.length ?? 0).toBeGreaterThan(0);
+      expect(m.stuckHelp).toBeTruthy();
+      expect(m.companyQuestion).toBeTruthy();
+      for (const q of [...m.recall, ...m.tests]) expect(q.options).toHaveLength(3);
+      for (const q of m.tests) expect(q.rightIndex).toBeLessThan(q.options.length);
+    }
+    expect(CLOSING_PROGRAM.modules[0].recall).toHaveLength(0);
+    for (const m of CLOSING_PROGRAM.modules.slice(1)) expect(m.recall.length).toBeGreaterThan(0);
+    expect(CLOSING_PROGRAM.benchmarks.length).toBeGreaterThan(0);
+    expect(CLOSING_PROGRAM.sources.length).toBeGreaterThan(0);
+  });
+});
 
 const lessonSlugs = OUTREACH_PLAYBOOK.sections.flatMap((s) => s.lessons.map((l) => l.slug));
 const PROMISES = /\b(guarantee|will (?:definitely|certainly) (?:raise|close)|investors will (?:say yes|invest))\b/i;

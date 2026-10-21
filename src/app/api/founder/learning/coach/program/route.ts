@@ -4,8 +4,8 @@ import { requireApiProfile } from "@/lib/api/auth";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { getCoachAccess } from "@/lib/learning/coach/access";
 import { getCoachLesson } from "@/lib/learning/coach/courses";
-import { OUTREACH_PLAYBOOK_SLUG } from "@/lib/learning/outreach-playbook";
-import { MONDAY_REVIEW_SLUG, getProgramModule } from "@/lib/learning/coach/program";
+import { MONDAY_REVIEW_SLUG } from "@/lib/learning/coach/program";
+import { getModule, getProgram } from "@/lib/learning/coach/programs";
 import { commitmentStreak, loadProgramRaw, metricValue, weekLine, whereYouStand } from "@/lib/learning/coach/program-reads";
 import { pacificDate } from "@/lib/learning/coach/plan-items";
 import { createTask } from "@/lib/tasks/db";
@@ -14,31 +14,35 @@ import { PROGRAM_EVENT_INDEX, dueChoiceFor, isProgramEventKind } from "@/lib/lea
 
 const loose = (c: unknown) => c as SupabaseClient;
 
-async function context() {
+async function context(courseSlug: string) {
   const auth = await requireApiProfile(["founder"]);
   if ("error" in auth) return { error: auth.error };
+  const program = getProgram(courseSlug);
+  if (!program) return { error: NextResponse.json({ error: "Course not found." }, { status: 404 }) };
   const { company } = await getActiveCompanyForUser(auth.profile);
   const client = loose(auth.supabase);
-  const access = await getCoachAccess(client, { founderId: auth.profile.id, companyId: company?.id ?? null, courseSlug: OUTREACH_PLAYBOOK_SLUG });
+  const access = await getCoachAccess(client, { founderId: auth.profile.id, companyId: company?.id ?? null, courseSlug });
   if (!company || !access.active) {
     return { error: NextResponse.json({ error: "The coach is not active for you on this course." }, { status: 403 }) };
   }
-  return { auth, company, client, access };
+  return { auth, company, client, access, program };
 }
 
 /** GET: everything the coached page needs for one lesson: live reads, where you stand, streak, commitments. */
 export async function GET(request: Request) {
-  const ctx = await context();
+  const url = new URL(request.url);
+  const ctx = await context(url.searchParams.get("courseSlug")?.trim() || "investor-outreach-playbook");
   if ("error" in ctx) return ctx.error;
-  const lessonSlug = new URL(request.url).searchParams.get("lessonSlug")?.trim() || "game-plan";
-  const mod = getProgramModule(lessonSlug);
-  const raw = await loadProgramRaw({ profile: ctx.auth.profile, company: ctx.company });
+  const { program } = ctx;
+  const lessonSlug = url.searchParams.get("lessonSlug")?.trim() || program.modules[0].lessonSlug;
+  const mod = getModule(program, lessonSlug);
+  const raw = await loadProgramRaw({ profile: ctx.auth.profile, company: ctx.company, program });
   const streak = commitmentStreak(raw.commitments);
   return NextResponse.json({
     tone: ctx.access.tone,
     raw,
-    stand: whereYouStand(raw),
-    weekLine: weekLine(raw, mod ? lessonSlug : "game-plan"),
+    stand: whereYouStand(raw, program),
+    weekLine: weekLine(raw, mod ? lessonSlug : program.modules[program.modules.length - 1].lessonSlug, program),
     streak,
     metric: mod ? metricValue(raw, mod.doMetric) : null,
     openCommitments: raw.commitments.filter((c) => c.status === "open"),
@@ -53,17 +57,17 @@ export async function GET(request: Request) {
  *   commit       saves the if-then commitment, creates the dated task, marks the lesson complete
  */
 export async function POST(request: Request) {
-  const ctx = await context();
-  if ("error" in ctx) return ctx.error;
-  const { auth, company, client } = ctx;
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+  const ctx = await context(typeof body.courseSlug === "string" ? body.courseSlug.trim() : "investor-outreach-playbook");
+  if ("error" in ctx) return ctx.error;
+  const { auth, company, client, program } = ctx;
   const action = typeof body.action === "string" ? body.action : "";
   const lessonSlug = typeof body.lessonSlug === "string" ? body.lessonSlug.trim() : "";
   const isReview = lessonSlug === MONDAY_REVIEW_SLUG;
-  const found = isReview ? null : getCoachLesson(OUTREACH_PLAYBOOK_SLUG, lessonSlug);
+  const found = isReview ? null : getCoachLesson(program.courseSlug, lessonSlug);
   if (!isReview && !found) return NextResponse.json({ error: "Lesson not found." }, { status: 404 });
 
-  const base = { founder_id: auth.profile.id, company_id: company.id, course_slug: OUTREACH_PLAYBOOK_SLUG, lesson_id: lessonSlug };
+  const base = { founder_id: auth.profile.id, company_id: company.id, course_slug: program.courseSlug, lesson_id: lessonSlug };
 
   if (action === "log") {
     if (!isProgramEventKind(body.kind)) return NextResponse.json({ error: "Unknown event." }, { status: 400 });
@@ -105,7 +109,7 @@ export async function POST(request: Request) {
     try {
       const task = await createTask(auth.profile.id, {
         title: `Playbook: ${act}`.slice(0, 500),
-        description: `${title}. From ${found ? found.lesson.title : "the Monday review"}, Investor Outreach Playbook. Your coach checks this at the time you chose.`,
+        description: `${title}. From ${found ? found.lesson.title : "the Monday review"}, ${program.title}. Your coach checks this at the time you chose.`,
         priority: "medium",
         due_date: pacificDate(dueAt.toISOString()),
         context_type: "personal",
@@ -121,7 +125,7 @@ export async function POST(request: Request) {
       const rows = found.steps.map((_, i) => ({ ...base, step_index: i, event: "done", note: "Completed in the coached program." }));
       await client.from("coach_step_events").insert(rows);
       await client.from("coach_step_events").insert({ ...base, step_index: PROGRAM_EVENT_INDEX.commit, event: "commit", note: title });
-      await completeLesson({ founderId: auth.profile.id, companyId: company.id, moduleSlug: OUTREACH_PLAYBOOK_SLUG, lessonId: lessonSlug }).catch(() => undefined);
+      await completeLesson({ founderId: auth.profile.id, companyId: company.id, moduleSlug: program.courseSlug, lessonId: lessonSlug }).catch(() => undefined);
     }
     return NextResponse.json({ ok: true, taskId, dueAt: dueAt.toISOString(), dueChoice });
   }

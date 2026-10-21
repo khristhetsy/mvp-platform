@@ -3,6 +3,7 @@ import type { CoachedCourseSummary } from "@/lib/learning/coach/program-summary"
 import { buildPromoSlides, type BuildPromoInput, type PublishedCourseInput } from "@/lib/learning/overview-programs";
 
 const coached: CoachedCourseSummary = {
+  courseSlug: "investor-outreach-playbook",
   title: "Investor Outreach Playbook",
   lessonCount: 8,
   lessonsDone: 0,

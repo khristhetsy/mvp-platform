@@ -14,8 +14,9 @@ import { crrFor } from "@/lib/crr/crr-for";
 import { getAgentByOrg } from "@/lib/ir-agent/store";
 import { listLessonProgressForCompany } from "@/lib/learning/lesson-progress";
 import { weekStartUtc } from "@/lib/matching/intro-quota";
-import { OUTREACH_PLAYBOOK_SLUG } from "@/lib/learning/outreach-playbook";
-import { INDUSTRY_MEDIAN_MIN_FOUNDERS, PROGRAM_BENCHMARKS, PROGRAM_MODULES, type ProgramMetric } from "@/lib/learning/coach/program";
+import { INDUSTRY_MEDIAN_MIN_FOUNDERS, OUTREACH_PROGRAM, type ProgramDefinition, type ProgramMetric } from "@/lib/learning/coach/program";
+import { getCompanyPledgeSummary, getFounderPledgeCompanyId } from "@/lib/data/investor-pledges";
+import type { Database } from "@/lib/supabase/types";
 
 export type ContactsRead = { total: number; withEmail: number; withNote: number; ready: number };
 export type IntrosRead = { week: number; total: number; dismissed: number; lastAt: string | null };
@@ -25,6 +26,12 @@ export type AutomatedRead = { unlocked: boolean; score: number | null; gate: num
 export type IrAgentRead = { status: string | null };
 export type TasksRead = { openOutreach: number };
 export type CommitmentRead = { lesson_id: string; status: "open" | "kept" | "missed" | "cancelled"; due_at: string; created_at: string; title: string };
+export type DealRoomsRead = { open: number; questionsOpen: number; docRequestsOpen: number };
+export type DocumentsRead = { total: number };
+export type OfferingRead = { type: string | null; attestedAt: string | null };
+export type SpvsRead = { count: number; checklistPct: number | null; closingPct: number | null };
+export type PledgesRead = { totalPledged: number; investorCount: number; raise: number | null };
+export type UpdatesRead = { last30: number; lastAt: string | null; daysSince: number | null };
 
 export type ProgramRaw = {
   contacts: ContactsRead | null;
@@ -36,8 +43,19 @@ export type ProgramRaw = {
   /** Not read yet: the events screen has no founder scoped count the coach can trust. */
   events: null;
   tasks: TasksRead | null;
+  /** Stage 4 reads. */
+  dealRooms: DealRoomsRead | null;
+  documents: DocumentsRead | null;
+  offering: OfferingRead | null;
+  spvs: SpvsRead | null;
+  pledges: PledgesRead | null;
+  updates: UpdatesRead | null;
+  /** Open tasks whose title starts with "Milestone", the founder's dated promises. */
+  milestoneTasks: number | null;
+  /** Open tasks that mention the deal room, the daily check. */
+  roomCheckTasks: number | null;
   commitments: CommitmentRead[];
-  /** Lesson slugs of the playbook marked complete in founder_lesson_progress. */
+  /** Lesson slugs of this program's course marked complete in founder_lesson_progress. */
   lessonsDone: string[];
   industry: string | null;
   stage: string | null;
@@ -56,7 +74,8 @@ async function settle<T>(read: () => Promise<T>): Promise<T | null> {
 
 const loose = (c: unknown) => c as SupabaseClient;
 
-export async function loadProgramRaw(input: { profile: Profile; company: Company; now?: Date }): Promise<ProgramRaw> {
+export async function loadProgramRaw(input: { profile: Profile; company: Company; now?: Date; program?: ProgramDefinition }): Promise<ProgramRaw> {
+  const program = input.program ?? OUTREACH_PROGRAM;
   const now = input.now ?? new Date();
   const since = weekStartUtc(now);
   const admin = loose(createServiceRoleClient());
@@ -64,7 +83,7 @@ export async function loadProgramRaw(input: { profile: Profile; company: Company
   const companyId = input.company.id;
   const orgId = (input.company as { org_id?: string | null }).org_id ?? null;
 
-  const [contacts, intros, sends, social, automated, irAgent, tasks, commitments, progress, peers] = await Promise.all([
+  const [contacts, intros, sends, social, automated, irAgent, tasks, commitments, progress, peers, dealRooms, documents, offering, spvs, pledges, updates, milestoneTasks, roomCheckTasks] = await Promise.all([
     settle(async (): Promise<ContactsRead> => {
       const { data, error } = await admin
         .from("founder_investor_contacts")
@@ -131,7 +150,7 @@ export async function loadProgramRaw(input: { profile: Profile; company: Company
         .select("lesson_id, status, due_at, created_at, title")
         .eq("founder_id", founderId)
         .eq("company_id", companyId)
-        .eq("course_slug", OUTREACH_PLAYBOOK_SLUG)
+        .eq("course_slug", program.courseSlug)
         .order("created_at", { ascending: true })
         .limit(500);
       if (error) throw new Error(error.message);
@@ -148,6 +167,58 @@ export async function loadProgramRaw(input: { profile: Profile; company: Company
       const { count } = await admin.from("coach_enrollments").select("id", { count: "exact", head: true }).in("company_id", ids).eq("status", "active");
       return count ?? 0;
     }),
+    settle(async (): Promise<DealRoomsRead> => {
+      const { data, error } = await admin.from("deal_rooms").select("id, status").eq("company_id", companyId).limit(500);
+      if (error) throw new Error(error.message);
+      const rooms = (data ?? []) as Array<{ id: string; status: string }>;
+      const open = rooms.filter((r) => !["closed", "archived", "cancelled"].includes(r.status));
+      const ids = open.map((r) => r.id);
+      if (ids.length === 0) return { open: 0, questionsOpen: 0, docRequestsOpen: 0 };
+      const [q, d] = await Promise.all([
+        admin.from("deal_room_questions").select("id", { count: "exact", head: true }).in("room_id", ids).is("founder_response", null),
+        admin.from("deal_room_document_requests").select("id", { count: "exact", head: true }).in("room_id", ids).is("fulfilled_at", null),
+      ]);
+      return { open: open.length, questionsOpen: q.count ?? 0, docRequestsOpen: d.count ?? 0 };
+    }),
+    settle(async (): Promise<DocumentsRead> => {
+      const { count, error } = await admin.from("documents").select("id", { count: "exact", head: true }).eq("company_id", companyId);
+      if (error) throw new Error(error.message);
+      return { total: count ?? 0 };
+    }),
+    settle(async (): Promise<OfferingRead> => {
+      const c = input.company as { offering_type?: string | null; offering_type_attested_at?: string | null };
+      return { type: c.offering_type ?? null, attestedAt: c.offering_type_attested_at ?? null };
+    }),
+    settle(async (): Promise<SpvsRead> => {
+      const { data, error } = await admin.from("spv_opportunities").select("checklist_readiness_pct, closing_readiness_pct").eq("company_id", companyId).limit(50);
+      if (error) throw new Error(error.message);
+      const rows = (data ?? []) as Array<{ checklist_readiness_pct: number | null; closing_readiness_pct: number | null }>;
+      const max = (k: "checklist_readiness_pct" | "closing_readiness_pct") => (rows.length ? Math.max(...rows.map((r) => r[k] ?? 0)) : null);
+      return { count: rows.length, checklistPct: max("checklist_readiness_pct"), closingPct: max("closing_readiness_pct") };
+    }),
+    settle(async (): Promise<PledgesRead> => {
+      const typed = admin as unknown as SupabaseClient<Database>;
+      const pledgeCompanyId = await getFounderPledgeCompanyId(typed, founderId, companyId);
+      const summary = await getCompanyPledgeSummary(typed, pledgeCompanyId);
+      const raise = (input.company as { funding_amount?: number | string | null }).funding_amount;
+      return { totalPledged: summary.totalPledged, investorCount: summary.investorCount, raise: raise === null || raise === undefined ? null : Number(raise) };
+    }),
+    settle(async (): Promise<UpdatesRead> => {
+      const { data, error } = await admin.from("company_updates").select("created_at").eq("company_id", companyId).order("created_at", { ascending: false }).limit(200);
+      if (error) throw new Error(error.message);
+      const rows = (data ?? []) as Array<{ created_at: string }>;
+      return countUpdates(rows, now);
+    }),
+    settle(async (): Promise<number> => {
+      const { count, error } = await admin.from("tasks").select("id", { count: "exact", head: true }).eq("created_by", founderId).in("status", ["todo", "in_progress"]).ilike("title", "Milestone%");
+      if (error) throw new Error(error.message);
+      return count ?? 0;
+    }),
+    settle(async (): Promise<number> => {
+      const { count, error } = await admin.from("tasks").select("id", { count: "exact", head: true }).eq("created_by", founderId).in("status", ["todo", "in_progress"]).ilike("title", "%deal room%");
+      if (error) throw new Error(error.message);
+      return count ?? 0;
+    }),
   ]);
 
   return {
@@ -159,9 +230,17 @@ export async function loadProgramRaw(input: { profile: Profile; company: Company
     irAgent,
     events: null,
     tasks,
+    dealRooms,
+    documents,
+    offering,
+    spvs,
+    pledges,
+    updates,
+    milestoneTasks,
+    roomCheckTasks,
     commitments: commitments ?? [],
     lessonsDone: (progress ?? [])
-      .filter((r) => r.module_slug === OUTREACH_PLAYBOOK_SLUG && r.status === "completed")
+      .filter((r) => r.module_slug === program.courseSlug && r.status === "completed")
       .map((r) => r.lesson_id),
     industry: input.company.industry ?? null,
     stage: (input.company as { funding_stage?: string | null }).funding_stage ?? null,
@@ -211,9 +290,35 @@ export function countSends(rows: Array<{ step_index: number; sent_at: string }>,
   return { week, total: rows.length, followUpsWeek, replies: recipients.filter((r) => r.repliedAt).length, recipients: recipients.length };
 }
 
+export function countUpdates(rows: Array<{ created_at: string }>, now: Date): UpdatesRead {
+  const since = new Date(now.getTime() - 30 * 86_400_000).toISOString();
+  const last30 = rows.filter((r) => r.created_at >= since).length;
+  const lastAt = rows.reduce<string | null>((m, r) => (!m || r.created_at > m ? r.created_at : m), null);
+  const daysSince = lastAt ? Math.floor((now.getTime() - new Date(lastAt).getTime()) / 86_400_000) : null;
+  return { last30, lastAt, daysSince };
+}
+
 /** The live number the Do step counts for a module, or null when that source could not be read. */
 export function metricValue(raw: ProgramRaw, metric: ProgramMetric): number | null {
   switch (metric) {
+    case "deal_rooms":
+      return raw.dealRooms ? raw.dealRooms.open : null;
+    case "documents":
+      return raw.documents ? raw.documents.total : null;
+    case "room_check":
+      return raw.roomCheckTasks;
+    case "offering_attested":
+      return raw.offering ? (raw.offering.attestedAt || raw.offering.type ? 1 : 0) : null;
+    case "checklist":
+      return raw.spvs ? (raw.spvs.count === 0 ? 0 : Math.round(((raw.spvs.checklistPct ?? 0) / 100) * 3)) : null;
+    case "pledges":
+      return raw.pledges ? raw.pledges.investorCount : null;
+    case "updates_30d":
+      return raw.updates ? raw.updates.last30 : null;
+    case "milestone_tasks":
+      return raw.milestoneTasks;
+    case "self_report":
+      return null;
     case "contacts_ready":
       return raw.contacts ? raw.contacts.ready : null;
     case "intro_requests":
@@ -262,27 +367,44 @@ function industryColumn(raw: ProgramRaw, estimate: string): string {
   return `${estimate} iCapOS ${name} peers today: ${peers}. Median shows at ${INDUSTRY_MEDIAN_MIN_FOUNDERS} founders with 4 weeks of data.`;
 }
 
-export function whereYouStand(raw: ProgramRaw): StandRow[] {
+function youColumn(raw: ProgramRaw, program: ProgramDefinition): Record<string, string> {
   const na = "Not read";
-  const you: Record<string, string> = {
-    lessons: `${raw.lessonsDone.length} of ${PROGRAM_MODULES.length}`,
+  const money = (n: number) => "$" + Math.round(n).toLocaleString("en-US");
+  return {
+    lessons: `${raw.lessonsDone.length} of ${program.modules.length}`,
     contacts_ready: raw.contacts ? `${raw.contacts.ready} of ${raw.contacts.total}` : na,
     sends_week: raw.sends ? String(raw.sends.week) : na,
     intro_requests: raw.intros ? `${raw.intros.week} this week, ${raw.intros.dismissed} of ${raw.intros.total} dismissed` : na,
     follow_ups: raw.sends ? String(raw.sends.followUpsWeek) : na,
     replies: raw.sends ? `${raw.sends.replies} of ${raw.sends.recipients}` : na,
     meetings: "Not measured here",
+    deal_rooms: raw.dealRooms ? String(raw.dealRooms.open) : na,
+    questions: raw.dealRooms ? `${raw.dealRooms.questionsOpen} waiting, ${raw.dealRooms.docRequestsOpen} document requests` : na,
+    updates: raw.updates ? `${raw.updates.last30}${raw.updates.daysSince !== null ? ` (last ${raw.updates.daysSince} days ago)` : " (none yet)"}` : na,
+    checklist: raw.spvs ? (raw.spvs.count === 0 ? "Not started" : `${raw.spvs.checklistPct ?? 0}% ready`) : na,
+    pledged: raw.pledges ? `${money(raw.pledges.totalPledged)} from ${raw.pledges.investorCount}${raw.pledges.raise ? ` of ${money(raw.pledges.raise)}` : ""}` : na,
+    weeks: "Not measured here",
+    meetings_ts: "Not measured here",
   };
-  return PROGRAM_BENCHMARKS.map((b) => ({ key: b.key, label: b.label, you: you[b.key] ?? na, lessonTarget: b.lessonTarget, stage: b.stage, industry: industryColumn(raw, b.industry) }));
+}
+
+export function whereYouStand(raw: ProgramRaw, program: ProgramDefinition = OUTREACH_PROGRAM): StandRow[] {
+  const you = youColumn(raw, program);
+  return program.benchmarks.map((b) => ({ key: b.key, label: b.label, you: you[b.key] ?? "Not read", lessonTarget: b.lessonTarget, stage: b.stage, industry: industryColumn(raw, b.industry) }));
 }
 
 /** One sentence for the top of the page: where the founder is this week and the next step. */
-export function weekLine(raw: ProgramRaw, lessonSlug: string): string {
-  const m = PROGRAM_MODULES.find((x) => x.lessonSlug === lessonSlug) ?? PROGRAM_MODULES[0];
+export function weekLine(raw: ProgramRaw, lessonSlug: string, program: ProgramDefinition = OUTREACH_PROGRAM): string {
+  const m = program.modules.find((x) => x.lessonSlug === lessonSlug) ?? program.modules[0];
   const value = metricValue(raw, m.doMetric);
   const parts: string[] = [];
-  if (raw.sends) parts.push(`${raw.sends.week} first messages sent this week`);
-  if (raw.contacts) parts.push(`${raw.contacts.ready} of ${raw.contacts.total} contacts ready`);
+  if (program.courseSlug === OUTREACH_PROGRAM.courseSlug) {
+    if (raw.sends) parts.push(`${raw.sends.week} first messages sent this week`);
+    if (raw.contacts) parts.push(`${raw.contacts.ready} of ${raw.contacts.total} contacts ready`);
+  } else {
+    if (raw.dealRooms) parts.push(`${raw.dealRooms.open} deal rooms open, ${raw.dealRooms.questionsOpen} questions waiting`);
+    if (raw.updates) parts.push(raw.updates.daysSince === null ? "no investor update yet" : `last investor update ${raw.updates.daysSince} days ago`);
+  }
   const where = parts.length ? parts.join(", ") + "." : "Your numbers could not be read just now.";
   if (value === null) return `${where} Next step: ${m.doIntro.split(".")[0]}.`;
   if (value >= m.doTarget) return `${where} ${m.shortTitle}: target met (${value} of ${m.doTarget}).`;

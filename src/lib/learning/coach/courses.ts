@@ -1,8 +1,9 @@
 import type { Course, CourseLesson, CoachStep } from "@/lib/learning/course-types";
 import { OUTREACH_PLAYBOOK } from "@/lib/learning/outreach-playbook";
+import { CLOSING_PLAYBOOK } from "@/lib/learning/closing-playbook";
 
 /** Courses in the coach format. Other courses join once their lessons have steps. */
-export const COACH_COURSES: Course[] = [OUTREACH_PLAYBOOK];
+export const COACH_COURSES: Course[] = [OUTREACH_PLAYBOOK, CLOSING_PLAYBOOK];
 
 export function getCoachCourse(slug: string): Course | null {
   return COACH_COURSES.find((c) => c.slug === slug) ?? null;

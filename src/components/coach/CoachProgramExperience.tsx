@@ -5,17 +5,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CoachStep } from "@/lib/learning/course-types";
 import { COACH_TONES, TONE_LABELS, type CoachTone } from "@/lib/learning/coach/tones";
 import {
-  MONDAY_REVIEW,
   MONDAY_REVIEW_SLUG,
-  PROGRAM_BENCHMARK_SOURCES,
-  PROGRAM_MODULES,
   encouragement,
-  getProgramModule,
   recallEncouragement,
   testEncouragement,
   type ProgramChoice,
+  type ProgramDefinition,
   type ProgramQuestion,
 } from "@/lib/learning/coach/program";
+import { TONE_LINES } from "@/lib/learning/coach/tones";
+import { taskBody } from "@/lib/learning/coach/plan-items";
 import type { CommitmentRead, ProgramRaw, StandRow } from "@/lib/learning/coach/program-reads";
 import { coachLessonHref } from "@/lib/learning/coach/program-links";
 
@@ -32,7 +31,7 @@ type Lesson = { title: string; content: string; keyPoints: string[]; steps: Coac
 
 type Props = Readonly<{
   founderFirstName: string;
-  courseSlug: string;
+  program: ProgramDefinition;
   lessonSlug: string;
   lesson: Lesson | null;
   tone: CoachTone;
@@ -50,11 +49,15 @@ function fmtDue(iso: string) {
   return new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/Los_Angeles" }).format(new Date(iso));
 }
 
-export function CoachProgramExperience({ founderFirstName, courseSlug, lessonSlug, lesson, tone: initialTone, initial }: Props) {
+export function CoachProgramExperience({ founderFirstName, program, lessonSlug, lesson, tone: initialTone, initial }: Props) {
+  const courseSlug = program.courseSlug;
+  const MODULES = program.modules;
+  const MONDAY_REVIEW = program.review;
   const isReview = lessonSlug === MONDAY_REVIEW_SLUG;
-  const mod = isReview ? null : getProgramModule(lessonSlug);
-  const weekIndex = mod ? PROGRAM_MODULES.findIndex((m) => m.lessonSlug === lessonSlug) : PROGRAM_MODULES.length;
+  const mod = isReview ? null : (MODULES.find((m) => m.lessonSlug === lessonSlug) ?? null);
+  const weekIndex = mod ? MODULES.findIndex((m) => m.lessonSlug === lessonSlug) : MODULES.length;
   const recallQs: ProgramQuestion[] = isReview ? MONDAY_REVIEW.recall : (mod?.recall ?? []);
+  const faq = (isReview ? MONDAY_REVIEW.faq : mod?.faq) ?? [];
   const companyQ = isReview ? MONDAY_REVIEW.companyQuestion : mod!.companyQuestion;
   const companyOpts: ProgramChoice[] = isReview ? MONDAY_REVIEW.companyOptions : mod!.companyOptions;
   const companyFollowUp = isReview ? MONDAY_REVIEW.companyFollowUp : mod!.companyFollowUp;
@@ -82,6 +85,9 @@ export function CoachProgramExperience({ founderFirstName, courseSlug, lessonSlu
   const [error, setError] = useState<string | null>(null);
   const [showStand, setShowStand] = useState(false);
   const [selfReported, setSelfReported] = useState(false);
+  const [explained, setExplained] = useState<number[]>([]);
+  const [stuck, setStuck] = useState<string | null>(null);
+  const [notNow, setNotNow] = useState<{ stage: "ask" | "chosen"; label?: string; dueAt?: string; task?: "idle" | "saving" | "added" | "failed" } | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   const log = useCallback(
@@ -89,10 +95,10 @@ export function CoachProgramExperience({ founderFirstName, courseSlug, lessonSlu
       void fetch("/api/founder/learning/coach/program", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "log", lessonSlug, kind, note }),
+        body: JSON.stringify({ action: "log", courseSlug, lessonSlug, kind, note }),
       }).catch(() => null);
     },
-    [lessonSlug],
+    [courseSlug, lessonSlug],
   );
 
   useEffect(() => {
@@ -107,7 +113,7 @@ export function CoachProgramExperience({ founderFirstName, courseSlug, lessonSlu
 
   async function refresh() {
     setChecking(true);
-    const res = await fetch(`/api/founder/learning/coach/program?${new URLSearchParams({ lessonSlug })}`).catch(() => null);
+    const res = await fetch(`/api/founder/learning/coach/program?${new URLSearchParams({ courseSlug, lessonSlug })}`).catch(() => null);
     setChecking(false);
     if (!res?.ok) return;
     const body = (await res.json()) as Initial & { tone: CoachTone };
@@ -120,7 +126,7 @@ export function CoachProgramExperience({ founderFirstName, courseSlug, lessonSlu
   }
 
   async function selfReport() {
-    const res = await fetch("/api/founder/learning/coach/program", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "self_report", lessonSlug }) }).catch(() => null);
+    const res = await fetch("/api/founder/learning/coach/program", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "self_report", courseSlug, lessonSlug }) }).catch(() => null);
     if (res?.ok) setSelfReported(true);
     else setError("Could not save that. Try again.");
   }
@@ -135,7 +141,7 @@ export function CoachProgramExperience({ founderFirstName, courseSlug, lessonSlu
     const res = await fetch("/api/founder/learning/coach/program", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "commit", lessonSlug, cue: cue.trim(), act: act.trim(), dueAt: iso }),
+      body: JSON.stringify({ action: "commit", courseSlug, lessonSlug, cue: cue.trim(), act: act.trim(), dueAt: iso }),
     }).catch(() => null);
     if (!res?.ok) {
       const body = res ? ((await res.json().catch(() => ({}))) as { error?: string }) : {};
@@ -145,6 +151,27 @@ export function CoachProgramExperience({ founderFirstName, courseSlug, lessonSlu
     const body = (await res.json()) as { dueAt: string; taskId: string | null };
     setCommitted({ dueAt: body.dueAt, taskId: body.taskId });
     void refresh();
+  }
+
+  /** "I am stuck" is a real step check in: the existing step route records it and replies in the founder's tone. */
+  async function markStuck() {
+    const res = await fetch("/api/founder/learning/coach/step", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ courseSlug, lessonSlug, stepIndex: 0, event: "stuck" }) }).catch(() => null);
+    const body = res?.ok ? ((await res.json()) as { reply: string }) : null;
+    setStuck(body?.reply ?? TONE_LINES[tone].stuck);
+  }
+
+  /** "Not now" with a time records a commitment through the step route; the task is added only when the founder presses the button. */
+  async function chooseNotNow(dueChoice: "today" | "tomorrow" | "this_week", label: string) {
+    const res = await fetch("/api/founder/learning/coach/step", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ courseSlug, lessonSlug, stepIndex: 0, event: "skipped", dueChoice }) }).catch(() => null);
+    const body = res?.ok ? ((await res.json()) as { reply: string; dueAt?: string | null }) : null;
+    setNotNow({ stage: "chosen", label, dueAt: body?.dueAt ?? undefined, task: "idle" });
+  }
+
+  async function addNotNowTask() {
+    if (!notNow?.dueAt || !mod) return;
+    setNotNow({ ...notNow, task: "saving" });
+    const res = await fetch("/api/tasks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(taskBody({ stepTitle: mod.doVerb + ": " + mod.shortTitle, dueAt: notNow.dueAt })) }).catch(() => null);
+    setNotNow({ ...notNow, task: res?.ok ? "added" : "failed" });
   }
 
   const doTarget = mod?.doTarget ?? 0;
@@ -190,7 +217,9 @@ export function CoachProgramExperience({ founderFirstName, courseSlug, lessonSlu
       log("answer", `follow up: ${t}`.slice(0, 500));
       return;
     }
-    setAsides((a) => [...a, { q: t, r: "Noted. Keep going with the step; I answer questions from the lesson and your own numbers, and the full chat is in the coach bubble on every page." }]);
+    const low = t.toLowerCase();
+    const hit = faq.find(([question]) => question.toLowerCase().split(/\W+/).filter((w) => w.length > 4).some((w) => low.indexOf(w) >= 0));
+    setAsides((a) => [...a, { q: t, r: hit ? hit[1] : "Noted. For anything beyond this lesson, the coach bubble on every iCapOS page answers from the course and your own numbers. Here, the questions under the box are the ones I answer; try one, or keep going with the step." }]);
   }
 
   const thread = useMemo<Msg[]>(() => {
@@ -259,7 +288,21 @@ export function CoachProgramExperience({ founderFirstName, courseSlug, lessonSlu
     if (phase >= 3 && mod) {
       if (!doComplete) {
         const count = metric === null ? "I cannot read this screen yet, so when it is done, mark it here and I will count it." : `${metric} of ${doTarget} so far.`;
-        C("do", `${mod.doIntro} ${count}`, phase === 3 ? { quick: unread ? [{ label: "Done, mark it", onPick: () => void selfReport() }] : [{ label: checking ? "Checking…" : "I did it, check again", onPick: () => void refresh() }] } : undefined);
+        const quick: Array<{ label: string; onPick: () => void }> = unread ? [{ label: "Done, mark it", onPick: () => void selfReport() }] : [{ label: checking ? "Checking…" : "I did it, check again", onPick: () => void refresh() }];
+        if (!stuck) quick.push({ label: "I am stuck", onPick: () => void markStuck() });
+        if (!notNow) quick.push({ label: "Not now", onPick: () => setNotNow({ stage: "ask" }) });
+        C("do", `${mod.doIntro} ${count}`, phase === 3 ? { quick } : undefined);
+        if (stuck) {
+          F("stuckq", "I am stuck.");
+          C("stucka", `${stuck} ${mod.stuckHelp ?? ""}`.trim(), phase === 3 ? { quick: [{ label: "That worked, check again", onPick: () => void refresh() }] } : undefined);
+        }
+        if (notNow?.stage === "ask") {
+          F("nnq", "Not now.");
+          C("nna", `${TONE_LINES[tone].skipped} When? Times are Pacific.`, { quick: [{ label: "Today 6pm", onPick: () => void chooseNotNow("today", "today 6pm") }, { label: "Tomorrow 9am", onPick: () => void chooseNotNow("tomorrow", "tomorrow 9am") }, { label: "This week, Friday 5pm", onPick: () => void chooseNotNow("this_week", "Friday 5pm") }] });
+        } else if (notNow?.stage === "chosen") {
+          F("nnq", `Not now. ${notNow.label}.`);
+          C("nna", `Held to ${notNow.label}. I check it at that time. Put it on your Tasks too? Nothing is added unless you press the button.`, { quick: [{ label: notNow.task === "added" ? "Added to Tasks" : notNow.task === "saving" ? "Adding…" : notNow.task === "failed" ? "Could not add, try again" : "Add to Tasks", onPick: () => void addNotNowTask() }, { label: "Actually, do it now", onPick: () => setNotNow(null) }] });
+        }
       } else {
         C("dodone", `${encouragement(tone, "done")} ${mod.doDone}`, phase === 3 ? { quick: [{ label: "Take the test", onPick: go(4) }] } : undefined);
       }
@@ -280,7 +323,15 @@ export function CoachProgramExperience({ founderFirstName, courseSlug, lessonSlu
     if (phase >= 5 && mod) {
       const correct = testAns.filter((a) => a?.ok).length;
       C("tsum", `${testEncouragement(tone, correct)} Here is why, question by question.`);
-      mod.tests.forEach((q, i) => C(`tw${i}`, q.why ?? "", { verdict: { ok: Boolean(testAns[i]?.ok), right: q.options[q.rightIndex] } }));
+      mod.tests.forEach((q, i) => {
+        const ok = Boolean(testAns[i]?.ok);
+        const canExplain = !ok && explained.indexOf(i) < 0 && phase === 5;
+        C(`tw${i}`, q.why ?? "", { verdict: { ok, right: q.options[q.rightIndex] }, quick: canExplain ? [{ label: "Explain more", onPick: () => setExplained((e) => [...e, i]) }] : undefined });
+        if (explained.indexOf(i) >= 0) {
+          F(`twq${i}`, "Explain more.");
+          C(`twa${i}`, `You picked "${testAns[i]?.text ?? ""}". The lesson's answer is "${q.options[q.rightIndex]}". ${q.why ?? ""} ${mod.readNote} The lesson lines are in the message above; read them once more, then the doing is what counts.`);
+        }
+      });
       C("tocommit", "Last step: one if then plan for this week. It becomes a task with a date, and next week I open by checking whether it was done.", phase === 5 ? { quick: [{ label: "Commit", onPick: go(6) }] } : undefined);
     }
 
@@ -299,7 +350,7 @@ export function CoachProgramExperience({ founderFirstName, courseSlug, lessonSlu
     });
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, recallAns, companyText, companyReply, companyText2, testAns, qi, committed, asides, data, tone, checking, selfReported]);
+  }, [phase, recallAns, companyText, companyReply, companyText2, testAns, qi, committed, asides, data, tone, checking, selfReported, explained, stuck, notNow]);
 
   const timeLeft = committed ? "done" : `about ${Math.max(1, Math.round(minutes * (1 - phase / 7)))} min left`;
   const placeholder = phase === 2 && (!companyText || !companyText2) ? "Answer in your own words" : "Ask your coach anything";
@@ -318,8 +369,8 @@ export function CoachProgramExperience({ founderFirstName, courseSlug, lessonSlu
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 17l4-8 4 4 4-6 4 10" stroke="#2E78F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-900">Investor Outreach Playbook</p>
-                <p className="text-xs text-slate-500">{isReview ? "Monday review · every week after mod 8" : `Module ${weekIndex + 1} of ${PROGRAM_MODULES.length} · ${mod!.shortTitle} · ${mod!.minutes} min`}</p>
+                <p className="text-sm font-semibold text-slate-900">{program.title}</p>
+                <p className="text-xs text-slate-500">{isReview ? `Monday review · every week after module ${MODULES.length}` : `Module ${weekIndex + 1} of ${MODULES.length} · ${mod!.shortTitle} · ${mod!.minutes} min`}</p>
               </div>
             </div>
             <p className="text-xs text-slate-500">
@@ -327,7 +378,7 @@ export function CoachProgramExperience({ founderFirstName, courseSlug, lessonSlu
             </p>
           </div>
           <div className="flex">
-            {PROGRAM_MODULES.map((m, i) => {
+            {MODULES.map((m, i) => {
               const done = r.lessonsDone.includes(m.lessonSlug);
               const current = i === weekIndex;
               const future = !done && !current;
@@ -343,17 +394,17 @@ export function CoachProgramExperience({ founderFirstName, courseSlug, lessonSlu
                       )}
                       {current ? <span className="absolute inset-0 rounded-full" style={{ animation: "ping 2s cubic-bezier(0,0,0.2,1) infinite", background: "#2E78F5", opacity: 0.2 }} /> : null}
                     </div>
-                    <div className="h-0.5 flex-1" style={{ background: i === PROGRAM_MODULES.length - 1 ? "transparent" : done ? "#2E78F5" : "#e2e8f0" }} />
+                    <div className="h-0.5 flex-1" style={{ background: i === MODULES.length - 1 ? "transparent" : done ? "#2E78F5" : "#e2e8f0" }} />
                   </div>
                   <p className="mt-1.5 hidden px-1 text-center text-[10px] font-semibold leading-tight sm:block" style={{ color: current ? "#2E78F5" : future ? "#94a3b8" : "#1e293b" }}>{m.shortTitle}</p>
                 </Link>
               );
             })}
           </div>
-          <p className="mt-2 text-center text-xs font-semibold text-[#2E78F5] sm:hidden">{isReview ? "Monday review" : `${weekIndex + 1} of ${PROGRAM_MODULES.length} · ${mod!.shortTitle}`}</p>
+          <p className="mt-2 text-center text-xs font-semibold text-[#2E78F5] sm:hidden">{isReview ? "Monday review" : `${weekIndex + 1} of ${MODULES.length} · ${mod!.shortTitle}`}</p>
           <div className="mt-3 flex justify-end">
             <Link href={coachLessonHref(courseSlug, MONDAY_REVIEW_SLUG)} className={`rounded-full border px-3 py-1.5 text-[11px] font-semibold ${isReview ? "border-[#0A1A40] bg-[#0A1A40] text-white" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}>
-              After mod 8: Monday review, every week · 5 min
+              After module {MODULES.length}: Monday review, every week · {MONDAY_REVIEW.minutes} min
             </Link>
           </div>
         </div>
@@ -382,7 +433,7 @@ export function CoachProgramExperience({ founderFirstName, courseSlug, lessonSlu
             </div>
           ))}
           <p className="border-t border-slate-100 pt-3 text-xs leading-5 text-slate-500">
-            You: your own company&apos;s data in iCapOS, read {new Date(r.readAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}. Lesson target: the playbook example. Benchmarks: {PROGRAM_BENCHMARK_SOURCES.join(" ")} Lines marked estimate are derived from those sources and say so.
+            You: your own company&apos;s data in iCapOS, read {new Date(r.readAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}. Lesson target: the playbook example. Benchmarks: {program.sources.join(" ")} Lines marked estimate are derived from those sources and say so.
           </p>
         </section>
       ) : null}
@@ -475,7 +526,16 @@ export function CoachProgramExperience({ founderFirstName, courseSlug, lessonSlu
             <div ref={bottomRef} />
           </div>
 
-          <form onSubmit={send} className="flex items-end gap-2 border-t border-slate-100 bg-[#FAFBFE] px-4 py-3">
+          {faq.length ? (
+            <div className="flex flex-wrap gap-1.5 border-t border-slate-100 bg-[#FAFBFE] px-4 pt-2">
+              {faq.map(([question, answer]) => (
+                <button key={question} type="button" onClick={() => setAsides((a) => [...a, { q: question, r: answer }])} className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-[#1D2F5C] hover:bg-slate-50">
+                  {question}
+                </button>
+              ))}
+            </div>
+          ) : null}
+          <form onSubmit={send} className="flex items-end gap-2 bg-[#FAFBFE] px-4 py-3">
             <textarea rows={2} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={placeholder} aria-label={placeholder} className="min-h-10 flex-1 resize-none rounded-lg border border-slate-300 px-3 py-2 text-sm" />
             <button type="submit" className="min-h-10 rounded-lg bg-[#0A1A40] px-4 py-2 text-sm font-semibold text-white hover:bg-[#14275A]">Send</button>
           </form>
@@ -535,7 +595,61 @@ function LiveFacts({ raw, lessonSlug, phase, committed, cue, act }: Readonly<{ r
       </div>
     );
   }
+  const money = (n: number) => "$" + Math.round(n).toLocaleString("en-US");
   switch (lessonSlug) {
+    case "deal-room":
+    case "diligence-answers":
+      return (
+        <div className="flex flex-col gap-2">
+          {row("Deal rooms open", raw.dealRooms ? String(raw.dealRooms.open) : na, raw.dealRooms ? raw.dealRooms.open > 0 : undefined)}
+          {row("Questions waiting", raw.dealRooms ? String(raw.dealRooms.questionsOpen) : na, raw.dealRooms ? raw.dealRooms.questionsOpen === 0 : undefined)}
+          {row("Document requests open", raw.dealRooms ? String(raw.dealRooms.docRequestsOpen) : na)}
+          {row("Documents uploaded", raw.documents ? String(raw.documents.total) : na)}
+          {lessonSlug === "diligence-answers" ? row("Daily deal room check in Tasks", raw.roomCheckTasks === null ? na : raw.roomCheckTasks > 0 ? "Set" : "No task", Boolean(raw.roomCheckTasks)) : null}
+        </div>
+      );
+    case "documents":
+      return <div className="flex flex-col gap-2">{row("Documents uploaded", raw.documents ? String(raw.documents.total) : na)}<p className="text-xs text-slate-500">Which are current versions is yours to say; the coach sees the count. Mark the step done when the sort is finished.</p></div>;
+    case "offering-type":
+      return (
+        <div className="flex flex-col gap-2">
+          {row("Offering type", raw.offering?.type ? raw.offering.type.replace(/_/g, " ").toUpperCase() : raw.offering ? "Not set" : na, Boolean(raw.offering?.type))}
+          {row("Attested", raw.offering?.attestedAt ? new Date(raw.offering.attestedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : raw.offering ? "Not attested" : na, Boolean(raw.offering?.attestedAt))}
+          {row("Raise amount", raw.pledges?.raise ? money(raw.pledges.raise) : na)}
+        </div>
+      );
+    case "closing-checklist":
+    case "closing-week":
+      return (
+        <div className="flex flex-col gap-2">
+          {row("SPVs or closings", raw.spvs ? String(raw.spvs.count) : na, raw.spvs ? raw.spvs.count > 0 : undefined)}
+          {row("Checklist readiness", raw.spvs ? (raw.spvs.checklistPct === null ? "Not started" : `${raw.spvs.checklistPct}%`) : na)}
+          {row("Closing readiness", raw.spvs ? (raw.spvs.closingPct === null ? "Not started" : `${raw.spvs.closingPct}%`) : na)}
+          <p className="text-xs text-slate-500">Pledges and indications only; no money moves on the platform.</p>
+        </div>
+      );
+    case "pledges":
+      return (
+        <div className="flex flex-col gap-2">
+          {row("Raise target", raw.pledges?.raise ? money(raw.pledges.raise) : na)}
+          {row("Pledged, recorded", raw.pledges ? `${money(raw.pledges.totalPledged)} from ${raw.pledges.investorCount}` : na, raw.pledges ? raw.pledges.investorCount > 0 : undefined)}
+          {row("Gap", raw.pledges?.raise ? money(Math.max(0, raw.pledges.raise - raw.pledges.totalPledged)) : na)}
+        </div>
+      );
+    case "investor-updates":
+      return (
+        <div className="flex flex-col gap-2">
+          {row("Updates sent, last 30 days", raw.updates ? String(raw.updates.last30) : na, raw.updates ? raw.updates.last30 > 0 : undefined)}
+          {row("Last update", raw.updates ? (raw.updates.daysSince === null ? "None yet" : `${raw.updates.daysSince} days ago`) : na, raw.updates ? raw.updates.daysSince !== null && raw.updates.daysSince <= 31 : undefined)}
+          <p className="text-xs text-slate-500">The builder drafts the three sections with AI; you review and send. Open it in a new tab, then check again.</p>
+        </div>
+      );
+    case "milestones":
+      return <div className="flex flex-col gap-2">{row("Milestone tasks with a date", raw.milestoneTasks === null ? na : String(raw.milestoneTasks), raw.milestoneTasks ? raw.milestoneTasks >= 3 : false)}<p className="text-xs text-slate-500">Add tasks whose title starts with Milestone, each with a number and a due date.</p></div>;
+    case "term-sheet":
+    case "valuation":
+    case "after-close":
+      return <div className="rounded-lg border border-dashed border-slate-300 px-3.5 py-3 text-sm text-slate-500">The coach does not read this screen. Open it, do the step, and mark it done here.</div>;
     case "game-plan":
       return phase <= 1 ? (
         <div className="flex flex-col gap-2">

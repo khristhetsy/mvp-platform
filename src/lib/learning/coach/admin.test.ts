@@ -1,3 +1,4 @@
+import { CLOSING_PLAYBOOK_SLUG } from "@/lib/learning/closing-playbook";
 import { describe, expect, it } from "vitest";
 import {
   buildCoachCourseRows,
@@ -30,7 +31,10 @@ describe("coach course rows", () => {
     expect(playbook.ready).toBe(true);
     expect(playbook.blocker).toBeNull();
     expect(playbook.enabled).toBe(false);
-    const others = rows.filter((r) => r.key !== OUTREACH_PLAYBOOK_SLUG);
+    const closing = rows.find((r) => r.key === CLOSING_PLAYBOOK_SLUG)!;
+    expect(closing.ready).toBe(true);
+    expect(closing.enabled).toBe(false);
+    const others = rows.filter((r) => r.key !== OUTREACH_PLAYBOOK_SLUG && r.key !== CLOSING_PLAYBOOK_SLUG);
     expect(others.length).toBeGreaterThan(0);
     expect(others.every((r) => !r.ready && !r.enabled && r.blocker)).toBe(true);
   });

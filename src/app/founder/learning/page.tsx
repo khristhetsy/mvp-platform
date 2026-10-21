@@ -17,11 +17,12 @@ import {
 } from "@/lib/learning/capital-stages";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { CoachedCourseCard } from "@/components/coach/CoachedCourseCard";
-import { loadCoachedCourseSummary } from "@/lib/learning/coach/program-summary";
+import { loadCoachedCourseSummaries } from "@/lib/learning/coach/program-summary";
 import { LearningPromoBanner } from "@/components/learning/LearningPromoBanner";
 import { LearningTabs, type LearningTab } from "@/components/learning/LearningTabs";
 import { buildPromoSlides } from "@/lib/learning/overview-programs";
 import { OUTREACH_PLAYBOOK } from "@/lib/learning/outreach-playbook";
+import { CLOSING_PLAYBOOK, CLOSING_PLAYBOOK_SLUG } from "@/lib/learning/closing-playbook";
 
 export const dynamic = "force-dynamic";
 
@@ -179,7 +180,9 @@ export default async function FounderLearningPage() {
     : withPromo.data;
   const publishedCourses = (rawPublishedCourses ?? []) as PublishedCourse[];
 
-  const coached = await loadCoachedCourseSummary({ profile, company });
+  const coachedAll = await loadCoachedCourseSummaries({ profile, company });
+  const coached = coachedAll.find((c) => c.courseSlug !== CLOSING_PLAYBOOK_SLUG) ?? null;
+  const closing = coachedAll.find((c) => c.courseSlug === CLOSING_PLAYBOOK_SLUG) ?? null;
 
   const rating = Math.round(
     stagePercents.stage_0 * 0.25 +
@@ -244,6 +247,16 @@ export default async function FounderLearningPage() {
               pct={Math.round((coached.lessonsDone / Math.max(coached.lessonCount, 1)) * 100)}
             />
           )}
+          {closing && (
+            <ContinueCard
+              href={closing.href}
+              icon="ti-target-arrow"
+              tone="bg-violet-50 text-violet-600"
+              title={closing.nextLessonTitle}
+              sub={`Closing playbook, about ${closing.nextMinutes} min`}
+              pct={Math.round((closing.lessonsDone / Math.max(closing.lessonCount, 1)) * 100)}
+            />
+          )}
           <ContinueCard
             href="/founder/learning/plan"
             icon="ti-bulb"
@@ -280,6 +293,16 @@ export default async function FounderLearningPage() {
               title="Investor outreach"
               sub={`${coached.lessonsDone} of ${coached.lessonCount} modules done`}
               pct={Math.round((coached.lessonsDone / Math.max(coached.lessonCount, 1)) * 100)}
+            />
+          )}
+          {closing && (
+            <ProgramCard
+              href={closing.href}
+              icon="ti-send"
+              tone="bg-indigo-50 text-indigo-600"
+              title="Closing"
+              sub={`${closing.lessonsDone} of ${closing.lessonCount} modules done`}
+              pct={Math.round((closing.lessonsDone / Math.max(closing.lessonCount, 1)) * 100)}
             />
           )}
           {publishedCourses.slice(0, 4).map((course) => {
@@ -460,10 +483,32 @@ export default async function FounderLearningPage() {
     </div>
   ) : null;
 
+  const closingPanel = closing ? (
+    <div className="space-y-4">
+      <CoachedCourseCard summary={closing} />
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <div className="border-b border-slate-100 bg-slate-50 px-6 py-4">
+          <h2 className="text-sm font-semibold text-slate-900">What you will learn</h2>
+          <p className="mt-0.5 text-xs text-slate-500">{closing.lessonCount} modules, one a week, in the order of your Stage 4 menu.</p>
+        </div>
+        <ol className="divide-y divide-slate-100">
+          {CLOSING_PLAYBOOK.sections.flatMap((s) => s.lessons).map((lesson, i) => (
+            <li key={lesson.slug} className="flex items-center gap-4 px-6 py-3">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[10px] font-bold text-slate-500">{i + 1}</span>
+              <span className="min-w-0 flex-1 text-sm font-medium text-slate-900">{lesson.title}</span>
+              <span className="text-xs text-slate-400">{lesson.durationMinutes} min</span>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </div>
+  ) : null;
+
   const tabs: LearningTab[] = [
     { key: "overview", label: "Overview", panel: overview },
     { key: "capital", label: "Capital readiness", badge: `${STAGES.length} stages`, panel: capitalPanel },
     ...(outreachPanel ? [{ key: "outreach", label: "Investor outreach", badge: `${coached?.lessonCount ?? 0} modules`, panel: outreachPanel }] : []),
+    ...(closingPanel ? [{ key: "closing", label: "Closing", badge: `${closing?.lessonCount ?? 0} modules`, panel: closingPanel }] : []),
   ];
 
   return (

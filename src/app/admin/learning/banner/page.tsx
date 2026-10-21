@@ -54,7 +54,7 @@ export default async function AdminLearningBannerPage() {
               The banner columns are missing. Apply the migration 20261020140000_learning_programs_banner.sql, then reload this page.
             </p>
           ) : (
-            <AdminLearningBannerManager initial={(data ?? []) as BannerProgram[]} />
+            <AdminLearningBannerManager initial={(data ?? []) as unknown as BannerProgram[]} />
           )}
         </WorkspacePanel>
       </WorkspacePageContainer>
