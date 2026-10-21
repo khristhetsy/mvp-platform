@@ -67,9 +67,18 @@ const STAGE_MENU: Record<JourneyStage, MenuDef[]> = {
     { label: "Documents", href: "/founder/documents", condition: "requiredDocsUploaded" },
     { label: "Business plan", href: "/founder/business-plan" },
     { label: "Pitch deck", href: "/founder/pitch-deck" },
-    { label: "Financial model", href: "/founder/financial-model" },
     { label: "Cap table", href: "/founder/cap-table" },
     { label: "Valuation Studio", href: "/founder/valuation" },
+    // The founder's diligence toolkit, in the order the founder menu lists it.
+    // No signal is wired for these yet, so they render as "Open" and count as
+    // not tracked rather than showing a fake status.
+    { label: "Pitch deck analyzer", href: "/founder/pitch-deck-analyzer" },
+    { label: "Market claim grader", href: "/founder/market-claim" },
+    { label: "Financial model", href: "/founder/financial-model" },
+    { label: "AI diligence report", href: "/founder/report" },
+    { label: "Diligence & review", href: "/founder/readiness/diligence" },
+    { label: "Prep & practice", href: "/founder/pitch-practice" },
+    { label: "Learning", href: "/founder/learning" },
   ],
   deploy: [
     // The requirement this stage runs on, stated first. Everything below that the

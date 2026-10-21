@@ -163,7 +163,7 @@ export function StageMenuMirror({
                   ) : null}
                   <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${meta.chip}`}>{meta.label}</span>
                 </StageItemDrawer>
-                {item.label === "Outreach" && outreach && mirror.reached ? (
+                {item.label === "Outreach" && outreach ? (
                   <OutreachChannels outreach={outreach} />
                 ) : null}
               </li>

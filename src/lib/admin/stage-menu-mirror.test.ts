@@ -114,6 +114,30 @@ describe("Preparation menu — the CRR row reads the CRR", () => {
   });
 });
 
+describe("Preparation menu — the diligence toolkit", () => {
+  it("lists the toolkit after Valuation Studio, in the founder menu order, once each", () => {
+    const m = getStageMirror(journey("qualify"), "qualify");
+    const labels = m.items.map((i) => i.label);
+    const toolkit = [
+      "Pitch deck analyzer",
+      "Market claim grader",
+      "Financial model",
+      "AI diligence report",
+      "Diligence & review",
+      "Prep & practice",
+      "Learning",
+    ];
+    expect(labels.slice(labels.indexOf("Valuation Studio") + 1)).toEqual(toolkit);
+    expect(new Set(labels).size).toBe(labels.length);
+  });
+
+  it("leaves the toolkit open and untracked, never blocking", () => {
+    const m = getStageMirror(journey("qualify"), "qualify");
+    expect(item(m, "Learning")?.status).toBe("todo");
+    expect(item(m, "Market claim grader")?.status).toBe("todo");
+  });
+});
+
 describe("stage advancement is never gated by CRR", () => {
   it("still reaches Marketing with the gate unmet", () => {
     const m = getStageMirror(journey("deploy"), "deploy");
