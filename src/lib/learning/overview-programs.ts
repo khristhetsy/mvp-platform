@@ -33,6 +33,12 @@ export type PublishedCourseInput = {
   difficulty: string | null;
   readiness_focus: string | null;
   banner_image_url: string | null;
+  /** Optional banner copy set by an admin. Empty values fall back to the course title and description. */
+  promo_headline?: string | null;
+  promo_blurb?: string | null;
+  promo_cta_label?: string | null;
+  /** False keeps a published course out of the banner. Missing means shown. */
+  show_in_banner?: boolean | null;
 };
 
 export type BuildPromoInput = {
@@ -52,6 +58,11 @@ const BLURB_MAX = 150;
 function clip(text: string, max: number): string {
   const clean = text.replace(/\s+/g, " ").trim();
   return clean.length <= max ? clean : `${clean.slice(0, max - 1).trimEnd()}…`;
+}
+
+function pick(text: string | null | undefined, fallback: string): string {
+  const clean = text?.trim();
+  return clean ? clean : fallback;
 }
 
 function capitalize(text: string): string {
@@ -106,6 +117,7 @@ export function buildPromoSlides(input: BuildPromoInput): PromoSlide[] {
   });
 
   for (const course of input.courses) {
+    if (course.show_in_banner === false) continue;
     const facts: PromoFact[] = [];
     if (course.difficulty) facts.push({ value: capitalize(course.difficulty), label: "level" });
     if (course.readiness_focus) facts.push({ value: `Stage ${stageNumber(course.readiness_focus)}`, label: "focus" });
@@ -113,10 +125,10 @@ export function buildPromoSlides(input: BuildPromoInput): PromoSlide[] {
       id: `course-${course.id}`,
       eyebrow: "COURSE",
       badge: "Included in your plan",
-      headline: course.title,
-      blurb: clip(course.description, BLURB_MAX),
+      headline: pick(course.promo_headline, course.title),
+      blurb: clip(pick(course.promo_blurb, course.description), BLURB_MAX),
       facts,
-      cta: { label: "Get started", href: `/founder/learning/courses/${course.id}` },
+      cta: { label: pick(course.promo_cta_label, "Get started"), href: `/founder/learning/courses/${course.id}` },
       secondary: { label: "Browse all courses", href: "/founder/learning/courses" },
       previewTitle: "About this course",
       preview: [],

@@ -85,4 +85,21 @@ describe("buildPromoSlides", () => {
     const slide = buildPromoSlides(base({ courses: [course("x", { description: "word ".repeat(100) })] }))[1];
     expect(slide.blurb.length).toBeLessThanOrEqual(150);
   });
+
+  it("uses the admin banner copy and falls back when it is empty", () => {
+    const slides = buildPromoSlides(
+      base({ courses: [course("a", { promo_headline: "  Sign up today  ", promo_blurb: "Start now.", promo_cta_label: "Join now" }), course("b", { promo_headline: " ", promo_blurb: null, promo_cta_label: "" })] }),
+    );
+    expect(slides[1].headline).toBe("Sign up today");
+    expect(slides[1].blurb).toBe("Start now.");
+    expect(slides[1].cta.label).toBe("Join now");
+    expect(slides[2].headline).toBe("Course b");
+    expect(slides[2].blurb).toBe("A course.");
+    expect(slides[2].cta.label).toBe("Get started");
+  });
+
+  it("keeps a course out of the banner when show_in_banner is false", () => {
+    const slides = buildPromoSlides(base({ courses: [course("a", { show_in_banner: false }), course("b", { show_in_banner: true }), course("c", { show_in_banner: null })] }));
+    expect(slides.map((x) => x.id)).toEqual(["capital-readiness", "course-b", "course-c"]);
+  });
 });
