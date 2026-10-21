@@ -17,6 +17,42 @@ export function ProspectIntrosClient({ initial }: { initial: ProspectIntroReques
   const [rows, setRows] = useState(initial);
   const [busy, setBusy] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | ProspectIntroStatus>("new");
+  const [dlg, setDlg] = useState<{ id: string; label: string; to: string | null; subject: string; message: string; markContacted: boolean; sending: boolean; error: string | null } | null>(null);
+  const [sentIds, setSentIds] = useState<Set<string>>(new Set());
+
+  async function openSend(r: ProspectIntroRequest) {
+    setBusy(r.id);
+    try {
+      const res = await fetch(`/api/admin/prospect-intros/${r.id}/send`);
+      const j = (await res.json().catch(() => null)) as { to?: string | null; subject?: string; body?: string; error?: string } | null;
+      if (!res.ok || !j) {
+        window.alert(j?.error ?? "Could not load the draft.");
+        return;
+      }
+      setDlg({ id: r.id, label: `${r.companyName ?? "A founder"} to ${r.prospectName ?? "the investor"}`, to: j.to ?? null, subject: j.subject ?? "", message: j.body ?? "", markContacted: true, sending: false, error: null });
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function doSend() {
+    if (!dlg) return;
+    setDlg({ ...dlg, sending: true, error: null });
+    const res = await fetch(`/api/admin/prospect-intros/${dlg.id}/send`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subject: dlg.subject, message: dlg.message }),
+    });
+    const j = (await res.json().catch(() => null)) as { error?: string } | null;
+    if (!res.ok) {
+      setDlg({ ...dlg, sending: false, error: j?.error ?? "Could not send." });
+      return;
+    }
+    setSentIds((prev) => new Set(prev).add(dlg.id));
+    const row = rows.find((x) => x.id === dlg.id);
+    if (dlg.markContacted && row && row.status !== "contacted") await update(dlg.id, "contacted");
+    setDlg(null);
+  }
 
   async function update(id: string, status: ProspectIntroStatus) {
     setBusy(id);
@@ -85,6 +121,15 @@ export function ProspectIntrosClient({ initial }: { initial: ProspectIntroReques
                 <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${STATUS_STYLE[r.status]}`}>
                   {r.status}
                 </span>
+                {r.status !== "dismissed" && (
+                  <button type="button"
+                    onClick={() => openSend(r)}
+                    disabled={busy === r.id || sentIds.has(r.id)}
+                    className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+                  >
+                    {sentIds.has(r.id) ? "Sent" : "Send intro"}
+                  </button>
+                )}
                 {r.status !== "contacted" && (
                   <button type="button"
                     onClick={() => update(r.id, "contacted")}
@@ -114,6 +159,33 @@ export function ProspectIntrosClient({ initial }: { initial: ProspectIntroReques
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {dlg && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
+          <div className="max-h-[92vh] w-full max-w-xl overflow-auto rounded-2xl border border-slate-200 bg-white p-5">
+            <h2 className="text-lg font-semibold text-slate-900">Send intro</h2>
+            <p className="text-xs text-slate-400">{dlg.label}</p>
+            <label className="mt-3 block text-[11px] font-bold uppercase tracking-wide text-slate-400">To</label>
+            <input readOnly value={dlg.to ?? "No email address on file"} className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm" />
+            <label className="mt-3 block text-[11px] font-bold uppercase tracking-wide text-slate-400">Subject</label>
+            <input value={dlg.subject} onChange={(e) => setDlg({ ...dlg, subject: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+            <label className="mt-3 block text-[11px] font-bold uppercase tracking-wide text-slate-400">Message (edit before sending)</label>
+            <textarea value={dlg.message} onChange={(e) => setDlg({ ...dlg, message: e.target.value })} className="mt-1 min-h-[240px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+            <label className="mt-3 flex items-center gap-2 text-sm text-slate-600">
+              <input type="checkbox" checked={dlg.markContacted} onChange={(e) => setDlg({ ...dlg, markContacted: e.target.checked })} />
+              Mark as contacted and notify the founder
+            </label>
+            <p className="mt-1 text-xs text-slate-400">Sends from iCapOS, is saved to the email log, and tracks delivered, opened and clicked.</p>
+            {dlg.error && <p className="mt-2 text-xs text-red-600">{dlg.error}</p>}
+            <div className="mt-4 flex items-center justify-between">
+              <button type="button" onClick={() => setDlg(null)} disabled={dlg.sending} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">Cancel</button>
+              <button type="button" onClick={doSend} disabled={dlg.sending || !dlg.to || !dlg.subject.trim() || !dlg.message.trim()} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-60">
+                {dlg.sending ? "Sending..." : "Approve and send"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
