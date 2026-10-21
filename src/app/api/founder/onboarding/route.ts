@@ -10,6 +10,7 @@ import { alertStaffNewCustomer } from "@/lib/notifications/new-customer-alerts";
 import { syncFounderRemediationTasks } from "@/lib/remediation/tasks";
 import { ONBOARDING_STEP_IDS, type OnboardingStepId } from "@/lib/onboarding/progress";
 import { requireApiProfile } from "@/lib/api/auth";
+import { advanceFounderJourney } from "@/lib/founder-journey/stage-gate";
 import { founderOnboardingStepSchema } from "@/lib/validation";
 import type { Company } from "@/lib/supabase/types";
 
@@ -254,6 +255,16 @@ export async function PATCH(request: Request) {
       companyId: company.id,
       companyName: finalCompany.company_name ?? null,
     });
+  }
+
+  // Completing onboarding promotes the founder out of Initialize right away,
+  // so the admin Companies stage never lags a completed onboarding.
+  if (finalCompany.onboarding_completed_at) {
+    try {
+      await advanceFounderJourney(auth.supabase as never, auth.profile.id);
+    } catch {
+      // Best-effort; the founder dashboard also advances the stage on next visit.
+    }
   }
 
   try {
