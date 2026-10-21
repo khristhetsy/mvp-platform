@@ -119,6 +119,15 @@ const STAGE_LABEL: Record<JourneyStage, string> = {
   optimize: "Closing",
 };
 
+/** The founder menu label for a route, across every stage; null when the route is not on the menu. */
+export function menuLabelForHref(href: string): string | null {
+  for (const items of Object.values(STAGE_MENU)) {
+    const hit = items.find((i) => i.href === href);
+    if (hit) return hit.label;
+  }
+  return null;
+}
+
 export function stageLabel(stage: JourneyStage): string {
   return STAGE_LABEL[stage];
 }

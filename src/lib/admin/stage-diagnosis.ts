@@ -10,6 +10,7 @@
 //
 // Server only — reads the engine through crrFor.
 
+import { menuLabelForHref } from "@/lib/admin/stage-menu-mirror";
 import { crrFor, type Crr } from "@/lib/crr/crr-for";
 import { allGaps } from "@/lib/crr/dimension-detail";
 import { loadActiveSet } from "@/lib/crr/weight-sets-db";
@@ -548,12 +549,16 @@ export async function diagnoseAllStages(
   const out = {} as Record<JourneyStage, StageDiagnosis>;
   stages.forEach((stage, i) => {
     const { byHref, situation, summary } = results[i];
-    const facts = Object.entries(byHref).flatMap(([, d]) => {
+    const facts = Object.entries(byHref).flatMap(([href, d]) => {
       if (!d.measured) return [];
+      const menu = menuLabelForHref(href);
+      const at = menu ? ` @ ${menu}` : "";
       return [
-        `${d.headline}. ${d.problem.join(" ")}`,
+        `${menu ?? href}: ${d.headline}. ${d.problem.join(" ")}`,
         ...d.missing.filter((m) => m.note !== "0" && m.note !== "yes").map((m) => `${m.label}: ${m.note}`),
-        ...d.fixes.filter((f) => f.impact).map((f) => `Fix (${f.impact}): ${f.text}`),
+        // Owner and menu item travel with the fix so the reach out draft can put the founder's own
+        // steps first and say where in iCapOS each one happens.
+        ...d.fixes.filter((f) => f.impact).map((f) => `Fix (${f.impact}) [${f.who ?? "Founder"}${at}]: ${f.text}`),
       ];
     });
     out[stage] = { byHref, situation, summary, facts };

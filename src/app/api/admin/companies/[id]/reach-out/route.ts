@@ -15,6 +15,7 @@ import {
   validSendAt,
 } from "@/lib/founder-outreach/scheduled-reach-outs";
 import { usZoneForState } from "@/lib/founder-outreach/us-time-zone";
+import { blockingFallbackBody, blockingPrompt, blockingSubject, nextFridayLabel, splitFindings } from "@/lib/founder-outreach/reach-out-brief";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 
@@ -53,9 +54,7 @@ const schema = z.discriminatedUnion("action", [
   }),
 ]);
 
-const BRIEF: Record<(typeof situations)[number], string> = {
-  blocking:
-    "Items in this stage are blocking. Name the specific gaps and the numbers, then give the ranked steps that close them. Be concrete about what each step is worth.",
+const BRIEF: Record<Exclude<(typeof situations)[number], "blocking">, string> = {
   cleared:
     "Nothing is blocking this stage. Do NOT write a congratulations note. Confirm it is clear in one line, then raise the single most useful thing in the facts — a setting worth double-checking, or what happens next.",
   "locked-near":
@@ -93,10 +92,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const admin = createServiceRoleClient() as unknown as SupabaseClient<Database>;
   const { data: company } = await admin
     .from("companies")
-    .select("id, company_name, founder_id")
+    .select("id, company_name, founder_id, state, country")
     .eq("id", id)
     .maybeSingle();
-  const co = company as { id: string; company_name: string | null; founder_id: string | null } | null;
+  const co = company as { id: string; company_name: string | null; founder_id: string | null; state: string | null; country: string | null } | null;
   if (!co?.founder_id) return NextResponse.json({ error: "Company or founder not found." }, { status: 404 });
 
   const { data: founder } = await admin.from("profiles").select("id, full_name, email").eq("id", co.founder_id).maybeSingle();
@@ -109,14 +108,38 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     const { items, facts, situation } = input;
     const stage = input.stage ?? "this stage";
 
+    // Blocking: the email is a to do list for the founder, built from the fixes they own,
+    // in the order of what each is worth, with a due date in their own time zone.
+    if (situation === "blocking") {
+      const brief = splitFindings(facts);
+      const zone = usZoneForState(co.state, co.country);
+      const dueLabel = nextFridayLabel(new Date(), zone?.iana ?? "America/Los_Angeles");
+      const subject = blockingSubject(first, brief, stage);
+      const fallbackBody = blockingFallbackBody(first, brief, stage, dueLabel);
+      if (!isClaudeConfigured()) return NextResponse.json({ subject, body: fallbackBody });
+      try {
+        const draft = await claudeComplete(
+          [{ role: "user", content: blockingPrompt({ founderName: f.full_name ?? "the founder", companyName: co.company_name ?? "their company", stage, brief, dueLabel }) }],
+          {
+            usage: { category: "internal", feature: "admin_company_ai" },
+            maxTokens: 500,
+            temperature: 0.3,
+            system:
+              "You are an iCapOS specialist helping founders prepare to raise capital. You write a short, specific to do list: what to do, where in iCapOS, what it is worth, by when. No filler and no funding promises.",
+          },
+        );
+        return NextResponse.json({ subject, body: draft || fallbackBody });
+      } catch {
+        return NextResponse.json({ subject, body: fallbackBody });
+      }
+    }
+
     const subject =
       situation === "cleared"
         ? `Your iCapOS ${stage} is clear — one thing worth checking`
         : situation === "locked-far"
           ? `Why ${stage} is greyed out — the full path`
-          : situation === "locked-near"
-            ? `Where you are on ${stage} — and what opens it`
-            : `A couple of things blocking your iCapOS ${stage}`;
+          : `Where you are on ${stage} — and what opens it`;
 
     // Facts beat labels: if the caller sent a diagnosis, the fallback quotes it
     // rather than listing item names, so even an unconfigured Claude says something.
@@ -125,9 +148,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       `Hi ${first},\n\n` +
       (situation === "cleared"
         ? `Your ${stage} is clear — nothing outstanding.\n`
-        : situation === "locked-far" || situation === "locked-near"
-          ? `Quick note on ${stage}:\n`
-          : `A couple of things left in ${stage}:\n`) +
+        : `Quick note on ${stage}:\n`) +
       (detail.length ? detail.map((i, n) => `${n + 1}. ${i}`).join("\n") : "1. Finish the remaining steps") +
       `\n\nReply here if anything's unclear and we'll help.`;
 
