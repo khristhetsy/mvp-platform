@@ -40,19 +40,22 @@ export default async function AdminCompanyWorkspacePage({ params }: PageProps) {
   let companyRiskSignals: RiskSignal[] = [];
 
   try {
-    workspace = await getAdminCompanyWorkspace(companyId);
-    workflowDependencies = await resolveCompanyDependencies(supabase, companyId).catch(() => []);
-    companyActions = await loadAndMergeNextBestActions({
-      profile,
-      supabase,
-      options: {
-        role: adminRole,
-        entityType: "company",
-        entityId: companyId,
-        limit: 3,
-        sync: true,
-      },
-    });
+    // None of these three needs another's result, so they load together.
+    [workspace, workflowDependencies, companyActions] = await Promise.all([
+      getAdminCompanyWorkspace(companyId),
+      resolveCompanyDependencies(supabase, companyId).catch(() => []),
+      loadAndMergeNextBestActions({
+        profile,
+        supabase,
+        options: {
+          role: adminRole,
+          entityType: "company",
+          entityId: companyId,
+          limit: 3,
+          sync: true,
+        },
+      }),
+    ]);
     if (workspace) {
       companyRiskSignals = computeCompanyReadinessRiskSignals({ companyId, workspace });
     }
