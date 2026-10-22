@@ -332,7 +332,9 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_min(100%,520px)]">
       <div className="space-y-5">
-        {/* AI Agent Type */}
+        {/* AI Agent Type: Admin builder only. Founders keep the original Investor Relations build. */}
+        {admin ? (
+          <>
         <section className={card}>
           <h2 className="text-base font-semibold text-slate-950">AI Agent Type</h2>
           <p className="mt-1 text-sm text-slate-600">Each type loads its own question set. Switching replaces the questions, agent name and welcome.</p>
@@ -363,6 +365,9 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
             })}
           </div>
         </section>
+
+          </>
+        ) : null}
 
         {/* Address */}
         <section className={card}>
@@ -439,10 +444,16 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
         <section className={card}>
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-base font-semibold text-slate-950">{typeSpec.label} questions</h2>
+              <h2 className="text-base font-semibold text-slate-950">{admin ? `${typeSpec.label} questions` : "Questions"}</h2>
               <p className="mt-1 text-sm text-slate-600">
-                The {typeSpec.label} question set is loaded. Reword, reorder, turn off, or add your own. Visitors can tap or type.
-                {typeSpec.fromProfile ? " Company details come from the Company profile (Selected fields below), so nobody enters them again." : ""}
+                {admin ? (
+                  <>
+                    The {typeSpec.label} question set is loaded. Reword, reorder, turn off, or add your own. Visitors can tap or type.
+                    {typeSpec.fromProfile ? " Company details come from the Company profile (Selected fields below), so nobody enters them again." : ""}
+                  </>
+                ) : (
+                  "Johnny's five investor profile questions come set. Reword them, reorder, turn off, or add your own. Investors can tap or type."
+                )}
               </p>
             </div>
             <button type="button" onClick={addCustom} className={btnQuiet}>
@@ -548,7 +559,7 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
         </section>
 
         {/* Data wired from the company profile */}
-        {data.wired ? (
+        {admin && agentType !== "founder" && data.wired ? (
           <section className={card}>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
