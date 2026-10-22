@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 import { WorkspaceSidebar } from "@/components/WorkspaceSidebar";
 import { IcapOSAssistant } from "@/components/assistant/IcapOSAssistant";
+import { FounderHowTo } from "@/components/founder/how-to/FounderHowTo";
 import { GlobalSearchModal } from "@/components/GlobalSearchModal";
 import { AdminHubTabsInline } from "@/components/admin/AdminHubTabsInline";
 import Link from "next/link";
@@ -107,6 +108,7 @@ export function WorkspaceShell({
         <main className={compact || topMenu
           ? "w-full flex-1 overflow-x-hidden overflow-y-auto bg-[var(--background)] px-3 py-3 lg:px-4"
           : "mx-auto w-full max-w-[1600px] flex-1 overflow-x-hidden overflow-y-auto bg-[var(--background)] px-4 py-5 lg:px-6 lg:py-6"}>
+          {workspace === "founder" ? <FounderHowTo /> : null}
           {children}
         </main>
         <IcapOSAssistant />
