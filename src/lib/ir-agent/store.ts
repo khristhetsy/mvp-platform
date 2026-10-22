@@ -296,6 +296,7 @@ export type AgentPatch = {
   compliance_acknowledged_at?: string | null;
   compliance_acknowledged_by?: string | null;
   wired_excluded?: string[];
+  archived_at?: string | null;
 };
 
 export async function updateAgent(agentId: string, patch: AgentPatch): Promise<{ ok: true; agent: AgentRow } | { ok: false; error: string }> {
