@@ -22,7 +22,7 @@ export async function GET(req: Request) {
     client.from("ir_agent_sources").select("id, file_name, bytes, status, created_at").eq("agent_id", agent.id).order("created_at", { ascending: false }),
     buildPublicConfig(agent),
     getGoogleConnectionStatus(createServiceRoleClient(), agent.host_profile_id ?? profile.id).catch(() => ({ connected: false, configured: false })),
-    loadWired(agent.organization_id, agent.wired_excluded ?? []),
+    loadWired(agent.organization_id, agent.wired_excluded ?? [], agent.company_name),
   ]);
   return NextResponse.json({
     agent,
@@ -62,6 +62,9 @@ export async function PUT(req: Request) {
   if (compliance_acknowledged) {
     patch.compliance_acknowledged_at = new Date().toISOString();
     patch.compliance_acknowledged_by = profile.id;
+  }
+  if (patch.status === "live" && !agent.organization_id) {
+    return NextResponse.json({ error: "Link a company in your account before going live. An agent without a company stays a Draft." }, { status: 400 });
   }
   if (patch.status === "live" && !agent.compliance_acknowledged_at && !compliance_acknowledged) {
     return NextResponse.json({ error: "Confirm the compliance notice before going live." }, { status: 400 });

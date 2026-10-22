@@ -8,7 +8,8 @@ export type AgentCompany = { id: string; name: string; kind: "Company" | "SPV"; 
 export type StandaloneAgent = { id: string; name: string; status: "draft" | "live" | "paused" };
 
 type Choice = { kind: "none" } | { kind: "org"; id: string } | { kind: "agent"; id: string };
-type ContactHit = { id: string; name: string; email: string | null; company: string; orgId: string | null; orgName: string | null };
+/** Contacts grouped by company. orgId is set when the company is in the account; null means a prospect that only exists in contacts. */
+type ContactGroup = { key: string; company: string; orgId: string | null; orgName: string | null; website: string | null; country: string | null; contacts: Array<{ id: string; name: string; email: string | null }> };
 
 const STATUS_LABEL = { draft: "Draft", live: "Live", paused: "Paused" } as const;
 const input = "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#1A6CE4] focus:ring-2 focus:ring-[#1A6CE4]/20";
@@ -17,8 +18,10 @@ const btn = "rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm fon
 /**
  * Admin AI Agent. Step 1 picks the company two ways: search your contacts, or
  * choose from the list. Only one of the two shows a company: a company found by
- * search leaves the list blank. Leaving both blank offers a new AI Agent with
- * no company, which a contact search can link to a company later.
+ * search leaves the list blank. Contacts are grouped by company. A company in
+ * the account loads its profile; a prospect that only exists in contacts starts
+ * a Draft agent that cannot go live until a company is linked. Leaving both
+ * blank offers a new AI Agent with no company.
  */
 export function AdminIrAgentBuilder({
   companies,
@@ -42,9 +45,9 @@ export function AdminIrAgentBuilder({
   );
   // How the company was chosen. "search" leaves the list blank and shows the contact instead.
   const [via, setVia] = useState<"list" | "search">("list");
-  const [picked, setPicked] = useState<ContactHit | null>(null);
+  const [picked, setPicked] = useState<ContactGroup | null>(null);
   const [q, setQ] = useState("");
-  const [hits, setHits] = useState<ContactHit[] | null>(null);
+  const [hits, setHits] = useState<ContactGroup[] | null>(null);
   const [searching, setSearching] = useState(false);
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
@@ -77,8 +80,8 @@ export function AdminIrAgentBuilder({
     const t = setTimeout(async () => {
       try {
         const res = await fetch(`/api/admin/ir-agent/contacts?q=${encodeURIComponent(text)}`, { cache: "no-store" });
-        const j = (await res.json().catch(() => ({}))) as { contacts?: ContactHit[] };
-        if (id === reqId.current) setHits(res.ok ? (j.contacts ?? []) : []);
+        const j = (await res.json().catch(() => ({}))) as { groups?: ContactGroup[] };
+        if (id === reqId.current) setHits(res.ok ? (j.groups ?? []) : []);
       } finally {
         if (id === reqId.current) setSearching(false);
       }
@@ -89,17 +92,45 @@ export function AdminIrAgentBuilder({
   const activeAgent = choice.kind === "agent" ? standalone.find((a) => a.id === choice.id) ?? null : null;
   const activeOrg = choice.kind === "org" ? companies.find((c) => c.id === choice.id) ?? null : null;
 
-  const pickContact = async (hit: ContactHit) => {
-    if (!hit.orgId) return;
+  const pickGroup = async (g: ContactGroup) => {
+    // A prospect from contacts: start (or reuse) a Draft agent named for the company, prefilled from the contact record.
+    if (!g.orgId) {
+      setLinking(true);
+      try {
+        const reuse = standalone.find((a) => a.name.trim().toLowerCase() === g.company.trim().toLowerCase());
+        let agentId = reuse?.id ?? null;
+        if (!agentId) {
+          const res = await fetch("/api/admin/ir-agent/new", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: g.company.slice(0, 60), website: g.website ?? undefined, country: g.country ?? undefined }),
+          });
+          const j = (await res.json().catch(() => ({}))) as { agentId?: string; name?: string; error?: string };
+          if (!res.ok || !j.agentId) throw new Error(j.error ?? "Could not start the agent.");
+          agentId = j.agentId;
+          setStandalone((cur) => [...cur, { id: j.agentId as string, name: j.name ?? g.company, status: "draft" }]);
+        }
+        setVia("search");
+        setPicked(g);
+        setQ("");
+        setHits(null);
+        choose({ kind: "agent", id: agentId });
+      } catch (e) {
+        toast({ title: "Not started", description: e instanceof Error ? e.message : "Could not start the agent.", variant: "error" });
+      } finally {
+        setLinking(false);
+      }
+      return;
+    }
     // A company found by search while a company-less agent is open: link it.
     if (activeAgent) {
       setLinking(true);
       try {
-        const res = await fetch(`/api/founder/ir-agent/link?agentId=${activeAgent.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orgId: hit.orgId }) });
+        const res = await fetch(`/api/founder/ir-agent/link?agentId=${activeAgent.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orgId: g.orgId }) });
         const j = (await res.json().catch(() => ({}))) as { error?: string };
         if (!res.ok) throw new Error(j.error ?? "Could not link the company.");
         setStandalone((cur) => cur.filter((a) => a.id !== activeAgent.id));
-        toast({ title: "Company linked", description: `${hit.orgName ?? hit.company} is now wired to ${activeAgent.name}.`, variant: "success" });
+        toast({ title: "Company linked", description: `${g.orgName ?? g.company} is now wired to ${activeAgent.name}.`, variant: "success" });
       } catch (e) {
         toast({ title: "Not linked", description: e instanceof Error ? e.message : "Could not link the company.", variant: "error" });
         setLinking(false);
@@ -108,10 +139,10 @@ export function AdminIrAgentBuilder({
       setLinking(false);
     }
     setVia("search");
-    setPicked(hit);
+    setPicked(g);
     setQ("");
     setHits(null);
-    choose({ kind: "org", id: hit.orgId });
+    choose({ kind: "org", id: g.orgId });
   };
 
   const clearSearchPick = () => {
@@ -150,7 +181,7 @@ export function AdminIrAgentBuilder({
 
   const listValue = via === "search" ? "" : choice.kind === "org" ? `org:${choice.id}` : choice.kind === "agent" ? `agent:${choice.id}` : "";
   const blank = choice.kind === "none";
-  const viaSearch = via === "search" && picked !== null && choice.kind === "org";
+  const viaSearch = via === "search" && picked !== null && choice.kind !== "none";
   const sorted = useMemo(() => companies, [companies]);
 
   return (
@@ -169,13 +200,13 @@ export function AdminIrAgentBuilder({
             <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Find a company</span>
             <div className="flex flex-wrap items-center gap-3 rounded-lg border border-[#1A6CE4] bg-[#F4F8FF] px-3 py-2.5">
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#0A1A40] text-xs font-semibold text-white">
-                {picked.name.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+                {(picked.orgName ?? picked.company).split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
               </span>
               <div className="min-w-[160px] flex-1 text-sm">
-                <p className="font-semibold text-slate-900">{picked.name}</p>
-                <p className="text-xs text-slate-600">{picked.orgName ?? picked.company}{picked.email ? ` · ${picked.email}` : ""}</p>
+                <p className="font-semibold text-slate-900">{picked.orgName ?? picked.company}</p>
+                <p className="text-xs text-slate-600">{picked.contacts.length} contact{picked.contacts.length === 1 ? "" : "s"}{picked.website ? ` · ${picked.website}` : ""}{picked.country ? ` · ${picked.country}` : ""}</p>
               </div>
-              <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">Selected from contacts</span>
+              <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${picked.orgId ? "bg-emerald-50 text-emerald-700" : "bg-amber-100 text-amber-800"}`}>{picked.orgId ? "Selected from contacts" : "Prospect from contacts"}</span>
               <button type="button" onClick={clearSearchPick} className={btn}>
                 Clear
               </button>
@@ -189,24 +220,31 @@ export function AdminIrAgentBuilder({
             </label>
             {q.trim().length >= 2 ? (
               <div className="mt-2 overflow-hidden rounded-lg border border-slate-200" role="listbox" aria-label="Contacts">
-                <p className="bg-slate-50 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-600">From contacts{searching ? " · searching…" : ""}</p>
+                <p className="bg-slate-50 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-600">From contacts, grouped by company{searching ? " · searching…" : ""}</p>
                 {hits && hits.length === 0 && !searching ? <p className="px-3 py-3 text-sm text-slate-600">No contact matches. Clear the search and choose a company below, or start a new AI Agent.</p> : null}
-                {(hits ?? []).map((h) => (
-                  <button
-                    key={h.id}
-                    type="button"
-                    role="option"
-                    aria-selected={false}
-                    disabled={!h.orgId || linking}
-                    onClick={() => void pickContact(h)}
-                    className="flex min-h-[52px] w-full flex-wrap items-center gap-3 border-t border-slate-100 bg-white px-3 py-2 text-left text-sm hover:bg-[#F4F8FF] disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <span className="min-w-[160px] flex-1">
-                      <span className="block font-medium text-slate-900">{h.name}</span>
-                      <span className="block text-xs text-slate-500">{h.company}{h.email ? ` · ${h.email}` : ""}</span>
-                    </span>
-                    <span className={`text-xs ${h.orgId ? "font-semibold text-[#1b3f99]" : "text-slate-500"}`}>{h.orgId ? `Use ${h.orgName}` : "Not a company in your account"}</span>
-                  </button>
+                {(hits ?? []).map((g) => (
+                  <div key={g.key} role="option" aria-selected={false} className="space-y-2 border-t border-slate-100 bg-white px-3 py-3">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className="min-w-[180px] flex-1 text-sm">
+                        <span className="block font-semibold text-slate-900">{g.orgName ?? g.company}</span>
+                        <span className="block text-xs text-slate-500">
+                          {g.contacts.length} contact{g.contacts.length === 1 ? "" : "s"}
+                          {!g.orgId && g.website ? ` · ${g.website}` : ""}
+                          {!g.orgId && g.country ? ` · ${g.country}` : ""}
+                        </span>
+                      </span>
+                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${g.orgId ? "bg-emerald-50 text-emerald-700" : "bg-amber-100 text-amber-800"}`}>{g.orgId ? "In your account" : "Prospect from contacts"}</span>
+                      <button type="button" disabled={linking} onClick={() => void pickGroup(g)} className={g.orgId ? "rounded-lg border border-[#1A6CE4] bg-white px-3 py-1.5 text-sm font-semibold text-[#1b3f99] hover:bg-[#F4F8FF] disabled:opacity-50" : btn}>
+                        {g.orgId ? "Use this company" : "Start Draft agent"}
+                      </button>
+                    </div>
+                    <ul className="space-y-0.5 pl-1 text-xs text-slate-600">
+                      {g.contacts.slice(0, 4).map((c) => (
+                        <li key={c.id}>{c.name}{c.email ? ` · ${c.email}` : ""}</li>
+                      ))}
+                      {g.contacts.length > 4 ? <li>and {g.contacts.length - 4} more</li> : null}
+                    </ul>
+                  </div>
                 ))}
               </div>
             ) : null}

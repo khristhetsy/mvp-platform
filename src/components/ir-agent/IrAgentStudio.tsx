@@ -335,7 +335,7 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
             Your membership is <b>{admin ? "Admin" : "Founder"}</b>, so the {AGENT_TYPE_SPECS[admin ? ADMIN_DEFAULT_TYPE : DEFAULT_AGENT_TYPE].label} question set is loaded first.{" "}
             {admin ? "Sales, Marketing and Investor Relations are Admin options. Founder and Investor are also available." : "Sales, Marketing and Investor Relations need Admin membership."}
           </p>
-          <div role="radiogroup" aria-label="AI Agent Type" className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div role="radiogroup" aria-label="AI Agent Type" className="mt-3 grid grid-cols-[repeat(auto-fit,minmax(210px,1fr))] gap-3">
             {AGENT_TYPES.map((t) => {
               const s = AGENT_TYPE_SPECS[t];
               const on = t === agentType;
@@ -343,9 +343,9 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
               const locked = adminOnly && !admin;
               const isDefault = t === (admin ? ADMIN_DEFAULT_TYPE : DEFAULT_AGENT_TYPE);
               return (
-                <label key={t} className={`flex items-start gap-3 rounded-lg border p-3 ${locked ? "cursor-not-allowed border-slate-200 bg-slate-50 opacity-60" : on ? "cursor-pointer border-[#1A6CE4] bg-[#F4F8FF]" : "cursor-pointer border-slate-300 bg-white hover:bg-slate-50"} ${switching ? "opacity-60" : ""}`}>
+                <label key={t} className={`flex min-w-0 items-start gap-3 rounded-lg border p-3 ${locked ? "cursor-not-allowed border-slate-200 bg-slate-50 opacity-60" : on ? "cursor-pointer border-[#1A6CE4] bg-[#F4F8FF]" : "cursor-pointer border-slate-300 bg-white hover:bg-slate-50"} ${switching ? "opacity-60" : ""}`}>
                   <input type="radio" name="agent-type" checked={on} disabled={switching || locked} onChange={() => void switchType(t)} className="mt-1 h-4 w-4 accent-[#1A6CE4]" />
-                  <span>
+                  <span className="min-w-0 break-words">
                     <span className="block text-sm font-semibold text-slate-900">
                       {s.label}
                       {adminOnly ? <span className={`ml-2 rounded-full px-2 py-0.5 text-[11px] font-semibold ${locked ? "bg-slate-200 text-slate-600" : "bg-[#E8EFFD] text-[#1b3f99]"}`}>{locked ? "Admin only" : "Admin"}</span> : null}
@@ -562,7 +562,7 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
               </div>
             </div>
             {!data.agent.organization_id ? (
-              <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">This AI Agent has no company yet, so every field shows Missing. Search your contacts in Select company above and choose a company to wire its Company profile.</p>
+              <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">This AI Agent has no company in your account yet, so only what the contact record held is wired and the rest shows Missing. It stays a Draft until you link a company. Search your contacts in Select company above and choose one.</p>
             ) : null}
             <ul className="mt-4 divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200">
               {wiredFields.map((f) => {
@@ -679,11 +679,11 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
               Pause agent
             </button>
           ) : (
-            <button type="button" onClick={() => void setStatus("live")} className={btnQuiet} disabled={dirty || (!acknowledged && !ackChecked)}>
+            <button type="button" onClick={() => void setStatus("live")} className={btnQuiet} disabled={dirty || !a.organization_id || (!acknowledged && !ackChecked)}>
               {a.status === "paused" ? "Resume agent" : "Go live"}
             </button>
           )}
-          {dirty ? <span className="text-xs text-slate-500">Save before going live.</span> : !acknowledged && !ackChecked ? <span className="text-xs text-slate-500">Confirm the compliance notice to unlock Go live.</span> : null}
+          {!a.organization_id ? <span className="text-xs text-amber-800">Go live is off until a company in your account is linked. Search your contacts in Select company.</span> : dirty ? <span className="text-xs text-slate-500">Save before going live.</span> : !acknowledged && !ackChecked ? <span className="text-xs text-slate-500">Confirm the compliance notice to unlock Go live.</span> : null}
         </div>
       </div>
 

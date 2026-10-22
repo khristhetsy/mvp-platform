@@ -33,7 +33,7 @@ export async function POST(req: Request, { params }: Params): Promise<Response> 
     getQuestions(agent.id),
     getTaughtAnswers(agent.id),
     getSourceTexts(agent.id),
-    wiredFactSheet(agent.organization_id, agent.wired_excluded ?? []),
+    wiredFactSheet(agent.organization_id, agent.wired_excluded ?? [], agent.company_name),
   ]);
   const system = founderSystemPrompt({
     displayName: agent.display_name,
