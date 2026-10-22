@@ -11,7 +11,7 @@ const ALLOWED: Record<string, string> = { "image/png": "png", "image/jpeg": "jpg
 
 /** The agent's photo or logo. PNG, JPG or SVG, under 2 MB, public bucket like company logos. */
 export async function POST(request: Request) {
-  const auth = await requireFounderAgentApi();
+  const auth = await requireFounderAgentApi(request);
   if ("error" in auth) return auth.error;
   const { agent } = auth.ctx;
 
@@ -39,8 +39,8 @@ export async function POST(request: Request) {
   return NextResponse.json({ image_url: imageUrl, agent: saved.ok ? saved.agent : null });
 }
 
-export async function DELETE() {
-  const auth = await requireFounderAgentApi();
+export async function DELETE(request: Request) {
+  const auth = await requireFounderAgentApi(request);
   if ("error" in auth) return auth.error;
   await serviceRoleClientUntyped().from("ir_agents").update({ image_url: null }).eq("id", auth.ctx.agent.id);
   return NextResponse.json({ ok: true });

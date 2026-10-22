@@ -8,6 +8,7 @@ import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
 import { getUserPlan } from "@/lib/subscriptions/get-subscription";
 import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { DEFAULT_AGENT_TYPE, templateForType, type AgentType } from "./agent-types";
 import { DEFAULT_TEMPLATE, LOCKED_DISCLAIMER, SLOT_MINUTES, normalizeTemplate, type AgentTemplate } from "./defaults";
 import { DEFAULT_ENDING, uniqueCompanySlug, validateEnding } from "./slug";
 import type { AgentContactField, AgentPublicConfig, AgentQuestion, AgentRow, TaughtAnswer } from "./types";
@@ -145,11 +146,13 @@ export async function getLiveAgentByAddress(companySlug: string, ending: string)
 }
 
 /** Create the organization's agent from the master template. Idempotent per organization. */
-export async function createAgentForOrg(input: { orgId: string; companyName: string; createdBy: string }): Promise<AgentRow | null> {
+export async function createAgentForOrg(input: { orgId: string; companyName: string; createdBy: string; agentType?: AgentType }): Promise<AgentRow | null> {
   const existing = await getAgentByOrg(input.orgId);
   if (existing) return existing;
   const client = db();
-  const template = await getTemplate();
+  const master = await getTemplate();
+  const agentType = input.agentType ?? DEFAULT_AGENT_TYPE;
+  const template = { ...templateForType(agentType, master), version: master.version };
   const { data: slugs } = await client.from("ir_agents").select("company_slug");
   const taken = new Set<string>((slugs ?? []).map((r: { company_slug: string }) => r.company_slug));
   const companySlug = uniqueCompanySlug(input.companyName, taken);
@@ -163,6 +166,7 @@ export async function createAgentForOrg(input: { orgId: string; companyName: str
       display_name: template.displayName,
       welcome_message: template.welcome.join("\n"),
       template_version: template.version,
+      agent_type: agentType,
       host_profile_id: input.createdBy,
       created_by: input.createdBy,
     })
@@ -263,6 +267,7 @@ export type AgentPatch = {
   host_profile_id?: string | null;
   compliance_acknowledged_at?: string | null;
   compliance_acknowledged_by?: string | null;
+  wired_excluded?: string[];
 };
 
 export async function updateAgent(agentId: string, patch: AgentPatch): Promise<{ ok: true; agent: AgentRow } | { ok: false; error: string }> {
@@ -272,6 +277,24 @@ export async function updateAgent(agentId: string, patch: AgentPatch): Promise<{
   }
   const { data, error } = await db().from("ir_agents").update(patch).eq("id", agentId).select("*").single();
   if (error || !data) return { ok: false, error: error?.message ?? "Could not save." };
+  return { ok: true, agent: data as AgentRow };
+}
+
+/**
+ * Switch the agent to another type: loads that type's question set, agent name and
+ * welcome. Contact questions, address, photo and taught answers are kept.
+ */
+export async function applyAgentType(agentId: string, type: AgentType): Promise<{ ok: true; agent: AgentRow } | { ok: false; error: string }> {
+  const template = templateForType(type, await getTemplate());
+  const questionsOk = await replaceQuestions(agentId, template.questions);
+  if (!questionsOk) return { ok: false, error: "Could not load the question set." };
+  const { data, error } = await db()
+    .from("ir_agents")
+    .update({ agent_type: type, display_name: template.displayName, welcome_message: template.welcome.join("\n") })
+    .eq("id", agentId)
+    .select("*")
+    .single();
+  if (error || !data) return { ok: false, error: error?.message ?? "Could not switch type." };
   return { ok: true, agent: data as AgentRow };
 }
 

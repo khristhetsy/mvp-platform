@@ -159,6 +159,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
               { href: "/admin/activity/assignments", label: "Assignment" },
             ],
           },
+          { href: "/admin/ai-agent",         label: "AI Agent",                                              requiredPermission: "manage_settings" },
           { href: "/admin/ir-funnel",        label: "Investor Relations Funnel", menuGroup: "Funnels",       requiredPermission: "view_admin_dashboard" },
           { href: "/admin/fit",              label: "Fit funnel", menuGroup: "Funnels",      requiredPermission: "view_admin_dashboard" },
           { href: "/admin/investors/enrich", label: "Enrich data", menuGroup: "Investor Relations CRM",     requiredPermission: "manage_investors"     },

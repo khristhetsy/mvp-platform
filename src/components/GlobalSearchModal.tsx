@@ -239,6 +239,7 @@ const PAGES: PageShortcut[] = [
   { id: "ad-accounts", title: "Accounts", subtitle: "Administration", href: "/admin/accounts", keywords: ["accounts"], workspace: "admin" },
   { id: "ad-profile", title: "My Profile", subtitle: "Administration", href: "/admin/profile", keywords: ["profile", "my profile"], workspace: "admin" },
   { id: "ad-pfields", title: "Profile and fields", subtitle: "Administration", href: "/admin/profile-fields", keywords: ["profile", "fields", "industry", "vocabulary"], workspace: "admin" },
+  { id: "ad-ai-agent", title: "AI Agent", subtitle: "Build the investor relations agent for a company", href: "/admin/ai-agent", keywords: ["ai agent", "ir agent", "investor relations agent", "johnny", "build agent"], workspace: "admin" },
   { id: "ad-fc", title: "Feature Controls", subtitle: "Administration · site view, AI budget, limits, departments, stages", href: "/admin/feature-controls", keywords: ["feature", "controls", "settings", "flags"], workspace: "admin" },
   { id: "ad-integ", title: "Integrations", subtitle: "System", href: "/admin/integrations", keywords: ["integrations", "connect", "settings"], workspace: "admin" },
   { id: "ad-queues", title: "Queues", subtitle: "System", href: "/admin/queues", keywords: ["queues"], workspace: "admin" },

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { agentReply, founderSystemPrompt, replyRequestSchema } from "@/lib/ir-agent/ai";
 import { FIELD_LABELS } from "@/lib/ir-agent/defaults";
 import { getAgentById, getQuestions, getSourceTexts, getTaughtAnswers } from "@/lib/ir-agent/store";
+import { wiredFactSheet } from "@/lib/ir-agent/wired";
 
 export const runtime = "edge";
 
@@ -28,14 +29,22 @@ export async function POST(req: Request, { params }: Params): Promise<Response> 
   const agent = await getAgentById(agentId);
   if (!agent) return NextResponse.json({ ok: false, error: "Not found." }, { status: 404 });
 
-  const [questions, taught, sources] = await Promise.all([getQuestions(agent.id), getTaughtAnswers(agent.id), getSourceTexts(agent.id)]);
+  const [questions, taught, sources, wired] = await Promise.all([
+    getQuestions(agent.id),
+    getTaughtAnswers(agent.id),
+    getSourceTexts(agent.id),
+    wiredFactSheet(agent.organization_id, agent.wired_excluded ?? []),
+  ]);
   const system = founderSystemPrompt({
     displayName: agent.display_name,
     companyName: agent.company_name,
-    about: agent.about,
+    about: [agent.about?.trim(), wired].filter(Boolean).join("\n\n") || null,
     taught,
     sources,
-    fieldsAsked: questions.filter((q) => q.enabled && q.field !== "custom").map((q) => FIELD_LABELS[q.field].toLowerCase()),
+    fieldsAsked: questions
+      .filter((q) => q.enabled && (q.field !== "custom" || (agent.agent_type ?? "founder") !== "founder"))
+      .map((q) => (q.field === "custom" ? q.prompt.replace(/\?$/, "").toLowerCase().slice(0, 70) : FIELD_LABELS[q.field].toLowerCase())),
+    agentType: agent.agent_type,
   });
 
   const result = await agentReply(req, parsed.data, system, "founder_ir_agent", `ir-agent:${agent.company_slug}`);

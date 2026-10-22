@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireFounderAgentApi } from "@/lib/ir-agent/founder";
 import { normalizeEnding, validateEnding } from "@/lib/ir-agent/slug";
+import { WIRED_KEYS, loadWired } from "@/lib/ir-agent/wired";
 import { buildPublicConfig, endingTaken, getContactFields, getQuestions, getTaughtAnswers, updateAgent } from "@/lib/ir-agent/store";
 import { getGoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
 import { createServiceRoleClient, serviceRoleClientUntyped } from "@/lib/supabase/admin";
@@ -9,18 +10,19 @@ import { createServiceRoleClient, serviceRoleClientUntyped } from "@/lib/supabas
 export const dynamic = "force-dynamic";
 
 /** Everything the founder's My IR Agent page needs. */
-export async function GET() {
-  const auth = await requireFounderAgentApi();
+export async function GET(req: Request) {
+  const auth = await requireFounderAgentApi(req);
   if ("error" in auth) return auth.error;
   const { agent, profile } = auth.ctx;
   const client = serviceRoleClientUntyped();
-  const [questions, contactFields, answers, sources, config, google] = await Promise.all([
+  const [questions, contactFields, answers, sources, config, google, wired] = await Promise.all([
     getQuestions(agent.id),
     getContactFields(agent.id),
     getTaughtAnswers(agent.id),
     client.from("ir_agent_sources").select("id, file_name, bytes, status, created_at").eq("agent_id", agent.id).order("created_at", { ascending: false }),
     buildPublicConfig(agent),
     getGoogleConnectionStatus(createServiceRoleClient(), agent.host_profile_id ?? profile.id).catch(() => ({ connected: false, configured: false })),
+    loadWired(agent.organization_id, agent.wired_excluded ?? []),
   ]);
   return NextResponse.json({
     agent,
@@ -31,6 +33,7 @@ export async function GET() {
     config,
     booking: { ready: config.bookingReady, googleConnected: Boolean(google.connected), hostId: agent.host_profile_id ?? profile.id },
     demo: config.demo,
+    wired,
   });
 }
 
@@ -40,6 +43,8 @@ const patchSchema = z.object({
   company_name: z.string().trim().min(1).max(120).optional(),
   welcome_message: z.string().max(600).optional(),
   about: z.string().max(6000).optional(),
+  /** Company profile fields to keep out of the agent. */
+  wired_excluded: z.array(z.enum(WIRED_KEYS)).max(WIRED_KEYS.length).optional(),
   status: z.enum(["draft", "live", "paused"]).optional(),
   /** The founder confirmed the compliance notice. Required once before going live. */
   compliance_acknowledged: z.literal(true).optional(),
@@ -47,7 +52,7 @@ const patchSchema = z.object({
 
 /** Save the Build tab. The company part of the address is locked; only the ending changes. */
 export async function PUT(req: Request) {
-  const auth = await requireFounderAgentApi();
+  const auth = await requireFounderAgentApi(req);
   if ("error" in auth) return auth.error;
   const { agent, profile } = auth.ctx;
   const parsed = patchSchema.safeParse(await req.json().catch(() => null));
