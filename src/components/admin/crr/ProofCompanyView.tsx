@@ -8,7 +8,7 @@
 import { MetricCard } from "@/components/MetricCard";
 import { WorkspaceSection } from "@/components/admin/company-workspace/WorkspaceSection";
 import { EVIDENCE, SOURCES } from "@/lib/crr/proof-evidence";
-import { announcementFor, changeOf, claimsFor, isMeasured, monthsLabel, monthsOf, signed, type ProofCompany } from "@/lib/crr/proof";
+import { announcementFor, changeOf, claimsFor, evidenceFlags, isMeasured, monthsLabel, monthsOf, signed, type ProofCompany } from "@/lib/crr/proof";
 import { improvementSteps, toolFor } from "@/lib/crr/improvement";
 import { DIMENSION_LABEL } from "@/lib/crr/weight-sets";
 import type { Dimension } from "@/lib/crr/profiles";
@@ -49,6 +49,10 @@ export function ProofCompanyView({ c, gate }: { c: ProofCompany; gate: number })
         <h2 className="text-lg font-semibold text-slate-900">{c.companyName}</h2>
         <span className="text-[12.5px] text-slate-500">{[c.founderName, c.profileLabel, c.industry].filter(Boolean).join(" · ")}</span>
       </div>
+
+      {evidenceFlags(c).length > 0 ? (
+        <p role="note" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[12.5px] text-rose-800"><b>Check before you state this figure:</b> {evidenceFlags(c).map((f) => f.label).join(". ")}.</p>
+      ) : null}
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <MetricCard label="CRR before and now" value={c.first && c.latest ? `${c.first.score} → ${c.latest.score}` : c.latest ? `${c.latest.score}` : "Not scored"} detail="Source: score history" accent="indigo" />
