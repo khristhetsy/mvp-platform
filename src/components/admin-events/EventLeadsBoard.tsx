@@ -1,5 +1,6 @@
 "use client";
 
+import { telHref } from "@/lib/phone";
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { EventLead, LeadStatus } from "@/lib/icfo-events/leads";
@@ -135,7 +136,7 @@ export function EventLeadsBoard({ eventId, initialLeads }: { eventId: string; in
                       <a href={`mailto:${l.contactEmail}`} title="Email" className="rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs text-[var(--blue)] hover:bg-slate-50"><i className="ti ti-mail" aria-hidden="true" /></a>
                     )}
                     {l.contactPhone && (
-                      <a href={`tel:${l.contactPhone.replace(/[^+\d]/g, "")}`} title="Call" className="rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs text-[var(--blue)] hover:bg-slate-50"><i className="ti ti-phone" aria-hidden="true" /></a>
+                      <a href={telHref(l.contactPhone) ?? `tel:${l.contactPhone.replace(/[^+\d]/g, "")}`} title="Call" className="rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs text-[var(--blue)] hover:bg-slate-50"><i className="ti ti-phone" aria-hidden="true" /></a>
                     )}
                     <button type="button" onClick={() => (editId === l.id ? setEditId(null) : startEdit(l))} className="rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs text-[var(--text-secondary)] hover:bg-slate-50">
                       {editId === l.id ? "Close" : "Edit"}

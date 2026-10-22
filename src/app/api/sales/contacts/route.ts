@@ -1,3 +1,4 @@
+import { phoneForStorage } from "@/lib/phone";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
@@ -120,7 +121,7 @@ export async function POST(req: NextRequest): Promise<Response> {
   const membership = parsed.data.contactType && parsed.data.contactType !== "other" ? MEMBERSHIP[parsed.data.contactType] : null;
   const { data, error } = await db()
     .from("crm_contacts")
-    .insert({ name: parsed.data.name.trim(), ...(membership ? { raw: { __profile: { membership } } } : {}), email: parsed.data.email || null, company: parsed.data.company || null, phone: parsed.data.phone || null, source: "manual", external_id: externalId, owner_id: ownerId, assignee_ids: scope.isManager ? [] : [profile.id] })
+    .insert({ name: parsed.data.name.trim(), ...(membership ? { raw: { __profile: { membership } } } : {}), email: parsed.data.email || null, company: parsed.data.company || null, phone: phoneForStorage(parsed.data.phone), source: "manual", external_id: externalId, owner_id: ownerId, assignee_ids: scope.isManager ? [] : [profile.id] })
     .select("id, name, email, company, phone, source")
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

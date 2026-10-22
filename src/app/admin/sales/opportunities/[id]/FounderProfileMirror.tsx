@@ -1,6 +1,7 @@
 // Read-only mirror of the linked contact's Founder Profile, shown on the
 // opportunity detail page. Source of truth stays on the contact — this is display
 // only. Reuses groupContactProfile so the sections match the contact page exactly.
+import { formatPhone } from "@/lib/phone";
 import Link from "next/link";
 import { groupContactProfile } from "@/lib/sales/contact-profile-sections";
 
@@ -53,7 +54,7 @@ export function FounderProfileMirror({ contact }: { contact: MirrorContact }) {
           <RoRow label="Job position">{contact.job_position || null}</RoRow>
           <RoRow label="Company">{contact.company || null}</RoRow>
           <RoRow label="Email">{contact.email ? <a href={`mailto:${contact.email}`} style={{ color: "#185FA5", textDecoration: "none" }}>{contact.email}</a> : null}</RoRow>
-          <RoRow label="Phone">{contact.phone || null}</RoRow>
+          <RoRow label="Phone">{contact.phone ? formatPhone(contact.phone) : null}</RoRow>
           <RoRow label="Phone 2">{contact.phone2 || null}</RoRow>
           <RoRow label="Website">{contact.website ? <a href={contact.website} target="_blank" rel="noopener noreferrer" style={{ color: "#185FA5", textDecoration: "none" }}>{contact.website}</a> : null}</RoRow>
           <RoRow label="Location">{address}</RoRow>

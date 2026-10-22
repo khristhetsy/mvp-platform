@@ -4,6 +4,7 @@
 // Unverified queue; pick a slice and verify just those (in addition to the
 // blind next-40 runner above). Verifying updates email status inline.
 
+import { formatPhone } from "@/lib/phone";
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ListRow } from "@/lib/prospects/store";
@@ -283,7 +284,7 @@ export function VerifyContactList() {
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error ?? "Save failed.");
-      setMsg(`Saved${d.email ? ` ${d.email}` : ""}${d.email && d.phone ? " and" : ""}${d.phone ? ` ${d.phone}` : ""}.`);
+      setMsg(`Saved${d.email ? ` ${d.email}` : ""}${d.email && d.phone ? " and" : ""}${d.phone ? ` ${formatPhone(d.phone)}` : ""}.`);
       setReveal(null);
       await load();
       router.refresh();
@@ -373,7 +374,7 @@ export function VerifyContactList() {
               {r.name ? <div style={{ fontSize: 11, color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.email}</div> : null}
             </div>
             <div style={{ color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.company ?? "—"}</div>
-            <div style={{ fontSize: 10.5, fontFamily: "monospace", color: r.phone ? "var(--foreground)" : "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.phone ?? "—"}</div>
+            <div style={{ fontSize: 10.5, fontFamily: "monospace", color: r.phone ? "var(--foreground)" : "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.phone ? formatPhone(r.phone) : "—"}</div>
             <div><span title={es === "valid" ? "The domain accepts mail. The mailbox itself is not confirmed." : undefined} style={{ fontSize: 11, color: EMAIL_COLOR[es], fontWeight: 600 }}>{EMAIL_LABEL[es] ?? cap(es)}</span></div>
             <div><span style={{ fontSize: 10, fontWeight: 700, color: LEAD_COLOR[ls] ?? "var(--foreground)", border: "0.5px solid var(--border)", borderRadius: 6, padding: "1px 6px" }}>{cap(ls)}</span></div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>

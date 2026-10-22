@@ -1,5 +1,6 @@
 // Event registrations. Attendance signal only — never exported raw to sponsors.
 
+import { phoneForStorage } from "@/lib/phone";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import type { RegistrationStatus } from "./types";
@@ -158,7 +159,7 @@ export async function setRegistrationContact(
   const answers = { ...(((cur as Record<string, unknown>)?.answers as Record<string, unknown>) ?? {}) };
   if (patch.contactName !== undefined) answers.name = patch.contactName ?? "";
   if (patch.contactEmail !== undefined) answers.email = patch.contactEmail ?? "";
-  if (patch.contactPhone !== undefined) answers.phone = patch.contactPhone ?? "";
+  if (patch.contactPhone !== undefined) answers.phone = phoneForStorage(patch.contactPhone) ?? "";
   if (patch.company !== undefined) answers.company = patch.company ?? "";
   const { data, error } = await raw(supabase)
     .from("registrations")

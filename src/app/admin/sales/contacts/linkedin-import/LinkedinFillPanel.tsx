@@ -7,6 +7,7 @@
  *   2. Person search: "person, then company" on each firm's own website. Free.
  *   3. Review: everything lands as proposals; nothing saves until accepted.
  */
+import { formatPhone } from "@/lib/phone";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
@@ -136,7 +137,7 @@ export function LinkedinFillPanel() {
                 <tbody>
                   {rows.slice(0, 200).map((r) => (
                     <tr key={r.contactId}>
-                      {[r.name, r.company, r.website?.replace(/^https?:\/\//, ""), r.email, r.phone ? `${r.phone}${r.phoneKind === "office" ? " (office)" : r.phoneKind === "direct" ? " (direct)" : ""}` : null].map((v, i) => (
+                      {[r.name, r.company, r.website?.replace(/^https?:\/\//, ""), r.email, r.phone ? `${formatPhone(r.phone)}${r.phoneKind === "office" ? " (office)" : r.phoneKind === "direct" ? " (direct)" : ""}` : null].map((v, i) => (
                         <td key={i} style={{ fontSize: 12.5, padding: "7px 8px", borderBottom: "0.5px solid #eef1f5", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{v ?? ""}</td>
                       ))}
                       <td style={{ fontSize: 12.5, padding: "7px 8px", borderBottom: "0.5px solid #eef1f5" }}>

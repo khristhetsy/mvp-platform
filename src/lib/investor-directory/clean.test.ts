@@ -15,9 +15,9 @@ describe("normalizers", () => {
     expect(normalizeEmail("")).toEqual({ email: null, invalid: false });
   });
   it("formats US phones and leaves others alone", () => {
-    expect(normalizePhone("312-346-1006")).toBe("(312) 346-1006");
-    expect(normalizePhone("(312) 750-0662 ext. 1")).toBe("(312) 750-0662 ext. 1");
-    expect(normalizePhone("+44 20 7946 0000")).toBe("+44 20 7946 0000");
+    expect(normalizePhone("312-346-1006")).toBe("+13123461006");
+    expect(normalizePhone("(312) 750-0662 ext. 1")).toBe("+13127500662 ext. 1");
+    expect(normalizePhone("+44 20 7946 0000")).toBe("+442079460000");
   });
   it("keeps acronyms, title-cases lower case, drops placeholders", () => {
     expect(normalizeName("LWO LLC")).toBe("LWO LLC");
@@ -67,7 +67,7 @@ describe("cleanCsv", () => {
     expect(r.invalidEmails).toBe(1);
     expect(r.skipped).toBe(1);
     expect(r.rows).toHaveLength(2);
-    expect(r.rows[0]).toMatchObject({ firm: "Cultivation Capital", phone: "(314) 565-8062", investor_types: ["venture-capital"], investing_now: true });
+    expect(r.rows[0]).toMatchObject({ firm: "Cultivation Capital", phone: "+13145658062", investor_types: ["venture-capital"], investing_now: true });
     expect(r.rows[0].funding_stages).toEqual(expect.arrayContaining(["seed", "series-a"]));
   });
 });

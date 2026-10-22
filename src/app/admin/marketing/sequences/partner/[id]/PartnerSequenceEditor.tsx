@@ -3,6 +3,7 @@
 // Marketing Hub › Sequences › Partner outreach editor. Four steps: Partners, Offer,
 // Steps (with the due now queue), Review. Every send is released by a person here.
 
+import { formatPhone } from "@/lib/phone";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -540,7 +541,7 @@ function StepsTab({ seq, partners, due, reload, say }: { seq: PartnerSequence; p
                   <span><b style={{ fontWeight: 500 }}>{p.name}</b> <span style={{ color: "var(--muted-foreground)" }}>{p.firm && p.firm !== p.name ? p.firm : ""}</span></span>
                   <span style={{ color: "var(--muted-foreground)" }}>
                     <i className={`ti ${isEmail ? "ti-mail" : "ti-phone"}`} aria-hidden="true" /> {step.label}
-                    {isEmail && !p.email ? " · no email, skip it" : ""}{!isEmail && p.phone ? ` · ${p.phone}` : ""}
+                    {isEmail && !p.email ? " · no email, skip it" : ""}{!isEmail && p.phone ? ` · ${formatPhone(p.phone)}` : ""}
                   </span>
                   <span style={{ display: "flex", gap: 6 }}>
                     {isEmail

@@ -13,6 +13,7 @@
  * attachments. The selection is the campaign audience, as before.
  */
 
+import { formatPhone } from "@/lib/phone";
 import Link from "next/link";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { FounderToolbar, applySearch, groupRows } from "@/components/founder/FounderToolbar";
@@ -856,7 +857,7 @@ export function ManualOutreachBuilder({
                                   <div className="grid grid-cols-[100px_minmax(0,1fr)] gap-x-3 gap-y-1 text-[12.5px]">
                                     <span className="text-slate-500">Contact</span><span>{r.name}</span>
                                     <span className="text-slate-500">Email</span><span>{r.email ?? "Not provided"}</span>
-                                    <span className="text-slate-500">Phone</span><span>{r.phone || "Not provided"}</span>
+                                    <span className="text-slate-500">Phone</span><span>{r.phone ? formatPhone(r.phone) : "Not provided"}</span>
                                     <span className="text-slate-500">Invests in</span><span>{invests || "Not provided"}</span>
                                     <span className="text-slate-500">Source</span><span>{r.source}</span>
                                     {r.source === "From investor directory" ? (

@@ -1,5 +1,6 @@
 "use client";
 
+import { telHref } from "@/lib/phone";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { CalendarPlus, Globe, Phone, Mail, Linkedin, Twitter, Link2, Check } from "lucide-react";
@@ -147,7 +148,7 @@ export function EventSideRail({
           <div className="text-[11px] text-[var(--text-muted)]">{t("organizer")}</div>
           {organizerName && <div className="text-sm font-medium text-[var(--navy)]">{organizerName}</div>}
           {organizerPhone && (
-            <a href={`tel:${organizerPhone}`} className="mt-0.5 flex items-center gap-1.5 text-xs text-[var(--text-secondary)] hover:underline">
+            <a href={telHref(organizerPhone) ?? `tel:${organizerPhone}`} className="mt-0.5 flex items-center gap-1.5 text-xs text-[var(--text-secondary)] hover:underline">
               <Phone className="h-3 w-3" /> {organizerPhone}
             </a>
           )}

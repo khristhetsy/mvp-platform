@@ -1,5 +1,6 @@
 "use client";
 
+import { telHref } from "@/lib/phone";
 import { useMemo, useState } from "react";
 import type { EventRegistrationRow } from "@/lib/icfo-events/registrations";
 import type { AttendeeType } from "@/lib/icfo-events/registration-intake";
@@ -268,7 +269,7 @@ export function EventRegistrationsBoard({ eventId, initial, fieldSet }: { eventI
                       <a href={`sms:${r.contactPhone.replace(/[^+\d]/g, "")}`} className="inline-flex items-center gap-1 rounded-md border border-[#F4D9A0] bg-[#FAEEDA] px-2 py-1 text-xs text-[#854F0B] hover:opacity-90"><i className="ti ti-message" aria-hidden="true" /> Message</a>
                     )}
                     {r.contactPhone && (
-                      <a href={`tel:${r.contactPhone.replace(/[^+\d]/g, "")}`} className="inline-flex items-center gap-1 rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs text-[#0F6E56] hover:bg-slate-50"><i className="ti ti-phone" aria-hidden="true" /> Call</a>
+                      <a href={telHref(r.contactPhone) ?? `tel:${r.contactPhone.replace(/[^+\d]/g, "")}`} className="inline-flex items-center gap-1 rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs text-[#0F6E56] hover:bg-slate-50"><i className="ti ti-phone" aria-hidden="true" /> Call</a>
                     )}
                     <button type="button" onClick={() => (editId === r.id ? setEditId(null) : startEdit(r))} className="inline-flex items-center gap-1 rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs text-[var(--text-secondary)] hover:bg-slate-50"><i className="ti ti-pencil" aria-hidden="true" /> {editId === r.id ? "Close" : "Edit"}</button>
                     <button type="button" onClick={() => removeRegistration(r.id)} disabled={busy === r.id} className="inline-flex items-center gap-1 rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs text-rose-600 hover:bg-rose-50 disabled:opacity-50"><i className="ti ti-trash" aria-hidden="true" /> Delete</button>

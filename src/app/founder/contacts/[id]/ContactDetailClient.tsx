@@ -1,5 +1,6 @@
 "use client";
 
+import { formatPhone, telHref } from "@/lib/phone";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -563,7 +564,7 @@ export function ContactDetailClient({
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {contact.phone ? <a href={`tel:${contact.phone}`} className="rounded-lg bg-emerald-800 px-3 py-1.5 text-[12.5px] font-semibold text-white hover:bg-emerald-900">Call</a> : null}
+            {contact.phone && telHref(contact.phone) ? <a href={telHref(contact.phone)!} className="rounded-lg bg-emerald-800 px-3 py-1.5 text-[12.5px] font-semibold text-white hover:bg-emerald-900">Call</a> : null}
             {contact.email ? <a href={`mailto:${contact.email}`} className={btn}>Email</a> : null}
             <Link href="/founder/deploy" className={btn}>Add to outreach</Link>
             <div ref={menuRef} className="relative">
@@ -665,7 +666,7 @@ export function ContactDetailClient({
           <div>
             <Row label="Firm"><Empty value={contact.firm_name} /></Row>
             <Row label="Email">{contact.email ? <a href={`mailto:${contact.email}`} className="text-[#1A6CE4] hover:underline">{contact.email}</a> : <Empty value={null} />}</Row>
-            <Row label="Phone"><Empty value={contact.phone} /></Row>
+            <Row label="Phone"><Empty value={contact.phone ? formatPhone(contact.phone) : contact.phone} /></Row>
             <Row label="Website"><Link2 value={contact.website} /></Row>
             <Row label="Location"><Empty value={contact.geography} /></Row>
             <Row label="Tags">{contact.tags?.length ? contact.tags.join(", ") : <Empty value={null} />}</Row>

@@ -1,5 +1,6 @@
 "use client";
 
+import { formatPhone } from "@/lib/phone";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Video, RefreshCw, Phone, User, Users, ExternalLink, Calendar } from "lucide-react";
@@ -88,9 +89,13 @@ export function MeetPanel() {
       {!connected ? (
         <div className="rounded-xl border border-[#B5D4F4] bg-[#E6F1FB] px-4 py-6 text-center">
           <p className="text-sm font-medium text-[#0C447C]">{t("connect_google_to_see_your_meet_meetings")}</p>
-          <a href="/api/integrations/google/connect?returnTo=/admin/meet" className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-[#2f6cb0] px-4 py-2 text-sm font-semibold text-white hover:bg-[#234f86]">
-            <ExternalLink className="h-4 w-4" /> Connect Google
-          </a>
+          {/* GET form: the route redirects to Google's consent screen (full-page nav). */}
+          <form action="/api/integrations/google/connect" method="get">
+            <input type="hidden" name="returnTo" value="/admin/meet" />
+            <button type="submit" className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-[#2f6cb0] px-4 py-2 text-sm font-semibold text-white hover:bg-[#234f86]">
+              <ExternalLink className="h-4 w-4" /> Connect Google
+            </button>
+          </form>
         </div>
       ) : loading ? (
         <p className="px-1 py-6 text-sm text-slate-400">{t("loading_meetings")}</p>
@@ -136,7 +141,7 @@ export function MeetPanel() {
                     <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{t("joining_info")}</p>
                     <a href={active.meetUrl} target="_blank" rel="noopener noreferrer" className="break-all text-sm text-[#185FA5] underline">{active.meetUrl.replace(/^https?:\/\//, "")}</a>
                     {active.phone ? (
-                      <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500"><Phone className="h-3.5 w-3.5" /> {active.phone}{active.pin ? ` · PIN ${active.pin}` : ""}</p>
+                      <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500"><Phone className="h-3.5 w-3.5" /> {formatPhone(active.phone)}{active.pin ? ` · PIN ${active.pin}` : ""}</p>
                     ) : null}
                   </div>
                   {active.organizer ? (

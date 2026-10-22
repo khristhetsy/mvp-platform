@@ -1,3 +1,4 @@
+import { phoneForStorage } from "@/lib/phone";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getValidGoogleAccessToken } from "@/lib/integrations/google-access-token";
 import { getGoogleBusyIntervals } from "@/lib/integrations/google-freebusy";
@@ -157,7 +158,7 @@ export async function bookSlot(input: BookSlotInput): Promise<BookSlotResult> {
 
     bookingId = await createBooking({
       host_id: input.hostId, event_id: hostEvent.id, event_type: title,
-      booker_name: input.booker.name, booker_email: input.booker.email, booker_phone: input.booker.phone ?? null,
+      booker_name: input.booker.name, booker_email: input.booker.email, booker_phone: phoneForStorage(input.booker.phone),
       booker_company: company,
       contact_crm_id: contactCrmId,
       start_time: input.startTime, end_time: input.endTime, timezone: input.timezone,

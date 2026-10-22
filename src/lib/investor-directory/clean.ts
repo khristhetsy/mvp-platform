@@ -6,6 +6,8 @@
  * phones, flag bad email formats, map public labels onto the platform's own
  * option lists, and merge duplicates by email (then by firm + contact).
  */
+import { phoneForStorage } from "@/lib/phone";
+
 
 export type CleanRow = {
   firm: string;
@@ -128,13 +130,7 @@ export function normalizeEmail(v: string | null | undefined): { email: string | 
 /** US numbers become (AAA) BBB-CCCC; extensions are kept; anything else is left as written. */
 export function normalizePhone(v: string | null | undefined): string | null {
   const t = tidy(v);
-  if (!t) return null;
-  const [main, ...rest] = t.split(/\s*(?:ext\.?|x)\s*/i);
-  let d = main.replace(/\D/g, "");
-  if (d.length === 11 && d.startsWith("1")) d = d.slice(1);
-  if (d.length !== 10 || main.trim().startsWith("+") && !main.trim().startsWith("+1")) return t;
-  const ext = rest.join("").replace(/\D/g, "");
-  return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}${ext ? ` ext. ${ext}` : ""}`;
+  return t ? phoneForStorage(t) : null;
 }
 
 const PLACEHOLDERS = new Set(["na", "n/a", "none", "null", "-", "unknown"]);

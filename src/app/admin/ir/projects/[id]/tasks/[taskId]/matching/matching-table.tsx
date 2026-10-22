@@ -4,6 +4,7 @@
  * Table pieces shared by the matching queue's two tabs (Proposed matches and Search all
  * investors): the row shape, the optional columns, how a cell renders, and header sorting.
  */
+import { formatPhone } from "@/lib/phone";
 import Link from "next/link";
 import { IR_STAGES, IR_STAGE_LABEL, type IrStage } from "@/lib/ir/types";
 
@@ -44,7 +45,7 @@ export function cell(k: ColKey, r: Row) {
   switch (k) {
     case "outreach": return r.onProject ? <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700">On this project</span> : <OutreachPill o={r.founderOutreach} />;
     case "firm": return r.firm || "—";
-    case "phone": return r.phone ? <span className="whitespace-nowrap">{r.phone}</span> : "—";
+    case "phone": return r.phone ? <span className="whitespace-nowrap">{formatPhone(r.phone)}</span> : "—";
     case "email": return r.email ? <a href={`mailto:${r.email}`} className="text-indigo-700 hover:underline">{r.email}</a> : "—";
     case "fit": return r.fit < 0 ? <span className="text-slate-400">not scored</span> : <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${TIER_CLS[r.tier]}`}>{r.fit}% · {r.tier}</span>;
     case "why": return r.summary;

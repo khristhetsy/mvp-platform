@@ -1,4 +1,5 @@
 "use client";
+import { formatPhone, telHref } from "@/lib/phone";
 import { TaskTitleInput } from "@/components/sales/TaskTitleInput";
 
 import { useState, useEffect } from "react";
@@ -248,7 +249,7 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
                 <div role="menu" style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 50, width: 290, background: "#fff", border: "0.5px solid #cbd5e1", borderRadius: 10, boxShadow: "0 14px 30px rgba(0,0,0,.14)", padding: "4px 0" }}>
                   <div style={menuHead}>Contact</div>
                   {o.contact_phone
-                    ? <a role="menuitem" href={`tel:${o.contact_phone.replace(/[^+\d]/g, "")}`} target="_blank" rel="noopener noreferrer" onClick={() => { logTouch("call"); setMenuOpen(false); }} style={menuItem}><i className="ti ti-phone" style={menuIcon} aria-hidden="true" />Call<span style={menuNote}>{o.contact_phone}</span></a>
+                    ? <a role="menuitem" href={telHref(o.contact_phone) ?? `tel:${o.contact_phone.replace(/[^+\d]/g, "")}`} target="_blank" rel="noopener noreferrer" onClick={() => { logTouch("call"); setMenuOpen(false); }} style={menuItem}><i className="ti ti-phone" style={menuIcon} aria-hidden="true" />Call<span style={menuNote}>{formatPhone(o.contact_phone)}</span></a>
                     : <span role="menuitem" aria-disabled="true" style={menuOff}><i className="ti ti-phone" style={menuIcon} aria-hidden="true" />Call<span style={menuNote}>needs phone</span></span>}
                   {o.contact_email
                     ? <a role="menuitem" href={`/admin/inbox?compose=1&to=${encodeURIComponent(o.contact_email)}`} target="_blank" rel="noopener noreferrer" onClick={() => setMenuOpen(false)} style={menuItem}><i className="ti ti-mail" style={menuIcon} aria-hidden="true" />Email<span style={menuNote}>{o.contact_email}</span></a>

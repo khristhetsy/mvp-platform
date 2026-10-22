@@ -11,6 +11,7 @@
  *    you where people quit.
  */
 
+import { phoneForStorage } from "@/lib/phone";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
 /** lowercase · trim · strip +tag · strip dots in the Gmail local part. */
@@ -65,7 +66,7 @@ export async function handoffFitSession(sessionId: string, booker: { name: strin
     const update: Record<string, unknown> = { raw };
     // Fill phone/company from the booking only where the contact has none: never overwrite CRM data.
     const cur = ((await db.from("crm_contacts").select("phone, company").eq("id", hit.id).maybeSingle()).data ?? {}) as { phone?: string | null; company?: string | null };
-    if (booker.phone && !cur.phone) update.phone = booker.phone;
+    if (booker.phone && !cur.phone) update.phone = phoneForStorage(booker.phone);
     if (booker.company && !cur.company) update.company = booker.company;
     const overrides = { ...((hit.overrides as Record<string, unknown> | null) ?? {}) };
     if (sess.source_tag && !overrides.lead_source) {
@@ -82,7 +83,7 @@ export async function handoffFitSession(sessionId: string, booker: { name: strin
     module: "founder",
     name: booker.name,
     email: booker.email,
-    phone: booker.phone || null,
+    phone: phoneForStorage(booker.phone),
     company: booker.company || null,
     raw: { __profile: { fit, leadSource: sess.source_tag } },
     overrides: { lead_source: sess.source_tag },

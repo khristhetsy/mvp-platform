@@ -9,6 +9,7 @@
  * Email and phone show only after import. Before the first import the founder
  * accepts the terms of use (own company's fundraising only, no redistribution).
  */
+import { formatPhone } from "@/lib/phone";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FounderToolbar } from "@/components/founder/FounderToolbar";
@@ -598,7 +599,7 @@ export function InvestorDirectoryClient({ pinnedSource, onTotal }: Readonly<{ pi
                       <div className="grid grid-cols-[100px_minmax(0,1fr)] gap-x-3 gap-y-1 bg-slate-50 px-3 pb-3 pl-10 pt-1 text-[12.5px]">
                         <span className="text-slate-500">Contact</span><span>{r.contact_name ?? "—"}{r.title ? `, ${r.title}` : ""}</span>
                         <span className="text-slate-500">Email</span><span>{r.held ? (r.email ?? "Not published") : r.hasEmail ? "Published, shown after import" : "Not published"}</span>
-                        <span className="text-slate-500">Phone</span><span>{r.held ? (r.phone ?? "Not published") : r.hasPhone ? "Published, shown after import" : "Not published"}</span>
+                        <span className="text-slate-500">Phone</span><span>{r.held ? (r.phone ? formatPhone(r.phone) : "Not published") : r.hasPhone ? "Published, shown after import" : "Not published"}</span>
                         <span className="text-slate-500">Invests in</span>
                         <span>{[...r.investor_types.map(types.label), ...r.funding_stages.map(stages.label), ...r.capital_types.map(capital.label), ...r.industries.map(industries.label)].join(" · ") || "—"}</span>
                         {r.fund_name ? <><span className="text-slate-500">Latest fund</span><span>{r.fund_name}{r.fund_size ? ` · ${money(r.fund_size)}` : ""}{r.avg_investment ? ` · avg check ${money(r.avg_investment)}` : ""}</span></> : null}
@@ -636,7 +637,7 @@ function FormdProfile({ people, held }: Readonly<{ people: FormdPerson[]; held: 
       ) : people.map((p) => (
         <div key={p.name} className="mb-2 grid grid-cols-[150px_minmax(0,1fr)] gap-x-3 gap-y-0.5">
           <span className="text-slate-500">Contact</span><span className="font-medium">{p.name}{p.role ? <span className="font-normal text-slate-600">, {p.role}</span> : null}</span>
-          <span className="text-slate-500">Phone</span><span>{held ? (p.phone ?? "Not in filing") : p.hasPhone ? "On the filing, shown after import" : "Not in filing"}</span>
+          <span className="text-slate-500">Phone</span><span>{held ? (p.phone ? formatPhone(p.phone) : "Not in filing") : p.hasPhone ? "On the filing, shown after import" : "Not in filing"}</span>
           <span className="text-slate-500">Email</span><span className="text-slate-500">Not in filing</span>
           <span className="text-slate-500">Fund industry (SEC)</span><span>{chips(p.industries)}</span>
           <span className="text-slate-500">Raising at stage</span><span>{chips(p.stages)}</span>

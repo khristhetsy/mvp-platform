@@ -13,6 +13,7 @@
  * mailbox (info@, contact@…) is kept as "Company email" under Details, never as the
  * person's email, so it can't make two people look like duplicates.
  */
+import { phoneForStorage } from "@/lib/phone";
 import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
 import { assertAiBudget, isAiBudgetExceeded } from "@/lib/ai-budget/service";
 import { serperCostPerSearch } from "@/lib/ai-budget/config";
@@ -71,7 +72,7 @@ async function enrichCompany(db: Db, company: string, people: Pending[], knownDo
 
     if (phone && !p.phone) {
       if (phoneElsewhere) { row.result = "phone_elsewhere"; row.note = `Phone belongs to ${phoneElsewhere.contact_name ?? "another contact"}`; }
-      else { patch.phone = phone; patch.phone_source = "site"; row.phone = phone; }
+      else { patch.phone = phoneForStorage(phone); patch.phone_source = "site"; row.phone = phone; }
     }
 
     if (email) {

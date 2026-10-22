@@ -6,6 +6,7 @@
  * Enrichment runs 50 companies per batch; "Run all" keeps going batch after batch, pausing
  * once after the first batch so the websites can be checked.
  */
+import { formatPhone } from "@/lib/phone";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { OdooPager } from "@/components/admin/OdooPager";
@@ -401,7 +402,7 @@ function EnrichPanel() {
                   <td style={td}>{r.result === "merged" ? r.name : <Link href={`/admin/sales/contacts/${r.contactId}`} style={{ color: "var(--foreground)" }}>{r.name}</Link>}</td>
                   <td style={td}>{r.company ?? "—"}</td>
                   <td style={td}>{r.website ? <a href={r.website} target="_blank" rel="noreferrer" style={{ color: BLUE }}>{r.website.replace(/^https?:\/\//, "")}</a> : "Not found"}</td>
-                  <td style={td}>{r.phone ? <>{r.phone} <span style={{ fontSize: 10.5, color: "#444441", background: "#F1EFE8", borderRadius: 6, padding: "1px 6px" }}>office</span></> : r.website ? "Not published" : "—"}</td>
+                  <td style={td}>{r.phone ? <>{formatPhone(r.phone)} <span style={{ fontSize: 10.5, color: "#444441", background: "#F1EFE8", borderRadius: 6, padding: "1px 6px" }}>office</span></> : r.website ? "Not published" : "—"}</td>
                   <td style={td} title={r.email ?? r.companyEmail ?? ""}>{r.email ?? (r.companyEmail ? <>{r.companyEmail} <span style={{ fontSize: 10.5, color: "#444441", background: "#F1EFE8", borderRadius: 6, padding: "1px 6px" }}>company</span></> : r.website ? "Not published" : "—")}</td>
                   <td style={td} title={r.note ?? ""}><span style={{ fontSize: 11, background: rl.bg, color: rl.fg, borderRadius: 6, padding: "2px 8px" }}>{rl.text}</span></td>
                 </tr>

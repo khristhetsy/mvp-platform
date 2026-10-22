@@ -1,5 +1,6 @@
 "use client";
 
+import { formatPhone } from "@/lib/phone";
 import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Mail, Phone, Globe, Building2, MapPin, Briefcase, Download, Send, CalendarPlus, Loader2, Check, Pencil, Archive } from "lucide-react";
@@ -274,7 +275,7 @@ export function RecordView({ record: r, annotation, canWrite = false }: { record
                 {d.title && <Row icon={Briefcase}>{d.title}</Row>}
                 {d.company && <Row icon={Building2}>{d.company}</Row>}
                 {d.email && <Row icon={Mail}><a href={`mailto:${d.email}`} className="hover:underline" style={{ color: BLUE }}>{d.email}</a></Row>}
-                {d.phone && <Row icon={Phone}>{d.phone}</Row>}
+                {d.phone && <Row icon={Phone}>{formatPhone(d.phone)}</Row>}
                 {d.website && <Row icon={Globe}><a href={d.website.startsWith("http") ? d.website : `https://${d.website}`} target="_blank" rel="noreferrer" className="hover:underline" style={{ color: BLUE }}>{d.website.replace(/^https?:\/\//, "")}</a></Row>}
                 {d.location && <Row icon={MapPin}>{d.location}</Row>}
                 {!d.title && !d.company && !d.email && !d.phone && !d.website && !d.location && (
