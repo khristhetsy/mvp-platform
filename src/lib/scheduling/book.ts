@@ -148,7 +148,8 @@ export async function bookSlot(input: BookSlotInput): Promise<BookSlotResult> {
         const heard = answers.find((a) => /how did you hear|hear about/i.test(a.label))?.value;
         const leadSource = input.source?.tag ?? heard ?? null;
         const bp = bookingProfile(answers);
-        const { data: created } = await admin.from("crm_contacts").upsert({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: created } = await (admin.from("crm_contacts") as any).upsert({
           source: "booking",
           external_id: `booking:${email}`,
           module: bp.module,
