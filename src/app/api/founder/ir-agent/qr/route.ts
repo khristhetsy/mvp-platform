@@ -5,8 +5,8 @@ import { trackedUrl } from "@/lib/ir-agent/slug";
 export const dynamic = "force-dynamic";
 
 /** A PNG QR code for the agent's tracked link (src=qr), for print and slides. */
-export async function GET() {
-  const auth = await requireFounderAgentApi();
+export async function GET(req: Request) {
+  const auth = await requireFounderAgentApi(req);
   if ("error" in auth) return auth.error;
   const { agent } = auth.ctx;
   const png = await QRCode.toBuffer(trackedUrl(agent.company_slug, agent.ending, "qr"), {

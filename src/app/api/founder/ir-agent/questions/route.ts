@@ -21,7 +21,7 @@ const schema = z.object({
 
 /** Replace the agent's questions: wording, order, options, on or off, custom ones. One of each profile field at most. */
 export async function PUT(req: Request) {
-  const auth = await requireFounderAgentApi();
+  const auth = await requireFounderAgentApi(req);
   if ("error" in auth) return auth.error;
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Each question needs wording of 3 to 200 characters." }, { status: 400 });

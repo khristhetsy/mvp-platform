@@ -282,6 +282,7 @@ export const workspaceNavIconByHref: Record<string, LucideIcon> = {
   "/admin/sales/contacts": Users,
   "/admin/ceo": Crown,
   "/admin/ir-funnel": Filter,
+  "/admin/ai-agent": BotMessageSquare, // AI Agent (admin builds the IR agent for a company)
   "/admin/sales": ShoppingCart,
   "/admin/companies": Building,
   "/admin/investors": Users,

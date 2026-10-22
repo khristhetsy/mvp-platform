@@ -1,3 +1,4 @@
+import type { AgentType } from "./agent-types";
 import type { QuestionField, TemplateContactField } from "./defaults";
 
 /** A question as the agent asks it. Profile questions map onto Johnny's fields; custom ones are stored as text. */
@@ -59,6 +60,10 @@ export interface AgentRow {
   created_by: string | null;
   compliance_acknowledged_at: string | null;
   compliance_acknowledged_by: string | null;
+  /** Company profile fields kept out of the agent (keys from wired.ts). */
+  wired_excluded?: string[];
+  /** Which kind of agent this is. Loads its own question set. */
+  agent_type?: AgentType;
   created_at: string;
   updated_at: string;
 }

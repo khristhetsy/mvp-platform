@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AgentChat } from "@/components/ir-agent/AgentChat";
 import { useToast } from "@/components/ui/ToastProvider";
+import { AGENT_TYPES, AGENT_TYPE_SPECS, DEFAULT_AGENT_TYPE, type AgentType } from "@/lib/ir-agent/agent-types";
 import { COMPLIANCE_NOTICE, FIELD_LABELS, type QuestionField } from "@/lib/ir-agent/defaults";
 import { AGENT_HOST, CHANNELS, CHANNEL_LABELS, agentUrl, normalizeEnding, trackedUrl, type Channel } from "@/lib/ir-agent/slug";
 import type { AgentContactField, AgentPublicConfig, AgentQuestion, AgentRow, TaughtAnswer } from "@/lib/ir-agent/types";
+import type { WiredData } from "@/lib/ir-agent/wired";
 
 type Source = { id: string; file_name: string; bytes: number; status: "processing" | "trained" | "failed"; created_at: string };
 type Conversation = {
@@ -31,6 +33,7 @@ type Loaded = {
   config: AgentPublicConfig;
   booking: { ready: boolean; googleConnected: boolean; hostId: string };
   demo: boolean;
+  wired?: WiredData;
 };
 type Tab = "build" | "train" | "share" | "conversations";
 
@@ -46,30 +49,46 @@ const btnPrimary = "rounded-lg bg-[#1A6CE4] px-4 py-2 text-sm font-semibold text
 const btnQuiet = "rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50";
 const card = "rounded-xl border border-slate-200 bg-white p-5";
 
+type AgentApi = (path?: string, params?: Record<string, string>) => string;
+
+/** Builds the agent API url. With an orgId the same routes serve an admin building for that company. */
+function makeApi(orgId?: string): AgentApi {
+  return (path = "", params = {}) => {
+    const sp = new URLSearchParams(params);
+    if (orgId) sp.set("orgId", orgId);
+    const qs = sp.toString();
+    return `/api/founder/ir-agent${path}${qs ? `?${qs}` : ""}`;
+  };
+}
+
+const AgentApiContext = createContext<{ api: AgentApi; admin: boolean }>({ api: makeApi(), admin: false });
+
 async function readJson<T>(res: Response): Promise<T & { error?: string }> {
   return (await res.json().catch(() => ({}))) as T & { error?: string };
 }
 
-export function IrAgentStudio() {
+export function IrAgentStudio({ orgId }: { orgId?: string } = {}) {
   const { toast } = useToast();
+  const api = useMemo(() => makeApi(orgId), [orgId]);
+  const ctxValue = useMemo(() => ({ api, admin: Boolean(orgId) }), [api, orgId]);
   const [data, setData] = useState<Loaded | null>(null);
   const [tab, setTab] = useState<Tab>("build");
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const res = await fetch("/api/founder/ir-agent", { cache: "no-store" });
+    const res = await fetch(api(), { cache: "no-store" });
     const j = await readJson<Loaded>(res);
     if (!res.ok) {
       setError(j.error ?? "Could not load your agent.");
       return;
     }
     setData(j);
-  }, []);
+  }, [api]);
 
   useEffect(() => {
     let active = true;
     void (async () => {
-      const res = await fetch("/api/founder/ir-agent", { cache: "no-store" });
+      const res = await fetch(api(), { cache: "no-store" });
       const j = await readJson<Loaded>(res);
       if (!active) return;
       if (!res.ok) setError(j.error ?? "Could not load your agent.");
@@ -78,7 +97,7 @@ export function IrAgentStudio() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [api]);
 
   if (error) return <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">{error}</div>;
   if (!data) return <div className="py-10 text-sm text-slate-500">Loading your agent…</div>;
@@ -86,6 +105,7 @@ export function IrAgentStudio() {
   const live = data.agent.status === "live";
 
   return (
+    <AgentApiContext.Provider value={ctxValue}>
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <nav className="flex gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1" aria-label="Agent sections">
@@ -117,17 +137,19 @@ export function IrAgentStudio() {
         </p>
       ) : null}
 
-      {tab === "build" ? <BuildTab data={data} onChange={setData} reload={load} toast={toast} /> : null}
+      {tab === "build" ? <BuildTab key={data.agent.agent_type ?? DEFAULT_AGENT_TYPE} data={data} onChange={setData} reload={load} toast={toast} /> : null}
       {tab === "train" ? <TrainTab data={data} onChange={setData} toast={toast} /> : null}
       {tab === "share" ? <ShareTab data={data} toast={toast} /> : null}
       {tab === "conversations" ? <ConversationsTab /> : null}
     </div>
+    </AgentApiContext.Provider>
   );
 }
 
 /* ================================================================== Build */
 
 function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (d: Loaded) => void; reload: () => Promise<void>; toast: ReturnType<typeof useToast>["toast"] }) {
+  const { api, admin } = useContext(AgentApiContext);
   const a = data.agent;
   const [ending, setEnding] = useState(a.ending);
   const [endingState, setEndingState] = useState<{ ok: boolean; reason?: string } | null>(null);
@@ -135,6 +157,7 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
   const [companyName, setCompanyName] = useState(a.company_name);
   const [welcome, setWelcome] = useState(a.welcome_message ?? "");
   const [about, setAbout] = useState(a.about ?? "");
+  const [excluded, setExcluded] = useState<string[]>(a.wired_excluded ?? []);
   const [questions, setQuestions] = useState<Array<Pick<AgentQuestion, "field" | "prompt" | "options" | "enabled">>>(() =>
     data.questions.map(({ field, prompt, options, enabled }) => ({ field, prompt, options, enabled })),
   );
@@ -142,6 +165,7 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
     data.contactFields.map(({ key, label, kind, required, enabled }) => ({ key, label, kind, required, enabled })),
   );
   const [saving, setSaving] = useState(false);
+  const [switching, setSwitching] = useState(false);
   const [previewKey, setPreviewKey] = useState(0);
   const [ackChecked, setAckChecked] = useState(false);
   const [noticeOpen, setNoticeOpen] = useState(false);
@@ -149,12 +173,48 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
   const fileRef = useRef<HTMLInputElement>(null);
   const checkTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Uploads happen in another module: pick up the change when the user comes back to this tab.
+  useEffect(() => {
+    const onFocus = () => void reload();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [reload]);
+
+  const agentType: AgentType = a.agent_type ?? DEFAULT_AGENT_TYPE;
+  const typeSpec = AGENT_TYPE_SPECS[agentType];
+
+  const switchType = async (next: AgentType) => {
+    if (next === agentType) return;
+    const warn = `Switch to the ${AGENT_TYPE_SPECS[next].label} agent? Its question set, agent name and welcome replace the current ones. Your address, photo, contact questions and Train answers stay.`;
+    if (!window.confirm(warn)) return;
+    setSwitching(true);
+    try {
+      const res = await fetch(api("/type"), { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ agent_type: next }) });
+      const j = await readJson<{ agent: AgentRow; questions: AgentQuestion[]; config: AgentPublicConfig }>(res);
+      if (!res.ok) throw new Error(j.error ?? "Could not switch type.");
+      await reload();
+      toast({ title: `${AGENT_TYPE_SPECS[next].label} agent loaded`, description: "Its question set is ready to edit.", variant: "success" });
+    } catch (e) {
+      toast({ title: "Not switched", description: e instanceof Error ? e.message : "Could not switch type.", variant: "error" });
+    } finally {
+      setSwitching(false);
+    }
+  };
+
+  const wiredFields = data.wired?.fields ?? [];
+  const wiredOn = wiredFields.filter((f) => f.present && !excluded.includes(f.key));
+  const wiredMissing = wiredFields.filter((f) => !f.present).length;
+  const profileHref = admin ? (data.wired?.companyId ? `/admin/companies/${data.wired.companyId}` : "/admin/companies") : "/founder/settings";
+  const toggleWired = (key: string) => setExcluded((cur) => (cur.includes(key) ? cur.filter((k) => k !== key) : [...cur, key]));
+  const setAllWired = (on: boolean) => setExcluded(on ? [] : wiredFields.filter((f) => f.present).map((f) => f.key));
+
   const dirty =
     ending !== a.ending ||
     displayName !== a.display_name ||
     companyName !== a.company_name ||
     welcome !== (a.welcome_message ?? "") ||
     about !== (a.about ?? "") ||
+    JSON.stringify([...excluded].sort()) !== JSON.stringify([...(a.wired_excluded ?? [])].sort()) ||
     JSON.stringify(questions) !== JSON.stringify(data.questions.map(({ field, prompt, options, enabled }) => ({ field, prompt, options, enabled }))) ||
     JSON.stringify(contactFields) !== JSON.stringify(data.contactFields.map(({ key, label, kind, required, enabled }) => ({ key, label, kind, required, enabled })));
 
@@ -165,7 +225,7 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
     if (checkTimer.current) clearTimeout(checkTimer.current);
     if (e === a.ending) return;
     checkTimer.current = setTimeout(async () => {
-      const res = await fetch(`/api/founder/ir-agent/ending?ending=${encodeURIComponent(e)}`);
+      const res = await fetch(api("/ending", { ending: e }));
       const j = await readJson<{ ok: boolean; reason?: string }>(res);
       setEndingState({ ok: Boolean(j.ok), reason: j.reason });
     }, 400);
@@ -174,17 +234,17 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
   const save = async () => {
     setSaving(true);
     try {
-      const res = await fetch("/api/founder/ir-agent", {
+      const res = await fetch(api(), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ending, display_name: displayName, company_name: companyName, welcome_message: welcome, about }),
+        body: JSON.stringify({ ending, display_name: displayName, company_name: companyName, welcome_message: welcome, about, wired_excluded: excluded }),
       });
       const j = await readJson<{ agent: AgentRow }>(res);
       if (!res.ok) throw new Error(j.error ?? "Could not save.");
-      const q = await fetch("/api/founder/ir-agent/questions", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ questions }) });
+      const q = await fetch(api("/questions"), { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ questions }) });
       const qj = await readJson<{ questions: AgentQuestion[] }>(q);
       if (!q.ok) throw new Error(qj.error ?? "Could not save questions.");
-      const c = await fetch("/api/founder/ir-agent/contact-fields", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fields: contactFields }) });
+      const c = await fetch(api("/contact-fields"), { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fields: contactFields }) });
       const cj = await readJson<{ contactFields: AgentContactField[] }>(c);
       if (!c.ok) throw new Error(cj.error ?? "Could not save contact questions.");
       setQuestions(qj.questions.map(({ field, prompt, options, enabled }) => ({ field, prompt, options, enabled })));
@@ -208,7 +268,7 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
       }
       body.compliance_acknowledged = true;
     }
-    const res = await fetch("/api/founder/ir-agent", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const res = await fetch(api(), { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     const j = await readJson<{ agent: AgentRow; config: AgentPublicConfig }>(res);
     if (!res.ok) {
       toast({ title: "Could not change status", description: j.error, variant: "error" });
@@ -221,7 +281,7 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
   const upload = async (file: File) => {
     const fd = new FormData();
     fd.append("file", file);
-    const res = await fetch("/api/founder/ir-agent/image", { method: "POST", body: fd });
+    const res = await fetch(api("/image"), { method: "POST", body: fd });
     const j = await readJson<{ image_url: string }>(res);
     if (!res.ok) {
       toast({ title: "Image not uploaded", description: j.error, variant: "error" });
@@ -242,7 +302,7 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
   const updateQ = (i: number, patch: Partial<(typeof questions)[number]>) => setQuestions(questions.map((q, k) => (k === i ? { ...q, ...patch } : q)));
   const removeQ = (i: number) => setQuestions(questions.filter((_, k) => k !== i));
   const addCustom = () => setQuestions([...questions, { field: "custom", prompt: "", options: [], enabled: true }]);
-  const missingDefaults = (["investor_type", "preferred_sectors", "check_size", "preferred_stages", "capital_types"] as QuestionField[]).filter((f) => !questions.some((q) => q.field === f));
+  const missingDefaults = (agentType !== "founder" ? [] : ["investor_type", "preferred_sectors", "check_size", "preferred_stages", "capital_types"] as QuestionField[]).filter((f) => !questions.some((q) => q.field === f));
   const restoreDefault = (f: QuestionField) => {
     const d = data.config.questions.find((q) => q.field === f);
     setQuestions([...questions, { field: f, prompt: d?.prompt ?? FIELD_LABELS[f], options: d?.options ?? [], enabled: true }]);
@@ -266,6 +326,27 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_min(100%,520px)]">
       <div className="space-y-5">
+        {/* AI Agent Type */}
+        <section className={card}>
+          <h2 className="text-base font-semibold text-slate-950">AI Agent Type</h2>
+          <p className="mt-1 text-sm text-slate-600">Each type loads its own question set. Switching replaces the questions, agent name and welcome.</p>
+          <div role="radiogroup" aria-label="AI Agent Type" className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {AGENT_TYPES.map((t) => {
+              const s = AGENT_TYPE_SPECS[t];
+              const on = t === agentType;
+              return (
+                <label key={t} className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 ${on ? "border-[#1A6CE4] bg-[#F4F8FF]" : "border-slate-300 bg-white hover:bg-slate-50"} ${switching ? "opacity-60" : ""}`}>
+                  <input type="radio" name="agent-type" checked={on} disabled={switching} onChange={() => void switchType(t)} className="mt-1 h-4 w-4 accent-[#1A6CE4]" />
+                  <span>
+                    <span className="block text-sm font-semibold text-slate-900">{s.label}</span>
+                    <span className="block text-xs text-slate-600">{s.description}</span>
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+        </section>
+
         {/* Address */}
         <section className={card}>
           <h2 className="text-base font-semibold text-slate-950">Address</h2>
@@ -312,7 +393,7 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
             <div className="space-y-3">
               <label className="block text-sm">
                 <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Agent name</span>
-                <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className={input} maxLength={60} placeholder="Investor Relations" />
+                <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className={input} maxLength={60} placeholder={typeSpec.displayName} />
               </label>
               <label className="block text-sm">
                 <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Company name as the agent says it</span>
@@ -332,6 +413,7 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
           <h2 className="text-base font-semibold text-slate-950">What the agent knows</h2>
           <p className="mt-1 text-sm text-slate-600">
             Plain facts about the company, in your words. The agent answers only from this, from what you teach it in Train, and from your PDFs. No prices, percentages or promises: the agent will not say them, and the reply is checked on the server.
+            {typeSpec.fromProfile ? " Add only what the Company profile does not already say: the selected profile fields are included automatically." : ""}
           </p>
           <textarea value={about} onChange={(e) => setAbout(e.target.value)} className={`${input} mt-3 min-h-[140px]`} maxLength={6000} placeholder="What the company does, who it serves, where it is based, who leads it, what the round is for (without figures)…" />
         </section>
@@ -340,8 +422,11 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
         <section className={card}>
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-base font-semibold text-slate-950">Questions</h2>
-              <p className="mt-1 text-sm text-slate-600">Johnny&apos;s five investor profile questions come set. Reword them, reorder, turn off, or add your own. Investors can tap or type.</p>
+              <h2 className="text-base font-semibold text-slate-950">{typeSpec.label} questions</h2>
+              <p className="mt-1 text-sm text-slate-600">
+                The {typeSpec.label} question set is loaded. Reword, reorder, turn off, or add your own. Visitors can tap or type.
+                {typeSpec.fromProfile ? " Company details come from the Company profile (Selected fields below), so nobody enters them again." : ""}
+              </p>
             </div>
             <button type="button" onClick={addCustom} className={btnQuiet}>
               Add question
@@ -444,6 +529,61 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
             })}
           </ul>
         </section>
+
+        {/* Data wired from the company profile */}
+        {data.wired ? (
+          <section className={card}>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-base font-semibold text-slate-950">Selected fields</h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  Wired from {companyName}. {wiredOn.length} of {wiredFields.length} fields selected, {wiredMissing} missing. Untick a field to keep it out of the agent. The agent never states the raise amount, revenue figures or cap table.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setAllWired(true)} className={btnQuiet}>
+                  Select all
+                </button>
+                <button type="button" onClick={() => setAllWired(false)} className={btnQuiet}>
+                  Deselect all
+                </button>
+              </div>
+            </div>
+            <ul className="mt-4 divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200">
+              {wiredFields.map((f) => {
+                const on = f.present && !excluded.includes(f.key);
+                return (
+                  <li key={f.key} className={`flex flex-wrap items-center gap-3 px-3 py-2.5 text-sm ${f.present ? "bg-white" : "bg-amber-50/60"}`}>
+                    <input
+                      type="checkbox"
+                      checked={on}
+                      disabled={!f.present}
+                      onChange={() => toggleWired(f.key)}
+                      aria-label={`${on ? "Deselect" : "Select"} ${f.label}`}
+                      className="h-5 w-5 shrink-0 accent-[#1A6CE4]"
+                    />
+                    <div className="min-w-[150px] flex-1">
+                      <p className="font-medium text-slate-900">{f.label}</p>
+                      <p className="truncate text-xs text-slate-500">{f.present ? f.preview : f.source}</p>
+                    </div>
+                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${!f.present ? "bg-amber-100 text-amber-800" : on ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
+                      {!f.present ? "Missing" : on ? "Wired" : "Off"}
+                    </span>
+                    <a
+                      href={profileHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={f.present ? btnQuiet : "rounded-lg border border-[#1A6CE4] bg-[#1A6CE4] px-3 py-1.5 text-sm font-semibold text-white hover:bg-[#2E78F5]"}
+                    >
+                      {f.present ? "Replace" : "Upload"} in Company profile ↗
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+            <p className="mt-2 text-xs text-slate-500">Upload and replace open the Company profile in a new tab. Come back to this tab and the list refreshes.</p>
+          </section>
+        ) : null}
 
         {/* Booking */}
         <section className={card}>
@@ -549,6 +689,7 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
 /* ================================================================== Train */
 
 function TrainTab({ data, onChange, toast }: { data: Loaded; onChange: (d: Loaded) => void; toast: ReturnType<typeof useToast>["toast"] }) {
+  const { api } = useContext(AgentApiContext);
   const [q, setQ] = useState("");
   const [a, setA] = useState("");
   const [busy, setBusy] = useState(false);
@@ -557,7 +698,7 @@ function TrainTab({ data, onChange, toast }: { data: Loaded; onChange: (d: Loade
   const teach = async () => {
     setBusy(true);
     try {
-      const res = await fetch("/api/founder/ir-agent/answers", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: q, answer: a }) });
+      const res = await fetch(api("/answers"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: q, answer: a }) });
       const j = await readJson<{ answer: TaughtAnswer }>(res);
       if (!res.ok) throw new Error(j.error ?? "Could not save.");
       onChange({ ...data, answers: [...data.answers, j.answer], config: { ...data.config, taughtAnswers: [...data.config.taughtAnswers, j.answer] } });
@@ -572,7 +713,7 @@ function TrainTab({ data, onChange, toast }: { data: Loaded; onChange: (d: Loade
   };
 
   const forget = async (id: string) => {
-    await fetch(`/api/founder/ir-agent/answers?id=${id}`, { method: "DELETE" });
+    await fetch(api("/answers", { id }), { method: "DELETE" });
     onChange({ ...data, answers: data.answers.filter((x) => x.id !== id), config: { ...data.config, taughtAnswers: data.config.taughtAnswers.filter((x) => x.id !== id) } });
   };
 
@@ -585,7 +726,7 @@ function TrainTab({ data, onChange, toast }: { data: Loaded; onChange: (d: Loade
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const res = await fetch("/api/founder/ir-agent/sources", { method: "POST", body: fd });
+      const res = await fetch(api("/sources"), { method: "POST", body: fd });
       const j = await readJson<{ source: Source; message: string }>(res);
       if (!res.ok) throw new Error(j.error ?? "Upload failed.");
       onChange({ ...data, sources: [j.source, ...data.sources] });
@@ -599,7 +740,7 @@ function TrainTab({ data, onChange, toast }: { data: Loaded; onChange: (d: Loade
   };
 
   const removePdf = async (id: string) => {
-    await fetch(`/api/founder/ir-agent/sources?id=${id}`, { method: "DELETE" });
+    await fetch(api("/sources", { id }), { method: "DELETE" });
     onChange({ ...data, sources: data.sources.filter((s) => s.id !== id) });
   };
 
@@ -683,6 +824,7 @@ function TrainTab({ data, onChange, toast }: { data: Loaded; onChange: (d: Loade
 /* ================================================================== Share */
 
 function ShareTab({ data, toast }: { data: Loaded; toast: ReturnType<typeof useToast>["toast"] }) {
+  const { api } = useContext(AgentApiContext);
   const a = data.agent;
   const url = agentUrl(a.company_slug, a.ending);
   const copy = async (text: string, label: string) => {
@@ -773,8 +915,8 @@ function ShareTab({ data, toast }: { data: Loaded; toast: ReturnType<typeof useT
           <p className="mt-1 text-sm text-slate-600">For slides, one pagers and event booths. Scans go to the tracked QR link.</p>
           <div className="mt-3 flex items-center gap-4">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/api/founder/ir-agent/qr" alt="QR code for your agent" className="h-36 w-36 rounded-lg border border-slate-200" />
-            <a href="/api/founder/ir-agent/qr" download={`${a.company_slug}-ir-agent-qr.png`} className={btnQuiet}>
+            <img src={api("/qr")} alt="QR code for your agent" className="h-36 w-36 rounded-lg border border-slate-200" />
+            <a href={api("/qr")} download={`${a.company_slug}-ir-agent-qr.png`} className={btnQuiet}>
               Download PNG
             </a>
           </div>
@@ -787,13 +929,14 @@ function ShareTab({ data, toast }: { data: Loaded; toast: ReturnType<typeof useT
 /* ========================================================== Conversations */
 
 function ConversationsTab() {
+  const { api } = useContext(AgentApiContext);
   const [rows, setRows] = useState<Conversation[] | null>(null);
   const [open, setOpen] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
     void (async () => {
-      const res = await fetch("/api/founder/ir-agent/conversations", { cache: "no-store" });
+      const res = await fetch(api("/conversations"), { cache: "no-store" });
       const j = await readJson<{ conversations: Conversation[] }>(res);
       if (active) setRows(j.conversations ?? []);
     })();
@@ -803,7 +946,7 @@ function ConversationsTab() {
   }, []);
 
   const setState = async (id: string, review_state: Conversation["review_state"]) => {
-    await fetch("/api/founder/ir-agent/conversations", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, review_state }) });
+    await fetch(api("/conversations"), { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, review_state }) });
     setRows((r) => (r ? r.map((c) => (c.id === id ? { ...c, review_state } : c)) : r));
   };
 

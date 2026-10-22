@@ -22,7 +22,7 @@ const schema = z.object({
 
 /** Replace the contact questions. Name and email stay required: the booking needs them. */
 export async function PUT(req: Request) {
-  const auth = await requireFounderAgentApi();
+  const auth = await requireFounderAgentApi(req);
   if ("error" in auth) return auth.error;
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Each contact question needs a label." }, { status: 400 });

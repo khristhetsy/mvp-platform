@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 /** Availability check for the editable part of the address, as the founder types. */
 export async function GET(req: Request) {
-  const auth = await requireFounderAgentApi();
+  const auth = await requireFounderAgentApi(req);
   if ("error" in auth) return auth.error;
   const { agent } = auth.ctx;
   const raw = new URL(req.url).searchParams.get("ending") ?? "";

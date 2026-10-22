@@ -6,8 +6,8 @@ import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
 export const dynamic = "force-dynamic";
 
 /** The last 100 conversations with the agent, newest first. */
-export async function GET() {
-  const auth = await requireFounderAgentApi();
+export async function GET(req: Request) {
+  const auth = await requireFounderAgentApi(req);
   if ("error" in auth) return auth.error;
   const { data } = await serviceRoleClientUntyped()
     .from("ir_agent_conversations")
@@ -21,7 +21,7 @@ export async function GET() {
 const patchSchema = z.object({ id: z.string().uuid(), review_state: z.enum(["new", "needs_review", "approved"]) });
 
 export async function PATCH(req: Request) {
-  const auth = await requireFounderAgentApi();
+  const auth = await requireFounderAgentApi(req);
   if ("error" in auth) return auth.error;
   const parsed = patchSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid request." }, { status: 400 });

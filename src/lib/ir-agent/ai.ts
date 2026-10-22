@@ -7,6 +7,7 @@
  * Edge safe: no Node APIs. Johnny's own route is untouched; founder agents use this.
  */
 import { z } from "zod";
+import { AGENT_TYPE_SPECS, DEFAULT_AGENT_TYPE, type AgentType } from "./agent-types";
 import { parseJohnnyReply, type JohnnyAiReply } from "@/lib/johnny/profile";
 import { violatesGuardrails } from "@/lib/ai-site/guardrails";
 import { checkRateLimitAsync } from "@/lib/ai-site/ratelimit";
@@ -134,6 +135,7 @@ export function founderSystemPrompt(input: {
   taught: Array<{ question: string; answer: string }>;
   sources: string[];
   fieldsAsked: string[];
+  agentType?: AgentType;
 }): string {
   const facts = [
     input.about?.trim() ? `ABOUT ${input.companyName.toUpperCase()}:\n${input.about.trim().slice(0, 4000)}` : "",
@@ -147,9 +149,11 @@ export function founderSystemPrompt(input: {
   ]
     .filter(Boolean)
     .join("\n\n");
+  const spec = AGENT_TYPE_SPECS[input.agentType ?? DEFAULT_AGENT_TYPE];
   const asked = input.fieldsAsked.length ? input.fieldsAsked.join(", ") : "investor type, check size, industries, stages, capital types";
+  const goal = spec.goal.replace("{asked}", asked);
 
-  return `You are ${input.displayName}, the investor relations agent for ${input.companyName}. You write to an investor prospect on the company's behalf. Your job is a real, friendly conversation: learn how they invest (${asked}) and move them toward a 30 minute call with the founder, where the company is presented properly. You are not iCFO Capital Global and you do not speak for iCapOS; you speak for ${input.companyName} only. iCapOS is the software this page runs on.
+  return `You are ${input.displayName}, the ${spec.role} for ${input.companyName}. You write to a visitor on the company's behalf. Your job is a real, friendly conversation: ${goal}. You are not iCFO Capital Global and you do not speak for iCapOS; you speak for ${input.companyName} only. iCapOS is the software this page runs on.
 
 ${facts || `You have no fact sheet yet. If asked about ${input.companyName}, say the founder covers that on the call.`}
 

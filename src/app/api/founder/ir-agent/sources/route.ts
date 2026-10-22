@@ -16,7 +16,7 @@ const MAX_SOURCES = 10;
  * without touching storage. PDF only, with the platform's own message on rejection.
  */
 export async function POST(request: Request) {
-  const auth = await requireFounderAgentApi();
+  const auth = await requireFounderAgentApi(request);
   if ("error" in auth) return auth.error;
   const { agent } = auth.ctx;
 
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const auth = await requireFounderAgentApi();
+  const auth = await requireFounderAgentApi(req);
   if ("error" in auth) return auth.error;
   const id = new URL(req.url).searchParams.get("id") ?? "";
   if (!id) return NextResponse.json({ error: "Missing id." }, { status: 400 });
