@@ -81,10 +81,10 @@ export function planContactChanges(before: ContactSnapshot, answers: Record<stri
   const phone = normPhone(phoneRaw);
   if (phone && phone !== normPhone(before.phone) && phone !== normPhone(before.phone2)) {
     if (!normPhone(before.phone)) {
-      plan.patch.phone = phoneForStorage(phoneRaw);
+      plan.patch.phone = phoneForStorage(phoneRaw) ?? phoneRaw;
       plan.changes.push({ field: "phone", label: "Phone", before: null, after: phoneRaw });
     } else {
-      plan.patch.phone2 = phoneForStorage(phoneRaw);
+      plan.patch.phone2 = phoneForStorage(phoneRaw) ?? phoneRaw;
       plan.changes.push({ field: "phone2", label: "Second phone", before: before.phone2, after: phoneRaw });
     }
   }
