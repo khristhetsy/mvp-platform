@@ -51,11 +51,10 @@ async function loadCompany(orgId: string | null): Promise<CompanyRow | null> {
   return (data as CompanyRow | null) ?? null;
 }
 
-function valueOf(c: CompanyRow | null, key: WiredKey): string {
+function valueOf(c: CompanyRow | null, key: WiredKey, fallbackName = ""): string {
+  if (key === "company_name") return (c?.company_name ?? "").trim() || fallbackName.trim();
   if (!c) return "";
   switch (key) {
-    case "company_name":
-      return (c.company_name ?? "").trim();
     case "business_summary":
       return (c.business_description ?? "").trim();
     case "sector_stage":
@@ -67,12 +66,13 @@ function valueOf(c: CompanyRow | null, key: WiredKey): string {
   }
 }
 
-export async function loadWired(orgId: string | null, excluded: string[]): Promise<WiredData> {
+/** fallbackName is the agent's company name: known even when the company has no profile (a prospect from contacts). */
+export async function loadWired(orgId: string | null, excluded: string[], fallbackName = ""): Promise<WiredData> {
   const company = await loadCompany(orgId);
   return {
     companyId: company?.id ?? null,
     fields: WIRED_KEYS.map((key) => {
-      const value = valueOf(company, key);
+      const value = valueOf(company, key, fallbackName);
       const present = value.length > 0;
       return { key, label: LABELS[key], source: "Company profile", present, selected: present && !excluded.includes(key), preview: value.slice(0, 120) };
     }),
@@ -80,10 +80,10 @@ export async function loadWired(orgId: string | null, excluded: string[]): Promi
 }
 
 /** The selected profile fields as plain lines for the agent's fact sheet. Empty when none are selected. */
-export async function wiredFactSheet(orgId: string | null, excluded: string[]): Promise<string> {
+export async function wiredFactSheet(orgId: string | null, excluded: string[], fallbackName = ""): Promise<string> {
   const company = await loadCompany(orgId);
   return WIRED_KEYS.filter((k) => !excluded.includes(k))
-    .map((k) => ({ k, v: valueOf(company, k) }))
+    .map((k) => ({ k, v: valueOf(company, k, fallbackName) }))
     .filter((x) => x.v)
     .map((x) => `${LABELS[x.k]}: ${x.v.slice(0, 1500)}`)
     .join("\n");

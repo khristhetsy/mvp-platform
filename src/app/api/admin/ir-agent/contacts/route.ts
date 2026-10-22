@@ -4,7 +4,18 @@ import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
-type ContactRow = { id: string; name: string | null; email: string | null; company: string | null };
+type ContactRow = { id: string; name: string | null; email: string | null; company: string | null; website: string | null; company_domain: string | null; country: string | null };
+
+export type ContactGroup = {
+  key: string;
+  company: string;
+  /** The account company this contact company is, when it is one. */
+  orgId: string | null;
+  orgName: string | null;
+  website: string | null;
+  country: string | null;
+  contacts: Array<{ id: string; name: string; email: string | null }>;
+};
 
 /** Compare company names the way a person would: case, punctuation and legal suffixes aside. */
 function norm(name: string): string {
@@ -19,8 +30,9 @@ function norm(name: string): string {
 
 /**
  * Find a company through contacts: search CRM contacts by name, email or
- * company, and say which account company each contact's company is. A contact
- * whose company is not in the account comes back with orgId null.
+ * company and group them by company, so a company with six contacts is one
+ * row. Each group says whether it is a company in the account (orgId) or a
+ * prospect that only exists in contacts (orgId null).
  */
 export async function GET(req: Request) {
   const auth = await requirePermissionApi("manage_settings");
@@ -28,16 +40,16 @@ export async function GET(req: Request) {
 
   // Keep the search text away from the PostgREST filter syntax.
   const q = (new URL(req.url).searchParams.get("q") ?? "").replace(/[,()%*_\\]/g, " ").trim().slice(0, 60);
-  if (q.length < 2) return NextResponse.json({ contacts: [] });
+  if (q.length < 2) return NextResponse.json({ groups: [] });
 
   const db = serviceRoleClientUntyped();
   const { data, error } = await db
     .from("crm_contacts")
-    .select("id, name, email, company")
+    .select("id, name, email, company, website, company_domain, country")
     .or(`name.ilike.%${q}%,email.ilike.%${q}%,company.ilike.%${q}%`)
     .not("company", "is", null)
-    .order("name")
-    .limit(15);
+    .order("company")
+    .limit(60);
   if (error) return NextResponse.json({ error: "Could not search contacts." }, { status: 500 });
   const rows = ((data ?? []) as ContactRow[]).filter((r) => (r.company ?? "").trim());
 
@@ -49,10 +61,21 @@ export async function GET(req: Request) {
   for (const o of (orgs.data ?? []) as Array<{ id: string; name: string | null }>) if (o.name?.trim()) byName.set(norm(o.name), { id: o.id, name: o.name.trim() });
   for (const c of (companies.data ?? []) as Array<{ org_id: string; company_name: string | null }>) if (c.company_name?.trim()) byName.set(norm(c.company_name), { id: c.org_id, name: c.company_name.trim() });
 
-  return NextResponse.json({
-    contacts: rows.map((r) => {
-      const match = byName.get(norm(r.company as string));
-      return { id: r.id, name: (r.name ?? "").trim() || (r.email ?? "Unnamed contact"), email: r.email, company: (r.company as string).trim(), orgId: match?.id ?? null, orgName: match?.name ?? null };
-    }),
-  });
+  const groups = new Map<string, ContactGroup>();
+  for (const r of rows) {
+    const company = (r.company as string).trim();
+    const key = norm(company) || company.toLowerCase();
+    const match = byName.get(key);
+    let g = groups.get(key);
+    if (!g) {
+      g = { key, company, orgId: match?.id ?? null, orgName: match?.name ?? null, website: null, country: null, contacts: [] };
+      groups.set(key, g);
+    }
+    g.website = g.website ?? ((r.website ?? r.company_domain ?? "").trim() || null);
+    g.country = g.country ?? ((r.country ?? "").trim() || null);
+    g.contacts.push({ id: r.id, name: (r.name ?? "").trim() || (r.email ?? "Unnamed contact"), email: r.email });
+  }
+  // Companies in the account first, then prospects.
+  const list = [...groups.values()].sort((a, b) => Number(Boolean(b.orgId)) - Number(Boolean(a.orgId)));
+  return NextResponse.json({ groups: list.slice(0, 12) });
 }
