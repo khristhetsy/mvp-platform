@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { AlertCircle, BarChart3, Bot, IdCard, Mail, Send, Settings, type LucideIcon } from "lucide-react";
 import { ManualOutreachGuide } from "@/components/founder/ManualOutreachGuide";
+import { HowToByKey } from "@/components/founder/how-to/HowToByKey";
 import {
   EMPTY_OUTREACH_STATUS,
   OUTREACH_MODE_COOKIE,
@@ -472,6 +473,7 @@ export function DeployWorkflow({
 
           {otab === "automated" ? (
             <div className="space-y-4">
+              <HowToByKey guideKey="outreach-automated" />
               <div
                 className={`flex items-start gap-2.5 rounded-xl border px-4 py-3 text-xs leading-relaxed ${
                   scoreReady
