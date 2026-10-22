@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { AdminComplianceModuleViews } from "@/components/admin/AdminComplianceModuleViews";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -31,12 +32,12 @@ export default async function AdminCompliancePage() {
             : t("auditNote")
         }
         actions={
-          <a
+          <Link
             href="/admin/audit"
             className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-900 hover:bg-indigo-100"
           >
             {t("auditCenter")}
-          </a>
+          </Link>
         }
       />
 

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireRole } from "@/lib/supabase/auth";
 import { listMastersWithCounts } from "@/lib/email/masters-queries";
 import { EmailGalleryClient } from "./EmailGalleryClient";
@@ -19,9 +20,9 @@ export default async function EmailTemplateGalleryPage() {
       <p className="mb-6 max-w-2xl text-sm text-slate-500">
         Pick a brand-locked master, fill in the content, and send. Logo, colours, and the unsubscribe footer are fixed —
         only the banner and content slots are editable. For a fully custom layout, use the{" "}
-        <a href="/admin/marketing/templates" className="text-blue-600 hover:underline">
+        <Link href="/admin/marketing/templates" className="text-blue-600 hover:underline">
           custom template builder
-        </a>
+        </Link>
         .
       </p>
       <EmailGalleryClient masters={masters} />

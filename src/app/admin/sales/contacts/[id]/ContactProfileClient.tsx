@@ -717,8 +717,15 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
     setProfileSub("tasks");
     if (!tasksLoaded) void loadContactTasks();
   }
+  // Switch to the Tasks tab during render when the deep link asks for it
+  // (React's "adjust state when a prop changes" pattern), then load in an effect.
+  const [prevWantTasksTab, setPrevWantTasksTab] = useState(false);
+  if (wantTasksTab !== prevWantTasksTab) {
+    setPrevWantTasksTab(wantTasksTab);
+    if (wantTasksTab) setProfileSub("tasks");
+  }
   useEffect(() => {
-    if (wantTasksTab) openTasksTab();
+    if (wantTasksTab && !tasksLoaded) void loadContactTasks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wantTasksTab]);
   useEffect(() => {

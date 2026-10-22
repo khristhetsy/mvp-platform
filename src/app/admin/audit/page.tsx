@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Suspense } from "react";
 import { getTranslations } from "next-intl/server";
 import { AppShell } from "@/components/AppShell";
@@ -70,12 +71,12 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
           description={t("auditGradeOperationalOversight")}
           metadata="Staff only · sanitized exports"
           actions={
-            <a
+            <Link
               href="/admin/compliance"
               className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
             >
               Compliance center
-            </a>
+            </Link>
           }
         />
         <Suspense fallback={<p className="text-sm text-slate-600">Loading audit center…</p>}>

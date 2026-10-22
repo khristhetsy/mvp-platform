@@ -7,6 +7,7 @@
  * rows expand in place (conversion chain, by-step, six-week trend, who replied / booked / won).
  * Data: /api/sales/analytics/followup — errors are shown, never rendered as zeros.
  */
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { FollowupResults as Results, SequenceDetail, Grain, Compare, Series } from "@/lib/sales/followup-analytics";
 
@@ -130,7 +131,7 @@ export function FollowupResults({ grain, compare }: { grain: Grain; compare: Com
                     <tr onClick={() => void toggleRow(s.id)} style={{ cursor: "pointer", background: isOpen ? "#F5F9FF" : undefined }}>
                       <td style={{ padding: "9px 10px", borderTop: "0.5px solid #eef1f5", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                         <span style={{ color: MUTED, marginRight: 6 }}>{isOpen ? "▾" : "▸"}</span>
-                        <a href="/admin/sales/sequences" onClick={(e) => e.stopPropagation()} style={{ color: "#185FA5", textDecoration: "none" }}>{s.name}</a>
+                        <Link href="/admin/sales/sequences" onClick={(e) => e.stopPropagation()} style={{ color: "#185FA5", textDecoration: "none" }}>{s.name}</Link>
                       </td>
                       <Td>{s.enrolled.toLocaleString()}</Td><Td>{s.sent.toLocaleString()}</Td>
                       <Td><Bar pct={s.openPct} color="#B5D4F4" /></Td><Td><Bar pct={s.replyPct} color="#9FE1CB" /></Td>

@@ -100,7 +100,7 @@ function BackupPanel() {
     <div className="rounded-xl border border-slate-200 bg-white p-5">
       <h3 className="text-[15px] font-semibold text-slate-900">Full Odoo snapshot</h3>
       <p className="mt-1 text-[12.5px] text-slate-600">Rollout step 8: before Odoo is turned off, download the complete Deals2Match record as JSON — every project, every task with its tags, assignee, dates and Agent Field, all tags, and the task chatter (mail.message). Odoo is only read. Keep the file with the company records; it is the reference if a count is ever questioned after cutover.</p>
-      <a href="/api/admin/ir/import/snapshot" className="mt-3 inline-block rounded-lg bg-indigo-600 px-4 py-1.5 text-[12.5px] font-semibold text-white hover:bg-indigo-700">Download Odoo snapshot (JSON)</a>
+      <a href="/api/admin/ir/import/snapshot" download className="mt-3 inline-block rounded-lg bg-indigo-600 px-4 py-1.5 text-[12.5px] font-semibold text-white hover:bg-indigo-700">Download Odoo snapshot (JSON)</a>
       <p className="mt-3 text-[11.5px] text-slate-400">Reads 18 projects and their tasks live, so it can take a few seconds. After the snapshot and the final import, the <code>odoo_*</code> trace columns can be dropped in a later migration.</p>
     </div>
   );

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
@@ -281,7 +282,7 @@ export function ContactsTable({ contacts, lists: initialLists, total, currentSea
           <option value="none">No grouping</option>
           <option value="list">Group by list</option>
         </select>
-        <a href="/admin/marketing/lists" title="Create a new contact list" style={{ fontSize: 12, fontWeight: 700, padding: "7px 11px", borderRadius: 8, border: "0.5px solid #93C5FD", background: "#EFF6FF", color: "#1A6CE4", textDecoration: "none", whiteSpace: "nowrap" }}>＋ Create list</a>
+        <Link href="/admin/marketing/lists" title="Create a new contact list" style={{ fontSize: 12, fontWeight: 700, padding: "7px 11px", borderRadius: 8, border: "0.5px solid #93C5FD", background: "#EFF6FF", color: "#1A6CE4", textDecoration: "none", whiteSpace: "nowrap" }}>＋ Create list</Link>
         <select value={tagFilter} onChange={(e) => setTagFilter(e.target.value)} style={{ fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--muted-foreground)" }}>
           <option value="">All tags</option>
           {allTagsInView.map((t) => <option key={t} value={t}>{t}</option>)}
