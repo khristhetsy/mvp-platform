@@ -40,7 +40,8 @@ export type WiredField = {
 
 export type WiredData = { companyId: string | null; fields: WiredField[] };
 
-async function loadCompany(orgId: string): Promise<CompanyRow | null> {
+async function loadCompany(orgId: string | null): Promise<CompanyRow | null> {
+  if (!orgId) return null;
   const { data } = await serviceRoleClientUntyped()
     .from("companies")
     .select("id, company_name, business_description, industry, revenue_stage, use_of_funds, team_summary")
@@ -66,7 +67,7 @@ function valueOf(c: CompanyRow | null, key: WiredKey): string {
   }
 }
 
-export async function loadWired(orgId: string, excluded: string[]): Promise<WiredData> {
+export async function loadWired(orgId: string | null, excluded: string[]): Promise<WiredData> {
   const company = await loadCompany(orgId);
   return {
     companyId: company?.id ?? null,
@@ -79,7 +80,7 @@ export async function loadWired(orgId: string, excluded: string[]): Promise<Wire
 }
 
 /** The selected profile fields as plain lines for the agent's fact sheet. Empty when none are selected. */
-export async function wiredFactSheet(orgId: string, excluded: string[]): Promise<string> {
+export async function wiredFactSheet(orgId: string | null, excluded: string[]): Promise<string> {
   const company = await loadCompany(orgId);
   return WIRED_KEYS.filter((k) => !excluded.includes(k))
     .map((k) => ({ k, v: valueOf(company, k) }))

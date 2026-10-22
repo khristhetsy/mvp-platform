@@ -111,6 +111,14 @@ export const AGENT_TYPE_SPECS: Record<AgentType, AgentTypeSpec> = {
   },
 };
 
+/** Sales, Marketing and Investor Relations agents are built by Admin membership. Founder and Investor are open to everyone. */
+export const ADMIN_ONLY_TYPES: readonly AgentType[] = ["sales", "marketing", "ir"];
+/** What an admin starts with: the first Admin option. */
+export const ADMIN_DEFAULT_TYPE: AgentType = "sales";
+export function isAdminOnlyType(type: AgentType): boolean {
+  return ADMIN_ONLY_TYPES.includes(type);
+}
+
 export function isAgentType(v: unknown): v is AgentType {
   return typeof v === "string" && (AGENT_TYPES as readonly string[]).includes(v);
 }
