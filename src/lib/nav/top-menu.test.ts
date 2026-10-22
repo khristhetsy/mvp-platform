@@ -87,6 +87,7 @@ describe("toApps: admin", () => {
     expect(entryLabels(byLabel(apps, "Operational Tools"))).toEqual([
       "Action Center",
       "Account Activity",
+      "AI Agent",
       "Funnels",
       "Investor Relations CRM",
       "Deals",
