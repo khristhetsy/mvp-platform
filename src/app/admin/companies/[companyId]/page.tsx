@@ -2,11 +2,13 @@ import { FieldDisplayProvider } from "@/lib/profile-fields/display-provider";
 import { loadSurfaceDisplay } from "@/lib/profile-fields/display-store";
 import { VocabularyProvider } from "@/lib/vocabulary/provider";
 import { loadVocabularies } from "@/lib/vocabulary/store";
+import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminActionHealthProvider } from "@/components/AdminActionHealthProvider";
 import { AdminCompanyWorkspace } from "@/components/admin/company-workspace/AdminCompanyWorkspace";
 import { AppShell } from "@/components/AppShell";
+import { WorkspaceLoadingSkeleton } from "@/components/admin/company-workspace/WorkspaceLoadingSkeleton";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { getAdminCompanyWorkspace } from "@/lib/admin/company-workspace";
 import { formatError } from "@/lib/errors/format-error";
@@ -26,9 +28,52 @@ type PageProps = {
   params: Promise<{ companyId: string }>;
 };
 
-export default async function AdminCompanyWorkspacePage({ params }: PageProps) {
-  const { companyId } = await params;
-  const profile = await requireRole(["admin", "analyst"]);
+// Reverse-link the founder to their CRM contact (contacts map to founders by
+// email, see /admin/sales/contacts/[id]). Powers the "User Profile" tab.
+async function findFounderContactId(email: string | null, serviceRoleConfigured: boolean): Promise<string | null> {
+  if (!email || !serviceRoleConfigured) return null;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const admin = createServiceRoleClient() as any;
+    const { data: c } = await admin.from("crm_contacts").select("id").eq("email", email).limit(1);
+    return c?.[0]?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// Investor access is a paid entitlement, used to plan-gate the reach-out card's
+// upgrade note (Basic and up can distribute; Free cannot).
+async function findFounderCanDistribute(founderId: string | null, serviceRoleConfigured: boolean): Promise<boolean> {
+  if (!founderId || !serviceRoleConfigured) return false;
+  try {
+    const plan = await getUserPlan(founderId);
+    return founderEntitlements(plan).canDistribute;
+  } catch {
+    return false;
+  }
+}
+
+/** The company name and industry only: one small lookup so the page can open at once. */
+async function loadShellLabel(companyId: string): Promise<{ exists: boolean; name: string | null; industry: string | null }> {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const admin = createServiceRoleClient() as any;
+    const { data, error } = await admin.from("companies").select("company_name, industry").eq("id", companyId).maybeSingle();
+    if (error) return { exists: true, name: null, industry: null };
+    if (!data) return { exists: false, name: null, industry: null };
+    return { exists: true, name: data.company_name ?? null, industry: data.industry ?? null };
+  } catch {
+    return { exists: true, name: null, industry: null };
+  }
+}
+
+type BodyProps = {
+  companyId: string;
+  profile: Awaited<ReturnType<typeof requireRole>>;
+};
+
+async function WorkspaceBody({ companyId, profile }: Readonly<BodyProps>) {
   const supabase = await createServerSupabaseClient();
   const adminRole = profile.role === "analyst" ? "analyst" : "admin";
   const serviceRoleConfigured = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -67,34 +112,50 @@ export default async function AdminCompanyWorkspacePage({ params }: PageProps) {
     notFound();
   }
 
-  // Reverse-link the founder to their CRM contact (contacts map to founders by
-  // email — see /admin/sales/contacts/[id]). Powers the "User Profile" tab.
-  let founderContactId: string | null = null;
-  if (workspace?.founder?.email && serviceRoleConfigured) {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const admin = createServiceRoleClient() as any;
-      const { data: c } = await admin
-        .from("crm_contacts")
-        .select("id")
-        .eq("email", workspace.founder.email)
-        .limit(1);
-      founderContactId = c?.[0]?.id ?? null;
-    } catch {
-      founderContactId = null;
-    }
+  // The contact link, the plan and the two display settings are independent of
+  // each other, so they load together once the workspace is in.
+  const [founderContactId, founderCanDistribute, vocabularies, surfaceDisplay] = await Promise.all([
+    findFounderContactId(workspace?.founder?.email ?? null, serviceRoleConfigured),
+    findFounderCanDistribute(workspace?.founder?.id ?? null, serviceRoleConfigured),
+    workspace ? loadVocabularies() : Promise.resolve(null),
+    workspace ? loadSurfaceDisplay("admin_editors") : Promise.resolve(null),
+  ]);
+
+  if (loadError) {
+    return (
+      <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-800">
+        Failed to load company workspace: {loadError}
+      </div>
+    );
   }
 
-  // Investor access is a paid entitlement — used to plan-gate the reach-out card's
-  // upgrade note (Basic and up can distribute; Free cannot).
-  let founderCanDistribute = false;
-  if (workspace?.founder?.id && serviceRoleConfigured) {
-    try {
-      const plan = await getUserPlan(workspace.founder.id);
-      founderCanDistribute = founderEntitlements(plan).canDistribute;
-    } catch {
-      founderCanDistribute = false;
-    }
+  if (!workspace) return null;
+
+  return (
+    <VocabularyProvider value={vocabularies as Awaited<ReturnType<typeof loadVocabularies>>}>
+      <FieldDisplayProvider value={surfaceDisplay as Awaited<ReturnType<typeof loadSurfaceDisplay>>}>
+        <AdminCompanyWorkspace
+          data={workspace}
+          nextBestActions={companyActions?.actions ?? []}
+          workflowDependencies={workflowDependencies}
+          adminRole={adminRole}
+          riskSignals={companyRiskSignals}
+          founderContactId={founderContactId}
+          founderCanDistribute={founderCanDistribute}
+        />
+      </FieldDisplayProvider>
+    </VocabularyProvider>
+  );
+}
+
+export default async function AdminCompanyWorkspacePage({ params }: PageProps) {
+  const { companyId } = await params;
+  const profile = await requireRole(["admin", "analyst"]);
+  const serviceRoleConfigured = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
+  const shell = serviceRoleConfigured ? await loadShellLabel(companyId) : { exists: true, name: null, industry: null };
+
+  if (!shell.exists) {
+    notFound();
   }
 
   return (
@@ -103,7 +164,7 @@ export default async function AdminCompanyWorkspacePage({ params }: PageProps) {
       workspace="admin"
       profileName={profile.full_name ?? profile.email ?? "Admin"}
       profileSubtitle={profile.role}
-          profileEmail={profile.email ?? undefined}
+      profileEmail={profile.email ?? undefined}
     >
       <AdminActionHealthProvider
         userId={profile.id}
@@ -111,32 +172,14 @@ export default async function AdminCompanyWorkspacePage({ params }: PageProps) {
         serviceRoleConfigured={serviceRoleConfigured}
       >
         <WorkspacePageContainer>
-          {loadError ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-800">
-              Failed to load company workspace: {loadError}
-            </div>
-          ) : workspace ? (
-            <>
-              <div className="mb-2">
-                <Link href="/admin/companies" className="text-xs font-medium text-indigo-600 hover:text-indigo-800">
-                  ← All companies
-                </Link>
-              </div>
-              <VocabularyProvider value={await loadVocabularies()}>
-              <FieldDisplayProvider value={await loadSurfaceDisplay("admin_editors")}>
-              <AdminCompanyWorkspace
-                data={workspace}
-                nextBestActions={companyActions?.actions ?? []}
-                workflowDependencies={workflowDependencies}
-                adminRole={adminRole}
-                riskSignals={companyRiskSignals}
-                founderContactId={founderContactId}
-                founderCanDistribute={founderCanDistribute}
-              />
-              </FieldDisplayProvider>
-              </VocabularyProvider>
-            </>
-          ) : null}
+          <div className="mb-2">
+            <Link href="/admin/companies" className="text-xs font-medium text-indigo-600 hover:text-indigo-800">
+              ← All companies
+            </Link>
+          </div>
+          <Suspense fallback={<WorkspaceLoadingSkeleton name={shell.name} industry={shell.industry} />}>
+            <WorkspaceBody companyId={companyId} profile={profile} />
+          </Suspense>
         </WorkspacePageContainer>
       </AdminActionHealthProvider>
     </AppShell>
