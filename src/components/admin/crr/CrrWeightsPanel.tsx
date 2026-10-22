@@ -13,6 +13,7 @@
  */
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Dimension, ProfileKey } from "@/lib/crr/profiles";
+import { ProofTab } from "@/components/admin/crr/ProofTab";
 import type { Bands, DiffRow, Floor, ImpactSnapshot, WeightSet } from "@/lib/crr/weight-sets";
 
 type Shape = {
@@ -25,7 +26,7 @@ type HistoryEntry = WeightSet & { diff: DiffRow[]; summary: string };
 type Payload = { active: WeightSet; sets: HistoryEntry[]; scoreCounts: Record<string, number>; companiesByProfile: Record<string, number>; shape: Shape };
 /** Factor points are the only thing edited. Dimension shares are derived from them. */
 type Draft = { factors: Record<ProfileKey, Record<string, number>>; bands: Bands; floors: Partial<Record<ProfileKey, Floor>> };
-type Tab = "companies" | "weights" | "history";
+type Tab = "companies" | "weights" | "history" | "proof";
 
 const card = "rounded-xl border border-slate-200 bg-white";
 const btn = "rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[12.5px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50";
@@ -114,11 +115,13 @@ export function CrrWeightsPanel({ children, canEdit }: { children: ReactNode; ca
 
   return (
     <div>
-      <div className="mb-4 flex border-b border-slate-200">{tabBtn("companies", "Companies")}{tabBtn("weights", "Weights")}{tabBtn("history", "History")}</div>
+      <div className="mb-4 flex border-b border-slate-200">{tabBtn("companies", "Companies")}{tabBtn("weights", "Weights")}{tabBtn("history", "History")}{tabBtn("proof", "Proof")}</div>
       {error ? <div role="alert" className="mb-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[12.5px] text-rose-700">{error}</div> : null}
       {notice ? <div className="mb-3 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[12.5px] text-emerald-800"><span className="flex-1">{notice}</span><button type="button" onClick={() => setNotice(null)}>✕</button></div> : null}
 
       {tab === "companies" ? children : null}
+
+      {tab === "proof" ? <ProofTab /> : null}
 
       {tab === "weights" && data && draft ? (
         <WeightsTab
