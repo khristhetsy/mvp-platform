@@ -22,13 +22,13 @@ describe("planContactChanges", () => {
     const p = planContactChanges(base, { email: "maya.chen@gmail.com", phone: "+61 433 210 887" });
     expect(p.patch.phone).toBeUndefined();
     expect(p.patch.email).toBeUndefined();
-    expect(p.patch.phone2).toBe("+61 433 210 887");
+    expect(p.patch.phone2).toBe("+61433210887");
     expect(p.email2).toBe("maya.chen@gmail.com");
   });
 
   it("fills the main slot when it is empty", () => {
     const p = planContactChanges({ ...base, phone: null }, { phone: "+61 433 210 887" });
-    expect(p.patch.phone).toBe("+61 433 210 887");
+    expect(p.patch.phone).toBe("+61433210887");
     expect(p.patch.phone2).toBeUndefined();
   });
 
