@@ -16,6 +16,9 @@
  * always show as columns, with a "+" to add a task straight into them. The pencil on a card opens
  * Edit task (name, stage, due date, assignee, investors, notes); the card itself still opens the task.
  *
+ * The three dots on a card open "Move to week": pick one of the month's weeks to move the card there
+ * (its due date and everything else stay as they are).
+ *
  * Active / Archived picks which tasks show. In the List view, tick tasks and use Actions to
  * archive, unarchive or delete them (delete asks first and counts what goes with it).
  */
@@ -30,6 +33,7 @@ import { SelectionBar } from "@/components/admin/sales/SelectionBar";
 import { TaskDeleteDialog, runTaskAction, type TaskAction } from "./TaskArchiveDelete";
 import { EditTaskDialog } from "./EditTaskDialog";
 import { TaskViewGear } from "./TaskViewGear";
+import { MoveWeekMenu } from "./MoveWeekMenu";
 
 type Payload = { project: IrProject; milestones: IrMilestone[]; matches: IrMatch[]; tasks: IrTask[]; openActivities: IrActivity[]; staff: Array<{ id: string; name: string }> };
 const STATUS_DOT: Record<string, string> = { new: "#94A3B8", in_progress: "#F59E0B", done: "#16A34A" };
@@ -125,6 +129,16 @@ export function TasksClient({ projectId, meId, initialMonth }: { projectId: stri
       await loadStages();
     } finally { setBusy(false); }
   }
+  async function moveToWeek(t: IrTask, w: IrMilestone) {
+    setBusy(true); setError(null);
+    try {
+      const r = await fetch(`/api/admin/ir/tasks/${t.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ milestoneId: w.id }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) { setError(j.error ?? "Couldn't move the task."); return; }
+      setNotice(`Moved "${t.title}" to ${w.label} (${formatRange(w.starts_on, w.ends_on)}).`);
+      await load();
+    } finally { setBusy(false); }
+  }
   async function star(t: IrTask) {
     await fetch(`/api/admin/ir/tasks/${t.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ starred: !t.starred }) });
     void load();
@@ -156,6 +170,9 @@ export function TasksClient({ projectId, meId, initialMonth }: { projectId: stri
         <div className="flex items-start gap-1.5">
           <Link href={href} className={`min-w-0 flex-1 font-semibold text-slate-900 hover:text-indigo-700 ${odoo ? "text-[14px]" : "text-[13px]"}`}>{t.title}</Link>
           <button type="button" onClick={() => setEditing(t)} aria-label={`Edit ${t.title}`} title="Edit task" className="rounded px-1 text-[15px] text-slate-400 hover:bg-indigo-50 hover:text-indigo-700"><i className="ti ti-pencil" aria-hidden="true" /></button>
+          {!archivedView && monthWeeks.length > 1 ? <MoveWeekMenu title={t.title} currentId={t.milestone_id} disabled={busy}
+            weeks={monthWeeks.map((w) => ({ id: w.id, label: w.label, range: formatRange(w.starts_on, w.ends_on) }))}
+            onMove={(id) => { const w = monthWeeks.find((x) => x.id === id); if (w) void moveToWeek(t, w); }} /> : null}
         </div>
         <div className={`flex flex-wrap ${odoo ? "mt-2 gap-1.5" : "mt-1.5 gap-1"}`}>
           {shown.map((m) => <span key={m.id} className={`${odoo ? "max-w-full truncate rounded-full px-2 py-0.5 text-[11px]" : "rounded px-1.5 py-0.5 text-[10.5px]"} ${hit(m) ? "bg-amber-100 text-amber-900" : "bg-slate-100 text-slate-700"}`}>{chipLabel(m)}</span>)}
