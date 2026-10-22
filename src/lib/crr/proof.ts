@@ -89,7 +89,31 @@ export function monthsOf(c: ProofCompany): number {
   return c.first && c.latest ? monthsBetween(c.first.at, c.latest.at) : 0;
 }
 
-export type MissingKey = "baseline" | "quote_pending" | "quote_none" | "activity";
+/** A measured change a judge could reasonably question, and why. */
+export type EvidenceFlag = { key: "low_baseline" | "short_span" | "tiny_change"; label: string };
+
+export const LOW_BASELINE = 10;
+export const SHORT_SPAN_DAYS = 30;
+export const TINY_CHANGE = 5;
+
+/**
+ * Cautions on a before and after. They do not remove a founder from the
+ * count, they say what to verify before stating the figure: a first score
+ * under 10 is often an incomplete profile, a span under a month is often
+ * re-scoring while documents were uploaded, and a change under 5 points is not
+ * evidence of progress.
+ */
+export function evidenceFlags(c: ProofCompany): EvidenceFlag[] {
+  if (!isMeasured(c)) return [];
+  const out: EvidenceFlag[] = [];
+  const days = (Date.parse(c.latest!.at) - Date.parse(c.first!.at)) / DAY;
+  if (c.first!.score < LOW_BASELINE) out.push({ key: "low_baseline", label: `First score ${c.first!.score}, check it was a complete profile` });
+  if (Number.isFinite(days) && days < SHORT_SPAN_DAYS) out.push({ key: "short_span", label: `Measured over ${Math.max(0, Math.round(days))} days` });
+  if (Math.abs(c.latest!.score - c.first!.score) < TINY_CHANGE) out.push({ key: "tiny_change", label: "Change under 5 points" });
+  return out;
+}
+
+export type MissingKey ="baseline" | "quote_pending" | "quote_none" | "activity";
 export type Missing = { key: MissingKey; label: string; tone: "bad" | "warn" };
 
 /** What stops a company being proven on all three: baseline, quote, activity. */
