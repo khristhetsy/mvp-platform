@@ -135,6 +135,46 @@ export function buildStaffJourneyDigestEmail(all: StalledRow[], now: Date = new 
   });
 }
 
+/**
+ * Most recent real activity per founder (epoch ms): the later of the last
+ * sign in and the latest audit log entry. Best-effort per user; a failed
+ * lookup simply contributes nothing.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function latestActivityByUser(db: SupabaseClient<any>, userIds: string[]): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  const CHUNK = 10;
+  for (let i = 0; i < userIds.length; i += CHUNK) {
+    await Promise.all(
+      userIds.slice(i, i + CHUNK).map(async (id) => {
+        let best = 0;
+        try {
+          const { data } = await db.auth.admin.getUserById(id);
+          const t = data?.user?.last_sign_in_at ? new Date(data.user.last_sign_in_at).getTime() : 0;
+          if (t > best) best = t;
+        } catch {
+          /* ignore */
+        }
+        try {
+          const { data } = await db
+            .from("audit_logs")
+            .select("created_at")
+            .eq("user_id", id)
+            .order("created_at", { ascending: false })
+            .limit(1);
+          const c = (data as { created_at: string }[] | null)?.[0]?.created_at;
+          const t = c ? new Date(/(Z|[+-]\d\d:?\d\d)$/.test(c) ? c : `${c.replace(" ", "T")}Z`).getTime() : 0;
+          if (t > best) best = t;
+        } catch {
+          /* ignore */
+        }
+        if (best) out.set(id, best);
+      }),
+    );
+  }
+  return out;
+}
+
 export async function digestStalledFoundersForStaff(): Promise<{ staffNotified: number; stalled: number }> {
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -164,6 +204,21 @@ export async function digestStalledFoundersForStaff(): Promise<{ staffNotified: 
     }
 
     const idleCutoff = Date.now() - IDLE_DAYS * 24 * 60 * 60 * 1000;
+    const DAY_MS = 24 * 60 * 60 * 1000;
+
+    // The company row only changes when the record itself is edited, so it
+    // understates activity. Candidates (stale by that measure) are re-checked
+    // against real signals: last sign in and latest audit log entry.
+    const candidateIds = founders
+      .filter((f) => f.stage_approval_status !== "pending")
+      .filter((f) => {
+        const u = companyByFounder.get(f.id)?.updated_at;
+        const ms = u ? new Date(u).getTime() : 0;
+        return ms && ms < idleCutoff;
+      })
+      .map((f) => f.id);
+    const lastActivity = await latestActivityByUser(db, candidateIds);
+
     const rows: StalledRow[] = [];
     for (const f of founders) {
       const company = companyByFounder.get(f.id);
@@ -172,9 +227,10 @@ export async function digestStalledFoundersForStaff(): Promise<{ staffNotified: 
         rows.push({ company: company?.company_name ?? "Company", companyId: company?.id ?? null, founder: f.full_name ?? "Founder", stage: stageLabel, pending: true, idleDays: null });
         continue;
       }
-      const updatedMs = company?.updated_at ? new Date(company.updated_at).getTime() : 0;
+      const companyMs = company?.updated_at ? new Date(company.updated_at).getTime() : 0;
+      const updatedMs = Math.max(companyMs, lastActivity.get(f.id) ?? 0);
       if (updatedMs && updatedMs < idleCutoff) {
-        const days = Math.floor((Date.now() - updatedMs) / (24 * 60 * 60 * 1000));
+        const days = Math.floor((Date.now() - updatedMs) / DAY_MS);
         rows.push({ company: company?.company_name ?? "Company", companyId: company?.id ?? null, founder: f.full_name ?? "Founder", stage: stageLabel, pending: false, idleDays: days });
       }
     }
