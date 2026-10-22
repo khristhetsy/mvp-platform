@@ -146,9 +146,11 @@ export async function getLiveAgentByAddress(companySlug: string, ending: string)
 }
 
 /** Create the organization's agent from the master template. Idempotent per organization. */
-export async function createAgentForOrg(input: { orgId: string; companyName: string; createdBy: string; agentType?: AgentType }): Promise<AgentRow | null> {
-  const existing = await getAgentByOrg(input.orgId);
-  if (existing) return existing;
+export async function createAgentForOrg(input: { orgId: string | null; companyName: string; createdBy: string; agentType?: AgentType }): Promise<AgentRow | null> {
+  if (input.orgId) {
+    const existing = await getAgentByOrg(input.orgId);
+    if (existing) return existing;
+  }
   const client = db();
   const master = await getTemplate();
   const agentType = input.agentType ?? DEFAULT_AGENT_TYPE;
@@ -185,6 +187,31 @@ export async function createAgentForOrg(input: { orgId: string; companyName: str
   return agent as AgentRow;
 }
 
+/** An agent started without a company. An admin links one later with linkAgentToOrg. */
+export function createStandaloneAgent(input: { name: string; createdBy: string; agentType?: AgentType }): Promise<AgentRow | null> {
+  return createAgentForOrg({ orgId: null, companyName: input.name, createdBy: input.createdBy, agentType: input.agentType });
+}
+
+/**
+ * Link a company to an agent that has none. One agent per company, so this
+ * refuses when the company already has one. The address follows the company
+ * name while the agent is not live.
+ */
+export async function linkAgentToOrg(agent: AgentRow, orgId: string, companyName: string): Promise<{ ok: true; agent: AgentRow } | { ok: false; error: string; status: number }> {
+  if (agent.organization_id) return { ok: false, error: "This agent already has a company.", status: 409 };
+  const existing = await getAgentByOrg(orgId);
+  if (existing) return { ok: false, error: "That company already has an AI Agent. Pick it from the Company list instead.", status: 409 };
+  const patch: Record<string, unknown> = { organization_id: orgId, company_name: companyName.trim().slice(0, 120) || agent.company_name };
+  if (agent.status !== "live") {
+    const { data: slugs } = await db().from("ir_agents").select("company_slug").neq("id", agent.id);
+    const taken = new Set<string>((slugs ?? []).map((r: { company_slug: string }) => r.company_slug));
+    patch.company_slug = uniqueCompanySlug(companyName, taken);
+  }
+  const { data, error } = await db().from("ir_agents").update(patch).eq("id", agent.id).select("*").single();
+  if (error || !data) return { ok: false, error: error?.message ?? "Could not link the company.", status: 500 };
+  return { ok: true, agent: data as AgentRow };
+}
+
 export async function getQuestions(agentId: string): Promise<AgentQuestion[]> {
   const { data } = await db().from("ir_agent_questions").select("id, field, prompt, options, enabled, position").eq("agent_id", agentId).order("position");
   return ((data ?? []) as Array<Omit<AgentQuestion, "options"> & { options: unknown }>).map((q) => ({
@@ -215,7 +242,8 @@ async function hostBookingReady(hostId: string | null): Promise<boolean> {
   return Array.isArray(rules) && rules.length > 0;
 }
 
-async function orgIsDemo(orgId: string): Promise<boolean> {
+async function orgIsDemo(orgId: string | null): Promise<boolean> {
+  if (!orgId) return false;
   const { data } = await db().from("organizations").select("purpose, email_dispatch_enabled").eq("id", orgId).maybeSingle();
   return Boolean(data && (data.purpose === "demo" || data.purpose === "internal" || data.email_dispatch_enabled === false));
 }

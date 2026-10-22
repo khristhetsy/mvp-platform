@@ -61,6 +61,7 @@ describe("toApps: admin", () => {
       "Investor Directory",
       "Accounting",
       "Social Media",
+      "AI Agent",
       "Events",
       "Voice",
       "Communication",

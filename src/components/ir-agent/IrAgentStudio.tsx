@@ -4,7 +4,7 @@ import Link from "next/link";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AgentChat } from "@/components/ir-agent/AgentChat";
 import { useToast } from "@/components/ui/ToastProvider";
-import { AGENT_TYPES, AGENT_TYPE_SPECS, DEFAULT_AGENT_TYPE, type AgentType } from "@/lib/ir-agent/agent-types";
+import { ADMIN_DEFAULT_TYPE, AGENT_TYPES, AGENT_TYPE_SPECS, DEFAULT_AGENT_TYPE, isAdminOnlyType, type AgentType } from "@/lib/ir-agent/agent-types";
 import { COMPLIANCE_NOTICE, FIELD_LABELS, type QuestionField } from "@/lib/ir-agent/defaults";
 import { AGENT_HOST, CHANNELS, CHANNEL_LABELS, agentUrl, normalizeEnding, trackedUrl, type Channel } from "@/lib/ir-agent/slug";
 import type { AgentContactField, AgentPublicConfig, AgentQuestion, AgentRow, TaughtAnswer } from "@/lib/ir-agent/types";
@@ -51,11 +51,12 @@ const card = "rounded-xl border border-slate-200 bg-white p-5";
 
 type AgentApi = (path?: string, params?: Record<string, string>) => string;
 
-/** Builds the agent API url. With an orgId the same routes serve an admin building for that company. */
-function makeApi(orgId?: string): AgentApi {
+/** Builds the agent API url. With an orgId or agentId the same routes serve an admin building for that company or agent. */
+function makeApi(scope: { orgId?: string; agentId?: string } = {}): AgentApi {
   return (path = "", params = {}) => {
     const sp = new URLSearchParams(params);
-    if (orgId) sp.set("orgId", orgId);
+    if (scope.orgId) sp.set("orgId", scope.orgId);
+    else if (scope.agentId) sp.set("agentId", scope.agentId);
     const qs = sp.toString();
     return `/api/founder/ir-agent${path}${qs ? `?${qs}` : ""}`;
   };
@@ -67,10 +68,10 @@ async function readJson<T>(res: Response): Promise<T & { error?: string }> {
   return (await res.json().catch(() => ({}))) as T & { error?: string };
 }
 
-export function IrAgentStudio({ orgId }: { orgId?: string } = {}) {
+export function IrAgentStudio({ orgId, agentId }: { orgId?: string; agentId?: string } = {}) {
   const { toast } = useToast();
-  const api = useMemo(() => makeApi(orgId), [orgId]);
-  const ctxValue = useMemo(() => ({ api, admin: Boolean(orgId) }), [api, orgId]);
+  const api = useMemo(() => makeApi({ orgId, agentId }), [orgId, agentId]);
+  const ctxValue = useMemo(() => ({ api, admin: Boolean(orgId || agentId) }), [api, orgId, agentId]);
   const [data, setData] = useState<Loaded | null>(null);
   const [tab, setTab] = useState<Tab>("build");
   const [error, setError] = useState<string | null>(null);
@@ -330,15 +331,26 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
         <section className={card}>
           <h2 className="text-base font-semibold text-slate-950">AI Agent Type</h2>
           <p className="mt-1 text-sm text-slate-600">Each type loads its own question set. Switching replaces the questions, agent name and welcome.</p>
+          <p className="mt-3 rounded-lg bg-[#EEF4FF] px-3 py-2 text-xs text-[#1b3f99]">
+            Your membership is <b>{admin ? "Admin" : "Founder"}</b>, so the {AGENT_TYPE_SPECS[admin ? ADMIN_DEFAULT_TYPE : DEFAULT_AGENT_TYPE].label} question set is loaded first.{" "}
+            {admin ? "Sales, Marketing and Investor Relations are Admin options. Founder and Investor are also available." : "Sales, Marketing and Investor Relations need Admin membership."}
+          </p>
           <div role="radiogroup" aria-label="AI Agent Type" className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {AGENT_TYPES.map((t) => {
               const s = AGENT_TYPE_SPECS[t];
               const on = t === agentType;
+              const adminOnly = isAdminOnlyType(t);
+              const locked = adminOnly && !admin;
+              const isDefault = t === (admin ? ADMIN_DEFAULT_TYPE : DEFAULT_AGENT_TYPE);
               return (
-                <label key={t} className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 ${on ? "border-[#1A6CE4] bg-[#F4F8FF]" : "border-slate-300 bg-white hover:bg-slate-50"} ${switching ? "opacity-60" : ""}`}>
-                  <input type="radio" name="agent-type" checked={on} disabled={switching} onChange={() => void switchType(t)} className="mt-1 h-4 w-4 accent-[#1A6CE4]" />
+                <label key={t} className={`flex items-start gap-3 rounded-lg border p-3 ${locked ? "cursor-not-allowed border-slate-200 bg-slate-50 opacity-60" : on ? "cursor-pointer border-[#1A6CE4] bg-[#F4F8FF]" : "cursor-pointer border-slate-300 bg-white hover:bg-slate-50"} ${switching ? "opacity-60" : ""}`}>
+                  <input type="radio" name="agent-type" checked={on} disabled={switching || locked} onChange={() => void switchType(t)} className="mt-1 h-4 w-4 accent-[#1A6CE4]" />
                   <span>
-                    <span className="block text-sm font-semibold text-slate-900">{s.label}</span>
+                    <span className="block text-sm font-semibold text-slate-900">
+                      {s.label}
+                      {adminOnly ? <span className={`ml-2 rounded-full px-2 py-0.5 text-[11px] font-semibold ${locked ? "bg-slate-200 text-slate-600" : "bg-[#E8EFFD] text-[#1b3f99]"}`}>{locked ? "Admin only" : "Admin"}</span> : null}
+                      {isDefault ? <span className="ml-2 rounded-full bg-[#E8EFFD] px-2 py-0.5 text-[11px] font-semibold text-[#1b3f99]">Default</span> : null}
+                    </span>
                     <span className="block text-xs text-slate-600">{s.description}</span>
                   </span>
                 </label>
@@ -537,7 +549,7 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
               <div>
                 <h2 className="text-base font-semibold text-slate-950">Selected fields</h2>
                 <p className="mt-1 text-sm text-slate-600">
-                  Wired from {companyName}. {wiredOn.length} of {wiredFields.length} fields selected, {wiredMissing} missing. Untick a field to keep it out of the agent. The agent never states the raise amount, revenue figures or cap table.
+                  Wired from {data.agent.organization_id ? companyName : "the company you link"}. {wiredOn.length} of {wiredFields.length} fields selected, {wiredMissing} missing. Untick a field to keep it out of the agent. The agent never states the raise amount, revenue figures or cap table.
                 </p>
               </div>
               <div className="flex gap-2">
@@ -549,6 +561,9 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
                 </button>
               </div>
             </div>
+            {!data.agent.organization_id ? (
+              <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">This AI Agent has no company yet, so every field shows Missing. Search your contacts in Select company above and choose a company to wire its Company profile.</p>
+            ) : null}
             <ul className="mt-4 divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200">
               {wiredFields.map((f) => {
                 const on = f.present && !excluded.includes(f.key);
