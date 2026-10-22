@@ -6,6 +6,8 @@ vi.mock("@/lib/email/send-email", () => ({ sendEmail: vi.fn() }));
 vi.mock("@/lib/support/inbound", () => ({ supportInboundEnabled: () => false, supportInboxAddress: () => "support@in.icapos.com" }));
 
 import {
+  freeSteps,
+  isFreeWelcome,
   planFeatures,
   renderWelcomeLetter,
   welcomeBell,
@@ -115,5 +117,70 @@ describe("Started row on a late letter", () => {
     const late = renderWelcomeLetter({ ...TED, startedAt: null }, CONN);
     expect(late.text).not.toContain("Started:");
     expect(late.text).toContain("Next renewal: Nov 8, 2026");
+  });
+});
+
+const GANESH: WelcomeLetterData = {
+  founderId: "u2",
+  email: "ganesh_iyer@opprtna.com",
+  firstName: "Ganesh",
+  companyName: "Opprtna Therapeutics",
+  plan: "founder_free",
+  priceCents: 0,
+  startedAt: null,
+  renewsAt: null,
+  onboardingPercent: 50,
+  steps: [
+    { key: "company_profile", done: true },
+    { key: "investor_readiness_review", done: true },
+    { key: "documents_uploaded", done: false },
+    { key: "funding_information", done: false },
+  ],
+  crrScore: null,
+};
+
+describe("free welcome letter", () => {
+  const out = renderWelcomeLetter(GANESH, CONN);
+
+  it("is chosen when there is no price", () => {
+    expect(isFreeWelcome(GANESH)).toBe(true);
+    expect(isFreeWelcome(TED)).toBe(false);
+  });
+
+  it("is warm, personal, and has no price or renewal", () => {
+    expect(out.subject).toBe("Ganesh, welcome to iCapOS. We're glad you're here");
+    expect(out.text).toContain("Hi Ganesh,");
+    expect(out.text).toContain("congratulations on taking this step for Opprtna Therapeutics");
+    expect(out.text).toContain("Your AI due diligence report and your Capital Readiness Rating, free");
+    expect(out.text).toContain("Questions along the way? Just reply to this email.");
+    expect(out.text).toContain("Warmly,");
+    expect(out.text).not.toMatch(/Amount:|renewal|\/ month|payment/i);
+  });
+
+  it("lists at most three open steps and one button", () => {
+    expect(freeSteps(GANESH)).toEqual([
+      "Add your documents to the data room",
+      "Share your funding plans",
+      "See where you stand with your Capital Readiness Rating",
+    ]);
+    expect(out.text).toContain("Start with your dashboard:");
+  });
+
+  it("carries the signature and disclaimer, with no dashes as punctuation", () => {
+    expect(out.text).toContain("Founder & CEO, iCFO Capital Global, Inc.");
+    expect(out.text).toContain("does not solicit securities and is not an investment adviser");
+    expect(out.text).toContain("because you created an iCapOS account");
+    expect(out.text).not.toMatch(/ [-–—] /);
+    expect(out.subject).not.toMatch(/ [-–—] /);
+  });
+
+  it("falls back without a first name or company and builds the bell", () => {
+    const bare = { ...GANESH, firstName: null, companyName: null };
+    expect(renderWelcomeLetter(bare, CONN).subject).toBe("Welcome to iCapOS. We're glad you're here");
+    expect(renderWelcomeLetter(bare, CONN).text).toContain("congratulations on taking this step.");
+    expect(welcomeBell(GANESH)).toEqual({
+      title: "Welcome to iCapOS",
+      message: "Your account is ready. A good place to start: add your documents to the data room.",
+    });
   });
 });
