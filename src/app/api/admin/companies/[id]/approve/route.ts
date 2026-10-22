@@ -4,6 +4,7 @@ import { requireStaffApi } from "@/lib/api/admin";
 import { adminDebug } from "@/lib/debug/admin-debug";
 import { applyCompanyReview } from "@/lib/data/admin-reviews";
 import { writeAuditLog } from "@/lib/data/audit";
+import { sendWelcomeLetterOnApproval } from "@/lib/notifications/founder-welcome-letter";
 
 export async function POST(
   _request: Request,
@@ -56,6 +57,9 @@ export async function POST(
     entityType: "company",
     entityId: id,
   });
+
+  // The welcome letter goes out once, when the company is approved.
+  await sendWelcomeLetterOnApproval((data?.company as { founder_id?: string | null } | null)?.founder_id, auth.profile.id);
 
   adminDebug({
     scope: "api.admin.approve",

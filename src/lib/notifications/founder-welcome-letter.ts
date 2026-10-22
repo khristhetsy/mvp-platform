@@ -11,11 +11,14 @@ import { supportInboundEnabled, supportInboxAddress } from "@/lib/support/inboun
 import { formatPlatformDateTime } from "@/lib/time/platform-tz";
 
 /**
- * The welcome letter a founder gets on their first payment: plan and price,
- * what the plan includes, their open onboarding steps, and one button.
+ * The welcome letter a founder gets: on their first payment (plan and price,
+ * what the plan includes, their open onboarding steps, and one button), or, for
+ * a free founder, when their company is approved (a warmer letter with no
+ * price, see isFreeWelcome).
  *
- * Sent once (the billing webhook calls it on checkout; renewals and retried
- * deliveries don't resend it). Every send is written to the email log with
+ * Sent once (the billing webhook calls it on checkout, company approval calls
+ * it for founders who haven't had one; renewals and retried deliveries don't
+ * resend it). Every send is written to the email log with
  * source "welcome_letter", so delivery, opens, clicks and bounces are tracked
  * the same way as every other platform email. Staff can resend it from
  * Analytics & Tools, Emails sent.
@@ -119,13 +122,25 @@ export function welcomeNextSteps(data: Pick<WelcomeLetterData, "steps" | "crrSco
   return open;
 }
 
-export function welcomeSubject(data: Pick<WelcomeLetterData, "plan" | "firstName">): string {
+/** A founder with no paid plan: they get the free welcome letter. */
+export function isFreeWelcome(data: Pick<WelcomeLetterData, "priceCents">): boolean {
+  return data.priceCents <= 0;
+}
+
+export function welcomeSubject(data: Pick<WelcomeLetterData, "plan" | "firstName"> & { priceCents?: number }): string {
+  if (data.priceCents !== undefined && isFreeWelcome({ priceCents: data.priceCents })) {
+    return data.firstName ? `${data.firstName}, welcome to iCapOS. We're glad you're here` : "Welcome to iCapOS. We're glad you're here";
+  }
   const plan = PLAN_LABELS[data.plan] ?? "iCapOS";
   return data.firstName ? `Welcome to iCapOS ${plan}, ${data.firstName}` : `Welcome to iCapOS ${plan}`;
 }
 
 /** One line for the founder's bell. */
-export function welcomeBell(data: Pick<WelcomeLetterData, "plan" | "steps" | "crrScore">): { title: string; message: string } {
+export function welcomeBell(data: Pick<WelcomeLetterData, "plan" | "steps" | "crrScore"> & { priceCents?: number }): { title: string; message: string } {
+  if (data.priceCents !== undefined && isFreeWelcome({ priceCents: data.priceCents })) {
+    const first = freeSteps(data)[0];
+    return { title: "Welcome to iCapOS", message: first ? `Your account is ready. A good place to start: ${first.charAt(0).toLowerCase()}${first.slice(1)}.` : "Your account is ready." };
+  }
   const plan = PLAN_LABELS[data.plan] ?? "iCapOS";
   const next = welcomeNextSteps(data)[0];
   const tail = next ? ` Next: ${next.text.charAt(0).toLowerCase()}${next.text.slice(1).replace(/\.$/, "")}.` : " Your matched investors are ready.";
@@ -146,7 +161,75 @@ function emailButton(label: string, url: string): string {
   return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:18px;"><tr><td bgcolor="${BLUE}" style="border-radius:8px;"><a href="${escapeHtml(url)}" style="display:inline-block;padding:11px 18px;font-family:${FONT};font-size:14px;font-weight:bold;color:#ffffff;text-decoration:none;border-radius:8px;">${escapeHtml(label)}</a></td></tr></table>`;
 }
 
+const FREE_STEP_COPY: Record<string, string> = {
+  company_profile: "Tell us about your company",
+  investor_readiness_review: "Finish your investor readiness review",
+  documents_uploaded: "Add your documents to the data room",
+  funding_information: "Share your funding plans",
+};
+const FREE_CRR_STEP = "See where you stand with your Capital Readiness Rating";
+
+/** Open steps for the free letter, in order, at most three. */
+export function freeSteps(data: Pick<WelcomeLetterData, "steps" | "crrScore">): string[] {
+  const open = STEP_ORDER.filter((key) => data.steps.some((s) => s.key === key && !s.done)).map((key) => FREE_STEP_COPY[key]);
+  if (data.crrScore == null) open.push(FREE_CRR_STEP);
+  return open.slice(0, 3);
+}
+
+const FREE_INCLUDED = "Your AI due diligence report and your Capital Readiness Rating, free";
+
+function renderFreeWelcomeLetter(data: WelcomeLetterData): { subject: string; html: string; text: string } {
+  const subject = welcomeSubject(data);
+  const greetingName = data.firstName ?? "there";
+  const steps = freeSteps(data);
+  const button = { label: "Start with your dashboard", url: absoluteUrl("/founder/dashboard") };
+  const intro = data.companyName
+    ? `Welcome, and congratulations on taking this step for ${data.companyName}.`
+    : "Welcome, and congratulations on taking this step.";
+  const body1 = `${intro} Raising capital takes real work, and you don't have to figure it out alone. We built iCapOS to walk beside founders like you.`;
+  const body2 = "Your account is ready, and it's yours to explore at your own pace.";
+  const ask = "Questions along the way? Just reply to this email. We'd love to help.";
+  const footer = "You are receiving this email because you created an iCapOS account.";
+
+  const band = `<div style="background:${NAVY};color:#ffffff;padding:22px 24px;border-radius:10px 10px 0 0;"><div style="font-weight:bold;font-size:15px;opacity:.9;">iCapOS</div><div style="font-size:22px;font-weight:bold;margin:14px 0 4px;">Welcome, ${escapeHtml(greetingName)}.</div>${
+    data.companyName ? `<div style="font-size:14px;opacity:.85;">${escapeHtml(data.companyName)} is ready on iCapOS.</div>` : ""
+  }</div>`;
+  const included = `<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:12px 16px;margin:16px 0;"><div style="font-weight:bold;color:#166534;">Already included for you</div><div style="font-size:13px;color:#166534;margin-top:2px;">${escapeHtml(FREE_INCLUDED)}</div></div>`;
+  const stepList = steps.length
+    ? `${heading("A good place to start")}<ol style="margin:0;padding-left:20px;">${steps.map((t) => `<li style="margin:6px 0;">${escapeHtml(t)}</li>`).join("")}</ol>`
+    : "";
+
+  const html = `<div style="font-family:${FONT};font-size:14px;line-height:1.6;color:#0F172A;max-width:600px;">${band}<div style="padding:22px 24px 26px;border:1px solid ${LINE};border-top:0;border-radius:0 0 10px 10px;"><p style="margin:0 0 12px;font-size:16px;font-weight:bold;">Hi ${escapeHtml(greetingName)},</p><p style="margin:0 0 12px;">${escapeHtml(body1)}</p><p style="margin:0;">${escapeHtml(body2)}</p>${included}${stepList}${emailButton(button.label, button.url)}<p style="margin:22px 0 0;">${escapeHtml(ask)}<br><br>Warmly,<br><b>Khris Thetsy</b><br>Founder &amp; CEO, iCFO Capital Global, Inc.</p><div style="margin-top:22px;padding-top:14px;border-top:1px solid ${LINE};font-size:11.5px;color:#94A3B8;line-height:1.5;">${escapeHtml(DISCLAIMER)} ${escapeHtml(footer)}</div></div></div>`;
+
+  const text = [
+    `Welcome, ${greetingName}.`,
+    "",
+    `Hi ${greetingName},`,
+    body1,
+    body2,
+    "",
+    "Already included for you",
+    FREE_INCLUDED,
+    "",
+    steps.length ? "A good place to start" : null,
+    ...steps.map((t, i) => `${i + 1}. ${t}`),
+    steps.length ? "" : null,
+    `${button.label}: ${button.url}`,
+    "",
+    ask,
+    "",
+    "Warmly,",
+    "Khris Thetsy",
+    "Founder & CEO, iCFO Capital Global, Inc.",
+    "",
+    `${DISCLAIMER} ${footer}`,
+  ].filter((l) => l !== null) as string[];
+
+  return { subject, html, text: lines(text) };
+}
+
 export function renderWelcomeLetter(data: WelcomeLetterData, conn: FounderConnectionConfig): { subject: string; html: string; text: string } {
+  if (isFreeWelcome(data)) return renderFreeWelcomeLetter(data);
   const plan = PLAN_LABELS[data.plan] ?? "iCapOS";
   const subject = welcomeSubject(data);
   const greetingName = data.firstName ?? "there";
@@ -245,10 +328,10 @@ export async function loadWelcomeLetterData(founderId: string, planHint?: PlanTy
   const p = profileRes.data as { email: string | null; full_name: string | null; role: string | null } | null;
   if (!p?.email) return null;
   const s = (subRes.data ?? {}) as { plan_type?: PlanType; monthly_price_cents?: number | null; current_period_start?: string | null; current_period_end?: string | null };
-  const plan = (planHint ?? s.plan_type ?? null) as PlanType | null;
-  if (!plan) return null;
+  // A founder with no subscription row, or on a free plan, gets the free letter.
+  const plan = (planHint ?? s.plan_type ?? "founder_free") as PlanType;
   const priceCents = typeof s.monthly_price_cents === "number" && s.monthly_price_cents > 0 ? s.monthly_price_cents : PLAN_PRICES[plan] ?? 0;
-  if (priceCents <= 0) return null;
+  if (p.role && p.role !== "founder") return null;
 
   const c = companyRes.data as { id: string; company_name: string | null; onboarding_progress_percent: number | null; onboarding_step_state: Record<string, unknown> | null } | null;
   let crrScore: number | null = null;
@@ -337,7 +420,7 @@ export async function sendFounderWelcomeLetter(input: {
 }): Promise<WelcomeSendResult> {
   try {
     const data = await loadWelcomeLetterData(input.founderId, input.plan ?? null);
-    if (!data) return { sent: false, reason: "No paid plan or no founder email" };
+    if (!data) return { sent: false, reason: "No founder email, or not a founder" };
     if (isInternalAccount({ email: data.email, role: "founder" })) return { sent: false, reason: "Internal account" };
 
     if (!input.resend) {
@@ -350,6 +433,7 @@ export async function sendFounderWelcomeLetter(input: {
 
     if (!input.resend) {
       const bell = welcomeBell(data);
+      const next = isFreeWelcome(data) ? freeSteps(data).length : welcomeNextSteps(data).length;
       const created = await createNotification({
         recipientUserId: input.founderId,
         type: FOUNDER_WELCOME_TYPE,
@@ -357,7 +441,7 @@ export async function sendFounderWelcomeLetter(input: {
         message: bell.message,
         entityType: "profile",
         entityId: input.founderId,
-        deepLink: welcomeNextSteps(data).length ? "/founder/onboarding" : "/founder/matches",
+        deepLink: next ? "/founder/onboarding" : isFreeWelcome(data) ? "/founder/dashboard" : "/founder/matches",
         dedupeKey: `${FOUNDER_WELCOME_TYPE}:${input.founderId}`,
       });
       // Two checkout events can arrive together. Only the earliest bell sends
@@ -396,4 +480,14 @@ export async function sendFounderWelcomeLetter(input: {
     console.warn("[founder-welcome-letter] failed", error);
     return { sent: false, reason: "Failed" };
   }
+}
+
+/**
+ * Company approval: send the welcome letter to the company's founder unless
+ * they already have one (paying founders got theirs at checkout). Never throws,
+ * so a failed letter can't undo an approval.
+ */
+export async function sendWelcomeLetterOnApproval(founderId: string | null | undefined, triggeredBy?: string | null): Promise<WelcomeSendResult> {
+  if (!founderId) return { sent: false, reason: "No founder on this company" };
+  return sendFounderWelcomeLetter({ founderId, triggeredBy: triggeredBy ?? null });
 }

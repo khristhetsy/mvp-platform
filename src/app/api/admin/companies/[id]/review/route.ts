@@ -3,6 +3,7 @@ import { apiErrorMessage } from "@/lib/api/errors";
 import { requireStaffApi } from "@/lib/api/admin";
 import { adminDebug } from "@/lib/debug/admin-debug";
 import { applyCompanyReview } from "@/lib/data/admin-reviews";
+import { sendWelcomeLetterOnApproval } from "@/lib/notifications/founder-welcome-letter";
 import { writeAuditLog } from "@/lib/data/audit";
 import { notifyCompanyFounder } from "@/lib/notifications/notifications";
 import { adminReviewActionSchema } from "@/lib/validation";
@@ -105,6 +106,11 @@ export async function POST(
     entityId: id,
     metadata: { feedback: feedback?.trim() ?? null },
   });
+
+  // The welcome letter goes out once, when the company is approved.
+  if (action === "approve") {
+    await sendWelcomeLetterOnApproval((data?.company as { founder_id?: string | null } | null)?.founder_id, auth.profile.id);
+  }
 
   const reviewNotification =
     action === "approve"
