@@ -40,7 +40,7 @@ describe("runEnrichBatch", () => {
     const b = await runEnrichBatch("investor", 50, 60_000);
     expect(b.rows[0]).toMatchObject({ result: "enriched", phone: "+1 415 555 0100", email: null, companyEmail: "info@fieldstone.com", website: "https://fieldstone.com" });
     const up = calls.find((c) => c.op === "update" && c.table === "crm_contacts");
-    expect(up?.arg).toMatchObject({ company_domain: "fieldstone.com", phone: "+1 415 555 0100", phone_source: "site", enrichment_status: "enriched" });
+    expect(up?.arg).toMatchObject({ company_domain: "fieldstone.com", phone: "+14155550100", phone_source: "site", enrichment_status: "enriched" });
     expect((up?.arg as Record<string, unknown>).email).toBeUndefined();
     expect(b.costUsd).toBe(0.0006);
   });
