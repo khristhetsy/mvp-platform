@@ -46,7 +46,8 @@ export interface AgentPublicConfig {
 
 export interface AgentRow {
   id: string;
-  organization_id: string;
+  /** Null while an admin has started the agent without a company. Linking a company fills it. */
+  organization_id: string | null;
   company_slug: string;
   ending: string;
   company_name: string;

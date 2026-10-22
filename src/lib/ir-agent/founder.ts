@@ -5,8 +5,8 @@ import { requirePermissionApi } from "@/lib/api/permissions";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
 import type { Profile } from "@/lib/supabase/types";
-import { DEFAULT_AGENT_TYPE, type AgentType } from "./agent-types";
-import { createAgentForOrg, getAgentByOrg, getFounderAgentAccess, type AccessResult } from "./store";
+import { ADMIN_DEFAULT_TYPE, DEFAULT_AGENT_TYPE, type AgentType } from "./agent-types";
+import { createAgentForOrg, getAgentById, getAgentByOrg, getFounderAgentAccess, type AccessResult } from "./store";
 import type { AgentRow } from "./types";
 
 export type FounderAgentContext = {
@@ -40,12 +40,14 @@ export async function loadFounderAgentContext(profile: Profile): Promise<Founder
   return { profile, orgId, companyName, access, agent };
 }
 
+const ADMIN_ACCESS: AccessResult = { allowed: true, reason: "ok", plan: null, override: null };
+
 /**
  * An admin with manage_settings acting for any company in the account, SPVs
- * included. The agent is created on first use from the question set that
- * matches the owner's membership, hosted by the owner so bookings land on their
- * calendar (the admin when the company has no owner account). Plan access does
- * not apply: admins can build for any company.
+ * included. The agent is created on first use with the Admin default type,
+ * hosted by the company's owner so bookings land on their calendar (the admin
+ * when the company has no owner account). Plan access does not apply: admins
+ * can build for any company.
  */
 export async function loadAdminAgentContext(orgId: string): Promise<{ ctx: FounderAgentContext & { agent: AgentRow } } | { error: Response }> {
   if (!z.string().uuid().safeParse(orgId).success) return { error: NextResponse.json({ error: "Invalid company." }, { status: 400 }) };
@@ -64,26 +66,32 @@ export async function loadAdminAgentContext(orgId: string): Promise<{ ctx: Found
   let agent = await getAgentByOrg(orgId);
   if (!agent) {
     if (!companyName) return { error: NextResponse.json({ error: "This company has no name yet, so an agent cannot be created." }, { status: 409 }) };
-    let role: string | null = null;
-    if (ownerId) {
-      const { data: owner } = await db.from("profiles").select("role").eq("id", ownerId).maybeSingle();
-      role = (owner as { role?: string } | null)?.role ?? null;
-    }
-    agent = await createAgentForOrg({ orgId, companyName, createdBy: ownerId ?? auth.profile.id, agentType: membershipAgentType(role) });
+    agent = await createAgentForOrg({ orgId, companyName, createdBy: ownerId ?? auth.profile.id, agentType: ADMIN_DEFAULT_TYPE });
   }
   if (!agent) return { error: NextResponse.json({ error: "Could not create the agent." }, { status: 500 }) };
+  return { ctx: { profile: auth.profile as Profile, orgId, companyName, access: ADMIN_ACCESS, agent, actingAdmin: true } };
+}
 
-  const access: AccessResult = { allowed: true, reason: "ok", plan: null, override: null };
-  return { ctx: { profile: auth.profile as Profile, orgId, companyName, access, agent, actingAdmin: true } };
+/** An admin working on an agent by its id: how an agent without a company is reached. */
+export async function loadAdminAgentContextById(agentId: string): Promise<{ ctx: FounderAgentContext & { agent: AgentRow } } | { error: Response }> {
+  if (!z.string().uuid().safeParse(agentId).success) return { error: NextResponse.json({ error: "Invalid agent." }, { status: 400 }) };
+  const auth = await requirePermissionApi("manage_settings");
+  if ("error" in auth) return { error: auth.error ?? NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
+  const agent = await getAgentById(agentId);
+  if (!agent) return { error: NextResponse.json({ error: "Agent not found." }, { status: 404 }) };
+  return { ctx: { profile: auth.profile as Profile, orgId: agent.organization_id ?? "", companyName: agent.company_name, access: ADMIN_ACCESS, agent, actingAdmin: true } };
 }
 
 /**
- * Founder routes call this with the request. A request that carries ?orgId=
- * is an admin acting for that company; anything else is the signed in founder.
+ * Founder routes call this with the request. ?orgId= or ?agentId= means an
+ * admin acting for that company or agent; anything else is the signed in founder.
  */
 export async function requireFounderAgentApi(req?: Request): Promise<{ ctx: FounderAgentContext & { agent: AgentRow } } | { error: Response }> {
-  const orgId = req ? new URL(req.url).searchParams.get("orgId") : null;
+  const params = req ? new URL(req.url).searchParams : null;
+  const orgId = params?.get("orgId");
   if (orgId) return loadAdminAgentContext(orgId);
+  const agentId = params?.get("agentId");
+  if (agentId) return loadAdminAgentContextById(agentId);
 
   const auth = await requireApiProfile(["founder"]);
   if ("error" in auth) return { error: auth.error ?? NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
