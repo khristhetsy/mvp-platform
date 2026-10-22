@@ -1,5 +1,7 @@
 "use client";
 
+import { formatPhone } from "@/lib/phone";
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
@@ -203,7 +205,7 @@ export function ContactsTable({ contacts, lists: initialLists, total, currentSea
         {cols.company && <div style={{ fontSize: 12, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.company ?? "—"}</div>}
         {cols.type && <div>{c.type ? <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 10, background: "#EEEDFE", color: "#4338CA", textTransform: "capitalize" }}>{c.type}</span> : <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>—</span>}</div>}
         {cols.membership && <div style={{ fontSize: 12, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.membership ?? "—"}</div>}
-        {cols.phone && <div style={{ fontSize: 11.5, fontFamily: "var(--font-mono)", color: c.phone ? "var(--foreground)" : "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.phone || "—"}</div>}
+        {cols.phone && <div style={{ fontSize: 11.5, fontFamily: "var(--font-mono)", color: c.phone ? "var(--foreground)" : "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.phone ? formatPhone(c.phone) : "—"}</div>}
         {cols.email && <div style={{ fontSize: 12, color: "#1A6CE4", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.email}</div>}
         {cols.lead_assign && <div style={{ display: "flex", gap: 4, flexWrap: "wrap", overflow: "hidden" }}>{c.assignees && c.assignees.length ? (<>{c.assignees.slice(0, 2).map((n) => <span key={n} style={{ fontSize: 10, background: "#E6F1FB", color: "#185FA5", borderRadius: 10, padding: "1px 7px", whiteSpace: "nowrap" }}>{n}</span>)}{c.assignees.length > 2 && <span style={{ fontSize: 10, color: "var(--muted-foreground)" }}>+{c.assignees.length - 2}</span>}</>) : <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>—</span>}</div>}
         {cols.tags && (
@@ -281,7 +283,7 @@ export function ContactsTable({ contacts, lists: initialLists, total, currentSea
           <option value="none">No grouping</option>
           <option value="list">Group by list</option>
         </select>
-        <a href="/admin/marketing/lists" title="Create a new contact list" style={{ fontSize: 12, fontWeight: 700, padding: "7px 11px", borderRadius: 8, border: "0.5px solid #93C5FD", background: "#EFF6FF", color: "#1A6CE4", textDecoration: "none", whiteSpace: "nowrap" }}>＋ Create list</a>
+        <Link href="/admin/marketing/lists" title="Create a new contact list" style={{ fontSize: 12, fontWeight: 700, padding: "7px 11px", borderRadius: 8, border: "0.5px solid #93C5FD", background: "#EFF6FF", color: "#1A6CE4", textDecoration: "none", whiteSpace: "nowrap" }}>＋ Create list</Link>
         <select value={tagFilter} onChange={(e) => setTagFilter(e.target.value)} style={{ fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--muted-foreground)" }}>
           <option value="">All tags</option>
           {allTagsInView.map((t) => <option key={t} value={t}>{t}</option>)}

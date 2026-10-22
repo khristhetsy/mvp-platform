@@ -1,6 +1,7 @@
 // iCFO Events — sponsor / service-provider lead pipeline. Rows are created at
 // registration intake (registration-intake.ts) and worked by staff here.
 
+import { phoneForStorage } from "@/lib/phone";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 
@@ -91,7 +92,7 @@ export async function setLeadContact(
   const answers = { ...(((cur as Row)?.answers as Record<string, unknown>) ?? {}) };
   if (patch.contactName !== undefined) answers.name = patch.contactName ?? "";
   if (patch.contactEmail !== undefined) answers.email = patch.contactEmail ?? "";
-  if (patch.contactPhone !== undefined) answers.phone = patch.contactPhone ?? "";
+  if (patch.contactPhone !== undefined) answers.phone = phoneForStorage(patch.contactPhone) ?? "";
   const { data, error } = await raw(supabase)
     .from("event_leads")
     .update({ answers })

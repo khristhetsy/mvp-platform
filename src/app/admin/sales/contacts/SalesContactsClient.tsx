@@ -1,5 +1,6 @@
 "use client";
 
+import { formatPhone, formatPhoneAsYouType } from "@/lib/phone";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -479,7 +480,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
         const shown = ind.slice(0, 2).join(", ");
         return <div title={ind.join(", ")} style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{shown}{ind.length > 2 ? <span style={{ color: "var(--muted-foreground)" }}> +{ind.length - 2}</span> : null}</div>;
       }
-      case "phone": return <div style={{ fontSize: 11.5, fontFamily: "var(--font-mono)", color: c.phone ? "var(--foreground)" : "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.phone || "—"}</div>;
+      case "phone": return <div style={{ fontSize: 11.5, fontFamily: "var(--font-mono)", color: c.phone ? "var(--foreground)" : "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.phone ? formatPhone(c.phone) : "—"}</div>;
       case "email": return <div style={{ color: "#185FA5", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.email || "—"}</div>;
       case "last_message": {
         const lm = c.lastMessage;
@@ -736,7 +737,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
           </select>
           <input value={addDraft.email} onChange={(e) => setAddDraft({ ...addDraft, email: e.target.value })} placeholder="Email" style={inp} />
           <input value={addDraft.company} onChange={(e) => setAddDraft({ ...addDraft, company: e.target.value })} placeholder="Company" style={inp} />
-          <input value={addDraft.phone} onChange={(e) => setAddDraft({ ...addDraft, phone: e.target.value })} placeholder="Phone" style={inp} />
+          <input value={addDraft.phone} onChange={(e) => setAddDraft({ ...addDraft, phone: formatPhoneAsYouType(e.target.value) })} placeholder="Phone" style={inp} />
           <div style={{ display: "flex", gap: 6 }}>
             <button type="button" onClick={addContact} disabled={busy || !addDraft.name.trim() || !addDraft.contactType} style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 12px", cursor: "pointer", opacity: busy || !addDraft.name.trim() || !addDraft.contactType ? 0.5 : 1 }}>Save</button>
             <button type="button" onClick={() => { setAdding(false); setErr(null); }} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-x" aria-hidden="true" /></button>

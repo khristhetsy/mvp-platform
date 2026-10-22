@@ -1,5 +1,6 @@
 "use client";
 
+import { formatPhone } from "@/lib/phone";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { List, LayoutGrid, Columns, X, Loader2, Mail, Phone, Globe, Building2, MapPin, Briefcase, Maximize2, Download } from "lucide-react";
@@ -472,7 +473,7 @@ function ContactDetailsBlock({ d }: { d: ContactDetails }) {
                 <a href={`mailto:${d.email}`} className="hover:underline" style={{ color: BLUE }}>{d.email}</a>
               </DetailRow>
             )}
-            {d.phone && <DetailRow icon={Phone}>{d.phone}</DetailRow>}
+            {d.phone && <DetailRow icon={Phone}>{formatPhone(d.phone)}</DetailRow>}
             {d.website && (
               <DetailRow icon={Globe}>
                 <a href={d.website.startsWith("http") ? d.website : `https://${d.website}`} target="_blank" rel="noreferrer" className="hover:underline" style={{ color: BLUE }}>

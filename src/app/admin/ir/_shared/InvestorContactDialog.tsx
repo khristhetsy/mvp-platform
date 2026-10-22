@@ -7,6 +7,7 @@
  * autosaving editor (InlineContactEditor): each field saves on its own to iCapOS, and to Odoo
  * for linked contacts when an admin edits, with Undo and History. The popup reloads on Done.
  */
+import { formatPhone, telHref } from "@/lib/phone";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { IR_STAGE_LABEL, type IrStage } from "@/lib/ir/types";
@@ -107,8 +108,8 @@ export function InvestorContactDialog({ contactId, onClose, matchId }: { contact
                 </div>
                 <div>
                   <F label="Job position">{dash(c.jobPosition)}</F>
-                  <F label="Phone">{c.phone ? <a href={`tel:${c.phone}`} className="text-slate-800 hover:text-indigo-700">{c.phone}</a> : dash(null)}</F>
-                  {c.mobile && c.mobile !== c.phone ? <F label="Mobile">{c.mobile}</F> : null}
+                  <F label="Phone">{c.phone ? <a href={telHref(c.phone) ?? `tel:${c.phone}`} className="text-slate-800 hover:text-indigo-700">{formatPhone(c.phone)}</a> : dash(null)}</F>
+                  {c.mobile && c.mobile !== c.phone ? <F label="Mobile">{formatPhone(c.mobile)}</F> : null}
                   <F label="Email">{c.email ? <span className="select-all">{c.email}</span> : dash(null)}</F>
                   <F label="Website">{c.website ? <a href={c.website.startsWith("http") ? c.website : `https://${c.website}`} target="_blank" rel="noreferrer" className="text-indigo-700 hover:underline">{c.website.replace(/^https?:\/\//, "")}</a> : dash(null)}</F>
                   <F label="Created on">{c.createdOn ? fmtDay(c.createdOn) : dash(null)}</F>

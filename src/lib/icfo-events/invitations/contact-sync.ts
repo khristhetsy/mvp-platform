@@ -5,6 +5,8 @@
  * different value goes to the second slot (phone2 / email2). The newest value
  * takes the second slot; the one it replaces stays in the timeline entry.
  */
+import { phoneForStorage } from "@/lib/phone";
+
 
 export type ContactSnapshot = {
   name: string | null;
@@ -79,10 +81,10 @@ export function planContactChanges(before: ContactSnapshot, answers: Record<stri
   const phone = normPhone(phoneRaw);
   if (phone && phone !== normPhone(before.phone) && phone !== normPhone(before.phone2)) {
     if (!normPhone(before.phone)) {
-      plan.patch.phone = phoneRaw;
+      plan.patch.phone = phoneForStorage(phoneRaw);
       plan.changes.push({ field: "phone", label: "Phone", before: null, after: phoneRaw });
     } else {
-      plan.patch.phone2 = phoneRaw;
+      plan.patch.phone2 = phoneForStorage(phoneRaw);
       plan.changes.push({ field: "phone2", label: "Second phone", before: before.phone2, after: phoneRaw });
     }
   }

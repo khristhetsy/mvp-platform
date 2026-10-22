@@ -1,5 +1,6 @@
 "use client";
 
+import { formatPhone } from "@/lib/phone";
 import { useRef, useState, type CSSProperties } from "react";
 import {
   MERGE_FIELDS,
@@ -639,7 +640,7 @@ export function TemplateVisualEditor({
                     {b.title ? <div className="text-slate-500">{b.title}</div> : null}
                     {b.company ? <div className="text-slate-500">{b.company}</div> : null}
                     {b.email ? <div className="text-[#2E78F5]">{b.email}</div> : null}
-                    {b.phone ? <div className="text-slate-500">{b.phone}</div> : null}
+                    {b.phone ? <div className="text-slate-500">{formatPhone(b.phone)}</div> : null}
                   </div>
                 </div>
               ) : b.type === "stats" ? (

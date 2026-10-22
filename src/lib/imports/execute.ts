@@ -1,3 +1,4 @@
+import { phoneForStorage } from "@/lib/phone";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { randomBytes } from "crypto";
 import { findExistingMatch, resolveFounderCompanyIds, type ImportContextIndex } from "@/lib/imports/dedupe";
@@ -221,7 +222,7 @@ async function importFounderContactRow(
     investor_name: mapped.investor_name.trim(),
     firm_name: mapped.firm_name?.trim() || null,
     email: mapped.email?.trim().toLowerCase() || null,
-    phone: mapped.phone?.trim() || null,
+    phone: phoneForStorage(mapped.phone),
     website: mapped.website?.trim() || null,
     investor_type: mapped.investor_type?.trim() || null,
     preferred_sectors: mapped.preferred_sectors?.trim() || null,

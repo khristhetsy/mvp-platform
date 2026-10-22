@@ -6,6 +6,7 @@
  * previous / next week pager. The Agent field composer picks an investor and writes a
  * dated activity — this replaces the free-text Agent Field from Odoo.
  */
+import { formatPhone } from "@/lib/phone";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { OdooStageBar } from "@/components/ui/OdooStageBar";
 import Link from "next/link";
@@ -354,7 +355,7 @@ export function TaskFormClient({ taskId, meId, initialTab, added, sequenced = nu
                     switch (k) {
                       case "firm": return m.investor_firm ?? "—";
                       case "membership": return c?.membership ?? "Investor";
-                      case "phone": return c?.phone ?? "—";
+                      case "phone": return c?.phone ? formatPhone(c.phone) : "—";
                       case "email": return <span className="block max-w-[220px] truncate" title={c?.email ?? ""}>{c?.email ?? "—"}</span>;
                       case "activities": return <button type="button" onClick={(e) => { e.stopPropagation(); const el = e.currentTarget; setActPop((cur) => (cur?.matchId === m.id ? null : { matchId: m.id, el })); }} aria-haspopup="dialog" aria-expanded={actPop?.matchId === m.id} title="See or schedule activities"
                         className={`-mx-1 rounded px-1 py-0.5 text-left hover:bg-indigo-50 ${actPop?.matchId === m.id ? "bg-indigo-50" : ""}`}>{oFirst ? <span className={`inline-flex items-center gap-1 ${oLate ? "text-rose-700" : "text-slate-700"}`}><i className="ti ti-calendar-event" aria-hidden="true" />{oFirst.summary}{oFirst.due ? <span className="text-slate-400"> · {oLate ? "overdue" : "due"} {new Date(odooDueIso(oFirst)).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span> : null}</span>

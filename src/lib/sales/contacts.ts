@@ -1,4 +1,5 @@
 // Sales contact profile — reads the CRM mirror + annotations + linked opportunities.
+import { phoneForStorage } from "@/lib/phone";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { INVESTOR_PROFILE_LABEL, INVESTOR_PROFILE_OVERRIDE_KEY, isInvestorProfileLabel, normalizeInvestorProfiles } from "@/lib/sales/investor-profile";
 import { logActivity } from "@/lib/sales/activity";
@@ -224,7 +225,7 @@ export async function updateContact(id: string, patch: ContactPatch, actorId?: s
   const update: Record<string, unknown> = {};
   if (patch.name !== undefined && patch.name.trim()) update.name = patch.name.trim();
   if (patch.lead_status !== undefined) update.lead_status = patch.lead_status || "new";
-  if (patch.phone !== undefined) update.phone = patch.phone || null;
+  if (patch.phone !== undefined) update.phone = phoneForStorage(patch.phone);
   if (patch.email !== undefined) update.email = patch.email || null;
   if (patch.company !== undefined) update.company = patch.company || null;
   if (patch.website !== undefined) update.website = patch.website || null;
@@ -236,7 +237,7 @@ export async function updateContact(id: string, patch: ContactPatch, actorId?: s
   const ovPatch: Record<string, string | null | string[]> = {};
   for (const k of OVERRIDE_KEYS) {
     const v = patch[k];
-    if (v !== undefined) ovPatch[k] = (v as string) || null;
+    if (v !== undefined) ovPatch[k] = k === "phone2" ? phoneForStorage(v as string) : ((v as string) || null);
   }
   // Structured "Additional details" edits — array-valued overrides keyed by label.
   if (patch.preferences) {

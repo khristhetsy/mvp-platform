@@ -1,5 +1,6 @@
 "use client";
 
+import { formatPhone, formatPhoneAsYouType, normalizePhone, smsHref, telHref } from "@/lib/phone";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -141,7 +142,7 @@ function InvestorRatingChip({ score, tier }: { score: number | null; tier: strin
 /** Odoo-style field actions: hovering a phone / email / website row reveals the link. */
 type RowAction = "tel" | "email" | "web";
 function actionHref(kind: RowAction, value: string): string {
-  if (kind === "tel") return `tel:${value.replace(/[^+\d]/g, "")}`;
+  if (kind === "tel") return telHref(value) ?? `tel:${value.replace(/[^+\d]/g, "")}`;
   if (kind === "email") return `/admin/inbox?compose=1&to=${encodeURIComponent(value.trim())}`;
   return /^https?:\/\//i.test(value) ? value : `https://${value.replace(/^\/+/, "")}`;
 }
@@ -171,14 +172,21 @@ function Row({ icon, label, value, link, action, options, placeholder, readOnly 
   const [err, setErr] = useState<string | null>(null);
   const editable = !readOnly && !!onSave;
   const act = action && value ? ACTION_META[action] : null;
+  const isTel = action === "tel";
 
-  function open() { if (!editable) return; setDraft(value ?? ""); setErr(null); setEditing(true); }
+  function open() { if (!editable) return; setDraft(isTel ? formatPhone(value) : (value ?? "")); setErr(null); setEditing(true); }
   function cancel() { setEditing(false); setErr(null); }
   async function commit() {
     if (!onSave) return;
-    if (draft.trim() === (value ?? "")) { setEditing(false); return; }
+    let next = draft.trim();
+    if (isTel && next) {
+      const e164 = normalizePhone(next);
+      if (!e164) { setErr("Enter a valid phone number. Add the country code (+33, +52) if it is not a US number."); return; }
+      next = e164;
+    }
+    if (next === (value ?? "")) { setEditing(false); return; }
     setSaving(true);
-    const e = await onSave(draft.trim());
+    const e = await onSave(next);
     setSaving(false);
     if (e) setErr(e); else setEditing(false);
   }
@@ -198,7 +206,7 @@ function Row({ icon, label, value, link, action, options, placeholder, readOnly 
             {listed.map((o) => <option key={o} value={o}>{o}</option>)}
           </select>
         ) : (
-          <input autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={keys} disabled={saving} placeholder={placeholder} style={{ ...inp, flex: "1 1 160px", minWidth: 0, padding: "4px 8px" }} />
+          <input autoFocus type={isTel ? "tel" : undefined} value={draft} onChange={(e) => setDraft(isTel ? formatPhoneAsYouType(e.target.value) : e.target.value)} onKeyDown={keys} disabled={saving} placeholder={placeholder} style={{ ...inp, flex: "1 1 160px", minWidth: 0, padding: "4px 8px" }} />
         )}
         <button type="button" onClick={() => void commit()} disabled={saving} title="Save" aria-label="Save" style={{ width: 24, height: 24, borderRadius: 6, border: "none", background: "#0F6E56", color: "#fff", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", alignSelf: "center", opacity: saving ? 0.6 : 1 }}><i className="ti ti-check" aria-hidden="true" style={{ fontSize: 13 }} /></button>
         <button type="button" onClick={cancel} disabled={saving} title="Undo" aria-label="Undo" style={{ width: 24, height: 24, borderRadius: 6, border: "0.5px solid var(--border-strong, #cbd5e1)", background: "#fff", color: "var(--muted-foreground)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", alignSelf: "center" }}><i className="ti ti-arrow-back-up" aria-hidden="true" style={{ fontSize: 13 }} /></button>
@@ -209,9 +217,9 @@ function Row({ icon, label, value, link, action, options, placeholder, readOnly 
   return (
     <div className={editable || act ? "field-row" : undefined} onClick={editable ? open : undefined} title={editable ? "Click to edit" : undefined} style={{ ...rowStyle, cursor: editable ? "pointer" : undefined }}>
       {iconEl}{labelEl}
-      <span className={act ? "field-val field-link" : "field-val"} style={{ color: link && value ? "#185FA5" : "var(--foreground)", flex: "1 1 160px", minWidth: 0, overflowWrap: "anywhere", lineHeight: 1.5 }}>{display ?? (value || "—")}</span>
+      <span className={act ? "field-val field-link" : "field-val"} style={{ color: link && value ? "#185FA5" : "var(--foreground)", flex: "1 1 160px", minWidth: 0, overflowWrap: "anywhere", lineHeight: 1.5 }}>{display ?? (isTel && value ? formatPhone(value) : (value || "—"))}</span>
       {act && value && (
-        <a href={actionHref(action!, value)} target={action === "tel" ? undefined : "_blank"} rel="noopener noreferrer" title={act.title} aria-label={`${act.title}: ${value}`} className="field-act" onClick={(e) => e.stopPropagation()}
+        <a href={actionHref(action!, value)} target={action === "tel" ? undefined : "_blank"} rel="noopener noreferrer" title={act.title} aria-label={`${act.title}: ${isTel ? formatPhone(value) : value}`} className="field-act" onClick={(e) => e.stopPropagation()}
           style={{ alignSelf: "center", width: 24, height: 24, borderRadius: 6, display: "inline-flex", alignItems: "center", justifyContent: "center", color: "#185FA5", background: "#E6F1FB", textDecoration: "none", flexShrink: 0 }}>
           <i className={`ti ${act.icon}`} aria-hidden="true" style={{ fontSize: 14 }} />
         </a>
@@ -717,8 +725,15 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
     setProfileSub("tasks");
     if (!tasksLoaded) void loadContactTasks();
   }
+  // Switch to the Tasks tab during render when the deep link asks for it
+  // (React's "adjust state when a prop changes" pattern), then load in an effect.
+  const [prevWantTasksTab, setPrevWantTasksTab] = useState(false);
+  if (wantTasksTab !== prevWantTasksTab) {
+    setPrevWantTasksTab(wantTasksTab);
+    if (wantTasksTab) setProfileSub("tasks");
+  }
   useEffect(() => {
-    if (wantTasksTab) openTasksTab();
+    if (wantTasksTab && !tasksLoaded) void loadContactTasks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wantTasksTab]);
   useEffect(() => {
@@ -783,13 +798,13 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
             </div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               {contact.phone
-                ? <a href={`tel:${contact.phone.replace(/[^+\d]/g, "")}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 13px", textDecoration: "none" }}><i className="ti ti-phone" aria-hidden="true" /> Call</a>
+                ? <a href={telHref(contact.phone) ?? `tel:${contact.phone.replace(/[^+\d]/g, "")}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 13px", textDecoration: "none" }}><i className="ti ti-phone" aria-hidden="true" /> Call</a>
                 : <span title="No phone number on this contact" style={{ ...outlineBtn, opacity: 0.5, cursor: "not-allowed" }}><i className="ti ti-phone" aria-hidden="true" /> Call</span>}
               {contact.email
                 ? <a href={`/admin/inbox?compose=1&to=${encodeURIComponent(contact.email)}`} target="_blank" rel="noopener noreferrer" onClick={() => logTouch("email")} style={{ fontSize: 11.5, fontWeight: 600, color: "#4338CA", background: "#EEF2FF", border: "0.5px solid #C7D2FE", borderRadius: 7, padding: "7px 13px", textDecoration: "none" }}><i className="ti ti-mail" aria-hidden="true" /> Email</a>
                 : <span title="No email on this contact" style={{ ...outlineBtn, opacity: 0.5, cursor: "not-allowed" }}><i className="ti ti-mail" aria-hidden="true" /> Email</span>}
               {contact.phone
-                ? <a href={`sms:${contact.phone.replace(/[^+\d]/g, "")}`} target="_blank" rel="noopener noreferrer" onClick={() => logTouch("message")} style={{ fontSize: 11.5, fontWeight: 600, color: "#854F0B", background: "#FAEEDA", border: "0.5px solid #F4D9A0", borderRadius: 7, padding: "7px 13px", textDecoration: "none" }}><i className="ti ti-message" aria-hidden="true" /> Message</a>
+                ? <a href={smsHref(contact.phone) ?? `sms:${contact.phone.replace(/[^+\d]/g, "")}`} target="_blank" rel="noopener noreferrer" onClick={() => logTouch("message")} style={{ fontSize: 11.5, fontWeight: 600, color: "#854F0B", background: "#FAEEDA", border: "0.5px solid #F4D9A0", borderRadius: 7, padding: "7px 13px", textDecoration: "none" }}><i className="ti ti-message" aria-hidden="true" /> Message</a>
                 : <span title="No phone number on this contact" style={{ ...outlineBtn, opacity: 0.5, cursor: "not-allowed" }}><i className="ti ti-message" aria-hidden="true" /> Message</span>}
               <Link href={`/admin/sales/contracts/send?contact=${contact.id}`} style={{ fontSize: 11.5, fontWeight: 600, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 7, padding: "7px 13px", textDecoration: "none" }}><i className="ti ti-signature" aria-hidden="true" /> Contracts</Link>
             </div>
@@ -887,7 +902,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
             {/* RIGHT column — Odoo field order */}
             <div>
               <Row icon="ti-briefcase" label="Job Position" value={contact.job_position} options={JOB_POSITION_OPTS} onSave={saveText("job_position")} />
-              <Row icon="ti-phone" label="Phone" value={contact.phone} action="tel" placeholder="+1 …" onSave={saveText("phone")} />
+              <Row icon="ti-phone" label="Phone" value={contact.phone} action="tel" placeholder="(425) 502-2832" onSave={saveText("phone")} />
               <Row icon="ti-phone" label="Phone 2" value={contact.phone2} action="tel" onSave={saveText("phone2")} />
               <Row icon="ti-device-mobile" label="Mobile" value={null} action="tel" readOnly />
               <Row icon="ti-mail" label="Email" value={contact.email} link action="email" placeholder="name@company.com" onSave={saveText("email")} />
@@ -1229,7 +1244,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
                         <button type="button" onClick={sendMail} disabled={mailBusy || !contact.email} title={contact.email ? "" : "Add an email to this contact to send"} style={{ fontSize: 11, fontWeight: 600, color: "#fff", background: "#4338CA", border: "none", borderRadius: 6, padding: "6px 14px", cursor: mailBusy || !contact.email ? "not-allowed" : "pointer", opacity: mailBusy || !contact.email ? 0.5 : 1 }}><i className="ti ti-send" aria-hidden="true" /> Send email</button>
                         <button type="button" onClick={sendMailTest} disabled={mailBusy} style={{ fontSize: 11, fontWeight: 600, color: "var(--foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cdd9ec)", borderRadius: 6, padding: "6px 12px", cursor: mailBusy ? "not-allowed" : "pointer", opacity: mailBusy ? 0.5 : 1 }}>Send test to me</button>
-                        {contact.phone && <a href={`sms:${contact.phone.replace(/[^+\d]/g, "")}`} target="_blank" rel="noopener noreferrer" onClick={() => logTouch("message")} style={{ fontSize: 11, fontWeight: 600, color: "#854F0B", background: "#FAEEDA", border: "0.5px solid #F4D9A0", borderRadius: 6, padding: "6px 12px", textDecoration: "none" }}><i className="ti ti-message" aria-hidden="true" /> Text</a>}
+                        {contact.phone && <a href={smsHref(contact.phone) ?? `sms:${contact.phone.replace(/[^+\d]/g, "")}`} target="_blank" rel="noopener noreferrer" onClick={() => logTouch("message")} style={{ fontSize: 11, fontWeight: 600, color: "#854F0B", background: "#FAEEDA", border: "0.5px solid #F4D9A0", borderRadius: 6, padding: "6px 12px", textDecoration: "none" }}><i className="ti ti-message" aria-hidden="true" /> Text</a>}
                         {mailMsg && <span style={{ fontSize: 11, color: /sent|Sent/.test(mailMsg) ? "#0F6E56" : "#A32D2D" }}>{mailMsg}</span>}
                       </div>
                       {/* Unified history: emails sent from iCapOS + messages imported from Odoo */}
@@ -1387,7 +1402,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                       </div>
                       {(bk.booker_phone || bk.answers.length > 0) && (
                         <div style={{ marginTop: 6, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-                          {bk.booker_phone ? <div><div style={{ fontSize: 10, color: "var(--muted-foreground)" }}>Phone</div><div style={{ fontSize: 12 }}>{bk.booker_phone}</div></div> : null}
+                          {bk.booker_phone ? <div><div style={{ fontSize: 10, color: "var(--muted-foreground)" }}>Phone</div><div style={{ fontSize: 12 }}>{formatPhone(bk.booker_phone)}</div></div> : null}
                           {bk.answers.map((a, i) => <div key={i}><div style={{ fontSize: 10, color: "var(--muted-foreground)" }}>{a.label}</div><div style={{ fontSize: 12 }}>{a.value}</div></div>)}
                         </div>
                       )}

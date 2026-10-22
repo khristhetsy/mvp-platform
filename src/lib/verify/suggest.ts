@@ -17,6 +17,7 @@
 //   persisted (contact_finder_suggestions), so a rejected value never comes back.
 // - 5.5: accepting records the lawful basis and starts the retention clock once.
 
+import { phoneForStorage } from "@/lib/phone";
 import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
 import { verifyEmail, domainHasMx, isRoleAddress } from "./email";
 import { isSuppressed, SUPPRESSED_REASON } from "./suppression";
@@ -304,7 +305,7 @@ export async function acceptSuggestion(input: AcceptInput): Promise<void> {
     }
     patch.enrichment_status = "enriched";
   } else {
-    patch.phone = normalizePhone(input.value, { fromTelLink: true }) ?? input.value;
+    patch.phone = phoneForStorage(normalizePhone(input.value, { fromTelLink: true }) ?? input.value);
     patch.phone_source = input.source; // phone_source has no CHECK constraint
   }
 
@@ -384,7 +385,7 @@ export async function logManualReveal(input: { contactId: string; email?: string
   const phoneRaw = (input.phone ?? "").trim() || null;
   if (!email && !phoneRaw) throw new Error("Enter an email or a phone.");
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("That email isn't valid.");
-  const phone = phoneRaw ? normalizePhone(phoneRaw, { fromTelLink: true }) : null;
+  const phone = phoneRaw ? phoneForStorage(normalizePhone(phoneRaw, { fromTelLink: true })) : null;
   if (phoneRaw && !phone) throw new Error("That phone number isn't valid.");
 
   const db = serviceRoleClientUntyped();
