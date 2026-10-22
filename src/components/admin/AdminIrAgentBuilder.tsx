@@ -1,11 +1,22 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { IrAgentStudio } from "@/components/ir-agent/IrAgentStudio";
+import { AdminAgentsList } from "@/components/admin/AdminAgentsList";
+import { IrAgentStudio, type StudioTab } from "@/components/ir-agent/IrAgentStudio";
+import type { AgentListItem } from "@/app/api/admin/ir-agent/agents/route";
 import { useToast } from "@/components/ui/ToastProvider";
 
 export type AgentCompany = { id: string; name: string; kind: "Company" | "SPV"; status: "draft" | "live" | "paused" | null };
 export type StandaloneAgent = { id: string; name: string; status: "draft" | "live" | "paused" };
+
+type PageTab = "agents" | StudioTab;
+const PAGE_TABS: Array<{ id: PageTab; label: string }> = [
+  { id: "agents", label: "Agents" },
+  { id: "build", label: "Build" },
+  { id: "train", label: "Train" },
+  { id: "share", label: "Share" },
+  { id: "conversations", label: "Conversations" },
+];
 
 type Choice = { kind: "none" } | { kind: "org"; id: string } | { kind: "agent"; id: string };
 /** Contacts grouped by company. orgId is set when the company is in the account; null means a prospect that only exists in contacts. */
@@ -43,6 +54,8 @@ export function AdminIrAgentBuilder({
         ? { kind: "agent", id: initialAgentId }
         : { kind: "none" },
   );
+  // Opens on Agents, or on Build when a company or agent was linked to.
+  const [tab, setTab] = useState<PageTab>(initialOrgId || initialAgentId ? "build" : "agents");
   // How the company was chosen. "search" leaves the list blank and shows the contact instead.
   const [via, setVia] = useState<"list" | "search">("list");
   const [picked, setPicked] = useState<ContactGroup | null>(null);
@@ -62,6 +75,35 @@ export function AdminIrAgentBuilder({
     if (c.kind === "agent") url.searchParams.set("agent", c.id);
     window.history.replaceState(null, "", url.toString());
   }, []);
+
+  const editAgent = (a: AgentListItem) => {
+    setVia("list");
+    setPicked(null);
+    setQ("");
+    setHits(null);
+    const c: Choice = a.organizationId ? { kind: "org", id: a.organizationId } : { kind: "agent", id: a.id };
+    if (c.kind === "agent") setStandalone((cur) => (cur.some((x) => x.id === a.id) ? cur : [...cur, { id: a.id, name: a.name, status: a.status }]));
+    choose(c);
+    setTab("build");
+  };
+
+  const newAgent = () => {
+    setVia("list");
+    setPicked(null);
+    setQ("");
+    setHits(null);
+    choose({ kind: "none" });
+    setTab("build");
+  };
+
+  const agentRemoved = (a: AgentListItem) => {
+    setStandalone((cur) => cur.filter((x) => x.id !== a.id));
+    if ((choice.kind === "agent" && choice.id === a.id) || (choice.kind === "org" && a.organizationId === choice.id)) {
+      setVia("list");
+      setPicked(null);
+      choose({ kind: "none" });
+    }
+  };
 
   const choose = (c: Choice) => {
     setChoice(c);
@@ -184,8 +226,45 @@ export function AdminIrAgentBuilder({
   const viaSearch = via === "search" && picked !== null && choice.kind !== "none";
   const sorted = useMemo(() => companies, [companies]);
 
+  const workingOn = activeOrg?.name ?? activeAgent?.name ?? null;
+
   return (
     <div className="space-y-5">
+      <nav className="flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-white p-1.5" aria-label="AI Agent sections" role="tablist">
+        {PAGE_TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={tab === t.id}
+            onClick={() => setTab(t.id)}
+            className={`min-h-[40px] rounded-lg px-5 text-sm font-medium ${tab === t.id ? "bg-slate-100 font-semibold text-[#0A1A40]" : "text-slate-600 hover:text-slate-900"}`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </nav>
+
+      {tab === "agents" ? <AdminAgentsList onNew={newAgent} onEdit={editAgent} onRemoved={agentRemoved} /> : null}
+
+      {tab !== "agents" && tab !== "build" ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+          {workingOn ? (
+            <>
+              <span className="text-slate-600">Working on</span>
+              <span className="font-semibold text-slate-900">{workingOn}</span>
+              <button type="button" onClick={() => setTab("build")} className={btn}>Change in Build</button>
+            </>
+          ) : (
+            <>
+              <span className="text-slate-600">No agent is open. Open one from Agents, or choose a company in Build.</span>
+              <button type="button" onClick={() => setTab("agents")} className={btn}>Go to Agents</button>
+            </>
+          )}
+        </div>
+      ) : null}
+
+      {tab === "build" ? (
       <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-5">
         <div>
           <h2 className="text-base font-semibold text-slate-950">1. Select company</h2>
@@ -303,10 +382,11 @@ export function AdminIrAgentBuilder({
           </p>
         )}
       </section>
+      ) : null}
 
-      {choice.kind === "org" ? <IrAgentStudio key={`org:${choice.id}`} orgId={choice.id} /> : null}
-      {choice.kind === "agent" ? <IrAgentStudio key={`agent:${choice.id}`} agentId={choice.id} /> : null}
-      {blank ? <p className="py-2 text-sm text-slate-500">Choose a company, find one through your contacts, or create a new AI Agent to start building.</p> : null}
+      {tab !== "agents" && choice.kind === "org" ? <IrAgentStudio key={`org:${choice.id}`} orgId={choice.id} tab={tab} /> : null}
+      {tab !== "agents" && choice.kind === "agent" ? <IrAgentStudio key={`agent:${choice.id}`} agentId={choice.id} tab={tab} /> : null}
+      {tab === "build" && blank ? <p className="py-2 text-sm text-slate-500">Choose a company, find one through your contacts, or create a new AI Agent to start building.</p> : null}
     </div>
   );
 }

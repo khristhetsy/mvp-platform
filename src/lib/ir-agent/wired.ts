@@ -88,3 +88,26 @@ export async function wiredFactSheet(orgId: string | null, excluded: string[], f
     .map((x) => `${LABELS[x.k]}: ${x.v.slice(0, 1500)}`)
     .join("\n");
 }
+
+/**
+ * How many of the five profile fields each agent has selected (present and not
+ * unticked), for the Agents list. One query for all agents.
+ */
+export async function wiredSelectedCounts(agents: Array<{ id: string; organization_id: string | null; wired_excluded?: string[] | null; company_name: string }>): Promise<Map<string, number>> {
+  const orgIds = [...new Set(agents.map((a) => a.organization_id).filter((v): v is string => Boolean(v)))];
+  const rows = new Map<string, CompanyRow>();
+  if (orgIds.length) {
+    const { data } = await serviceRoleClientUntyped()
+      .from("companies")
+      .select("id, org_id, company_name, business_description, industry, revenue_stage, use_of_funds, team_summary")
+      .in("org_id", orgIds);
+    for (const r of (data ?? []) as Array<CompanyRow & { org_id: string }>) if (!rows.has(r.org_id)) rows.set(r.org_id, r);
+  }
+  const out = new Map<string, number>();
+  for (const a of agents) {
+    const company = a.organization_id ? (rows.get(a.organization_id) ?? null) : null;
+    const excluded = a.wired_excluded ?? [];
+    out.set(a.id, WIRED_KEYS.filter((k) => !excluded.includes(k) && valueOf(company, k, a.company_name).length > 0).length);
+  }
+  return out;
+}

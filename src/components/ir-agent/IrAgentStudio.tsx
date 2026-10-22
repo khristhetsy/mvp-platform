@@ -35,7 +35,8 @@ type Loaded = {
   demo: boolean;
   wired?: WiredData;
 };
-type Tab = "build" | "train" | "share" | "conversations";
+export type StudioTab = "build" | "train" | "share" | "conversations";
+type Tab = StudioTab;
 
 const TABS: Array<{ id: Tab; label: string }> = [
   { id: "build", label: "Build" },
@@ -68,12 +69,14 @@ async function readJson<T>(res: Response): Promise<T & { error?: string }> {
   return (await res.json().catch(() => ({}))) as T & { error?: string };
 }
 
-export function IrAgentStudio({ orgId, agentId }: { orgId?: string; agentId?: string } = {}) {
+/** With tab set, the page owns the tab bar (Admin AI Agent) and the studio shows only that tab. */
+export function IrAgentStudio({ orgId, agentId, tab: controlledTab }: { orgId?: string; agentId?: string; tab?: StudioTab } = {}) {
   const { toast } = useToast();
   const api = useMemo(() => makeApi({ orgId, agentId }), [orgId, agentId]);
   const ctxValue = useMemo(() => ({ api, admin: Boolean(orgId || agentId) }), [api, orgId, agentId]);
   const [data, setData] = useState<Loaded | null>(null);
-  const [tab, setTab] = useState<Tab>("build");
+  const [tabState, setTab] = useState<Tab>("build");
+  const tab = controlledTab ?? tabState;
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -109,6 +112,7 @@ export function IrAgentStudio({ orgId, agentId }: { orgId?: string; agentId?: st
     <AgentApiContext.Provider value={ctxValue}>
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
+        {controlledTab ? <span /> : (
         <nav className="flex gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1" aria-label="Agent sections">
           {TABS.map((t) => (
             <button
@@ -121,6 +125,7 @@ export function IrAgentStudio({ orgId, agentId }: { orgId?: string; agentId?: st
             </button>
           ))}
         </nav>
+        )}
         <div className="flex items-center gap-3 text-sm">
           <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${live ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
             <span className={`h-1.5 w-1.5 rounded-full ${live ? "bg-emerald-500" : "bg-slate-400"}`} />

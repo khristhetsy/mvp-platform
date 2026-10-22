@@ -63,6 +63,8 @@ export interface AgentRow {
   compliance_acknowledged_by: string | null;
   /** Company profile fields kept out of the agent (keys from wired.ts). */
   wired_excluded?: string[];
+  /** Set when an admin archived the agent. Archived agents are offline. */
+  archived_at?: string | null;
   /** Which kind of agent this is. Loads its own question set. */
   agent_type?: AgentType;
   created_at: string;
