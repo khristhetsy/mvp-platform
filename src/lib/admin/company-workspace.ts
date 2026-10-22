@@ -241,6 +241,10 @@ export async function getAdminCompanyWorkspace(companyId: string): Promise<Admin
     updateSummaries,
     investableScoreRows,
     journeyState,
+    engineCrr,
+    outreachStatus,
+    manualReminderRes,
+    welcomeRow,
   ] = await Promise.all([
     listRemediationTasksForCompany(companyId),
     admin
@@ -281,6 +285,23 @@ export async function getAdminCompanyWorkspace(companyId: string): Promise<Admin
       .order("created_at", { ascending: false })
       .limit(30),
     evaluateFounderJourney(admin, founderId),
+    // These four only need the company and founder ids, so they run in this
+    // batch instead of waiting behind it (one round of waiting each before).
+    // The headline figure comes from the one platform reader, so the admin card
+    // shows the company's own-stage CRR under the active weight set, the same
+    // number the founder sees, rather than the stored Series A column.
+    crrFor(companyId),
+    // Outreach = automated AND manual, read by the same loader the founder's
+    // Outreach page uses, so the admin row, the drawer and the Overview tile can
+    // never disagree with what the founder sees.
+    loadOutreachStatus(companyId),
+    admin
+      .from("stage_gate_reminders")
+      .select("sends_count, last_sent_at, next_send_at, resolved_at, paused")
+      .eq("company_id", companyId)
+      .eq("gate_key", MANUAL_OUTREACH_GATE_KEY)
+      .maybeSingle(),
+    founderId ? latestWelcomeLetter(founderId) : Promise.resolve(null),
   ]);
 
   // Investable Readiness (13-factor model) — admin/analyst surface.
@@ -291,10 +312,6 @@ export async function getAdminCompanyWorkspace(companyId: string): Promise<Admin
     factor_scores: unknown;
     created_at: string;
   }>;
-  // The headline figure comes from the one platform reader, so the admin card
-  // shows the company's own-stage CRR under the active weight set — the same
-  // number the founder sees — rather than the stored Series A column.
-  const engineCrr = await crrFor(companyId);
   const investable = investableRows.length > 0
     ? {
         totalScore: investableRows[0].total_score,
@@ -376,19 +393,6 @@ export async function getAdminCompanyWorkspace(companyId: string): Promise<Admin
     interestAmountTotal += Number(row.interest_amount) || 0;
   }
 
-  // Outreach = automated AND manual, read by the same loader the founder's
-  // Outreach page uses, so the admin row, the drawer and the Overview tile can
-  // never disagree with what the founder sees.
-  const [outreachStatus, manualReminderRes, welcomeRow] = await Promise.all([
-    loadOutreachStatus(companyId),
-    admin
-      .from("stage_gate_reminders")
-      .select("sends_count, last_sent_at, next_send_at, resolved_at, paused")
-      .eq("company_id", companyId)
-      .eq("gate_key", MANUAL_OUTREACH_GATE_KEY)
-      .maybeSingle(),
-    founderId ? latestWelcomeLetter(founderId) : Promise.resolve(null),
-  ]);
   const manualReminderRow = (manualReminderRes.data ?? null) as {
     sends_count: number | null;
     last_sent_at: string | null;
