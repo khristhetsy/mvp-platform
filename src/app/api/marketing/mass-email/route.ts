@@ -36,6 +36,9 @@ import { logOutboundEmailActivity } from "@/lib/sales/activity";
 import { scheduleAtFrom, scheduleSend } from "@/lib/scheduled-emails/schedule";
 
 export const dynamic = "force-dynamic";
+// Sends go out one recipient at a time with a short delay, so a large selection needs more
+// than the default function time.
+export const maxDuration = 300;
 
 // Conservative Gmail daily cap — Workspace allows ~500 external/day (less on consumer
 // accounts). Above this we refuse and steer to iCapOS rather than risk a block.

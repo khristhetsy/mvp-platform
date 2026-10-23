@@ -71,6 +71,9 @@ export async function runBriefing(mode: "weekly" | "daily" = "daily"): Promise<B
     goals: payload.goals.map((g) => ({ title: g.title, current: g.current, target: g.target, period: g.period })),
     recent_decisions: ((sessions ?? []) as Array<{ session_date: string; decisions: string[] }>).flatMap((s) => (Array.isArray(s.decisions) ? s.decisions : []).map((d) => ({ date: s.session_date, decision: d }))),
   };
+  // The daily brief and the per-KPI coaching do not depend on each other, so they run at
+  // the same time. Each part handles its own errors, so neither can fail the other.
+  const briefTask = (async () => {
   try {
     const out = await claudeComplete(
       [{ role: "user", content: `Context (JSON):\n${JSON.stringify(briefCtx)}\n\nWrite the CEO's operating brief. Output STRICT JSON {"headline": string, "sections": [{"title": string, "body": string}]} with 3–4 sections (e.g. What matters most, Wins, Watch items, Decisions needed). Cite magnitudes; reference journal decisions by date when relevant. Internal-only — no external performance claims.` }],
@@ -85,10 +88,12 @@ export async function runBriefing(mode: "weekly" | "daily" = "daily"): Promise<B
       briefError = "the AI response was not valid JSON";
     }
   } catch (e) { briefError = e instanceof Error ? e.message : "brief generation failed"; }
+  })();
 
   // ── Per-KPI AI coaching (batched, capped) ──
   let kpiAiWritten = 0;
   const batch = needing.slice(0, 12);
+  const kpiTask = (async () => {
   if (batch.length > 0) {
     const items = batch.map((x) => ({ kpi_key: x.k.key, label: x.k.label, fmt: x.k.fmt, direction: x.k.direction, target: x.k.target, red_line: x.k.redLine, benchmark: x.k.benchmark, recent_weeks: x.k.weeks.slice(-8).map((w) => w.value), owner: x.k.owner, status: x.st }));
     try {
@@ -107,6 +112,9 @@ export async function runBriefing(mode: "weekly" | "daily" = "daily"): Promise<B
       }
     } catch { /* fail soft */ }
   }
+  })();
+
+  await Promise.all([briefTask, kpiTask]);
 
   // ── Emails ──
   let emailsSent = 0;
