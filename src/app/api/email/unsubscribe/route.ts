@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { verifyToken } from "@/lib/signed-links/tokens";
 import { appBase } from "@/lib/notifications/founder-email-budget/digest";
+import { checkFormRateLimit } from "@/lib/ai-site/ratelimit";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +53,14 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const ip = (request.headers.get("x-forwarded-for") ?? "").split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown";
+  const limited = await checkFormRateLimit({ scope: "email-unsubscribe", ip, limit: 30 });
+  if (!limited.ok) {
+    return NextResponse.json(
+      { ok: false, error: "Too many requests. Please try again later." },
+      { status: 429, headers: { "Retry-After": String(limited.retryAfterSec) } },
+    );
+  }
   const token = new URL(request.url).searchParams.get("t");
   const ok = await apply(token);
   return NextResponse.json({ ok }, { status: ok ? 200 : 400 });

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { recordFunnelEvent } from "@/lib/analytics/funnel";
+import { checkFormRateLimit } from "@/lib/ai-site/ratelimit";
 
 /**
  * Marketing signup intake (spec §3, §8). Writes a marketing_site_leads row via
@@ -29,6 +30,14 @@ const leadSchema = z.object({
 });
 
 export async function POST(req: NextRequest): Promise<Response> {
+  const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown";
+  const limited = await checkFormRateLimit({ scope: "lead", ip, limit: 10 });
+  if (!limited.ok) {
+    return NextResponse.json(
+      { ok: false, error: "Too many requests. Please try again later." },
+      { status: 429, headers: { "Retry-After": String(limited.retryAfterSec) } },
+    );
+  }
   const body = await req.json().catch(() => null);
   const parsed = leadSchema.safeParse(body);
   if (!parsed.success) {
