@@ -124,34 +124,40 @@ export async function ensureSubscriptionForProfile(input: {
   const now = new Date().toISOString();
   const admin = createServiceRoleClient();
 
+  // Upsert with ignoreDuplicates: ensureSubscriptionForProfile runs on every founder
+  // page render, so two requests can race on the same new profile. A conflict is
+  // not an error here, the other request already created the row.
   const { error: insertError } = await admin
     .from("subscriptions")
-    .insert({
-      profile_id: input.profileId,
-      role: input.role,
-      plan_type: defaults.plan_type,
-      subscription_status: defaults.subscription_status,
-      trial_started_at: defaults.trial_started_at,
-      trial_ends_at: defaults.trial_ends_at,
-      current_period_start: now,
-      current_period_end: defaults.trial_ends_at,
-      monthly_price_cents: defaults.monthly_price_cents,
-      currency: "USD",
-      // New Free rows are never grandfathered: they get due diligence and the
-      // CRR only (access.ts reads this flag).
-      is_grandfathered: false,
-    });
+    .upsert(
+      {
+        profile_id: input.profileId,
+        role: input.role,
+        plan_type: defaults.plan_type,
+        subscription_status: defaults.subscription_status,
+        trial_started_at: defaults.trial_started_at,
+        trial_ends_at: defaults.trial_ends_at,
+        current_period_start: now,
+        current_period_end: defaults.trial_ends_at,
+        monthly_price_cents: defaults.monthly_price_cents,
+        currency: "USD",
+        // New Free rows are never grandfathered: they get due diligence and the
+        // CRR only (access.ts reads this flag).
+        is_grandfathered: false,
+      },
+      { onConflict: "profile_id", ignoreDuplicates: true },
+    );
 
-  // Duplicate key = race condition: another request already created it — just fetch it
-  if (insertError) {
-    if (insertError.code === "23505") {
-      const fallback = await getSubscription(input.profileId);
-      if (fallback) return refreshSubscriptionState(fallback);
-    }
+  if (insertError && insertError.code !== "23505") {
     throw new Error(`Failed to create subscription: ${insertError.message}`);
   }
 
-  const created = await getSubscription(input.profileId);
+  // Re-read with a short retry in case the winning request has not committed yet.
+  let created = await getSubscription(input.profileId);
+  for (let attempt = 0; !created && attempt < 3; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 150 * (attempt + 1)));
+    created = await getSubscription(input.profileId);
+  }
   if (!created) {
     throw new Error("Failed to create subscription: record not found after insert.");
   }
