@@ -6,7 +6,8 @@ import { getCronSecret, validateCronSecret, cronUnauthorizedResponse, cronMiscon
 import { runBriefing } from "@/lib/ceo/briefing";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+// Two sequential AI calls plus the email send: 60s was not enough on the weekly run.
+export const maxDuration = 300;
 
 // GET — Vercel cron. Weekly (full) on Mondays, light run other days.
 async function scheduledGET(req: NextRequest): Promise<Response> {
