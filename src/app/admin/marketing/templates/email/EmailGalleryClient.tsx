@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { MasterWithCount } from "@/lib/email/masters-queries";
+import { SandboxedHtmlPreview } from "@/components/admin/SandboxedHtmlPreview";
 
 export function EmailGalleryClient({ masters }: Readonly<{ masters: MasterWithCount[] }>) {
   const router = useRouter();
@@ -101,10 +102,9 @@ export function EmailGalleryClient({ masters }: Readonly<{ masters: MasterWithCo
             </div>
             {/* Master preview: compiled HTML with unfilled {{slots}} visible as-is. */}
             <div className="overflow-auto bg-[#f4f7fc] p-4">
-              <div
-                className="mx-auto max-w-[600px] overflow-hidden rounded-lg bg-white"
-                dangerouslySetInnerHTML={{ __html: preview.compiled_html }}
-              />
+              <div className="mx-auto max-w-[600px] overflow-hidden rounded-lg bg-white">
+                <SandboxedHtmlPreview html={preview.compiled_html} title="Template preview" minHeight={200} />
+              </div>
             </div>
           </div>
         </div>

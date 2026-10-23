@@ -15,6 +15,7 @@ import {
   type TemplateBlock,
 } from "@/lib/marketing/template-blocks";
 import { DEFAULT_THEME, inferThemeFromHtml, parseDocument, type TemplateTheme } from "@/lib/marketing/template-theme";
+import { SandboxedHtmlPreview } from "@/components/admin/SandboxedHtmlPreview";
 
 const STATUS_MAP: Record<string, { bg: string; color: string }> = {
   active:   { bg: "#E1F5EE", color: "#0F6E56" },
@@ -77,7 +78,7 @@ function LetterPreview({ template, compact = false }: { template: Partial<Market
       {/* Body */}
       <div style={{ fontSize: 14, color: "#444441", lineHeight: 1.8, marginBottom: 24 }}>
         {template.html_body ? (
-          <div dangerouslySetInnerHTML={{ __html: template.html_body }} />
+          <SandboxedHtmlPreview html={template.html_body} title="Template body" fontSize={14} color="#444441" />
         ) : (
           <span style={{ color: "#B4B2A9", fontStyle: "italic" }}>Begin typing your message…</span>
         )}
@@ -112,7 +113,7 @@ function RawEmailPreview({ template }: { template: Partial<MarketingTemplate> })
       {/* Render the email directly — it carries its own page background and
           centred card, so wrapping it in another card hid the page colour. */}
       {template.html_body
-        ? <div style={{ minWidth: 600 }} dangerouslySetInnerHTML={{ __html: template.html_body }} />
+        ? <div style={{ minWidth: 600 }}><SandboxedHtmlPreview html={template.html_body} title="Full template" minHeight={200} /></div>
         : <div style={{ maxWidth: 600, margin: "0 auto", padding: 24, background: "#fff", borderRadius: 10, color: "#B4B2A9", fontStyle: "italic" }}>No content yet.</div>}
       <div style={{ textAlign: "center", fontSize: 11, color: "#8fa0bf", marginTop: 10 }}>Full template as it renders in delivered mail — no cropping.</div>
     </div>
