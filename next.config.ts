@@ -23,6 +23,34 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: __dirname,
   },
+  // Security headers. nosniff and Referrer-Policy are enforced. The CSP ships in
+  // report-only mode first (violations show in the browser console, nothing is
+  // blocked) so it can be tightened and then switched to enforcing.
+  async headers() {
+    const csp = [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://us.i.posthog.com https://us-assets.i.posthog.com https://cdn.plaid.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' data: https://fonts.gstatic.com",
+      "img-src 'self' data: blob: https:",
+      "media-src 'self' blob: https:",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://us.i.posthog.com https://us-assets.i.posthog.com https://*.sentry.io https://*.ingest.sentry.io https://*.plaid.com",
+      "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://cdn.plaid.com",
+      "frame-ancestors 'self'",
+      "base-uri 'self'",
+      "object-src 'none'",
+    ].join("; ");
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Content-Security-Policy-Report-Only", value: csp },
+        ],
+      },
+    ];
+  },
   async redirects() {
     return [
       // /login duplicated /auth/sign-in — consolidate to the canonical auth route.

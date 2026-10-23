@@ -129,6 +129,21 @@ export async function checkRateLimitAsync(input: { ip: string; sessionId?: strin
   return { ok: true };
 }
 
+/** Generic per-IP limiter for public form endpoints (lead, demo, assessment,
+ *  testimonial). Durable via Upstash when configured, else in-memory. Reuses the
+ *  same backends as the AI limiter and never throws. */
+export async function checkFormRateLimit(input: {
+  scope: string;
+  ip: string;
+  limit: number;
+  windowMs?: number;
+}): Promise<RateResult> {
+  const windowMs = input.windowMs ?? HOUR;
+  const key = `form:${input.scope}:${input.ip}:${Math.floor(Date.now() / windowMs)}`;
+  const h = upstashConfigured() ? await hitDurable(key, input.limit, windowMs) : hit(key, input.limit, windowMs);
+  return h.ok ? { ok: true } : rate(h, "rate");
+}
+
 /** Test/maintenance helper — clears all counters. */
 export function __resetRateLimit(): void {
   store.clear();

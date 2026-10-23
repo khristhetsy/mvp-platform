@@ -5,6 +5,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { SUPPORT_CONFIRM_ACTION } from "@/lib/support/emails";
 import { founderConfirm, founderRate, loadRequestCtx, onFounderReply } from "@/lib/support/care";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { checkFormRateLimit } from "@/lib/ai-site/ratelimit";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,14 @@ const schema = z.discriminatedUnion("step", [
 ]);
 
 export async function POST(req: NextRequest): Promise<Response> {
+  const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown";
+  const limited = await checkFormRateLimit({ scope: "support-confirm", ip, limit: 30 });
+  if (!limited.ok) {
+    return NextResponse.json(
+      { ok: false, error: "Too many requests. Please try again later." },
+      { status: 429, headers: { "Retry-After": String(limited.retryAfterSec) } },
+    );
+  }
   const parsed = schema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   const requestId = verifyToken({ token: parsed.data.token, kind: "support", action: SUPPORT_CONFIRM_ACTION });

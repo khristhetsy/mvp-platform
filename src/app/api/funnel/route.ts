@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { recordFunnelEvent, FUNNEL_EVENTS, type FunnelEventName } from "@/lib/analytics/funnel";
+import { checkFormRateLimit } from "@/lib/ai-site/ratelimit";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,14 @@ const schema = z.object({
 });
 
 export async function POST(req: NextRequest): Promise<Response> {
+  const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown";
+  const limited = await checkFormRateLimit({ scope: "funnel", ip, limit: 300 });
+  if (!limited.ok) {
+    return NextResponse.json(
+      { ok: false, error: "Too many requests. Please try again later." },
+      { status: 429, headers: { "Retry-After": String(limited.retryAfterSec) } },
+    );
+  }
   const parsed = schema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success || !CLIENT_EVENTS.has(parsed.data.eventName)) {
     return NextResponse.json({ ok: false }, { status: 400 });

@@ -4,6 +4,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/send-email";
 import { generateDemoSlots, FIRM_TIMEZONE } from "@/lib/marketing-site/demo-slots";
 import { renderEmail } from "@/lib/email/layout";
+import { checkFormRateLimit } from "@/lib/ai-site/ratelimit";
 
 /**
  * Demo booking (spec §9). GET → available slots (server-generated in the firm's
@@ -87,6 +88,14 @@ export async function GET(): Promise<Response> {
 }
 
 export async function POST(req: Request): Promise<Response> {
+  const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown";
+  const limited = await checkFormRateLimit({ scope: "demo", ip, limit: 5 });
+  if (!limited.ok) {
+    return NextResponse.json(
+      { ok: false, error: "Too many requests. Please try again later." },
+      { status: 429, headers: { "Retry-After": String(limited.retryAfterSec) } },
+    );
+  }
   const body = await req.json().catch(() => null);
   const parsed = demoSchema.safeParse(body);
   if (!parsed.success) {

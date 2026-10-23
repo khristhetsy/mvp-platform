@@ -14,6 +14,7 @@ import Link from "next/link";
 import { formatRange } from "@/lib/ir/milestones";
 import type { ExecSummary, ReportData, ReportKind } from "@/lib/ir/report";
 import { reportCaptions } from "@/lib/ir/report-captions";
+import { SandboxedHtmlPreview } from "@/components/admin/SandboxedHtmlPreview";
 
 type View = "live" | "doc";
 const seg = (on: boolean) => `rounded-md px-2.5 py-1 text-[12px] font-medium ${on ? "bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200" : "text-slate-600 hover:text-slate-900"}`;
@@ -224,7 +225,7 @@ export function ReportClient({ projectId, meName }: { projectId: string; meName:
           <div className="w-full max-w-2xl rounded-xl bg-white p-5 shadow-xl">
             <div className="mb-2 flex items-center justify-between"><h3 className="text-[14px] font-semibold text-slate-900">Email preview</h3><button type="button" onClick={() => setPreview(null)} className="text-[12px] text-slate-500 hover:text-slate-800">Close</button></div>
             <p className="text-[12px] text-slate-500">To: {sendTo || "—"} · Subject: {preview.subject}</p>
-            <div className="mt-3 max-h-[60vh] overflow-auto rounded-lg border border-slate-200 p-4" dangerouslySetInnerHTML={{ __html: preview.html }} />
+            <div className="mt-3 max-h-[60vh] overflow-auto rounded-lg border border-slate-200"><SandboxedHtmlPreview html={preview.html} title="Email preview" padding={16} /></div>
           </div>
         </div>
       ) : null}

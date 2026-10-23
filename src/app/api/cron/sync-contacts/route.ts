@@ -16,6 +16,11 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const DERIVE_BUDGET_MS = 25_000;
+// The whole run shares one 60s limit. Derivation only gets what is left of the first
+// 40s, and the index rebuild is skipped once 45s are gone (the previous index keeps
+// serving and the next hourly run rebuilds it).
+const DERIVE_DEADLINE_MS = 40_000;
+const REBUILD_DEADLINE_MS = 45_000;
 
 async function deriveWithinBudget(budgetMs: number) {
   const started = Date.now();
@@ -40,6 +45,7 @@ async function handle(request: Request) {
   if (!getCronSecret()) return cronMisconfiguredResponse();
   if (!validateCronSecret(request)) return cronUnauthorizedResponse();
 
+  const startedAt = Date.now();
   try {
     const sources = configuredSources();
     const results: Record<string, number> = {};
@@ -58,17 +64,25 @@ async function handle(request: Request) {
     // call after a big Odoo import left the rest unfilled until the next hour. Walk the
     // cursor until done or the budget is spent — the rebuild still needs its share of
     // the 60s, and what's left simply resumes next run.
-    const derived = await deriveWithinBudget(DERIVE_BUDGET_MS).catch((err) => {
+    const deriveBudget = Math.min(DERIVE_BUDGET_MS, DERIVE_DEADLINE_MS - (Date.now() - startedAt));
+    const derivedPromise =
+      deriveBudget > 0
+        ? deriveWithinBudget(deriveBudget)
+        : Promise.resolve({ scanned: 0, contacts: 0, fields: 0, errors: 0, firstError: null as string | null, reindexed: 0, done: false });
+    const derived = await derivedPromise.catch((err) => {
       Sentry.captureException(err);
       return { scanned: 0, contacts: 0, fields: 0, errors: 1, firstError: "derivation failed", reindexed: 0, done: false };
     });
     // The /fit match index is derived from crm_contacts, so refresh it here rather than
     // on its own schedule — it can only be stale if contacts changed. Best-effort: a
     // failed rebuild leaves the previous index serving and must not fail the sync.
-    const index = await rebuildMatchIndex().catch((err) => {
-      Sentry.captureException(err);
-      return { scanned: 0, written: 0, removed: 0, error: true };
-    });
+    const index =
+      Date.now() - startedAt > REBUILD_DEADLINE_MS
+        ? { scanned: 0, written: 0, removed: 0, skipped: true }
+        : await rebuildMatchIndex().catch((err) => {
+            Sentry.captureException(err);
+            return { scanned: 0, written: 0, removed: 0, error: true };
+          });
     return NextResponse.json({ ok: true, sources: sources.length, results, derived, index });
   } catch (err) {
     Sentry.captureException(err);
