@@ -5,9 +5,13 @@
 # usual) and reports the result back to the queue. A patch that doesn't apply
 # cleanly is marked failed and nothing is pushed.
 #
-# Needs one repository secret: DEV_PATCH_KEY. The Supabase URL and publishable
-# key below are public (the same ones the website ships to every browser); the
-# queue key is what authorizes reading the queue.
+# Needs two repository secrets: DEV_PATCH_KEY (authorizes reading the queue) and
+# SB_SERVICE_KEY (the Supabase key this job calls the queue functions with).
+#
+# Before anything is pushed, the patched tree must pass `tsc --noEmit`, the same check
+# the Typecheck workflow runs. Vercel builds ignore type errors, so this is the gate
+# that keeps a bad patch from reaching production. A patch that fails it is marked
+# failed and nothing is pushed.
 name: Apply patch queue
 
 on:
@@ -25,7 +29,7 @@ concurrency:
 jobs:
   apply:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     env:
       SB_URL: https://raowjbhbtmwkycmwvavd.supabase.co
       SB_KEY: ${{ secrets.SB_SERVICE_KEY }}
@@ -48,7 +52,20 @@ jobs:
           fetch-depth: 0
           path: repo
 
-      - name: Apply and push
+      - name: Setup Node
+        if: steps.pending.outputs.count != '0'
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: repo/package-lock.json
+
+      - name: Install dependencies
+        if: steps.pending.outputs.count != '0'
+        working-directory: repo
+        run: npm ci
+
+      - name: Apply, type check and push
         if: steps.pending.outputs.count != '0'
         working-directory: repo
         run: |
@@ -66,11 +83,16 @@ jobs:
             jq -r ".[$i].patch" ../pending.json > "../patch-$id.patch"
             echo "Applying #$id: $title"
             if out=$(git am --committer-date-is-author-date "../patch-$id.patch" 2>&1); then
-              if push=$(git push origin HEAD:main 2>&1); then
-                report "$id" applied "Pushed $(git rev-parse --short HEAD)" "$(git rev-parse HEAD)"
+              if tc=$(npx tsc --noEmit 2>&1); then
+                if push=$(git push origin HEAD:main 2>&1); then
+                  report "$id" applied "Pushed $(git rev-parse --short HEAD)" "$(git rev-parse HEAD)"
+                else
+                  git reset --hard origin/main
+                  report "$id" failed "Push failed: $push" ""
+                fi
               else
                 git reset --hard origin/main
-                report "$id" failed "Push failed: $push" ""
+                report "$id" failed "Type check failed, nothing pushed: $(printf %s "$tc" | tail -c 1500)" ""
               fi
             else
               git am --abort || true
