@@ -7,14 +7,15 @@ import type { HowToGuideData, HowToStep } from "@/lib/founder/how-to-types";
 /**
  * A "how to use" card in the same style as the manual outreach guide: numbered
  * steps, each with a mini screen showing what to tap (blue ring and dot) and
- * what you'll see next. Open the first time a founder visits a page, then
- * remembers Hide in this browser and shows a small link instead. Purely visual:
+ * what you'll see next. Closed by default: a small link opens it, and
+ * Hide closes it again. The choice is remembered in this browser. Purely visual:
  * nothing here sends or saves.
  */
 
-const STORAGE_PREFIX = "icapos.howto.hidden.";
+// Closed until the founder opens it. A new key, so old "hidden" flags do not matter.
+const STORAGE_PREFIX = "icapos.howto.open.";
 
-function readHidden(key: string): boolean {
+function readOpen(key: string): boolean {
   try {
     return window.localStorage.getItem(STORAGE_PREFIX + key) === "1";
   } catch {
@@ -24,9 +25,9 @@ function readHidden(key: string): boolean {
 
 const listeners = new Set<() => void>();
 
-function writeHidden(key: string, hidden: boolean) {
+function writeOpen(key: string, open: boolean) {
   try {
-    if (hidden) window.localStorage.setItem(STORAGE_PREFIX + key, "1");
+    if (open) window.localStorage.setItem(STORAGE_PREFIX + key, "1");
     else window.localStorage.removeItem(STORAGE_PREFIX + key);
   } catch {
     /* storage can be blocked; the card then simply reopens next visit */
@@ -99,7 +100,7 @@ export function HowToGuide({ guide }: Readonly<{ guide: HowToGuideData }>) {
   // "pending" on the server and until the browser has been asked, so a hidden card never flashes open.
   const state = useSyncExternalStore(
     subscribe,
-    () => (readHidden(guide.key) ? "hidden" : "open"),
+    () => (readOpen(guide.key) ? "open" : "closed"),
     () => "pending",
   );
 
@@ -111,7 +112,7 @@ export function HowToGuide({ guide }: Readonly<{ guide: HowToGuideData }>) {
       <div className="mb-3">
         <button
           type="button"
-          onClick={() => writeHidden(guide.key, false)}
+          onClick={() => writeOpen(guide.key, true)}
           className="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-700"
         >
           <HelpCircle className="h-4 w-4" aria-hidden="true" />
@@ -130,7 +131,7 @@ export function HowToGuide({ guide }: Readonly<{ guide: HowToGuideData }>) {
         </p>
         <button
           type="button"
-          onClick={() => writeHidden(guide.key, true)}
+          onClick={() => writeOpen(guide.key, false)}
           className="inline-flex shrink-0 items-center gap-1 text-xs text-slate-500 hover:text-slate-700"
         >
           Hide <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />

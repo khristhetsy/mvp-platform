@@ -6,6 +6,7 @@ import { listEvents, createEvent, insertLocalEvent } from "@/lib/calendar/events
 import { loadAvailability } from "./store";
 import { configFromSettings, expandWindows } from "./availability";
 import { createBooking } from "./bookings";
+import { bookingProfile } from "./booking-profile";
 import { logActivity } from "@/lib/sales/activity";
 import type { CalendarEventRecord, TimeInterval } from "./types";
 import type { SourceConfidence } from "@/lib/attribution/source";
@@ -140,6 +141,29 @@ export async function bookSlot(input: BookSlotInput): Promise<BookSlotResult> {
       const { data } = await admin.from("crm_contacts").select("id, overrides, company").ilike("email", input.booker.email).maybeSingle();
       const contact = data as { id: string; overrides: Record<string, unknown> | null; company: string | null } | null;
       contactCrmId = contact?.id ?? null;
+      // No contact yet: a booking IS a new lead, so create the contact instead of leaving
+      // the booking orphaned (no timeline, no follow up). Idempotent on source+external_id.
+      if (!contactCrmId) {
+        const email = input.booker.email.trim().toLowerCase();
+        const heard = answers.find((a) => /how did you hear|hear about/i.test(a.label))?.value;
+        const leadSource = input.source?.tag ?? heard ?? null;
+        const bp = bookingProfile(answers);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: created } = await (admin.from("crm_contacts") as any).upsert({
+          source: "booking",
+          external_id: `booking:${email}`,
+          module: bp.module,
+          name: input.booker.name,
+          email,
+          phone: phoneForStorage(input.booker.phone),
+          company: company,
+          // Membership lives in raw.__profile (contact Type is generated from it) and in overrides (editor).
+          raw: { __profile: { ...(bp.membership ? { membership: bp.membership } : {}), booking: bp.booking, leadSource } },
+          overrides: { ...(bp.membership ? { membership: bp.membership } : {}), ...(leadSource ? { lead_source: leadSource } : {}) },
+          synced_at: new Date().toISOString(),
+        }, { onConflict: "source,external_id" }).select("id").single();
+        contactCrmId = (created as { id: string } | null)?.id ?? null;
+      }
       // Best-effort enrichment of the linked contact: fill lead source from "how did
       // you hear", and Company from the booking — only when each is currently blank.
       if (contactCrmId) {
