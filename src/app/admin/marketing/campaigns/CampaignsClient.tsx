@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type { MarketingCampaign, MarketingList, MarketingTemplate } from "@/lib/marketing/types";
 import { DEPARTMENTS, UNASSIGNED, deptMeta, departmentOf, groupByDepartment } from "@/lib/marketing/department-grouping";
 import { fromPlatformInput, platformInputToIso, toPlatformInput } from "@/lib/time/platform-input";
+import { SandboxedHtmlPreview } from "@/components/admin/SandboxedHtmlPreview";
 
 interface Props {
   campaigns: MarketingCampaign[];
@@ -955,7 +956,7 @@ function CampaignPreview({ data }: { data: CampaignDetail }) {
           <div><span style={meta}>Subject</span> <span style={{ color: "var(--foreground)", fontWeight: 500 }}>{subject}</span></div>
         </div>
         {html ? (
-          <div style={{ padding: 16, fontSize: 13.5, lineHeight: 1.7, color: "var(--foreground)" }} dangerouslySetInnerHTML={{ __html: html }} />
+          <SandboxedHtmlPreview html={html} title="Campaign preview" padding={16} fontSize={13.5} />
         ) : (
           <div style={{ padding: 24, textAlign: "center", fontSize: 12.5, color: "var(--muted-foreground)" }}>No template content to preview.</div>
         )}
