@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { captureAssessmentLead } from "@/lib/assessment/leads";
 import { recordFunnelEvent } from "@/lib/analytics/funnel";
+import { checkFormRateLimit } from "@/lib/ai-site/ratelimit";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,14 @@ const schema = z.object({
 });
 
 export async function POST(req: NextRequest): Promise<Response> {
+  const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown";
+  const limited = await checkFormRateLimit({ scope: "assessment", ip, limit: 10 });
+  if (!limited.ok) {
+    return NextResponse.json(
+      { ok: false, error: "Too many requests. Please try again later." },
+      { status: 429, headers: { "Retry-After": String(limited.retryAfterSec) } },
+    );
+  }
   const parsed = schema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
     return NextResponse.json({ error: "A valid email and answers are required." }, { status: 400 });

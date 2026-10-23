@@ -2,12 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyTestimonialToken } from "@/lib/testimonials/token";
 import { validateTestimonial } from "@/lib/testimonials/validate";
 import { loadTestimonialContext, saveTestimonial } from "@/lib/testimonials/db";
+import { checkFormRateLimit } from "@/lib/ai-site/ratelimit";
 
 /**
  * Public submit endpoint for icapos.com/testimonial. No login: the signed token
  * from the email identifies the founder. Saves as pending for admin review.
  */
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown";
+  const limited = await checkFormRateLimit({ scope: "testimonial", ip, limit: 5 });
+  if (!limited.ok) {
+    return NextResponse.json(
+      { ok: false, error: "Too many requests. Please try again later." },
+      { status: 429, headers: { "Retry-After": String(limited.retryAfterSec) } },
+    );
+  }
   let body: unknown;
   try {
     body = await req.json();
