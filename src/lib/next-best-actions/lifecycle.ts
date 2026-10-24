@@ -308,6 +308,18 @@ export async function upsertComputedActions(
   const userId = profile.id;
   const results: NextBestActionRecord[] = [];
 
+  // Validate company ids once up front. An id that points at no company row
+  // violates next_best_actions_company_id_fkey, and because insert errors are
+  // swallowed below, the same failing insert was retried on every dashboard load.
+  const candidateCompanyIds = Array.from(
+    new Set(computed.map((a) => parseUuid(a.companyId)).filter((id): id is string => Boolean(id))),
+  );
+  const validCompanyIds = new Set<string>();
+  if (candidateCompanyIds.length > 0) {
+    const { data: foundCompanies } = await supabase.from("companies").select("id").in("id", candidateCompanyIds);
+    for (const row of foundCompanies ?? []) validCompanyIds.add(row.id);
+  }
+
   for (const action of computed) {
     const dedupeKey = buildDedupeKey(action);
     const sourceSignature = buildSourceSignature(action);
@@ -341,7 +353,10 @@ export async function upsertComputedActions(
       role: action.role,
       entity_type: action.entityType,
       entity_id: parseUuid(action.entityId),
-      company_id: parseUuid(action.companyId),
+      company_id: (() => {
+        const id = parseUuid(action.companyId);
+        return id && validCompanyIds.has(id) ? id : null;
+      })(),
       investor_id: parseUuid(action.investorId),
       spv_id: parseUuid(action.spvId),
       action_type: action.id,
