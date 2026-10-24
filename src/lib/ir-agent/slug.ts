@@ -12,7 +12,7 @@
  */
 export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
   "about", "about-us", "admin", "api", "app", "apple-icon", "assessment", "auth",
-  "billing", "blog", "campaigns", "checkout", "claim", "configuration-error", "connect",
+  "billing", "blog", "campaigns", "checkout", "claim", "clients", "configuration-error", "connect",
   "contact", "contracts", "credits", "daniela", "dashboard", "deal", "deals", "deck",
   "disclosures", "dr", "e", "email", "events", "f", "favicon", "fit", "founder",
   "founders", "help", "home", "icapos", "icfo", "icon", "install", "investor",

@@ -23,7 +23,7 @@ describe("reserved company slugs", () => {
 
   it("matches the list seeded by the migrations", () => {
     const seeded = new Set<string>();
-    for (const file of ["20261013120000_ir_agents.sql", "20261013190000_ir_agents_studio.sql"]) {
+    for (const file of ["20261013120000_ir_agents.sql", "20261013190000_ir_agents_studio.sql", "20261024140000_ir_agent_reserved_slug_clients.sql"]) {
       const sql = readFileSync(join(ROOT, "supabase/migrations", file), "utf8");
       const start = sql.indexOf("insert into public.ir_agent_reserved_slugs");
       const block = sql.slice(start, sql.indexOf("on conflict (slug) do nothing", start));
