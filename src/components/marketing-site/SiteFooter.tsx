@@ -22,6 +22,7 @@ const INVESTOR_LINKS = [
 const COMPANY_LINKS = [
   { href: "/", label: "Home" },
   { href: "/about", label: "About us" },
+  { href: "/clients", label: "Client stories" },
   { href: "/events", label: "Events" }, // required cross-link: About → Events
   { href: "/disclosures", label: "Disclosures" },
   { href: "/terms", label: "Terms of Service" },
