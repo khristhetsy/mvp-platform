@@ -1,7 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { createServiceRoleClient } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/types";
-import { getStorageBucket, createSignedDocumentUrl } from "@/lib/data/documents";
 import type { SubscriptionRecord } from "@/lib/subscriptions/plans";
 import type { PlanType } from "@/lib/subscriptions/plans";
 import { computeReadinessMilestones, milestoneLabelForAdmin } from "@/lib/learning/milestones";
@@ -157,23 +155,13 @@ export async function listAdminCompanies(supabase: SupabaseClient<Database>): Pr
   }
 
   const rows = (result.data as CompanyWithRelations[] | null) ?? [];
-  const service = createServiceRoleClient();
 
-  const pitchDecks = rows.map((row) =>
-    row.documents?.find((doc) => doc.document_type?.toUpperCase() === "PITCH_DECK") ?? null,
-  );
-
-  const signedUrls = await Promise.all(
-    pitchDecks.map(async (pitchDeck) => {
-      if (!pitchDeck?.file_path) return null;
-      const bucket = getStorageBucket(pitchDeck.document_type ?? "PITCH_DECK");
-      const signed = await createSignedDocumentUrl(service, bucket, pitchDeck.file_path, 3600);
-      return signed.data?.signedUrl ?? null;
-    }),
-  );
-
-  return rows.map((row, i) => {
-    const pitchDeckUrl = signedUrls[i] ?? null;
+  // Pitch deck URLs are NOT signed here. Signing one URL per company on every
+  // load cost ~2 s per admin dashboard view (12 storage calls in parallel after
+  // the company query). AdminCompanyCard signs on click through
+  // /api/documents/signed-url, keyed by pitch_deck_id.
+  return rows.map((row) => {
+    const pitchDeckUrl = null;
     return {
         id: row.id,
         company_name: row.company_name,
