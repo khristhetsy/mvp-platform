@@ -11,7 +11,7 @@ import { useSiteViewer, type SiteViewer } from "@/components/marketing-site/useS
  * active-state. Structure is fixed:
  *   Home · Founders ▾ · Investors · Events · About ▾
  *   Founders ▾ : How it works · Readiness Rating · Pricing  (Pricing lives here only)
- *   About ▾    : About us · Disclosures
+ *   About ▾    : About us · Client stories · Disclosures
  *   Right side : AI Mode · Sign in · Get started   (signed out)
  *                AI Mode · Dashboard · avatar menu (signed in)
  * The session is read in the browser (useSiteViewer) so public pages stay
@@ -35,6 +35,7 @@ const FOUNDERS: Item[] = [
 ];
 const ABOUT: Item[] = [
   { href: "/about", label: "About us" },
+  { href: "/clients", label: "Client stories" },
   { href: "/disclosures", label: "Disclosures" },
 ];
 
