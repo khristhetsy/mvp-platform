@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { MarketingBell } from "@/components/marketing/notifications/MarketingBell";
 
 type NavChild = { label: string; href: string };
 type NavGroup = { label: string; href: string; routes: string[]; children?: NavChild[] };
 
-// Grouped 2-tier nav: 6 top groups, each with an optional secondary sub-tab row.
+// Grouped nav: 6 top tabs. Groups with children open a dropdown (no second sub-tab row).
 const GROUPS: NavGroup[] = [
   { label: "Dashboard", href: "/admin/marketing", routes: ["/admin/marketing"] },
   { label: "Prospects", href: "/admin/marketing/prospects", routes: ["/admin/marketing/prospects"] },
@@ -57,6 +58,25 @@ function groupActive(group: NavGroup, pathname: string): boolean {
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const [open, setOpen] = useState<string | null>(null);
+  const barRef = useRef<HTMLDivElement>(null);
+
+  // Close the open dropdown on an outside click or Escape.
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (barRef.current && !barRef.current.contains(e.target as Node)) setOpen(null);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(null);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
@@ -65,6 +85,8 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
         background: "var(--background)",
         padding: "14px 24px 0",
         flexShrink: 0,
+        position: "relative",
+        zIndex: 20,
       }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
           <div>
@@ -82,53 +104,77 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 2, marginTop: 12, flexWrap: "wrap", borderBottom: "0.5px solid var(--border)" }}>
+        <div ref={barRef} style={{ display: "flex", gap: 2, marginTop: 12, flexWrap: "wrap", borderBottom: "0.5px solid var(--border)" }}>
           {GROUPS.map((group) => {
             const active = groupActive(group, pathname);
+            const tabStyle: React.CSSProperties = {
+              padding: "9px 14px",
+              fontSize: 13,
+              fontWeight: active ? 600 : 500,
+              color: active ? "#1A6CE4" : "var(--muted-foreground)",
+              borderBottom: active ? "2px solid #1A6CE4" : "2px solid transparent",
+              textDecoration: "none",
+              whiteSpace: "nowrap",
+              transition: "color 0.15s",
+            };
+            if (!group.children) {
+              return (
+                <Link key={group.href} href={group.href} style={tabStyle}>
+                  {group.label}
+                </Link>
+              );
+            }
+            const isOpen = open === group.label;
             return (
-              <Link
-                key={group.href}
-                href={group.href}
-                style={{
-                  padding: "9px 14px",
-                  fontSize: 13,
-                  fontWeight: active ? 600 : 500,
-                  color: active ? "#1A6CE4" : "var(--muted-foreground)",
-                  borderBottom: active ? "2px solid #1A6CE4" : "2px solid transparent",
-                  textDecoration: "none",
-                  whiteSpace: "nowrap",
-                  transition: "color 0.15s",
-                }}
-              >
-                {group.label}
-              </Link>
+              <div key={group.href} style={{ position: "relative" }}>
+                <button
+                  type="button"
+                  aria-haspopup="menu"
+                  aria-expanded={isOpen}
+                  onClick={() => setOpen(isOpen ? null : group.label)}
+                  style={{ ...tabStyle, background: "none", borderTop: 0, borderLeft: 0, borderRight: 0, cursor: "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center", gap: 6 }}
+                >
+                  {group.label}
+                  <span aria-hidden style={{ fontSize: 9, opacity: 0.7 }}>{isOpen ? "\u25B4" : "\u25BE"}</span>
+                </button>
+                {isOpen && (
+                  <div
+                    role="menu"
+                    style={{
+                      position: "absolute", top: "100%", left: 0, minWidth: 210, padding: 6, zIndex: 40,
+                      background: "var(--background)", border: "0.5px solid var(--border)", borderRadius: 12,
+                      boxShadow: "0 12px 30px rgba(11,19,48,.18)",
+                    }}
+                  >
+                    {group.children.map((child) => {
+                      const childActive = pathname === child.href || pathname.startsWith(child.href + "/");
+                      return (
+                        <Link
+                          key={child.href}
+                          href={child.href}
+                          role="menuitem"
+                          onClick={() => setOpen(null)}
+                          style={{
+                            display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+                            minHeight: 44, padding: "0 12px", borderRadius: 8, fontSize: 13,
+                            fontWeight: childActive ? 600 : 500,
+                            color: childActive ? "#1A6CE4" : "var(--foreground)",
+                            background: childActive ? "rgba(26,108,228,.08)" : "transparent",
+                            textDecoration: "none", whiteSpace: "nowrap",
+                          }}
+                        >
+                          {child.label}
+                          {childActive && <span aria-hidden>{"\u2713"}</span>}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
       </div>
-
-      {/* Secondary sub-tab row for the active group */}
-      {(() => {
-        const group = GROUPS.find((g) => groupActive(g, pathname));
-        if (!group?.children) return null;
-        return (
-          <div style={{ background: "var(--muted)", borderBottom: "0.5px solid var(--border)", padding: "0 24px", display: "flex", gap: 4, flexShrink: 0 }}>
-            {group.children.map((child) => {
-              const childActive = pathname === child.href || pathname.startsWith(child.href + "/");
-              return (
-                <Link key={child.href} href={child.href} style={{
-                  padding: "7px 10px", fontSize: 11.5, fontWeight: childActive ? 700 : 500,
-                  color: childActive ? "#1A6CE4" : "var(--muted-foreground)",
-                  borderBottom: childActive ? "2px solid #2E78F5" : "2px solid transparent",
-                  textDecoration: "none", whiteSpace: "nowrap",
-                }}>
-                  {child.label}
-                </Link>
-              );
-            })}
-          </div>
-        );
-      })()}
 
       <div style={{ flex: 1, overflow: "auto", background: "var(--background)" }}>{children}</div>
     </div>
