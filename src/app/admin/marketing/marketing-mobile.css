@@ -1,5 +1,6 @@
 /* Marketing pages, phone layout (max-width 639px). Layout only; desktop is unchanged. */
 @media (max-width: 639px) {
+  .mk-m-body { padding-bottom: 90px; }
   .mk-m-1col { grid-template-columns: minmax(0, 1fr) !important; }
   .mk-m-2col { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
   .mk-m-tbl { grid-template-columns: minmax(0, 1.5fr) repeat(3, minmax(0, 1fr)) !important; }
