@@ -3,7 +3,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { writeAuditLog } from "@/lib/data/audit";
 import { cancelSubscription, resumeSubscription } from "@/lib/lemonsqueezy";
-import { canDowngrade, isCardPlan, pendingPlanFor, type DowngradeTarget } from "@/lib/billing/plan-change";
+import { canDowngrade, canSwitchFromPremium, cardPlanFor, isCardPlan, pendingPlanFor, type CardTarget, type DowngradeTarget } from "@/lib/billing/plan-change";
 import { openWireInvoiceForProfile, voidWireInvoice } from "@/lib/billing/wire";
 
 export const dynamic = "force-dynamic";
@@ -83,6 +83,28 @@ export async function POST(req: Request) {
         if (open?.is_renewal) await voidWireInvoice(open.id, null, admin);
         await audit("renewal_stopped");
         return NextResponse.json({ success: true, endsAt: sub.current_period_end });
+      }
+      if (action === "switch_to_card") {
+        const target = body.plan === "professional" || body.plan === "basic" ? (body.plan as CardTarget) : null;
+        if (!target || !canSwitchFromPremium(sub.plan_type, target)) {
+          return NextResponse.json({ error: "That plan change isn't available." }, { status: 400 });
+        }
+        if (cancelling) return NextResponse.json({ error: "Undo the pending change first." }, { status: 409 });
+        if (!sub.current_period_end) {
+          return NextResponse.json({ error: "Your billing period isn't available yet. Try again later." }, { status: 409 });
+        }
+        // Same as Stop renewal, but remember the chosen card plan. The card plan
+        // starts at checkout once Premium ends: Lemon Squeezy bills on checkout.
+        await save({
+          cancel_at_period_end: true,
+          cancel_reason: "user",
+          pending_plan_type: cardPlanFor(target),
+          pending_plan_effective_at: sub.current_period_end,
+        });
+        const open = await openWireInvoiceForProfile(user.id, admin);
+        if (open?.is_renewal) await voidWireInvoice(open.id, null, admin);
+        await audit("premium_switch_scheduled", { to: target, effectiveAt: sub.current_period_end });
+        return NextResponse.json({ success: true, effectiveAt: sub.current_period_end });
       }
       if (action === "resume" || action === "undo_downgrade") {
         if (!cancelling) return NextResponse.json({ error: "Renewal is not stopped." }, { status: 400 });

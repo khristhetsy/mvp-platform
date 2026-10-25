@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -15,7 +16,8 @@ import { PlanActions } from "@/components/billing/PlanActions";
 import { PortalCards } from "@/components/billing/PortalCards";
 import { BillingAddressCard } from "@/components/billing/BillingAddressCard";
 import { readStoredAddress } from "@/lib/billing/address";
-import { isCardPlan } from "@/lib/billing/plan-change";
+import { awaitingCardCheckout, isCardPlan } from "@/lib/billing/plan-change";
+import { PLAN_LABELS } from "@/lib/subscriptions/plans";
 import { getCustomerDetails, getSubscriptionDetails } from "@/lib/lemonsqueezy";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +25,7 @@ export const dynamic = "force-dynamic";
 export default async function FounderSettingsBillingPage() {
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
+  const tb = await getTranslations("billingManage");
   const { company } = await getActiveCompanyForUser(profile);
   const subscription =
     (await getSubscriptionForProfile(profile.id)) ??
@@ -73,6 +76,14 @@ export default async function FounderSettingsBillingPage() {
               }
             />
           </Suspense>
+          {awaitingCardCheckout(subscription) ? (
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900">
+              <span>{tb("start_plan_prompt", { plan: PLAN_LABELS[subscription.pending_plan_type as keyof typeof PLAN_LABELS] })}</span>
+              <Link href="/billing" className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">
+                {tb("start_plan_button", { plan: PLAN_LABELS[subscription.pending_plan_type as keyof typeof PLAN_LABELS] })}
+              </Link>
+            </div>
+          ) : null}
           {cardPlan ? (
             <PortalCards cardBrand={lsDetails?.cardBrand ?? null} cardLast4={lsDetails?.cardLastFour ?? null} place={place || null} />
           ) : null}

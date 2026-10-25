@@ -16,6 +16,26 @@ export function canDowngrade(from: PlanType | string, to: DowngradeTarget): bool
   return false;
 }
 
+export type CardTarget = "professional" | "basic";
+
+/** Premium (wire) can move to a card plan. The card plan starts at checkout, after the Premium period. */
+export function canSwitchFromPremium(from: PlanType | string, to: CardTarget): boolean {
+  return from === "founder_premium" && (to === "professional" || to === "basic");
+}
+
+export function cardPlanFor(target: CardTarget): PlanType {
+  return target === "professional" ? "founder_professional" : "founder_basic";
+}
+
+/** A founder who chose a card plan and has not paid for it yet: shown a "Start plan" prompt. */
+export function awaitingCardCheckout(sub: {
+  plan_type: string;
+  pending_plan_type?: string | null;
+  ls_subscription_id?: string | null;
+}): boolean {
+  return sub.plan_type === "founder_free" && isCardPlan(sub.pending_plan_type) && !sub.ls_subscription_id;
+}
+
 export function pendingPlanFor(target: DowngradeTarget): PlanType {
   return target === "basic" ? "founder_basic" : "founder_free";
 }

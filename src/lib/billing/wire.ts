@@ -429,12 +429,15 @@ export async function runWireInvoiceCron(now: Date = new Date(), client: Db = db
   {
     const { data: ending, error } = await client
       .from("subscriptions")
-      .select("id, profile_id")
+      .select("id, profile_id, pending_plan_type")
       .eq("plan_type", "founder_premium")
       .eq("cancel_at_period_end", true)
       .lte("current_period_end", now.toISOString());
     if (error) result.errors.push(`ended: ${error.message}`);
-    for (const row of (ending ?? []) as Array<{ id: string; profile_id: string }>) {
+    for (const row of (ending ?? []) as Array<{ id: string; profile_id: string; pending_plan_type: string | null }>) {
+      // A card plan the founder chose stays recorded, so the Billing tab can offer
+      // "Start plan". The webhook clears it when that plan's subscription arrives.
+      const keepsChoice = row.pending_plan_type === "founder_basic" || row.pending_plan_type === "founder_professional";
       const { error: upErr } = await client
         .from("subscriptions")
         .update({
@@ -443,7 +446,7 @@ export async function runWireInvoiceCron(now: Date = new Date(), client: Db = db
           monthly_price_cents: 0,
           cancel_at_period_end: false,
           cancel_reason: null,
-          pending_plan_type: null,
+          pending_plan_type: keepsChoice ? row.pending_plan_type : null,
           pending_plan_effective_at: null,
           grace_period_ends_at: null,
           updated_at: now.toISOString(),
