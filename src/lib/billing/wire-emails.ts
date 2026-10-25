@@ -186,3 +186,25 @@ export function renderWirePausedEmail(input: {
   const text = [hello, "", lead, "", next, `Billing: ${input.billingUrl}`, "", WIRE_COPY.disclaimer].join("\n");
   return { subject, html, text };
 }
+
+/** Sent once when Premium ends for a founder who chose to continue on a card plan. */
+export function renderPremiumEndedEmail(input: {
+  firstName: string | null;
+  planLabel: string;
+  endedOn: string;
+  billingUrl: string;
+}): RenderedWireEmail {
+  const { planLabel } = input;
+  const subject = `Your Premium period has ended: start your ${planLabel} plan`;
+  const hello = `Hi ${input.firstName?.trim() || "there"},`;
+  const lead = `Your Premium period ended on ${input.endedOn}. You chose to continue on ${planLabel}, so the next step is to start it.`;
+  const next = `Your account is on the Free plan until then. Your dashboard, documents, due diligence report and Capital Readiness Rating stay available. ${planLabel} starts when you check out, and your card is charged at that point.`;
+  const html = frame(subject, `Start ${planLabel} to get your paid plan back`, [
+    `<p>${escapeHtml(hello)}</p>`,
+    `<p>${escapeHtml(lead)}</p>`,
+    `<p>${escapeHtml(next)}</p>`,
+    `<p>${button(`Start ${planLabel}`, input.billingUrl, true)}</p>`,
+  ].join(""));
+  const text = [hello, "", lead, "", next, `Start ${planLabel}: ${input.billingUrl}`, "", WIRE_COPY.disclaimer].join("\n");
+  return { subject, html, text };
+}
