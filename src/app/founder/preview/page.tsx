@@ -102,7 +102,7 @@ export default async function FounderPreviewPage({
       {!isEmbed && (
       <div style={{
         background: "#1e1b4b",
-        padding: "10px 24px",
+        padding: "10px clamp(12px, 4vw, 24px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
@@ -130,7 +130,7 @@ export default async function FounderPreviewPage({
             )}
           </p>
         </div>
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
           {hasSlug && isPublished && (
             <a
               href={`/f/${pub.slug}`}
@@ -244,7 +244,7 @@ export default async function FounderPreviewPage({
           background: "white",
           border: "1px solid #e5e7eb",
           borderRadius: 16,
-          padding: "32px 36px",
+          padding: "clamp(18px, 5vw, 32px) clamp(16px, 5vw, 36px)",
           marginBottom: 20,
         }}>
           <div style={{ display: "flex", alignItems: "flex-start", gap: 20, flexWrap: "wrap" }}>
@@ -264,8 +264,8 @@ export default async function FounderPreviewPage({
                 {pub.company_name.slice(0, 1).toUpperCase()}
               </div>
             )}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <h1 style={{ fontSize: 26, fontWeight: 800, color: "#111827", margin: "0 0 8px", lineHeight: 1.2 }}>
+            <div style={{ flex: "1 1 220px", minWidth: 0 }}>
+              <h1 style={{ fontSize: 26, overflowWrap: "anywhere", fontWeight: 800, color: "#111827", margin: "0 0 8px", lineHeight: 1.2 }}>
                 {pub.company_name}
               </h1>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 2 }}>

@@ -164,7 +164,7 @@ export function DocumentUploadForm({ companyId, companyName, documentTypes, file
 
   const uploading = progress !== null;
   return (
-    <div className="mt-8 grid gap-4">
+    <div className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-4">
       <input ref={fileRef} type="file" accept={ALLOWED_ACCEPT} multiple className="hidden" aria-label="Choose files to upload" onChange={(e) => onFiles(e.target.files)} disabled={uploading} />
 
       {/* Drop zone */}
@@ -180,12 +180,12 @@ export function DocumentUploadForm({ companyId, companyName, documentTypes, file
       <p className="text-sm text-slate-600">Uploading for <span className="font-semibold text-slate-950">{companyName}</span></p>
 
       {progress ? (
-        <div className="grid gap-2"><div className="h-2 w-full rounded-full bg-slate-100"><div className="h-2 rounded-full bg-slate-950" style={{ width: `${progress.pct}%` }} /></div><p className="text-xs text-slate-600">Uploading {progress.done} of {progress.total}…</p></div>
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-2"><div className="h-2 w-full rounded-full bg-slate-100"><div className="h-2 rounded-full bg-slate-950" style={{ width: `${progress.pct}%` }} /></div><p className="text-xs text-slate-600">Uploading {progress.done} of {progress.total}…</p></div>
       ) : null}
       {notice ? <p className={`rounded-xl p-3 text-sm ${notice.ok ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-700"}`}>{notice.text}</p> : null}
 
       {/* Categories */}
-      <div className="grid gap-2">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-2">
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{t("document_type")}</p>
         {documentTypes.map((type) => {
           const files = filesByType[type.value.toUpperCase()] ?? [];

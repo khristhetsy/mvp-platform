@@ -267,7 +267,7 @@ export function MyContactsClient({ initialRows, initialQuick = [], initialNotice
                 <th className="px-2 py-2 font-medium">Name</th>
                 <th className="hidden px-2 py-2 font-medium md:table-cell">Email</th>
                 <th className="hidden w-36 px-2 py-2 font-medium sm:table-cell">Type</th>
-                <th className="w-32 px-2 py-2 font-medium">Source</th>
+                <th className="hidden w-32 px-2 py-2 font-medium sm:table-cell">Source</th>
                 <th className="hidden w-36 px-2 py-2 font-medium sm:table-cell">Status</th>
               </tr>
             </thead>
@@ -312,13 +312,16 @@ export function MyContactsClient({ initialRows, initialQuick = [], initialNotice
                                 <p className="truncate font-medium text-slate-900">{r.name}</p>
                               )}
                               {r.firm ? <p className="truncate text-[11.5px] text-slate-400">{r.firm}</p> : null}
+                              <span className={`mt-1 inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium sm:hidden ${SOURCE_STYLE[r.source] ?? SOURCE_STYLE["Added by you"]}`}>
+                                {r.source}
+                              </span>
                             </td>
                             <td className="hidden truncate px-2 py-2.5 text-slate-600 md:table-cell">
                               {r.email ?? <span className="text-slate-300">{r.kind === "intro" ? "Shared in the intro" : "—"}</span>}
                             </td>
                             <td className="hidden truncate px-2 py-2.5 text-slate-600 sm:table-cell">{r.investorType ?? "—"}</td>
-                            <td className="px-2 py-2.5">
-                              <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${SOURCE_STYLE[r.source] ?? SOURCE_STYLE["Added by you"]}`}>
+                            <td className="hidden px-2 py-2.5 sm:table-cell">
+                              <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium ${SOURCE_STYLE[r.source] ?? SOURCE_STYLE["Added by you"]}`}>
                                 {r.source}
                               </span>
                             </td>

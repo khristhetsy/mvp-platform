@@ -95,8 +95,8 @@ export default async function DocumentUploadPage() {
             title={t("upload_diligence_documents")}
             description={t("files_are_stored_in_a_private_bucket_and_serve")}
           />
-        <section className="grid gap-5 lg:grid-cols-[1fr_1fr]">
-        <div className="cap-surface-card p-4 sm:p-6">
+        <section className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="cap-surface-card min-w-0 p-4 sm:p-6">
 
           <div className="mb-5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
             <div className="flex items-center gap-2">

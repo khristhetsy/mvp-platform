@@ -363,7 +363,7 @@ export function MarketClaimClient({
           <>
             <h2 style={{ ...h2, marginTop: 0 }}>Sources</h2>
             <p style={sub}>Where each graded value came from.</p>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14, tableLayout: "fixed" }}>
+            <table className="mc-fields" style={{ width: "100%", borderCollapse: "collapse", fontSize: 14, tableLayout: "fixed" }}>
               <thead>
                 <tr><th style={{ ...th, width: "30%" }}>Field</th><th style={{ ...th, width: "44%" }}>Value</th><th style={{ ...th, width: "26%" }}>Source</th></tr>
               </thead>
@@ -377,7 +377,7 @@ export function MarketClaimClient({
                   return (
                     <tr key={i}>
                       <td style={td}>{f.field}</td>
-                      <td style={{ ...td, fontFamily: "monospace", fontSize: 13 }}>
+                      <td className="mc-value" style={{ ...td, fontFamily: "monospace", fontSize: 13 }}>
                         {f.value}
                         {f.cite && <span style={{ fontFamily: "Inter, sans-serif", fontSize: 12, color: C.muted, display: "block", marginTop: 3, lineHeight: 1.45 }}>{f.cite}</span>}
                       </td>
