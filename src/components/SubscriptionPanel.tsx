@@ -232,7 +232,8 @@ export function FounderSubscriptionSettingsCard({
         <Link href="/pricing" className="font-semibold text-indigo-600 hover:text-indigo-500">
           pricing
         </Link>
-        . Payment checkout is not connected yet.
+        .
+        {!process.env.LEMONSQUEEZY_API_KEY && !subscription.ls_subscription_id ? " Payment checkout is not connected yet." : ""}
       </p>
     </section>
   );
