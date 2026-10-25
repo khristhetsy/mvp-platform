@@ -25,7 +25,7 @@ export function bufferToBytea(b: Buffer): string {
 }
 
 const TEMPLATE_COLS =
-  "id, key, name, kind, subtype, version, status, default_entity_id, entity_match, signature_anchors, has_expiry, created_by, created_at, master_filename";
+  "id, key, name, kind, subtype, version, status, default_entity_id, entity_match, signature_anchors, has_expiry, package_key, part_key, delivery, created_by, created_at, master_filename";
 
 // ── Entities ───────────────────────────────────────────────────────────────
 
@@ -120,6 +120,9 @@ export async function replaceMaster(db: Db, templateId: string, file: Buffer, fi
       entity_match: current.entity_match,
       signature_anchors: current.signature_anchors,
       has_expiry: current.has_expiry,
+      package_key: current.package_key,
+      part_key: current.part_key,
+      delivery: current.delivery,
       created_by: userId,
     })
     .select("id")
