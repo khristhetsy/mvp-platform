@@ -15,7 +15,7 @@ const BODY = "#1e293b";
 export function renderWireInvoicePdf(input: {
   invoice: WireInvoiceRow;
   instructions: WireInstructions;
-  billTo: { name: string | null; email: string | null; company: string | null };
+  billTo: { name: string | null; email: string | null; company: string | null; addressLines?: string[] };
 }): Promise<Buffer> {
   const { invoice, instructions, billTo } = input;
   return new Promise<Buffer>((resolve, reject) => {
@@ -43,6 +43,7 @@ export function renderWireInvoicePdf(input: {
       if (billTo.company) row("Company", billTo.company);
       if (billTo.name) row("Name", billTo.name);
       if (billTo.email) row("Email", billTo.email);
+      if (billTo.addressLines?.length) row("Address", billTo.addressLines.join(", "));
 
       h2("Invoice");
       row("Status", WIRE_STATUS_LABEL[invoice.status]);

@@ -135,6 +135,27 @@ export async function getSubscriptionDetails(lsSubscriptionId: string): Promise<
   }
 }
 
+export type LsCustomerDetails = { name: string | null; city: string | null; region: string | null; country: string | null };
+
+/** Name and location Lemon Squeezy holds for a customer. The street address and tax ID are not exposed by the API. */
+export async function getCustomerDetails(lsCustomerId: string): Promise<LsCustomerDetails | null> {
+  if (!process.env.LEMONSQUEEZY_API_KEY || !lsCustomerId) return null;
+  try {
+    const res = await fetch(`${LS_API}/customers/${encodeURIComponent(lsCustomerId)}`, { headers: headers() });
+    if (!res.ok) return null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const a = ((await res.json()) as { data?: { attributes?: any } }).data?.attributes ?? {};
+    return {
+      name: a.name ?? null,
+      city: a.city ?? null,
+      region: a.region ?? null,
+      country: a.country_formatted ?? a.country ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 async function patchSubscription(lsSubscriptionId: string, attributes: Record<string, unknown>): Promise<void> {
   const res = await fetch(`${LS_API}/subscriptions/${encodeURIComponent(lsSubscriptionId)}`, {
     method: "PATCH",

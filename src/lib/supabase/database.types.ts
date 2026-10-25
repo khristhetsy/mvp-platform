@@ -24549,6 +24549,7 @@ export type Database = {
         Row: {
           created_at: string
           cancel_at_period_end: boolean
+          billing_address: Json | null
           cancel_reason: string | null
           pending_plan_type: string | null
           pending_plan_effective_at: string | null
@@ -24577,6 +24578,7 @@ export type Database = {
         Insert: {
           created_at?: string
           cancel_at_period_end?: boolean
+          billing_address?: Json | null
           cancel_reason?: string | null
           pending_plan_type?: string | null
           pending_plan_effective_at?: string | null
@@ -24605,6 +24607,7 @@ export type Database = {
         Update: {
           created_at?: string
           cancel_at_period_end?: boolean
+          billing_address?: Json | null
           cancel_reason?: string | null
           pending_plan_type?: string | null
           pending_plan_effective_at?: string | null

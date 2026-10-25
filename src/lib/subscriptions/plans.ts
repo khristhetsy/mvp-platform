@@ -60,6 +60,8 @@ export type SubscriptionRecord = {
   cancel_reason?: string | null;
   pending_plan_type?: PlanType | null;
   pending_plan_effective_at?: string | null;
+  // Billing address for wire invoices (validated by lib/billing/address).
+  billing_address?: unknown;
   // LemonSqueezy
   ls_customer_id:     string | null;
   ls_subscription_id: string | null;

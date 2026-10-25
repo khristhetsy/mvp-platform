@@ -46,7 +46,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const admin = createServiceRoleClient() as any;
 
-  let query = admin.from("subscriptions").select("id, profile_id, pending_plan_type");
+  let query = admin.from("subscriptions").select("id, profile_id, pending_plan_type, plan_type");
   if (lsSubId) {
     query = query.eq("ls_subscription_id", lsSubId);
   } else if (profileId) {
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   const { data: existing, error: lookupError } = (await query.maybeSingle()) as {
-    data: { id: string; profile_id: string; pending_plan_type: string | null } | null;
+    data: { id: string; profile_id: string; pending_plan_type: string | null; plan_type: string } | null;
     error: { message: string } | null;
   };
   if (lookupError) {
@@ -67,6 +67,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       profile_id: profileId,
     });
     return NextResponse.json({ error: "Lookup failed" }, { status: 500 });
+  }
+
+  // Premium is paid by wire. The card subscription it replaced is cancelled and
+  // keeps sending events (cancelled, expired). They must not rewrite the Premium row.
+  if (existing?.plan_type === "founder_premium") {
+    return NextResponse.json({ received: true, ignored: "premium paid by wire" });
   }
 
   const { plan, source } = variantToPlan(attributes.variant_id, attributes.variant_name, attributes.product_name);

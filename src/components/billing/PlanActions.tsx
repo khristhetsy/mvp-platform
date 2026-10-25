@@ -8,6 +8,8 @@ import { PLAN_LABELS, PLAN_PRICES, type PlanType } from "@/lib/subscriptions/pla
 
 type Props = {
   planType: PlanType;
+  /** "card" = Basic or Professional on Lemon Squeezy. "wire" = Premium paid by bank wire. */
+  mode: "card" | "wire";
   cancelAtPeriodEnd: boolean;
   cancelReason: string | null;
   pendingPlan: PlanType | null;
@@ -19,10 +21,14 @@ function fmt(iso: string | null) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 }
 
-/** Downgrade and stop payment for card plans (Lemon Squeezy). Access lasts to the end of the paid period. */
-export function PlanActions({ planType, cancelAtPeriodEnd, cancelReason, pendingPlan, periodEnd }: Readonly<Props>) {
+/**
+ * Plan changes on the Billing tab. Card plans: downgrade and Stop payment. Premium (wire):
+ * Stop renewal. Access always lasts to the end of the paid period.
+ */
+export function PlanActions({ planType, mode, cancelAtPeriodEnd, cancelReason, pendingPlan, periodEnd }: Readonly<Props>) {
   const t = useTranslations("billingManage");
   const router = useRouter();
+  const wire = mode === "wire";
   const [panel, setPanel] = useState<"none" | "downgrade" | "stop">("none");
   const [sel, setSel] = useState<DowngradeTarget | null>(null);
   const [busy, setBusy] = useState(false);
@@ -30,9 +36,10 @@ export function PlanActions({ planType, cancelAtPeriodEnd, cancelReason, pending
 
   const date = fmt(periodEnd);
   const planName = PLAN_LABELS[planType];
-  const targets = (["basic", "free"] as DowngradeTarget[]).filter((x) => canDowngrade(planType, x));
+  const targets = wire ? [] : (["basic", "free"] as DowngradeTarget[]).filter((x) => canDowngrade(planType, x));
   const hasPending = Boolean(pendingPlan) || cancelAtPeriodEnd;
   const basicPrice = `$${Math.round(PLAN_PRICES.founder_basic / 100)}`;
+  const canStop = wire || targets.length > 0;
 
   async function act(action: string, plan?: DowngradeTarget) {
     setBusy(true);
@@ -63,43 +70,48 @@ export function PlanActions({ planType, cancelAtPeriodEnd, cancelReason, pending
     void act("downgrade", sel);
   }
 
-  const targetName = pendingPlan ? PLAN_LABELS[pendingPlan] : "";
+  const toFree = pendingPlan === "founder_free" || (!pendingPlan && cancelAtPeriodEnd);
+  const bannerText = wire
+    ? t("banner_renewal_stopped", { date })
+    : toFree
+      ? t("banner_stopped", { plan: planName, date })
+      : t("banner_downgrade", { target: pendingPlan ? PLAN_LABELS[pendingPlan] : "", date, plan: planName });
+  const undoLabel = wire ? t("resume_renewal") : t("undo_downgrade", { plan: planName });
+  const undoAction = wire ? "resume" : pendingPlan ? "undo_downgrade" : "resume";
 
   return (
     <div className="mt-4 space-y-3">
       {hasPending && cancelReason !== "deletion" ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          <span>
-            {pendingPlan
-              ? t("banner_downgrade", { target: targetName, date, plan: planName })
-              : t("banner_stopped", { plan: planName, date })}
-          </span>
+          <span>{bannerText}</span>
           <button
             type="button"
             disabled={busy}
-            onClick={() => void act(pendingPlan ? "undo_downgrade" : "resume")}
+            onClick={() => void act(undoAction)}
             className="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-900 hover:bg-amber-100 disabled:opacity-50"
           >
-            {busy ? t("working") : pendingPlan ? t("undo_downgrade", { plan: planName }) : t("resume_payment")}
+            {busy ? t("working") : undoLabel}
           </button>
         </div>
       ) : null}
 
-      {!hasPending && targets.length > 0 ? (
+      {!hasPending && canStop ? (
         <div className="flex flex-wrap items-center gap-4">
-          <button
-            type="button"
-            onClick={() => { setPanel(panel === "downgrade" ? "none" : "downgrade"); setError(null); }}
-            className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-          >
-            {t("downgrade_plan")}
-          </button>
+          {targets.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => { setPanel(panel === "downgrade" ? "none" : "downgrade"); setError(null); }}
+              className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              {t("downgrade_plan")}
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => { setPanel(panel === "stop" ? "none" : "stop"); setError(null); }}
             className="text-sm text-slate-500 underline hover:text-slate-700"
           >
-            {t("stop_payment")}
+            {wire ? t("stop_renewal") : t("stop_payment")}
           </button>
         </div>
       ) : null}
@@ -150,15 +162,15 @@ export function PlanActions({ planType, cancelAtPeriodEnd, cancelReason, pending
 
       {panel === "stop" && !hasPending ? (
         <div className="rounded-xl border border-red-200 bg-white p-4">
-          <p className="text-sm font-semibold text-red-800">{t("stop_title")}</p>
-          <p className="mt-1 text-sm text-slate-600">{t("stop_body", { date })}</p>
+          <p className="text-sm font-semibold text-red-800">{wire ? t("stop_renewal_title") : t("stop_title")}</p>
+          <p className="mt-1 text-sm text-slate-600">{wire ? t("stop_renewal_body", { date }) : t("stop_body", { date })}</p>
           <p className="mt-2 min-h-[1.25rem] text-sm text-red-700" role="alert">{error}</p>
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => { setPanel("none"); setError(null); }} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-              {t("stop_keep")}
+              {wire ? t("stop_renewal_keep") : t("stop_keep")}
             </button>
             <button type="button" disabled={busy} onClick={() => void act("stop")} className="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50">
-              {busy ? t("working") : t("stop_confirm")}
+              {busy ? t("working") : wire ? t("stop_renewal_confirm") : t("stop_confirm")}
             </button>
           </div>
         </div>

@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { CreditCard, ExternalLink, MapPin } from "lucide-react";
 
 /** Cards and billing address for card plans. Edits happen in the provider's secure portal. */
-export function PortalCards({ cardBrand, cardLast4 }: Readonly<{ cardBrand: string | null; cardLast4: string | null }>) {
+export function PortalCards({ cardBrand, cardLast4, place }: Readonly<{ cardBrand: string | null; cardLast4: string | null; place?: string | null }>) {
   const t = useTranslations("billingManage");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +67,10 @@ export function PortalCards({ cardBrand, cardLast4 }: Readonly<{ cardBrand: stri
         </div>
         <div className="mt-3 flex items-start gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5">
           <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-slate-500" aria-hidden />
-          <p className="text-sm text-slate-600">{t("address_help")}</p>
+          <div className="text-sm text-slate-600">
+            {place ? <p className="font-medium text-slate-900">{t("address_place", { place })}</p> : null}
+            <p>{t("address_help")}</p>
+          </div>
         </div>
       </section>
     </div>
