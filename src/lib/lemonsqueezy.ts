@@ -241,7 +241,12 @@ export function verifyWebhookSignature(rawBody: string, signature: string): bool
     .createHmac("sha256", secret)
     .update(rawBody)
     .digest("hex");
-  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+  const a = Buffer.from(expected);
+  const b = Buffer.from(signature);
+  // timingSafeEqual throws on different lengths, which turned a bad or missing
+  // signature into a 500 instead of a 401.
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
 }
 
 // ─── Webhook payload types ────────────────────────────────────────────────────
