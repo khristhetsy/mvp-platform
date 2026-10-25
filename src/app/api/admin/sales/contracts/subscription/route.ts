@@ -10,7 +10,7 @@ export const maxDuration = 60;
 
 const schema = z.object({
   contactId: z.string().uuid(),
-  profile: z.object({ type: z.enum(["entity", "individual"]), usPerson: z.boolean(), spouseSigns: z.boolean() }),
+  profile: z.object({ type: z.enum(["entity", "individual", "joint"]), usPerson: z.boolean(), spouseSigns: z.boolean() }),
 });
 
 /**

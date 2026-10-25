@@ -12,6 +12,7 @@ import { saveToDrive } from "./drive";
 import { docxToPdf } from "./render-pdf";
 import { placeSignatureFields, readPdfLines } from "./signature-anchors";
 import { refreshToc } from "./toc";
+import { applyLogo, logoPath } from "./logo";
 import {
   addEvent,
   getContactLite,
@@ -141,8 +142,11 @@ export async function renderBundleDocx(db: Db, b: Bundle, mode: "preview" | "fin
   if (isUpload(b)) throw new SendBlockedError("An uploaded contract has no Word version.");
   const master = await getMaster(db, b.template.id);
   const docx = await renderDocx({ master, fields: b.fields, entityMatch: b.template.entity_match, values: bundleValues(b), edits: b.doc.body_edits, mode });
-  // The Memorandum's contents page numbers come from the finished deal; bring them up to date.
-  return b.template.key === "sub_ppm" ? refreshToc(docx) : docx;
+  if (b.template.key !== "sub_ppm") return docx;
+  // The Memorandum: the issuer's logo goes on the Information Statement cover (or the marker is cleared),
+  // then the contents page numbers, which come from the finished deal, are brought up to date.
+  const logo = await getFile(db, logoPath(b.doc)).catch(() => null);
+  return refreshToc(await applyLogo(docx, logo));
 }
 
 /** True preview: the same Word → PDF render that is sent for signature. */
@@ -204,6 +208,9 @@ async function prepare(db: Db, b: Bundle): Promise<Prepared> {
   if (placed.prospect.name) prospectFields.push({ field_type: "text", ...placed.prospect.name, required: true, placeholder: "Full name" });
   if (placed.prospect.title) prospectFields.push({ field_type: "text", ...placed.prospect.title, required: true, placeholder: "Title" });
   if (placed.prospect.date) prospectFields.push({ field_type: "date", ...placed.prospect.date, required: true });
+  // Joint individuals sign on one link: a second signature and the second printed name.
+  if (placed.prospect.signature2) prospectFields.push({ field_type: "signature", ...placed.prospect.signature2, required: true });
+  if (placed.prospect.name2) prospectFields.push({ field_type: "text", ...placed.prospect.name2, required: true, placeholder: "Second signer's full name" });
   return { b, docx, pdf, pageCount, prospectFields, countersign: placed.countersign, expiresAt: expiryFor(b) };
 }
 

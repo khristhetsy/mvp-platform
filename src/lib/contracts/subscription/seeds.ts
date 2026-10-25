@@ -66,7 +66,7 @@ const sigSubscription = (individual: boolean): Pick<SubscriptionSeed, "fields" |
   ],
 });
 
-export const SUBSCRIPTION_SEEDS: SubscriptionSeed[] = [
+const BASE_SEEDS: SubscriptionSeed[] = [
   {
     key: "sub_cover_index",
     name: "Subscription Package, Cover and Index",
@@ -207,3 +207,26 @@ export const SUBSCRIPTION_SEEDS: SubscriptionSeed[] = [
     fields: [SPV, ISSUER, DATE],
   },
 ];
+
+/**
+ * Joint individuals sign the same pages as one individual, both lines: same Word file and fields, with a
+ * second signature box and a second printed name placed on the "By: / Name 2:" lines. Listed right after
+ * the individual page they derive from.
+ */
+const JOINT_OF: Record<string, { key: string; name: string; filename: string }> = {
+  sub_sig_subscription_individual: {
+    key: "sub_sig_subscription_joint",
+    name: "Signature Page, Subscription Agreement (joint individuals)",
+    filename: "Subscription Package - Signature Page, Subscription Agreement (joint individuals).docx",
+  },
+  sub_sig_llc_individual: {
+    key: "sub_sig_llc_joint",
+    name: "Signature Page, LLC Agreement (joint individuals)",
+    filename: "Subscription Package - Signature Page, LLC Agreement (joint individuals).docx",
+  },
+};
+
+export const SUBSCRIPTION_SEEDS: SubscriptionSeed[] = BASE_SEEDS.flatMap((seed) => {
+  const joint = JOINT_OF[seed.key];
+  return joint ? [seed, { ...seed, ...joint, anchors: { ...seed.anchors, second: true } }] : [seed];
+});

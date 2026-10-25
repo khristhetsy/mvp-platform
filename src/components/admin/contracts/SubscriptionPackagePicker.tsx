@@ -40,7 +40,7 @@ export function SubscriptionPackagePicker({
   const items = packageItems(profile);
   const byKey = new Map(templates.map((t) => [t.key, t]));
   const missing = items.filter((i): i is Extract<PackageItem, { source: "template" }> => i.source === "template").filter((i) => !byKey.has(i.templateKey));
-  const individual = profile.type === "individual";
+  const individual = profile.type === "individual"; // spouse page only applies to a single individual
 
   return (
     <div>
@@ -97,10 +97,10 @@ export function SubscriptionPackagePicker({
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 16 }}>
         <fieldset style={{ border: "none", margin: 0, padding: 0 }}>
           <legend style={{ fontSize: 11.5, fontWeight: 600, color: "#3a4a63", marginBottom: 6, padding: 0 }}>Subscriber type</legend>
-          {(["entity", "individual"] as const).map((t) => (
+          {(["entity", "individual", "joint"] as const).map((t) => (
             <label key={t} style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13, color: NAVY, lineHeight: 2 }}>
-              <input type="radio" name="sub-type" checked={profile.type === t} onChange={() => onProfile({ ...profile, type: t, spouseSigns: t === "entity" ? false : profile.spouseSigns })} />
-              {t === "entity" ? "Entity" : "Individual"}
+              <input type="radio" name="sub-type" checked={profile.type === t} onChange={() => onProfile({ ...profile, type: t, spouseSigns: t === "individual" ? profile.spouseSigns : false })} />
+              {t === "entity" ? "Entity" : t === "individual" ? "Individual" : "Joint individuals (both sign)"}
             </label>
           ))}
         </fieldset>

@@ -12,11 +12,12 @@ import type { CSSProperties, KeyboardEvent } from "react";
 import type { BodyEdits, IssuingEntity, Segment, TemplateField } from "@/lib/contracts/types";
 import type { ModelBlock, ModelParagraph, ModelSegment } from "@/lib/contracts/docx-engine";
 import type { ParaHint } from "@/lib/contracts/types";
+import { LogoControl } from "./LogoControl";
 import { api, BLUE, btn, MUTED, NAVY, Notice } from "./ui";
 
 export type EditorData = {
   doc: { id: string; version: number; status: string; locked: boolean; entity_id: string | null; field_values: Record<string, string>; body_edits: BodyEdits; updated_at: string };
-  template: { id: string; name: string; kind: string; version: number; entity_match: string | null; has_expiry: boolean };
+  template: { id: string; name: string; kind: string; key?: string; version: number; entity_match: string | null; has_expiry: boolean };
   fields: TemplateField[];
   entities: IssuingEntity[];
   blocks: ModelBlock[];
@@ -539,6 +540,7 @@ export const ContractEditor = forwardRef<
         </div>
       </div>
 
+      {data.template.key === "sub_ppm" ? <LogoControl docId={data.doc.id} readOnly={readOnly} /> : null}
       {notice ? <div style={{ padding: "8px 16px" }}><Notice tone="warn">{notice}</Notice></div> : null}
 
       <div style={{ display: "flex", flexWrap: "wrap" }}>

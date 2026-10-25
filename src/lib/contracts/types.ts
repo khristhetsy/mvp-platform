@@ -69,6 +69,8 @@ export type ContractTemplate = {
 export type SignatureAnchors = {
   prospect: { party: string };
   countersign: { party: string }[];
+  /** Joint individuals: a second signer signs under the first, on the same link (the "By: / Name 2:" lines). */
+  second?: boolean;
 };
 
 export type IssuingEntity = {

@@ -26,7 +26,8 @@ export const PART_LABEL: Record<PartKey, string> = Object.fromEntries(PARTS.map(
 /** States whose spouses sign the Agreement of Spouse (from the Subscription Instructions, footnote 1). */
 export const COMMUNITY_PROPERTY_STATES = ["Alaska", "Arizona", "California", "Idaho", "Louisiana", "Nevada", "New Mexico", "Texas", "Washington", "Wisconsin"] as const;
 
-export type SubscriberType = "entity" | "individual";
+/** "joint": two individuals who sign together on one link. */
+export type SubscriberType = "entity" | "individual" | "joint";
 export type SubscriberProfile = { type: SubscriberType; usPerson: boolean; spouseSigns: boolean };
 
 export const DEFAULT_PROFILE: SubscriberProfile = { type: "entity", usPerson: true, spouseSigns: false };
@@ -50,13 +51,14 @@ export type PackageItem =
  * IRS forms; `applies` marks the one the Subscription Instructions require of this subscriber.
  */
 export function packageItems(p: SubscriberProfile): PackageItem[] {
-  const individual = p.type === "individual";
+  const individual = p.type !== "entity";
+  const joint = p.type === "joint";
   const items: PackageItem[] = [];
   items.push({ source: "template", part: "cover_index", templateKey: "sub_cover_index" });
   items.push({ source: "template", part: "instructions", templateKey: "sub_instructions" });
-  items.push({ source: "template", part: "signature_pages", templateKey: individual ? "sub_sig_subscription_individual" : "sub_sig_subscription_entity" });
-  if (p.spouseSigns && individual) items.push({ source: "template", part: "signature_pages", templateKey: "sub_sig_spouse" });
-  items.push({ source: "template", part: "signature_pages", templateKey: individual ? "sub_sig_llc_individual" : "sub_sig_llc_entity" });
+  items.push({ source: "template", part: "signature_pages", templateKey: joint ? "sub_sig_subscription_joint" : individual ? "sub_sig_subscription_individual" : "sub_sig_subscription_entity" });
+  if (p.spouseSigns && p.type === "individual") items.push({ source: "template", part: "signature_pages", templateKey: "sub_sig_spouse" });
+  items.push({ source: "template", part: "signature_pages", templateKey: joint ? "sub_sig_llc_joint" : individual ? "sub_sig_llc_individual" : "sub_sig_llc_entity" });
   items.push({ source: "pdf", part: "forms", formKey: "w9", title: FORM_TITLE.w9, applies: p.usPerson });
   items.push({ source: "pdf", part: "forms", formKey: "w8bene", title: FORM_TITLE.w8bene, applies: !p.usPerson && !individual });
   items.push({
@@ -78,9 +80,11 @@ export const SUBSCRIPTION_TEMPLATE_KEYS = [
   "sub_instructions",
   "sub_sig_subscription_entity",
   "sub_sig_subscription_individual",
+  "sub_sig_subscription_joint",
   "sub_sig_spouse",
   "sub_sig_llc_entity",
   "sub_sig_llc_individual",
+  "sub_sig_llc_joint",
   "sub_form_ai_entity",
   "sub_form_ai_individual",
   "sub_ppm",
@@ -90,6 +94,7 @@ export const SUBSCRIPTION_TEMPLATE_KEYS = [
 /** Why a spouse page does or does not apply, in words for the profile card. */
 export function spouseNote(p: SubscriberProfile): string {
   if (p.type === "entity") return "Not applicable to an entity subscriber.";
+  if (p.type === "joint") return "Not applicable: both joint individuals sign the Signature Pages.";
   return p.spouseSigns ? "Attached: the subscriber has a spouse in a community property state." : "Not required.";
 }
 
@@ -153,6 +158,6 @@ export function leftoverPlaceholders(text: string): string[] {
  */
 export const TEMPLATE_NOTES: Record<string, string> = {
   sub_ppm:
-    "Exhibit A and Exhibit E hold only their heading page in this master: write or paste the issuer's Information Statement and the Fund's Certificate of Formation in with the editor, or confirm them supplied in the next step. Exhibit B's financial statements show 000,000.00 placeholders to replace. One sentence in the Portfolio Company Securities section still gives the valuation cap as ($30) million. The Table of Contents page numbers are refreshed when the Memorandum is sent.",
+    "Upload the issuer's logo above for the Information Statement cover (or leave it off). Exhibit A and Exhibit E hold only their heading page in this master: write or paste the issuer's Information Statement and the Fund's Certificate of Formation in with the editor, or confirm them supplied in the next step. Exhibit B's financial statements show 000,000.00 placeholders to replace. One sentence in the Portfolio Company Securities section still gives the valuation cap as ($30) million. The Table of Contents page numbers are refreshed when the Memorandum is sent.",
   sub_instructions: "The Fund EIN in this master belongs to the previous Fund. Enter this Fund's EIN and its bank details.",
 };

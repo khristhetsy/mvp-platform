@@ -38,6 +38,15 @@ describe("which documents a subscriber gets", () => {
     expect(k).not.toContain("sub_sig_spouse");
   });
 
+  it("joint individuals get the joint signature pages, the individual letter, and never the spouse page", () => {
+    const k = keysOf({ type: "joint", usPerson: true, spouseSigns: true });
+    expect(k).toContain("sub_sig_subscription_joint");
+    expect(k).toContain("sub_sig_llc_joint");
+    expect(k).toContain("sub_form_ai_individual");
+    expect(k).not.toContain("sub_sig_spouse");
+    expect(k).not.toContain("sub_sig_subscription_individual");
+  });
+
   it("the Agreement of Spouse is added for an individual with a spouse in a community property state, after the subscription page", () => {
     const k = keysOf({ type: "individual", usPerson: true, spouseSigns: true });
     expect(k.indexOf("sub_sig_spouse")).toBe(k.indexOf("sub_sig_subscription_individual") + 1);

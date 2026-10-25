@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SignaturePad } from "@/components/signatures/SignaturePad";
 import { CONTRACT_TYPE_LABEL, type ContractStatus, type ContractType } from "@/lib/contracts/types";
+import { AcceptanceCard } from "./AcceptanceCard";
 import { ContractEditor, loadEditorData, type EditorData } from "./ContractEditor";
 import { RecipientPicker } from "./RecipientPicker";
 import { api, BLUE, btn, Card, fmtDateTime, MUTED, NAVY, Notice, SectionLabel, StatusPill } from "./ui";
@@ -40,6 +41,9 @@ const EVENT_LABEL: Record<string, string> = {
   expired: "Signing link expired",
   archived: "Archived",
   restored: "Restored",
+  manager_accepted: "Subscription accepted by the Manager",
+  acceptance_email_sent: "Acceptance email sent to the subscriber",
+  acceptance_email_not_sent: "Acceptance email not sent",
 };
 
 export function ContractDocumentClient({ id, defaultSignerName }: { id: string; defaultSignerName: string }) {
@@ -212,6 +216,7 @@ export function ContractDocumentClient({ id, defaultSignerName }: { id: string; 
                 {d.doc.has_certificate ? <a href={`${base}/pdf?kind=certificate&download=1`} style={{ color: BLUE }}>Signature certificate</a> : null}
               </div>
             </Card>
+            {d.template.kind === "subscription" ? <AcceptanceCard docId={id} onChanged={load} /> : null}
 
             <SectionLabel>Activity</SectionLabel>
             <Card style={{ padding: "6px 16px" }}>

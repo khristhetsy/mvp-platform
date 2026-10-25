@@ -73,6 +73,13 @@ describe("subscription package masters", () => {
       const placed = placeSignatureFields(lines, seed.anchors, values);
       expect(placed.prospect.signature.width).toBeGreaterThan(0);
       expect(placed.countersign.some((c) => c.kind === "signature")).toBe(seed.anchors.countersign.length > 0);
+      // Joint individuals: a second signature box and printed name, below the first signature.
+      expect(Boolean(placed.prospect.signature2)).toBe(Boolean(seed.anchors.second));
+      if (seed.anchors.second) {
+        expect(placed.prospect.name2).toBeTruthy();
+        const a = placed.prospect.signature, b = placed.prospect.signature2!;
+        expect(b.page > a.page || b.y > a.y).toBe(true);
+      }
     }, 60000);
   }
 });

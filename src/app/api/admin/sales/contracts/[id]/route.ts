@@ -72,7 +72,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       signature_request_id: b.doc.signature_request_id,
       countersign_count: (b.doc.countersign_fields ?? []).filter((f) => f.kind === "signature").length,
     },
-    template: { id: b.template.id, name: b.template.name, kind: b.template.kind, version: b.template.version, entity_match: b.template.entity_match, has_expiry: b.template.has_expiry },
+    template: { id: b.template.id, name: b.template.name, kind: b.template.kind, key: b.template.key, version: b.template.version, entity_match: b.template.entity_match, has_expiry: b.template.has_expiry },
     contact: b.contact,
     fields: b.fields,
     entities,

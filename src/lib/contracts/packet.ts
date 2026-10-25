@@ -18,9 +18,21 @@ export type PacketDoc = {
   showExpiry: boolean;
   signUrl: string | null;
   hasExecuted: boolean;
+  /** Subscription packages: the part of the package this document belongs to, and whether it is signed or only read. */
+  partKey: string | null;
+  delivery: "sign" | "review" | null;
 };
 
-export type Packet = { id: string; recipientEmail: string; recipientName: string | null; company: string | null; sentAt: string; documents: PacketDoc[] };
+export type Packet = {
+  id: string;
+  recipientEmail: string;
+  recipientName: string | null;
+  company: string | null;
+  sentAt: string;
+  documents: PacketDoc[];
+  /** Subscription packages: when the Manager accepted the subscription. */
+  acceptedAt: string | null;
+};
 
 export async function loadPacket(db: Db, token: string): Promise<Packet | null> {
   if (!token || token.length < 32) return null;
@@ -28,11 +40,11 @@ export async function loadPacket(db: Db, token: string): Promise<Packet | null> 
   if (!p) return null;
   const { data: rows } = await db
     .from("contract_documents")
-    .select("*, template:contract_templates(name, kind, has_expiry), entity:contract_entities(legal_name), request:signature_requests!contract_documents_signature_request_id_fkey(access_token)")
+    .select("*, template:contract_templates(name, kind, has_expiry, part_key, delivery), entity:contract_entities(legal_name), request:signature_requests!contract_documents_signature_request_id_fkey(access_token)")
     .eq("packet_id", p.id)
     .order("created_at");
   const documents: PacketDoc[] = [];
-  for (const row of (rows ?? []) as Array<ContractDocument & { template: { name: string; kind: string; has_expiry: boolean } | null; entity: { legal_name: string } | null; request: { access_token: string | null } | null }>) {
+  for (const row of (rows ?? []) as Array<ContractDocument & { template: { name: string; kind: string; has_expiry: boolean; part_key: string | null; delivery: "sign" | "review" } | null; entity: { legal_name: string } | null; request: { access_token: string | null } | null }>) {
     const doc = await expireIfDue(db, row);
     const open = doc.status === "sent" || doc.status === "viewed";
     documents.push({
@@ -47,10 +59,17 @@ export async function loadPacket(db: Db, token: string): Promise<Packet | null> 
       showExpiry: Boolean(row.template?.has_expiry) || row.template?.kind === "term_sheet",
       signUrl: open && row.request?.access_token ? `/sign/${row.request.access_token}` : null,
       hasExecuted: Boolean(row.executed_path),
+      partKey: row.template?.kind === "subscription" ? row.template.part_key : null,
+      delivery: row.template?.kind === "subscription" ? row.template.delivery : null,
     });
   }
   const contact = p.contact as { company: string | null } | null;
-  return { id: p.id, recipientEmail: p.recipient_email, recipientName: p.recipient_name, company: contact?.company ?? null, sentAt: p.sent_at, documents };
+  let acceptedAt: string | null = null;
+  if (documents.some((d) => d.partKey)) {
+    const { data: ev } = await db.from("contract_events").select("created_at").in("contract_document_id", documents.map((d) => d.id)).eq("kind", "manager_accepted").order("created_at").limit(1);
+    acceptedAt = (ev?.[0]?.created_at as string | undefined) ?? null;
+  }
+  return { id: p.id, recipientEmail: p.recipient_email, recipientName: p.recipient_name, company: contact?.company ?? null, sentAt: p.sent_at, documents, acceptedAt };
 }
 
 /** A document in this packet (or null), for the prospect's file and respond routes. */

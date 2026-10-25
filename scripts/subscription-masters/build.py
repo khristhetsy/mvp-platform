@@ -236,9 +236,12 @@ def ppm_edits(k):
     # The source Memorandum was cut from a finished deal. Its issuer specific exhibits are not carried
     # into the master (they belong to another company, and the master is committed to the repo):
     # Exhibit A and Exhibit E keep their headings only, and the Information Statement keeps its cover page.
-    for i in (1433, 1819):  # (ISSUER LOGO): the master has no logo to place
+    # (ISSUER LOGO) on the Information Statement cover stays: the sender uploads the logo per send, and
+    # the render swaps the marker for the image (or for nothing when none is uploaded). The second one,
+    # in the part of the source that is dropped, is cleared.
+    for i in (1433, 1819):
         assert text(k[i]).strip() == "(ISSUER LOGO)"
-        set_runs(k[i], [])
+    set_runs(k[1819], [])
     # The offering table: typed figures become fields, so they can be calculated and cannot go stale.
     tbl = next(e for e in k if e.tag == W + "tbl" and "Aggregate Amount" in text(e))
     rows = table_cells(tbl)
