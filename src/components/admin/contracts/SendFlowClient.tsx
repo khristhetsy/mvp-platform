@@ -12,6 +12,8 @@ import { linkedFieldValues, linkedValue, openFields } from "@/lib/contracts/fiel
 import type { TemplateField } from "@/lib/contracts/types";
 import { ContractEditor, loadEditorData, type EditorData, type EditorHandle, type FieldLink } from "./ContractEditor";
 import { TrackingTable } from "./TrackingTable";
+import { SubscriptionPackagePicker } from "./SubscriptionPackagePicker";
+import { DEFAULT_PROFILE, PARTS, packageLinkedValues, SUBSCRIPTION_TEMPLATE_KEYS, TEMPLATE_NOTES, type PartKey, type SubscriberProfile } from "@/lib/contracts/subscription/package";
 import { UploadContractModal } from "./UploadContractModal";
 import { PendingScheduledList, postScheduled, ScheduledNotice, ScheduleSendMenu, type ScheduledInfo } from "@/components/email/ScheduleSend";
 import { api, BLUE, btn, Card, MUTED, NAVY, Notice, SectionLabel } from "./ui";
@@ -19,7 +21,7 @@ import { api, BLUE, btn, Card, MUTED, NAVY, Notice, SectionLabel } from "./ui";
 type Template = { id: string; key: string; name: string; kind: string; subtype: string | null; version: number; usage: number; versions: number; master_filename: string };
 type Contact = { id: string; name: string; email: string | null; company: string | null };
 type Draft = { id: string; name: string; description: string | null; subject: string; body: string };
-type OpenDoc = { id: string; templateId: string; name: string; kind: string };
+type OpenDoc = { id: string; templateId: string; name: string; kind: string; /** Tab label when it differs from the name (subscription parts carry their part number). */ label?: string };
 type ListRow = { id: string; status: string; template_id: string | null; locked: boolean; source?: string; title?: string | null; signature_request_id?: string | null; version?: number; created_at?: string; updated_at?: string; template?: { name: string; kind: string } | null; entity?: { short_name: string; legal_name: string } | null };
 /** A contract this contact already has in progress (an unsent draft made from a master). */
 type InProgress = { id: string; templateId: string; name: string; entity: string | null; version: number; updatedAt: string; copyNo: number };
@@ -85,6 +87,10 @@ export function SendFlowClient({ contact, isAdmin, senderName, gmail, autoResume
   const [choiceMade, setChoiceMade] = useState(false);
   const [openMode, setOpenMode] = useState<OpenMode>({ kind: "default" });
   const replaceTarget = useRef<string | null>(null);
+  // Which set of documents Step 1 offers: term sheets and services agreements, or the subscription package.
+  const [docSet, setDocSet] = useState<"contracts" | "subscription">("contracts");
+  const [profile, setProfile] = useState<SubscriberProfile>(DEFAULT_PROFILE);
+  const [packageNotes, setPackageNotes] = useState<string[]>([]);
 
   const applyTemplates = useCallback((r: Awaited<ReturnType<typeof fetchTemplates>>) => {
     if (!r.ok) return setError(r.data.error ?? "Could not load templates.");
@@ -146,7 +152,8 @@ export function SendFlowClient({ contact, isAdmin, senderName, gmail, autoResume
   }, [contact.id, refreshKey]);
 
   const termSheets = useMemo(() => (templates ?? []).filter((t) => t.kind === "term_sheet").sort((a, b) => TS_ORDER.indexOf(a.subtype ?? "") - TS_ORDER.indexOf(b.subtype ?? "")), [templates]);
-  const others = useMemo(() => (templates ?? []).filter((t) => t.kind !== "term_sheet"), [templates]);
+  const others = useMemo(() => (templates ?? []).filter((t) => t.kind !== "term_sheet" && t.kind !== "subscription"), [templates]);
+  const subscriptionTemplates = useMemo(() => (templates ?? []).filter((t) => t.kind === "subscription"), [templates]);
 
   async function install() {
     setBusy(true);
@@ -221,6 +228,33 @@ export function SendFlowClient({ contact, isAdmin, senderName, gmail, autoResume
     return opened;
   }
 
+  /** Open the subscription package for this subscriber: the contact's drafts of each part and the IRS form PDFs. */
+  async function openPackage() {
+    if (!templates) return;
+    setBusy(true);
+    setError(null);
+    const r = await api<{ documents: { id: string; templateId: string | null; name: string; part: PartKey; kind: "subscription" | "form" }[]; notes: string[] }>("/api/admin/sales/contracts/subscription", {
+      method: "POST",
+      body: JSON.stringify({ contactId: contact.id, profile }),
+    });
+    if (!r.ok) {
+      setBusy(false);
+      return setError(r.data.error ?? "Could not open the subscription package.");
+    }
+    const opened: OpenDoc[] = r.data.documents.map((d) => {
+      const no = PARTS.find((p) => p.key === d.part)?.no ?? 0;
+      return { id: d.id, templateId: d.templateId ?? "", name: d.name, kind: d.kind === "form" ? "upload" : "subscription", label: `${no} · ${d.name}` };
+    });
+    setPackageNotes(r.data.notes);
+    setDocs(opened);
+    setUnlinked({});
+    await Promise.all(opened.map((d) => loadDoc(d.id)));
+    setReviewed(new Set([opened[0].id]));
+    setActive(opened[0].id);
+    setStep(2);
+    setBusy(false);
+  }
+
   /** Resume the saved send: same documents (their saved values), unlinked fields, cover email and step. */
   async function resume() {
     const d = savedSend;
@@ -233,6 +267,7 @@ export function SendFlowClient({ contact, isAdmin, senderName, gmail, autoResume
     };
     setSavedSend(null);
     if (!sel.termSheet && !sel.extras.length && !sel.uploads.length) return setError("The documents in the saved draft are no longer available. Choose documents to start again.");
+    if (sel.extras.some((id) => templates.find((t) => t.id === id)?.kind === "subscription")) setDocSet("subscription");
     setTermSheet(sel.termSheet);
     setExtras(new Set(sel.extras));
     setChosenUploads(new Set(sel.uploads));
@@ -315,6 +350,16 @@ export function SendFlowClient({ contact, isAdmin, senderName, gmail, autoResume
     (docId: string, data: Record<string, EditorData | null | undefined>): FieldLink[] => {
       const d = docs.find((x) => x.id === docId);
       const e = data[docId];
+      if (d && e && d.kind === "subscription") {
+        // A value typed once in the package follows into the parts after it (package order, not tab order).
+        const order = (x: OpenDoc) => SUBSCRIPTION_TEMPLATE_KEYS.indexOf((templates?.find((t) => t.id === x.templateId)?.key ?? "") as (typeof SUBSCRIPTION_TEMPLATE_KEYS)[number]);
+        const earlier = docs
+          .filter((x) => x.kind === "subscription" && x.id !== docId && data[x.id] && order(x) < order(d))
+          .sort((a, b) => order(a) - order(b))
+          .map((x) => ({ tokens: data[x.id]!.fields.map((f) => f.token), values: data[x.id]!.doc.field_values, label: x.name }));
+        const off = unlinked[docId] ?? [];
+        return packageLinkedValues(e.fields.map((f) => f.token), earlier).map((l) => ({ token: l.token, value: l.value, linked: !off.includes(l.token), source: l.source }));
+      }
       if (!d || !e || d.kind === "term_sheet" || d.kind === "upload") return [];
       const sources = docs
         .filter((x) => x.kind === "term_sheet" && data[x.id])
@@ -322,7 +367,7 @@ export function SendFlowClient({ contact, isAdmin, senderName, gmail, autoResume
       const off = unlinked[docId] ?? [];
       return Object.entries(linkedFieldValues(e.fields, sources)).map(([token, value]) => ({ token, value, linked: !off.includes(token), source: "term sheet" }));
     },
-    [docs, unlinked],
+    [docs, unlinked, templates],
   );
 
   async function switchTab(id: string) {
@@ -533,6 +578,29 @@ export function SendFlowClient({ contact, isAdmin, senderName, gmail, autoResume
         ) : null}
         {templates && templates.length > 0 ? (
           <>
+            <div role="tablist" aria-label="Document set" style={{ display: "inline-flex", gap: 2, background: "#eef1f5", borderRadius: 8, padding: 3, marginBottom: 14 }}>
+              {([["contracts", "Term sheet and diligence"], ["subscription", "Subscription package"]] as const).map(([k, label]) => (
+                <button key={k} type="button" role="tab" aria-selected={docSet === k} onClick={() => setDocSet(k)} style={{ border: "none", borderRadius: 6, padding: "7px 14px", fontSize: 12.5, fontWeight: docSet === k ? 700 : 500, background: docSet === k ? "#fff" : "transparent", color: docSet === k ? NAVY : MUTED, cursor: "pointer", boxShadow: docSet === k ? "0 1px 2px rgba(10,26,64,.12)" : "none" }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {docSet === "subscription" ? (
+              <SubscriptionPackagePicker
+                templates={subscriptionTemplates}
+                isAdmin={isAdmin}
+                profile={profile}
+                onProfile={setProfile}
+                busy={busy}
+                missingMasters={missingMasters}
+                onInstall={() => void install()}
+                onReplace={(id) => { replaceTarget.current = id; fileRef.current?.click(); }}
+                onHistory={(id) => void showHistory(id)}
+                onOpen={() => void openPackage()}
+                openLabel={busy && step === 1 ? "Opening…" : "Open editor"}
+              />
+            ) : (
+          <>
             <div style={sub}>Term sheet type · pick one</div>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               {termSheets.map((t) => {
@@ -589,6 +657,8 @@ export function SendFlowClient({ contact, isAdmin, senderName, gmail, autoResume
               <button type="button" disabled={busy || (!termSheet && !extras.size && !chosenUploads.size)} onClick={() => void openEditor()} style={{ ...btn(true), opacity: busy || (!termSheet && !extras.size && !chosenUploads.size) ? 0.5 : 1 }}>{busy && step === 1 ? "Opening…" : !termSheet && !extras.size ? "Continue" : "Open editor"}</button>
             </div>
           </>
+            )}
+          </>
         ) : null}
         <input ref={fileRef} type="file" accept=".docx" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void replaceFile(f); }} />
       </Card>
@@ -597,6 +667,7 @@ export function SendFlowClient({ contact, isAdmin, senderName, gmail, autoResume
       {step >= 2 && docs.length ? (
         <>
           <SectionLabel>Step 2 · Entity, then edit content inside the locked layout</SectionLabel>
+          {packageNotes.length ? <div style={{ marginBottom: 10 }}>{packageNotes.map((n) => <Notice key={n} tone="warn">{n}</Notice>)}</div> : null}
           <Card style={{ overflow: "hidden" }}>
             <div role="tablist" style={{ display: "flex", background: NAVY, padding: "0 14px", flexWrap: "wrap" }}>
               {docs.map((d) => {
@@ -604,12 +675,17 @@ export function SendFlowClient({ contact, isAdmin, senderName, gmail, autoResume
                 const st = tabStatus(d.id);
                 return (
                   <button key={d.id} role="tab" aria-selected={on} type="button" onClick={() => void switchTab(d.id)} style={{ padding: "12px 16px", marginTop: 6, border: "none", borderRadius: "8px 8px 0 0", background: on ? "#fff" : "transparent", color: on ? NAVY : "#9fd0ff", fontSize: 13, fontWeight: on ? 700 : 500, cursor: "pointer" }}>
-                    {d.name}
+                    {d.label ?? d.name}
                     <span style={{ background: st.warn ? "#fff4d6" : on ? "#e6f6ec" : "#1e3a5f", color: st.warn ? "#8a6500" : on ? "#1a7f43" : "#9fd0ff", fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 9, marginLeft: 6 }}>{st.short}</span>
                   </button>
                 );
               })}
             </div>
+            {(() => {
+              const key = templates?.find((t) => t.id === docs.find((d) => d.id === active)?.templateId)?.key;
+              const note = key ? TEMPLATE_NOTES[key] : undefined;
+              return note ? <div style={{ padding: "10px 16px 0" }}><Notice tone="warn">{note}</Notice></div> : null;
+            })()}
             {active && docs.find((d) => d.id === active)?.kind === "upload" ? (
               <UploadedPanel doc={docs.find((d) => d.id === active)!} requestId={uploads.find((u) => u.id === active)?.requestId ?? null} />
             ) : active && editorData[active] ? (

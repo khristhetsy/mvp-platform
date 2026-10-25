@@ -46,6 +46,23 @@ const DEFAULTS: { name: string; description: string; subject: string; body: stri
   },
 ];
 
+/** Cover email for the subscription package, seeded with the master install. */
+const SUBSCRIPTION_DEFAULTS: { name: string; description: string; subject: string; body: string }[] = [
+  {
+    name: "Subscription package",
+    description: "Full package, six parts",
+    subject: "Subscription package for {{spv_name}}",
+    body: [
+      "Hi {{first_name}},",
+      "Thank you for your interest in {{spv_name}}, the special purpose vehicle investing in {{company_name}}. Your subscription package is attached.",
+      "Your proposed commitment: {{subscription_amount}}, equal to {{interests_count}} Interests.",
+      "To subscribe, please follow these steps:\n1. Review the Private Placement Memorandum.\n2. Complete your Subscriber Information and sign the Signature Pages through the link below.\n3. Complete the tax form and the accredited investor letter that apply to you.",
+      "Funding instructions are in the Subscription Instructions and apply once the Manager accepts your subscription.",
+      "Best regards,\n{{sender_name}}",
+    ].join("\n\n"),
+  },
+];
+
 function toHtml(body: string): string {
   return body
     .split(/\n{2,}/)
@@ -116,4 +133,16 @@ export async function seedEmailDrafts(db: Db, userId: string): Promise<number> {
   if (existing.length) return 0;
   for (const d of DEFAULTS) await saveEmailDraft(db, { ...d, userId });
   return DEFAULTS.length;
+}
+
+/** Add the subscription package cover email once, whatever else the library already holds. */
+export async function seedSubscriptionDrafts(db: Db, userId: string): Promise<number> {
+  const existing = new Set((await listEmailDrafts(db)).map((d) => d.name));
+  let added = 0;
+  for (const d of SUBSCRIPTION_DEFAULTS) {
+    if (existing.has(d.name)) continue;
+    await saveEmailDraft(db, { ...d, userId });
+    added++;
+  }
+  return added;
 }

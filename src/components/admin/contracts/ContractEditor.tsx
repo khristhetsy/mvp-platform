@@ -7,7 +7,7 @@
 // true render (iCapOS renderer, see render-pdf.ts) is one click away in the preview tab.
 
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { groupCurrencyInput, linkedValue, openFields, plainCurrency } from "@/lib/contracts/fields";
+import { deriveValues, groupCurrencyInput, INTEREST_PRICE, linkedValue, openFields, plainCurrency } from "@/lib/contracts/fields";
 import type { CSSProperties, KeyboardEvent } from "react";
 import type { BodyEdits, IssuingEntity, Segment, TemplateField } from "@/lib/contracts/types";
 import type { ModelBlock, ModelParagraph, ModelSegment } from "@/lib/contracts/docx-engine";
@@ -251,15 +251,18 @@ export const ContractEditor = forwardRef<
   const open = useMemo(() => openFields(data.fields, eff, entity, needsEntity), [data.fields, eff, entity, needsEntity]);
   useEffect(() => onOpenChange?.(open.length), [open.length, onOpenChange]);
 
+  // Calculated fields (Interests = subscription amount ÷ price per Interest) are shown, never typed.
+  const derived = useMemo(() => deriveValues(eff), [eff]);
+
   const chips = useMemo(() => {
     const out: Record<string, ChipInfo> = {};
     for (const f of data.fields) {
-      const v = (eff[f.token] ?? f.default_value ?? "").trim();
+      const v = (f.type === "derived" ? derived[f.token] ?? "" : eff[f.token] ?? f.default_value ?? "").trim();
       out[f.token] = { label: f.label, value: (f.type === "currency" ? groupCurrencyInput(v) : v) || null, required: f.required };
     }
     out.issuing_entity = { label: "Issuing entity", value: entity?.legal_name ?? null, required: true };
     return out;
-  }, [data.fields, eff, entity]);
+  }, [data.fields, eff, entity, derived]);
 
   const save = useCallback(
     async (keepalive = false) => {
@@ -383,6 +386,7 @@ export const ContractEditor = forwardRef<
       document.getElementById(`entity-${data.doc.id}`)?.focus();
       return;
     }
+    if (data.fields.find((f) => f.token === token)?.type === "derived") return; // calculated, not typed
     setChipEdit({ token, top: r.bottom - host.top + (bodyRef.current?.scrollTop ?? 0) + 4, left: Math.max(0, r.left - host.left) });
   };
 
@@ -561,8 +565,8 @@ export const ContractEditor = forwardRef<
                 <FieldInput
                   key={f.token}
                   field={f}
-                  value={eff[f.token] ?? f.default_value ?? ""}
-                  readOnly={readOnly}
+                  value={f.type === "derived" ? derived[f.token] ?? "" : eff[f.token] ?? f.default_value ?? ""}
+                  readOnly={readOnly || f.type === "derived"}
                   link={links?.find((l) => l.token === f.token)}
                   onRelink={() => onRelink?.(f.token)}
                   onChange={(v) => editField(f.token, v)}
@@ -681,6 +685,11 @@ function FieldInput({
         )}
         {field.type === "percent" ? <span style={{ fontSize: 12, color: MUTED }}>%</span> : null}
       </span>
+      {field.type === "derived" ? (
+        <span style={{ display: "block", fontSize: 11, color: MUTED, marginTop: 3 }}>
+          {value ? "Calculated from the subscription amount." : `Calculated once the subscription amount is a multiple of $${INTEREST_PRICE.toLocaleString("en-US")}.`}
+        </span>
+      ) : null}
     </label>
   );
 }

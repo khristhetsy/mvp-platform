@@ -15,7 +15,7 @@ export const maxDuration = 300;
 const schema = z.object({
   action: z.enum(["preview", "test"]),
   contactId: z.string().uuid(),
-  documentIds: z.array(z.string().uuid()).min(1).max(6),
+  documentIds: z.array(z.string().uuid()).min(1).max(12),
   subject: z.string().max(300),
   body: z.string().max(20000),
   emailDraftId: z.string().uuid().nullable().optional(),

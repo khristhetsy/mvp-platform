@@ -1,9 +1,9 @@
 // SPV contract send: shared types. Tables are not in the generated Supabase
 // types yet, so these mirror supabase/migrations/20261002210000_spv_contracts.sql.
 
-export type TemplateKind = "term_sheet" | "services_agreement" | "advisory_agreement" | "nda";
+export type TemplateKind = "term_sheet" | "services_agreement" | "advisory_agreement" | "nda" | "subscription";
 export type TemplateSubtype = "convertible_note" | "safe" | "series_a" | null;
-export type FieldType = "text" | "date" | "currency" | "percent" | "multiline";
+export type FieldType = "text" | "date" | "currency" | "percent" | "multiline" | "derived";
 
 /** Contract types an uploaded contract is filed under (selection row on Contracts › Uploaded). */
 export const CONTRACT_TYPES = [
@@ -51,6 +51,11 @@ export type ContractTemplate = {
   /** Signature anchors used to place fields on the rendered PDF. */
   signature_anchors: SignatureAnchors;
   has_expiry: boolean;
+  /** Subscription package parts only: which package and part this master belongs to. */
+  package_key: string | null;
+  part_key: string | null;
+  /** "sign": the subscriber signs it on a signing link. "review": sent to read, no signature requested. */
+  delivery: "sign" | "review";
   created_by: string | null;
   created_at: string;
 };

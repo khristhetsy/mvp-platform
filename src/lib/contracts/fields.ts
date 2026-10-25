@@ -2,6 +2,7 @@
 // Pure functions (unit tested in fields.test.ts).
 
 import type { FieldType, IssuingEntity, TemplateField } from "./types";
+import { packageLinkValue } from "./subscription/package";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
@@ -27,6 +28,29 @@ export function formatPercent(v: string): string {
   return v.trim().replace(/\s*%$/, "");
 }
 
+/**
+ * Price of one Interest in a subscription package. The Subscription Agreement and the
+ * Manager Acceptance both state "Interests @ $50,000 each", so the count is the
+ * subscription amount divided by this.
+ */
+export const INTEREST_PRICE = 50000;
+
+/** Whole Interests for a subscription amount, or null when the amount is not a positive multiple of the price. */
+export function interestsFor(amount: string | undefined): number | null {
+  const raw = (amount ?? "").trim().replace(/^\$/, "").replace(/,/g, "");
+  if (!/^\d+(\.\d+)?$/.test(raw)) return null;
+  const n = Number(raw);
+  return n > 0 && Number.isInteger(n / INTEREST_PRICE) ? n / INTEREST_PRICE : null;
+}
+
+/** Values no one types: worked out from other fields of the same document. */
+export function deriveValues(values: Record<string, string>): Record<string, string> {
+  const out: Record<string, string> = {};
+  const n = interestsFor(values.subscription_amount);
+  if (n !== null) out.interests_count = String(n);
+  return out;
+}
+
 export function formatValue(type: FieldType, v: string): string {
   if (type === "date") return formatDate(v);
   if (type === "currency") return formatCurrency(v);
@@ -41,7 +65,12 @@ export function resolveValues(
   entity: IssuingEntity | null,
 ): Record<string, string> {
   const out: Record<string, string> = {};
+  const derived = deriveValues(stored);
   for (const f of fields) {
+    if (f.type === "derived") {
+      if (derived[f.token]) out[f.token] = derived[f.token];
+      continue;
+    }
     const v = stored[f.token] ?? f.default_value ?? "";
     if (v.trim()) out[f.token] = formatValue(f.type, v);
   }
@@ -60,9 +89,10 @@ export function openFields(
 ): OpenField[] {
   const open: OpenField[] = [];
   if (needsEntity && !entity) open.push({ token: "issuing_entity", label: "Issuing entity" });
+  const derived = deriveValues(stored);
   for (const f of fields) {
     if (!f.required) continue;
-    const v = (stored[f.token] ?? f.default_value ?? "").trim();
+    const v = (f.type === "derived" ? derived[f.token] ?? "" : stored[f.token] ?? f.default_value ?? "").trim();
     if (!v) open.push({ token: f.token, label: f.label });
   }
   return open;
@@ -115,7 +145,9 @@ export const LINKED_FIELDS: { token: string; from: string[]; text?: boolean }[] 
 
 /** A linked field's value in comparable form: trimmed text for text links, a plain number otherwise. */
 export function linkedValue(token: string, raw: string): string {
-  return LINKED_FIELDS.find((l) => l.token === token)?.text ? raw.trim() : plainCurrency(raw);
+  const link = LINKED_FIELDS.find((l) => l.token === token);
+  if (link) return link.text ? raw.trim() : plainCurrency(raw);
+  return packageLinkValue(token, raw);
 }
 
 /** Linked values for a target document, read from the term sheets in the same send. Numbers are plain; text is trimmed. */

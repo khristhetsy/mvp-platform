@@ -58,3 +58,26 @@ describe("cover email gaps", () => {
     expect(bestDraft(drafts, { company: "Acme", financing_amount: "$1", spv_name: "ICFO ACME SPV, LLC" })?.id).toBe("cn");
   });
 });
+
+describe("subscription package email tokens", () => {
+  const sig: TemplateField[] = [
+    { token: "spv_name", label: "SPV name", type: "text", required: true, default_value: null, position_ref: [], sort_order: 0 },
+    { token: "subscription_amount", label: "Subscription amount", type: "currency", required: true, default_value: null, position_ref: [], sort_order: 1 },
+    { token: "interests_count", label: "Number of Interests", type: "derived", required: true, default_value: null, position_ref: [], sort_order: 2 },
+  ];
+  it("fills the commitment and the calculated Interests from the signature page", () => {
+    const v = emailTokenValues({
+      contactName: "John Boesel",
+      company: "Source Vision Corp",
+      senderName: "Khris Thetsy",
+      documents: [{ fields: sig, values: { spv_name: "ICFO SOURCE VISION SPV, LLC", subscription_amount: "150000" }, entityName: null, title: "Signature Page" }],
+    });
+    expect(v.subscription_amount).toBe("$150,000");
+    expect(v.interests_count).toBe("3");
+    expect(applyEmailTokens("{{subscription_amount}} = {{interests_count}} Interests in {{spv_name}}", v).text).toBe("$150,000 = 3 Interests in ICFO SOURCE VISION SPV, LLC");
+  });
+  it("leaves Interests empty (a missing token) while the amount is not a multiple of $50,000", () => {
+    const v = emailTokenValues({ contactName: null, company: null, senderName: null, documents: [{ fields: sig, values: { subscription_amount: "70000" }, entityName: null, title: "x" }] });
+    expect(v.interests_count).toBeUndefined();
+  });
+});

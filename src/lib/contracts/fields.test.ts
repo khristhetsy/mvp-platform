@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defaultCompanyName, defaultSpvName, formatCurrency, formatDate, formatPercent, groupCurrencyInput, linkedFieldValues, linkedValue, openFields, plainCurrency, resolveValues } from "./fields";
+import { defaultCompanyName, defaultSpvName, deriveValues, formatCurrency, formatDate, formatPercent, groupCurrencyInput, interestsFor, linkedFieldValues, linkedValue, openFields, plainCurrency, resolveValues } from "./fields";
 import type { IssuingEntity, TemplateField } from "./types";
 
 const f = (token: string, required = true, default_value: string | null = null, type: TemplateField["type"] = "text"): TemplateField => ({ token, label: token, type, required, default_value, position_ref: [], sort_order: 0 });
@@ -77,5 +77,36 @@ describe("linked fields", () => {
   it("does nothing without a term sheet or the field", () => {
     expect(linkedFieldValues([cf("equity_valuation")], [])).toEqual({});
     expect(linkedFieldValues([cf("service_fee")], [{ fields: [cf("valuation_cap")], values: { valuation_cap: "5" } }])).toEqual({});
+  });
+});
+
+describe("calculated Interests (subscription package)", () => {
+  it("counts whole Interests at $50,000 each", () => {
+    expect(interestsFor("150000")).toBe(3);
+    expect(interestsFor("$1,000,000")).toBe(20);
+    expect(interestsFor("50,000.00")).toBe(1);
+  });
+
+  it("is empty for an amount that is not a positive multiple", () => {
+    expect(interestsFor("")).toBeNull();
+    expect(interestsFor("75000")).toBeNull();
+    expect(interestsFor("0")).toBeNull();
+    expect(interestsFor("abc")).toBeNull();
+    expect(deriveValues({ subscription_amount: "75000" })).toEqual({});
+  });
+
+  it("a derived field is resolved from the amount, ignores anything typed, and is open until it can be worked out", () => {
+    const fields = [f("subscription_amount", true, null, "currency"), f("interests_count", true, null, "derived")];
+    expect(resolveValues(fields, { subscription_amount: "200000", interests_count: "99" }, null)).toEqual({ subscription_amount: "200,000", interests_count: "4" });
+    expect(openFields(fields, { subscription_amount: "200000" }, null, false)).toEqual([]);
+    expect(openFields(fields, { subscription_amount: "70000" }, null, false)).toEqual([{ token: "interests_count", label: "interests_count" }]);
+    expect(openFields(fields, {}, null, false).map((o) => o.token)).toEqual(["subscription_amount", "interests_count"]);
+  });
+
+  it("package fields compare as text or a plain amount; term sheet links are unchanged", () => {
+    expect(linkedValue("spv_name", " ICFO X SPV, LLC ")).toBe("ICFO X SPV, LLC");
+    expect(linkedValue("subscription_amount", "$150,000")).toBe("150000");
+    expect(linkedValue("equity_valuation", "$10,000,000")).toBe("10000000");
+    expect(linkedValue("company_name", " ACME ")).toBe("ACME");
   });
 });

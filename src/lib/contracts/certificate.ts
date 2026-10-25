@@ -9,7 +9,8 @@ export type CertificateInput = {
   company: string;
   documentHash: string;
   signer: { name: string | null; email: string | null };
-  countersigner: { name: string; email: string | null };
+  /** Absent for a document only the subscriber signs (no iCFO countersignature). */
+  countersigner?: { name: string; email: string | null };
   events: { at: string; what: string; who: string | null; ip: string | null }[];
 };
 
@@ -54,8 +55,10 @@ export async function buildCertificate(input: CertificateInput): Promise<Buffer>
   y -= 6;
   line("Signer", { f: bold });
   line(`${input.signer.name ?? "—"}${input.signer.email ? ` <${input.signer.email}>` : ""}`);
-  line("Countersigned by", { f: bold });
-  line(`${input.countersigner.name}${input.countersigner.email ? ` <${input.countersigner.email}>` : ""}`);
+  if (input.countersigner) {
+    line("Countersigned by", { f: bold });
+    line(`${input.countersigner.name}${input.countersigner.email ? ` <${input.countersigner.email}>` : ""}`);
+  }
   y -= 10;
   line("Audit trail (UTC)", { f: bold, size: 12 });
   for (const e of input.events) {
