@@ -171,7 +171,7 @@ export function NotificationsSettings() {
   };
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 300px", gap: 20, alignItems: "start" }}>
+    <div className="mk-m-1col" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 300px", gap: 20, alignItems: "start" }}>
       {/* Left: grouped list */}
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {!settings.master_on ? (
@@ -242,7 +242,7 @@ export function NotificationsSettings() {
       </div>
 
       {/* Right: master control + live preview */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 16, position: "sticky", top: 12 }}>
+      <div className="mk-m-first" style={{ display: "flex", flexDirection: "column", gap: 16, position: "sticky", top: 12 }}>
         <div style={card}>
           <div style={{ padding: "12px 16px", borderBottom: "0.5px solid #eef1f5", fontSize: 13, fontWeight: 600, color: "#0f2147" }}>{t("controls")}</div>
           <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 14 }}>
@@ -259,18 +259,18 @@ export function NotificationsSettings() {
               <Switch on={settings.quiet_hours_on} label={t("quiet_hours")} onToggle={() => updateSettings({ quiet_hours_on: !settings.quiet_hours_on })} />
             </Row>
             {settings.quiet_hours_on ? (
-              <div style={{ display: "flex", alignItems: "center", gap: 8, paddingLeft: 2 }}>
-                <input type="time" value={settings.quiet_start} onChange={(e) => updateSettings({ quiet_start: e.target.value })} style={selectStyle} aria-label="Quiet start" />
+              <div className="mk-m-times" style={{ display: "flex", alignItems: "center", gap: 8, paddingLeft: 2 }}>
+                <input className="mk-m-grow" type="time" value={settings.quiet_start} onChange={(e) => updateSettings({ quiet_start: e.target.value })} style={selectStyle} aria-label="Quiet start" />
                 <span style={{ fontSize: 12, color: "#7a8494" }}>to</span>
-                <input type="time" value={settings.quiet_end} onChange={(e) => updateSettings({ quiet_end: e.target.value })} style={selectStyle} aria-label="Quiet end" />
+                <input className="mk-m-grow" type="time" value={settings.quiet_end} onChange={(e) => updateSettings({ quiet_end: e.target.value })} style={selectStyle} aria-label="Quiet end" />
               </div>
             ) : null}
             <div>
               <p style={{ fontSize: 12.5, fontWeight: 500, color: "#0f2147", margin: "0 0 6px" }}>{t("default_channels")}</p>
               <ChannelChips value={settings.default_channels} onChange={(ch) => updateSettings({ default_channels: ch })} />
             </div>
-            <Row label={t("timezone")} hint="">
-              <select value={settings.timezone} onChange={(e) => updateSettings({ timezone: e.target.value })} style={selectStyle} aria-label="Timezone">
+            <Row label={t("timezone")} hint="" stack>
+              <select className="mk-m-fullsel" value={settings.timezone} onChange={(e) => updateSettings({ timezone: e.target.value })} style={selectStyle} aria-label="Timezone">
                 {(TIMEZONES.includes(settings.timezone) ? TIMEZONES : [settings.timezone, ...TIMEZONES]).map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
             </Row>
@@ -316,10 +316,10 @@ const selectStyle: React.CSSProperties = {
   fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "1px solid #d7dce4", background: "#fff", color: "#3d3d3a",
 };
 
-function Row({ label, hint, children }: { label: string; hint: string; children: React.ReactNode }) {
+function Row({ label, hint, children, stack }: { label: string; hint: string; children: React.ReactNode; stack?: boolean }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-      <div>
+    <div className={stack ? "mk-m-stack" : undefined} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+      <div style={{ minWidth: 0 }}>
         <p style={{ fontSize: 12.5, fontWeight: 500, color: "#0f2147", margin: 0 }}>{label}</p>
         {hint ? <p style={{ fontSize: 11, color: "#7a8494", margin: "1px 0 0" }}>{hint}</p> : null}
       </div>

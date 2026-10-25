@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import "./marketing-mobile.css";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { MarketingBell } from "@/components/marketing/notifications/MarketingBell";

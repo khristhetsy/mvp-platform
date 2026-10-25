@@ -175,7 +175,7 @@ export default async function MarketingDashboardPage({ searchParams }: { searchP
       <MarketingAdvisor funnelSummary={marketingStages.map((s) => `${s.label} ${s.count}`).join(", ")} />
 
       {/* Campaigns + Sequences */}
-      <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 14, marginBottom: 14 }}>
+      <div className="mk-m-1col" style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 14, marginBottom: 14 }}>
         {/* Active campaigns */}
         <div style={{ ...card, overflow: "hidden" }}>
           <div style={{ padding: "12px 16px", borderBottom: "0.5px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -192,8 +192,8 @@ export default async function MarketingDashboardPage({ searchParams }: { searchP
               const prog = c.stat_sent > 0 ? Math.min((c.stat_sent / Math.max(c.stat_sent, 500)) * 100, 100) : 0;
               return (
                 <div key={c.id} style={{ padding: "12px 16px", borderBottom: "0.5px solid var(--border)", display: "grid", gridTemplateColumns: "1fr auto auto", gap: 12, alignItems: "center" }}>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 500, color: "var(--foreground)", marginBottom: 2 }}>{c.name}</div>
+                  <div style={{ minWidth: 0 }}>
+                    <div className="mk-m-clamp2" style={{ fontSize: 13, fontWeight: 500, color: "var(--foreground)", marginBottom: 2 }}>{c.name}</div>
                     <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
                       {(c.list as { name?: string } | null)?.name ?? "No list"} · {c.stat_sent.toLocaleString()} sent
                     </div>
@@ -227,8 +227,8 @@ export default async function MarketingDashboardPage({ searchParams }: { searchP
               const sc = SEQ_STATUS_MAP[s.status] ?? SEQ_STATUS_MAP.draft;
               return (
                 <div key={s.id} style={{ padding: "12px 16px", borderBottom: "0.5px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div style={{ fontSize: 13, fontWeight: 500 }}>{s.name}</div>
-                  <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: sc.bg, color: sc.color, fontWeight: 500 }}>
+                  <div style={{ fontSize: 13, fontWeight: 500, minWidth: 0, paddingRight: 8 }}>{s.name}</div>
+                  <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: sc.bg, color: sc.color, fontWeight: 500, whiteSpace: "nowrap", flexShrink: 0 }}>
                     {s.status.charAt(0).toUpperCase() + s.status.slice(1)}
                   </span>
                 </div>

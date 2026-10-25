@@ -1,0 +1,12 @@
+/* Marketing pages, phone layout (max-width 639px). Layout only; desktop is unchanged. */
+@media (max-width: 639px) {
+  .mk-m-1col { grid-template-columns: minmax(0, 1fr) !important; }
+  .mk-m-2col { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .mk-m-tbl { grid-template-columns: minmax(0, 1.5fr) repeat(3, minmax(0, 1fr)) !important; }
+  .mk-m-fullsel { width: 100%; max-width: 100%; min-width: 0; }
+  .mk-m-first { order: -1; position: static !important; }
+  .mk-m-times .mk-m-grow { flex: 1; min-width: 0; }
+  .mk-m-stack { flex-wrap: wrap; }
+  .mk-m-stack > select { width: 100%; }
+  .mk-m-clamp2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+}
