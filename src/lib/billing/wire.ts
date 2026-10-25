@@ -24,11 +24,12 @@ import { centsFor } from "@/lib/subscriptions/pricing-catalog";
 import {
   activationPeriod, cycleMonths, daysOverdue, dueDateFor, EMPTY_WIRE_INSTRUCTIONS, invoiceAmountCents,
   isOpenStatus, needsRenewalInvoice, normalizeWireInstructions, periodEnd, PREMIUM_MONTHLY_CENTS,
-  shouldPausePremium, statusFor, type WireCycle, type WireInstructions, type WireInvoiceRow,
+  shouldPausePremium, statusFor, wireDatePT, type WireCycle, type WireInstructions, type WireInvoiceRow,
 } from "@/lib/billing/wire-core";
 import {
-  renderWireInvoiceEmail, renderWirePausedEmail, renderWireReceiptEmail, renderWireReminderEmail,
+  renderPremiumEndedEmail, renderWireInvoiceEmail, renderWirePausedEmail, renderWireReceiptEmail, renderWireReminderEmail,
 } from "@/lib/billing/wire-emails";
+import { PLAN_LABELS, type PlanType } from "@/lib/subscriptions/plans";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // wire_invoices and next_wire_invoice_number() are not in the generated types
@@ -429,12 +430,12 @@ export async function runWireInvoiceCron(now: Date = new Date(), client: Db = db
   {
     const { data: ending, error } = await client
       .from("subscriptions")
-      .select("id, profile_id, pending_plan_type")
+      .select("id, profile_id, pending_plan_type, current_period_end")
       .eq("plan_type", "founder_premium")
       .eq("cancel_at_period_end", true)
       .lte("current_period_end", now.toISOString());
     if (error) result.errors.push(`ended: ${error.message}`);
-    for (const row of (ending ?? []) as Array<{ id: string; profile_id: string; pending_plan_type: string | null }>) {
+    for (const row of (ending ?? []) as Array<{ id: string; profile_id: string; pending_plan_type: string | null; current_period_end: string | null }>) {
       // A card plan the founder chose stays recorded, so the Billing tab can offer
       // "Start plan". The webhook clears it when that plan's subscription arrives.
       const keepsChoice = row.pending_plan_type === "founder_basic" || row.pending_plan_type === "founder_professional";
@@ -453,8 +454,26 @@ export async function runWireInvoiceCron(now: Date = new Date(), client: Db = db
         })
         .eq("id", row.id)
         .eq("plan_type", "founder_premium");
-      if (upErr) result.errors.push(`ended ${row.profile_id}: ${upErr.message}`);
-      else result.ended += 1;
+      if (upErr) {
+        result.errors.push(`ended ${row.profile_id}: ${upErr.message}`);
+        continue;
+      }
+      result.ended += 1;
+      // The update above only matches a row still on Premium, so this runs once.
+      if (keepsChoice) {
+        try {
+          const contact = await founderContact(row.profile_id, client);
+          const rendered = renderPremiumEndedEmail({
+            firstName: contact.firstName,
+            planLabel: PLAN_LABELS[row.pending_plan_type as PlanType],
+            endedOn: wireDatePT(row.current_period_end),
+            billingUrl: absoluteUrl(BILLING_PATH),
+          });
+          await emailFounder(row.profile_id, rendered, "premium_ended_card_plan", client);
+        } catch (e) {
+          result.errors.push(`ended email ${row.profile_id}: ${e instanceof Error ? e.message.slice(0, 160) : "failed"}`);
+        }
+      }
     }
   }
 
