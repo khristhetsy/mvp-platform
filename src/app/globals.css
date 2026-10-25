@@ -311,3 +311,13 @@ select {
 .field-row .field-act:hover { background: #B5D4F4; }
 .field-row.field-editing { background: var(--muted); }
 .field-row.field-editing:hover .field-pen { visibility: hidden; }
+
+/* Phone width: Market claim grader Sources table stacks label, value, source. */
+@media (max-width: 639px) {
+  .mc-fields, .mc-fields tbody, .mc-fields tr, .mc-fields td { display: block; width: 100% !important; }
+  .mc-fields thead { display: none; }
+  .mc-fields tr { padding: 10px 0; border-bottom: 1px solid #e5e7eb; }
+  .mc-fields td { border-bottom: 0 !important; padding: 2px 0 !important; overflow-wrap: anywhere; }
+  .mc-fields td:first-child { font-size: 12px; color: #64748b; }
+  .mc-fields td.mc-value { font-family: inherit !important; font-size: 14px !important; }
+}

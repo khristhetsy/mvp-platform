@@ -466,10 +466,12 @@ export function CompanySettingsForm({ company, display }: Props) {
             return (
               <Fragment key={f.key}>
                 {sectionHeader}
-                <div onClick={() => { setEditingKey(f.key); setMessage(null); }} className="group flex cursor-pointer items-start gap-4 border-b border-slate-100 py-2.5 hover:bg-slate-50/60 rounded-md px-1 -mx-1">
-                  <span className="w-40 shrink-0 text-sm text-slate-500">{f.label}</span>
-                  <span className="min-w-0 flex-1 text-sm">{displayNode(f)}</span>
-                  <span className="opacity-0 group-hover:opacity-100 text-slate-400 text-xs pt-0.5"><i className="ti ti-pencil" aria-hidden="true" /></span>
+                <div onClick={() => { setEditingKey(f.key); setMessage(null); }} className="group flex min-h-[44px] cursor-pointer items-start gap-2 border-b border-slate-100 py-2.5 hover:bg-slate-50/60 rounded-md px-1 -mx-1 sm:gap-4">
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:gap-4">
+                    <span className="text-[12px] text-slate-500 sm:w-40 sm:shrink-0 sm:text-sm">{f.label}</span>
+                    <span className="min-w-0 flex-1 break-words text-sm [overflow-wrap:anywhere]">{displayNode(f)}</span>
+                  </div>
+                  <span className="pt-0.5 text-xs text-slate-400 sm:opacity-0 sm:group-hover:opacity-100"><i className="ti ti-pencil" aria-hidden="true" /></span>
                 </div>
               </Fragment>
             );

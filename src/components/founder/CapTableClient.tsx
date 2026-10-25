@@ -154,7 +154,34 @@ export function CapTableClient() {
             <h2 className="text-sm font-semibold text-[var(--navy)]">{t("shareholders")}</h2>
             <button type="button" onClick={addHolder} className="inline-flex items-center gap-1 text-xs font-medium text-[var(--indigo)]">+ Add holder</button>
           </div>
-          <div className="overflow-x-auto">
+          <div className="sm:hidden">
+            {sum.rows.map((row, i) => (
+              <div key={row.holder.id} className="border-t border-[var(--border-subtle)] py-3">
+                <div className="flex items-center gap-2">
+                  <span className="inline-block h-2 w-2 flex-none rounded-sm" style={{ background: colorFor(i) }} />
+                  <input value={row.holder.name} onChange={(e) => update(row.holder.id, { name: e.target.value })} aria-label="Holder name" className="min-w-0 flex-1 rounded border border-[var(--border-subtle)] px-2 py-1.5 text-sm" />
+                  <button type="button" onClick={() => removeHolder(row.holder.id)} aria-label="Remove holder" className="px-2 text-lg text-[var(--text-muted)] hover:text-rose-600">×</button>
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <select value={row.holder.group} onChange={(e) => update(row.holder.id, { group: e.target.value as HolderGroup })} aria-label="Group" className="min-w-0 rounded border border-[var(--border-subtle)] px-2 py-1.5 text-sm">
+                    {(["founder", "pool", "investor"] as HolderGroup[]).map((g) => (
+                      <option key={g} value={g}>{GROUP_LABEL[g]}</option>
+                    ))}
+                  </select>
+                  <input value={row.holder.shareClass} onChange={(e) => update(row.holder.id, { shareClass: e.target.value })} aria-label="Class" className="min-w-0 rounded border border-[var(--border-subtle)] px-2 py-1.5 text-sm" />
+                </div>
+                <div className="mt-2 grid grid-cols-2 items-center gap-2">
+                  <input type="number" min={0} value={row.holder.shares} onChange={(e) => update(row.holder.id, { shares: Math.max(0, Number(e.target.value) || 0) })} aria-label="Shares" className="min-w-0 rounded border border-[var(--border-subtle)] px-2 py-1.5 text-right text-sm tabular-nums" />
+                  <span className="text-right text-sm tabular-nums text-[var(--text-secondary)]">{pct(row.pct)} FD</span>
+                </div>
+              </div>
+            ))}
+            <div className="flex items-center justify-between border-t border-[var(--border-subtle)] pt-3 text-sm font-medium">
+              <span>Fully diluted</span>
+              <span className="tabular-nums">{sum.totalShares.toLocaleString()} · 100%</span>
+            </div>
+          </div>
+          <div className="hidden overflow-x-auto sm:block">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs text-[var(--text-muted)]">
@@ -209,14 +236,14 @@ export function CapTableClient() {
 
         {/* Ownership donut + summary */}
         <section className="flex flex-col gap-3">
-          <div className="rounded-xl border border-[var(--border-subtle)] bg-white p-4 text-center">
-            <svg viewBox="0 0 120 120" width="120" height="120" className="mx-auto block" role="img" aria-label="Ownership split">
+          <div className="flex items-center gap-4 rounded-xl border border-[var(--border-subtle)] bg-white p-4 md:block md:text-center">
+            <svg viewBox="0 0 120 120" width="120" height="120" className="block h-[96px] w-[96px] flex-none md:mx-auto md:h-[120px] md:w-[120px]" role="img" aria-label="Ownership split">
               {donutSlices.map((s) => (
                 <circle key={s.id} cx={60} cy={60} r={46} fill="none" stroke={s.color} strokeWidth={18}
                   strokeDasharray={`${s.len} ${circ - s.len}`} strokeDashoffset={-s.offset} transform="rotate(-90 60 60)" />
               ))}
             </svg>
-            <div className="mt-3 space-y-1 text-left text-xs">
+            <div className="min-w-0 flex-1 space-y-1 text-left text-xs md:mt-3">
               {(["founder", "pool", "investor"] as HolderGroup[]).map((g) => (
                 <div key={g} className="flex items-center justify-between">
                   <span className="text-[var(--text-secondary)]">{GROUP_LABEL[g]}s</span>
