@@ -11,6 +11,7 @@ import { openFields, resolveValues } from "./fields";
 import { saveToDrive } from "./drive";
 import { docxToPdf } from "./render-pdf";
 import { placeSignatureFields, readPdfLines } from "./signature-anchors";
+import { refreshToc } from "./toc";
 import {
   addEvent,
   getContactLite,
@@ -139,7 +140,9 @@ export function fileBase(b: Bundle): string {
 export async function renderBundleDocx(db: Db, b: Bundle, mode: "preview" | "final"): Promise<Buffer> {
   if (isUpload(b)) throw new SendBlockedError("An uploaded contract has no Word version.");
   const master = await getMaster(db, b.template.id);
-  return renderDocx({ master, fields: b.fields, entityMatch: b.template.entity_match, values: bundleValues(b), edits: b.doc.body_edits, mode });
+  const docx = await renderDocx({ master, fields: b.fields, entityMatch: b.template.entity_match, values: bundleValues(b), edits: b.doc.body_edits, mode });
+  // The Memorandum's contents page numbers come from the finished deal; bring them up to date.
+  return b.template.key === "sub_ppm" ? refreshToc(docx) : docx;
 }
 
 /** True preview: the same Word → PDF render that is sent for signature. */

@@ -45,12 +45,12 @@ def text(e):
 
 # ── Placeholder injection ──────────────────────────────────────────────────
 
-def _blank_run(placeholder, like_rpr=None):
+def _blank_run(placeholder, like_rpr=None, keep_underline=False):
     r = etree.SubElement(etree.Element("x"), W + "r")
     rpr = etree.SubElement(r, W + "rPr")
     if like_rpr is not None:
         for c in like_rpr:
-            if c.tag in (W + "u", W + "highlight"):
+            if c.tag == W + "highlight" or (c.tag == W + "u" and not keep_underline):
                 continue
             rpr.append(copy.deepcopy(c))
     hl = etree.SubElement(rpr, W + "highlight")
@@ -73,7 +73,8 @@ def fill_blank(p, which, placeholder):
     if which >= len(runs):
         raise SystemExit("no underlined blank #%d in: %s" % (which, text(p)[:60]))
     old = runs[which]
-    new = _blank_run(placeholder, old.find("w:rPr", NS))
+    # The filled value keeps the line the blank had, as a typed name sits on a line in Word.
+    new = _blank_run(placeholder, old.find("w:rPr", NS), keep_underline=True)
     old.getparent().replace(old, new)
 
 
@@ -98,6 +99,9 @@ def set_runs(p, parts):
     for kind, s in parts:
         if kind == "p":
             p.append(_blank_run(s, rpr))
+        elif kind == "br":
+            r = etree.SubElement(p, W + "r")
+            etree.SubElement(r, W + "br")
         else:
             r = etree.SubElement(p, W + "r")
             if rpr is not None:
@@ -196,7 +200,10 @@ def sig_subscription_edits(individual):
         fill_blank(k[178], 0, "(AMOUNT)")
         fill_blank(k[178], 0, "(INTERESTS)")  # the first blank was just replaced
         fill_blank(k[180], 0, "(MAILING ADDRESS)")
-        set_runs(k[183], [("t", "Telephone: "), ("p", "(TELEPHONE)"), ("t", "    Email: "), ("p", "(EMAIL)")])
+        set_runs(k[183], [("t", "Telephone: "), ("p", "(TELEPHONE)"), ("br", ""), ("t", "Email: "), ("p", "(EMAIL)")])
+        ind = k[183].find("w:pPr/w:ind", NS)
+        if ind is not None and ind.get(W + "right") is not None:
+            del ind.attrib[W + "right"]  # the source's wide right indent only made the blanks wrap
         # Manager Acceptance page
         append_text(k[2981], "(SUBSCRIBER NAME)")
         fill_blank(k[2983], 0, "(AMOUNT)")
@@ -215,12 +222,43 @@ def sig_llc_edits(individual):
     return edit
 
 
+def table_cells(tbl):
+    return [[c for c in tr.findall("w:tc", NS)] for tr in tbl.findall("w:tr", NS)]
+
+
+def set_cell_text(tc, text):
+    """Replace a cell's text with one placeholder, keeping the first run's formatting."""
+    p = tc.find("w:p", NS)
+    set_runs(p, [("p", text)])
+
+
 def ppm_edits(k):
     # The source Memorandum was cut from a finished deal. Its issuer specific exhibits are not carried
-    # into the master (they would belong to another company, and the master is committed to the repo):
-    # each is replaced by a marked blank the sender fills for the new deal.
-    set_runs(k[1432], [("p", "(INFO HERE)"), ("t", " Insert the Information Statement of "), ("p", "(ISSUER COMPANY)"), ("t", ", including its risk factors.")])
-    set_runs(k[2716], [("p", "(INFO HERE)"), ("t", " Insert the Certificate of Formation of "), ("p", "(SPV LLC COMPANY)"), ("t", ".")])
+    # into the master (they belong to another company, and the master is committed to the repo):
+    # Exhibit A and Exhibit E keep their headings only, and the Information Statement keeps its cover page.
+    for i in (1433, 1819):  # (ISSUER LOGO): the master has no logo to place
+        assert text(k[i]).strip() == "(ISSUER LOGO)"
+        set_runs(k[i], [])
+    # The offering table: typed figures become fields, so they can be calculated and cannot go stale.
+    tbl = next(e for e in k if e.tag == W + "tbl" and "Aggregate Amount" in text(e))
+    rows = table_cells(tbl)
+    price, expenses, proceeds = rows[1][1], rows[1][2], rows[1][3]
+    amount, agg_exp, agg_proceeds = rows[2][1], rows[2][2], rows[2][3]
+    set_runs(price.find("w:p", NS), [("p", "(OFFERING PRICE)"), ("t", " per Interest")])
+    set_runs(expenses.find("w:p", NS), [("p", "(EXPENSE PER INTEREST)"), ("t", " per Interest")])
+    set_runs(proceeds.find("w:p", NS), [("p", "(PROCEEDS PER INTEREST)"), ("t", " per Interest")])
+    set_cell_text(amount, "(OFFERING MAX)")
+    set_cell_text(agg_exp, "(OFFERING EXPENSES)")
+    set_cell_text(agg_proceeds, "(OFFERING PROCEEDS)")
+    # Row labels and the "$" signs sit in the cells' own text; add the dollar sign back where it was.
+    for tc in (price, expenses, proceeds, amount, agg_exp, agg_proceeds):
+        p = tc.find("w:p", NS)
+        first = p.find("w:r", NS)
+        if first is not None:
+            lead = etree.Element(W + "r")
+            t = etree.SubElement(lead, W + "t")
+            t.text = "$"
+            first.addprevious(lead)
 
 
 def spouse_edits(k):
@@ -231,13 +269,13 @@ SPECS = {
     "sub-cover-index": dict(ranges=[(0, 55)]),
     "sub-instructions": dict(ranges=[(55, 125)]),
     "sub-sig-subscription-entity": dict(ranges=[(145, 191), (2960, 2991)], drop=range(163, 176), edit=sig_subscription_edits(False)),
-    "sub-sig-subscription-individual": dict(ranges=[(145, 191), (2960, 2991)], drop=list(range(149, 163)) + list(range(171, 175)), edit=sig_subscription_edits(True)),
+    "sub-sig-subscription-individual": dict(ranges=[(145, 191), (2960, 2991)], drop=range(149, 163), edit=sig_subscription_edits(True)),
     "sub-sig-spouse": dict(ranges=[(191, 212)], edit=spouse_edits),
     "sub-sig-llc-entity": dict(ranges=[(212, 253)], drop=range(231, 253), edit=sig_llc_edits(False)),
-    "sub-sig-llc-individual": dict(ranges=[(212, 253)], drop=list(range(220, 237)) + list(range(247, 253)), edit=sig_llc_edits(True)),
+    "sub-sig-llc-individual": dict(ranges=[(212, 253)], drop=range(220, 237), edit=sig_llc_edits(True)),
     "sub-form-ai-entity": dict(ranges=[(313, 435)]),
     "sub-form-ai-individual": dict(ranges=[(435, 481)]),
-    "sub-ppm": dict(ranges=[(487, 1433), (1680, 2717)], edit=ppm_edits),
+    "sub-ppm": dict(ranges=[(487, 1448), (1680, 2717)], edit=ppm_edits),
     "sub-agreement": dict(ranges=[(2767, 2959), (2991, 3346)]),
 }
 

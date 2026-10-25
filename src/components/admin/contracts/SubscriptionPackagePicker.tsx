@@ -77,13 +77,13 @@ export function SubscriptionPackagePicker({
                   return (
                     <div key={i} style={{ fontSize: 12.5, color: NAVY, lineHeight: 1.9 }}>
                       {r.title} <span style={{ fontSize: 9.5, fontWeight: 700, background: "#FCEBEB", color: "#A32D2D", borderRadius: 4, padding: "1px 5px" }}>PDF</span>
-                      <span style={{ color: "#8a93a6", fontSize: 11 }}> sent as published</span>
+                      <span style={{ color: r.applies ? "#0F6E56" : "#8a93a6", fontSize: 11 }}>{r.applies ? " applies to this subscriber" : " sent as published, not required of this subscriber"}</span>
                     </div>
                   );
                 }
                 return (
                   <div key={i} style={{ fontSize: 12, color: "#8a6500", lineHeight: 1.7 }}>
-                    {r.title}: {r.note}
+                    {r.title}{r.applies ? " (applies to this subscriber)" : ""}: {r.note}
                   </div>
                 );
               })}
@@ -139,6 +139,11 @@ export function SubscriptionPackagePicker({
         </div>
       ) : null}
 
+      {isAdmin && missingMasters === 0 ? (
+        <div style={{ marginTop: 12, fontSize: 11.5, color: MUTED }}>
+          After an app release, <button type="button" disabled={busy} onClick={onInstall} style={link}>update the masters</button> to save the shipped files as new versions (files you replaced yourself are left alone).
+        </div>
+      ) : null}
       <div style={{ marginTop: 12, padding: "10px 12px", background: "#f6f8fc", borderRadius: 8, fontSize: 11.5, color: MUTED, lineHeight: 1.6 }}>
         <b>Open editor</b> makes an editable copy of each part for this prospect; the masters never change. The Signature Pages are signed by the subscriber on a signing link; the other parts are sent to read.
       </div>

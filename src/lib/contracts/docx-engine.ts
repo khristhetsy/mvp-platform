@@ -8,7 +8,7 @@
 
 import JSZip from "jszip";
 import { DOMParser, XMLSerializer } from "@xmldom/xmldom";
-import type { BodyEdits, FieldMatch, Segment, TemplateField } from "./types";
+import type { BodyEdits, FieldMatch, ParaHint, Segment, TemplateField } from "./types";
 
 const DOC_PART = "word/document.xml";
 
@@ -187,7 +187,8 @@ export function tokenizeDoc(doc: XDoc, fields: TemplateField[], entityMatch: str
 
 // ── 2. Editor model ────────────────────────────────────────────────────────
 
-export type ModelSegment = Segment & { hl?: boolean };
+/** `u`: underlined in the master (a blank to fill in, or an underlined heading). */
+export type ModelSegment = Segment & { hl?: boolean; u?: boolean };
 export type ModelParagraph = {
   id: string;
   segments: ModelSegment[];
@@ -196,28 +197,30 @@ export type ModelParagraph = {
   align: string | null;
   /** Paragraph holds an image, field code or text box: shown, not editable. */
   locked: boolean;
+  /** Layout from the master (alignment, indents, tabs, label), added by the document route. */
+  hint?: ParaHint;
 };
 export type ModelBlock =
   | { type: "p"; p: ModelParagraph }
   | { type: "table"; rows: ModelParagraph[][][] };
 
-function runFormat(r: XNode): { b: boolean; i: boolean; hl: boolean } {
+function runFormat(r: XNode): { b: boolean; i: boolean; hl: boolean; u: boolean } {
   const rPr = firstKid(r, "w:rPr");
-  return { b: onOff(rPr, "w:b"), i: onOff(rPr, "w:i"), hl: Boolean(rPr && firstKid(rPr, "w:highlight")) };
+  return { b: onOff(rPr, "w:b"), i: onOff(rPr, "w:i"), hl: Boolean(rPr && firstKid(rPr, "w:highlight")), u: onOff(rPr, "w:u") };
 }
 
 function paragraphModel(p: XNode, id: string): ModelParagraph {
   const segs: ModelSegment[] = [];
-  const push = (text: string, f: { b: boolean; i: boolean; hl: boolean }) => {
+  const push = (text: string, f: { b: boolean; i: boolean; hl: boolean; u: boolean }) => {
     if (!text) return;
     const last = segs[segs.length - 1];
-    if (last && Boolean(last.b) === f.b && Boolean(last.i) === f.i && Boolean(last.hl) === f.hl) last.text += text;
-    else segs.push({ text, ...(f.b ? { b: true } : {}), ...(f.i ? { i: true } : {}), ...(f.hl ? { hl: true } : {}) });
+    if (last && Boolean(last.b) === f.b && Boolean(last.i) === f.i && Boolean(last.hl) === f.hl && Boolean(last.u) === f.u) last.text += text;
+    else segs.push({ text, ...(f.b ? { b: true } : {}), ...(f.i ? { i: true } : {}), ...(f.hl ? { hl: true } : {}), ...(f.u ? { u: true } : {}) });
   };
   for (const r of ownRuns(p)) {
     const f = runFormat(r);
     for (const k of kids(r)) {
-      if (k.nodeName === "w:t") push(textOf(k), f);
+      if (k.nodeName === "w:t") push(textOf(k).replace(/[\uf0a3\uf071]/g, "\u2610"), f); // Wingdings check boxes
       else if (k.nodeName === "w:tab") push("\t", f);
       else if (k.nodeName === "w:br" || k.nodeName === "w:cr") push("\n", f);
     }

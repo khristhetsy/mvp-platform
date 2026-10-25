@@ -17,7 +17,7 @@ function html(profile: SubscriberProfile, templates: PickerTemplate[] = installe
 describe("Step 1 for the subscription package", () => {
   it("lists the six parts in order", () => {
     const h = html({ type: "entity", usPerson: true, spouseSigns: false });
-    const at = ["Cover and Index", "Signature Pages", "Forms", "Private Placement Memorandum", "Subscription Agreement", "Subscription Instructions"].map((p) => h.indexOf(`>${p}<`));
+    const at = ["Cover and Index", "Subscription Instructions", "Signature Pages", "Forms", "Private Placement Memorandum", "Subscription Agreement"].map((p) => h.indexOf(`>${p}<`));
     expect(at.every((i) => i > -1)).toBe(true);
     expect([...at].sort((a, b) => a - b)).toEqual(at);
   });
@@ -36,8 +36,10 @@ describe("Step 1 for the subscription package", () => {
     expect(h).toContain(names.sub_form_ai_individual);
   });
 
-  it("tells the sender a non-U.S. individual needs a W-8BEN the package does not carry", () => {
-    expect(html({ type: "individual", usPerson: false, spouseSigns: false })).toContain("The source package has no W-8BEN");
+  it("lists the W-8BEN with its note, and marks it as applying to a non-U.S. individual", () => {
+    const h = html({ type: "individual", usPerson: false, spouseSigns: false });
+    expect(h).toContain("The source package has no W-8BEN");
+    expect(h).toContain("(applies to this subscriber)");
   });
 
   it("warns, and offers Install to an admin, when masters are missing; no Replace file for a master that is not there", () => {

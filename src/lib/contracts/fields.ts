@@ -43,11 +43,49 @@ export function interestsFor(amount: string | undefined): number | null {
   return n > 0 && Number.isInteger(n / INTEREST_PRICE) ? n / INTEREST_PRICE : null;
 }
 
-/** Values no one types: worked out from other fields of the same document. */
+const plainNumber = (v: string | undefined): number | null => {
+  const raw = (v ?? "").trim().replace(/^\$/, "").replace(/,/g, "");
+  return /^\d+(\.\d+)?$/.test(raw) ? Number(raw) : null;
+};
+/** Dollars with thousands separators; cents only when there are some (or when `cents` asks for them). */
+function money(n: number, cents = false): string {
+  const fixed = cents || !Number.isInteger(Math.round(n * 100) / 100) || Math.round(n * 100) % 100 !== 0 ? n.toFixed(2) : String(Math.round(n));
+  const [int, dec] = fixed.split(".");
+  return `${int.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}${dec ? `.${dec}` : ""}`;
+}
+
+/**
+ * Values no one types: worked out from other fields of the same document.
+ * `values` is what the document holds, master defaults included (see withDefaults).
+ *   interests_count   subscription amount ÷ price of an Interest
+ *   offering table    Memorandum: Interests offered, expenses and proceeds per Interest, aggregate proceeds
+ */
 export function deriveValues(values: Record<string, string>): Record<string, string> {
   const out: Record<string, string> = {};
   const n = interestsFor(values.subscription_amount);
   if (n !== null) out.interests_count = String(n);
+
+  const price = plainNumber(values.offering_price);
+  const max = plainNumber(values.offering_max);
+  const expenses = plainNumber(values.offering_expenses);
+  if (price && max && Number.isInteger(max / price)) {
+    const interests = max / price;
+    out.offering_interests = String(interests);
+    if (expenses !== null && expenses <= max) {
+      const per = expenses / interests;
+      out.expense_per_interest = money(per, true);
+      out.proceeds_per_interest = money(price - per);
+      out.offering_proceeds = money(max - expenses);
+    }
+  }
+  return out;
+}
+
+/** Stored values over the master's defaults: what a document actually holds. */
+export function withDefaults(fields: TemplateField[], stored: Record<string, string>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const f of fields) if (f.default_value) out[f.token] = f.default_value;
+  for (const [k, v] of Object.entries(stored)) if (v !== undefined && v !== "") out[k] = v;
   return out;
 }
 
@@ -65,7 +103,7 @@ export function resolveValues(
   entity: IssuingEntity | null,
 ): Record<string, string> {
   const out: Record<string, string> = {};
-  const derived = deriveValues(stored);
+  const derived = deriveValues(withDefaults(fields, stored));
   for (const f of fields) {
     if (f.type === "derived") {
       if (derived[f.token]) out[f.token] = derived[f.token];
@@ -89,7 +127,7 @@ export function openFields(
 ): OpenField[] {
   const open: OpenField[] = [];
   if (needsEntity && !entity) open.push({ token: "issuing_entity", label: "Issuing entity" });
-  const derived = deriveValues(stored);
+  const derived = deriveValues(withDefaults(fields, stored));
   for (const f of fields) {
     if (!f.required) continue;
     const v = (f.type === "derived" ? derived[f.token] ?? "" : stored[f.token] ?? f.default_value ?? "").trim();

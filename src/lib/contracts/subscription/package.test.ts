@@ -7,19 +7,27 @@ describe("which documents a subscriber gets", () => {
   it("U.S. entity: entity pages, W-9, entity verification letter, no spouse page", () => {
     expect(keysOf({ type: "entity", usPerson: true, spouseSigns: false })).toEqual([
       "sub_cover_index",
+      "sub_instructions",
       "sub_sig_subscription_entity",
       "sub_sig_llc_entity",
       "pdf:w9",
+      "pdf:w8bene",
+      "missing:IRS Form W-8BEN",
       "sub_form_ai_entity",
       "sub_ppm",
       "sub_agreement",
-      "sub_instructions",
     ]);
   });
 
-  it("non-U.S. entity gets the W-8BEN-E", () => {
-    expect(keysOf({ type: "entity", usPerson: false, spouseSigns: false })).toContain("pdf:w8bene");
-    expect(keysOf({ type: "entity", usPerson: false, spouseSigns: false })).not.toContain("pdf:w9");
+  const applies = (p: SubscriberProfile) =>
+    packageItems(p).flatMap((i) => (i.source === "template" ? [] : i.applies ? [i.source === "pdf" ? i.formKey : "w8ben"] : []));
+
+  it("the Forms part always lists all three IRS forms and marks the one that applies", () => {
+    for (const type of ["entity", "individual"] as const)
+      expect(keysOf({ type, usPerson: true, spouseSigns: false })).toEqual(expect.arrayContaining(["pdf:w9", "pdf:w8bene", "missing:IRS Form W-8BEN"]));
+    expect(applies({ type: "entity", usPerson: true, spouseSigns: false })).toEqual(["w9"]);
+    expect(applies({ type: "entity", usPerson: false, spouseSigns: false })).toEqual(["w8bene"]);
+    expect(applies({ type: "individual", usPerson: false, spouseSigns: false })).toEqual(["w8ben"]);
   });
 
   it("individual: individual pages and individual verification letter", () => {
@@ -54,7 +62,7 @@ describe("which documents a subscriber gets", () => {
   });
 
   it("parts come out in package order", () => {
-    const order = ["cover_index", "signature_pages", "forms", "ppm", "agreement", "instructions"];
+    const order = ["cover_index", "instructions", "signature_pages", "forms", "ppm", "agreement"];
     const parts = packageItems({ type: "individual", usPerson: true, spouseSigns: true }).map((i) => order.indexOf(i.part));
     expect([...parts].sort((a, b) => a - b)).toEqual(parts);
   });

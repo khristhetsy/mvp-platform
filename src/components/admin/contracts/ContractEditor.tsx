@@ -7,10 +7,11 @@
 // true render (iCapOS renderer, see render-pdf.ts) is one click away in the preview tab.
 
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { deriveValues, groupCurrencyInput, INTEREST_PRICE, linkedValue, openFields, plainCurrency } from "@/lib/contracts/fields";
+import { deriveValues, groupCurrencyInput, INTEREST_PRICE, linkedValue, openFields, plainCurrency, withDefaults } from "@/lib/contracts/fields";
 import type { CSSProperties, KeyboardEvent } from "react";
 import type { BodyEdits, IssuingEntity, Segment, TemplateField } from "@/lib/contracts/types";
 import type { ModelBlock, ModelParagraph, ModelSegment } from "@/lib/contracts/docx-engine";
+import type { ParaHint } from "@/lib/contracts/types";
 import { api, BLUE, btn, MUTED, NAVY, Notice } from "./ui";
 
 export type EditorData = {
@@ -66,6 +67,7 @@ function parseParagraph(el: HTMLElement): Segment[] {
       if (!(child instanceof HTMLElement)) return;
       const tok = child.dataset.token;
       if (tok) return push(`{{${tok}}}`, f);
+      if (child.dataset.tab !== undefined) return push("\t", f);
       if (child.tagName === "BR") return push("\n", f);
       const st = child.style;
       const next = {
@@ -91,17 +93,30 @@ function chipHtml(token: string, info: ChipInfo | undefined): string {
   return `<span contenteditable="false" data-token="${esc(token)}" class="${cls}" title="${esc(info?.label ?? token)}">${esc(text)}</span>`;
 }
 
-function segmentsHtml(segs: ModelSegment[], chips: Record<string, ChipInfo>): string {
+/** A tab as it reads in Word: an underlined one is a blank to fill in; one with a dotted leader is a row of dots. */
+function tabHtml(underlined: boolean, leader: boolean): string {
+  const cls = underlined ? "ctr-blank" : leader ? "ctr-leader" : "ctr-tab";
+  return `<span contenteditable="false" data-tab class="${cls}">\t</span>`;
+}
+
+function textHtml(text: string, underlined: boolean, leader: boolean): string {
+  return text
+    .split("\t")
+    .map((part) => esc(part).replace(/\n/g, "<br>"))
+    .join(tabHtml(underlined, leader));
+}
+
+function segmentsHtml(segs: ModelSegment[], chips: Record<string, ChipInfo>, leader = false): string {
   return segs
     .map((s) => {
       let html = "";
       let last = 0;
       for (const m of s.text.matchAll(TOKEN_RE)) {
-        html += esc(s.text.slice(last, m.index)).replace(/\n/g, "<br>");
+        html += textHtml(s.text.slice(last, m.index), Boolean(s.u), leader);
         html += chipHtml(m[1], chips[m[1]]);
         last = (m.index ?? 0) + m[0].length;
       }
-      html += esc(s.text.slice(last)).replace(/\n/g, "<br>");
+      html += textHtml(s.text.slice(last), Boolean(s.u), leader);
       if (s.hl) html = `<span class="ctr-hl">${html}</span>`;
       if (s.i) html = `<i>${html}</i>`;
       if (s.b) html = `<b>${html}</b>`;
@@ -121,7 +136,7 @@ function Paragraph({
   onChip,
   onEnter,
 }: {
-  p: ModelParagraph | { id: string; style: null; numbered: boolean; align: null; locked: false };
+  p: ModelParagraph | { id: string; style: null; numbered: boolean; align: null; locked: false; hint?: ParaHint };
   segments: ModelSegment[];
   chips: Record<string, ChipInfo>;
   readOnly: boolean;
@@ -132,7 +147,11 @@ function Paragraph({
   onEnter: (id: string) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const html = useMemo(() => segmentsHtml(segments, chips), [segments, chips]);
+  const hint = p.hint;
+  // A contents row (text, dotted leader, page number) is laid out as a row and is not typed into:
+  // its page numbers are brought up to date when the Memorandum is rendered.
+  const tocRow = Boolean(hint?.tabs.some((t) => t.type === "right" && t.leader === "dot")) && /\t\s*\d+\s*$/.test(segments.map((x) => x.text).join(""));
+  const html = useMemo(() => segmentsHtml(segments, chips, Boolean(hint?.tabs.some((t) => t.leader === "dot"))), [segments, chips, hint]);
   const focused = useRef(false);
 
   useLayoutEffect(() => {
@@ -152,15 +171,19 @@ function Paragraph({
   }, [html, chips]);
 
   const heading = /heading|title/i.test(p.style ?? "");
-  const editable = !readOnly && !p.locked;
+  const editable = !readOnly && !p.locked && !tocRow;
+  const align = hint?.align ?? p.align ?? "left";
+  const hang = hint && hint.firstLine < 0 ? -hint.firstLine : 0;
+  const label = hint?.label ?? (p.numbered ? "•" : null);
+  const boxLabel = label === "\u2610";
   return (
     <div style={{ position: "relative", display: "flex", gap: 6 }}>
-      <span aria-hidden="true" style={{ width: 10, flexShrink: 0, color: "#b8bfcc", fontSize: 10, paddingTop: 4 }} title={p.numbered ? "List item (numbering from the master)" : undefined}>
-        {p.numbered ? "•" : edited ? "✎" : ""}
+      <span aria-hidden="true" style={{ minWidth: 10, flexShrink: 0, color: boxLabel ? NAVY : "#b8bfcc", fontSize: boxLabel ? 14 : 10, paddingTop: boxLabel ? 0 : 4 }} title={p.numbered ? "List item (numbering from the master)" : undefined}>
+        {boxLabel ? "\u2610" : p.numbered ? "•" : edited ? "✎" : ""}
       </span>
       <div
         ref={ref}
-        className="ctr-para"
+        className={tocRow ? "ctr-para ctr-toc" : "ctr-para"}
         contentEditable={editable}
         suppressContentEditableWarning
         data-pid={p.id}
@@ -187,8 +210,16 @@ function Paragraph({
           minHeight: 18,
           outline: "none",
           whiteSpace: "pre-wrap",
-          textAlign: (p.align === "center" ? "center" : p.align === "right" ? "right" : p.align === "both" ? "justify" : "left") as "left",
-          fontWeight: heading ? 700 : undefined,
+          textAlign: (align === "center" ? "center" : align === "right" ? "right" : align === "both" ? "justify" : "left") as "left",
+          fontWeight: heading || hint?.bold ? 700 : undefined,
+          textDecoration: hint?.underline ? "underline" : undefined,
+          fontSize: hint && hint.size > 11.5 ? `${Math.min(hint.size / 11, 2.2).toFixed(2)}em` : undefined,
+          // Indents as Word has them; a hanging indent puts the first line back by the hang, and a tab
+          // from there lands on the indent (that is how the label column of the key terms is built).
+          paddingLeft: hint && hint.left > 0 ? `min(${(hint.left * 1.333).toFixed(0)}px, 45%)` : undefined,
+          textIndent: hang ? `-${(hang * 1.333).toFixed(0)}px` : hint && hint.firstLine > 0 ? `${(hint.firstLine * 1.333).toFixed(0)}px` : undefined,
+          tabSize: hang ? Math.round(hang * 1.333) : hint?.tabs[0] && hint.tabs[0].type === "left" ? Math.round(hint.tabs[0].pos * 1.333) : 48,
+          display: tocRow ? "flex" : undefined,
           color: p.locked ? "#8a93a6" : undefined,
           borderRadius: 4,
           padding: "1px 4px",
@@ -252,7 +283,7 @@ export const ContractEditor = forwardRef<
   useEffect(() => onOpenChange?.(open.length), [open.length, onOpenChange]);
 
   // Calculated fields (Interests = subscription amount ÷ price per Interest) are shown, never typed.
-  const derived = useMemo(() => deriveValues(eff), [eff]);
+  const derived = useMemo(() => deriveValues(withDefaults(data.fields, eff)), [data.fields, eff]);
 
   const chips = useMemo(() => {
     const out: Record<string, ChipInfo> = {};
@@ -442,6 +473,10 @@ export const ContractEditor = forwardRef<
         .ctr-chip-opt{background:#f6f8fc;border:1px dashed #b9cbe6;color:#5a6b87}
         .ctr-chip-set{background:#e8f0fe;border:1px solid #c8d6ea;color:#185FA5}
         .ctr-hl{background:#fffbe0}
+        .ctr-blank{display:inline-block;min-width:7em;border-bottom:1px solid #0A1A40;white-space:pre}
+        .ctr-tab{white-space:pre}
+        .ctr-leader{display:inline-block;min-width:4em;border-bottom:1.5px dotted #5a6b87;white-space:pre;margin:0 3px}
+        .ctr-toc .ctr-leader{flex:1;min-width:1em;height:.75em;margin:0 4px}
         .ctr-para:focus{box-shadow:0 0 0 1px #c8d6ea}
       `}</style>
 
@@ -687,7 +722,7 @@ function FieldInput({
       </span>
       {field.type === "derived" ? (
         <span style={{ display: "block", fontSize: 11, color: MUTED, marginTop: 3 }}>
-          {value ? "Calculated from the subscription amount." : `Calculated once the subscription amount is a multiple of $${INTEREST_PRICE.toLocaleString("en-US")}.`}
+          {value ? "Calculated from the other fields." : field.token === "interests_count" ? `Calculated once the subscription amount is a multiple of $${INTEREST_PRICE.toLocaleString("en-US")}.` : "Calculated once the offering figures above are filled."}
         </span>
       ) : null}
     </label>

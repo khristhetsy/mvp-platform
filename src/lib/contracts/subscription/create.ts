@@ -88,7 +88,7 @@ export async function createPackageDocuments(db: Db, input: { contactId: string;
       }
       documents.push({ id, templateId: null, name: item.title, part: item.part, partLabel: PART_LABEL[item.part], kind: "form" });
     } else {
-      notes.push(`${item.title}: ${item.note}`);
+      if (item.applies) notes.push(`${item.title}: ${item.note}`);
     }
   }
   return { documents, notes };

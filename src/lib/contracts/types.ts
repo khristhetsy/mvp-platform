@@ -95,6 +95,20 @@ export type ContractStatus =
   | "shared";
 
 export type Segment = { text: string; b?: boolean; i?: boolean };
+/** How Word lays a paragraph out; the editor mirrors it. Lengths in points. */
+export type ParaHint = {
+  align: "left" | "center" | "right" | "both";
+  left: number;
+  right: number;
+  /** Negative = hanging. */
+  firstLine: number;
+  tabs: { pos: number; type: "left" | "right" | "center" | "decimal"; leader: "dot" | "hyphen" | "underscore" | null }[];
+  /** List label (a bullet or a check box), if the paragraph is a list item. */
+  label: string | null;
+  size: number;
+  bold: boolean;
+  underline: boolean;
+};
 /** Paragraph id → new segments, or null to delete the paragraph. */
 export type ParagraphEdits = Record<string, Segment[] | null>;
 export type InsertedParagraph = { id: string; after: string; segments: Segment[] };

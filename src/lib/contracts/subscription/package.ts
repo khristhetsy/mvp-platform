@@ -10,15 +10,15 @@
 
 export const SUBSCRIPTION_PACKAGE_KEY = "subscription";
 
-export type PartKey = "cover_index" | "signature_pages" | "forms" | "ppm" | "agreement" | "instructions";
+export type PartKey = "cover_index" | "instructions" | "signature_pages" | "forms" | "ppm" | "agreement";
 
 export const PARTS: { key: PartKey; no: number; label: string; blurb: string }[] = [
   { key: "cover_index", no: 1, label: "Cover and Index", blurb: "Dated cover page and the index of the package." },
-  { key: "signature_pages", no: 2, label: "Signature Pages", blurb: "Subscription Agreement, LLC Agreement and, where required, the Agreement of Spouse." },
-  { key: "forms", no: 3, label: "Forms", blurb: "The IRS form and the Accredited Investor Verification Letter that apply to the subscriber." },
-  { key: "ppm", no: 4, label: "Private Placement Memorandum", blurb: "The Memorandum with Exhibits A to E." },
-  { key: "agreement", no: 5, label: "Subscription Agreement", blurb: "The Agreement with Attachments A to F." },
-  { key: "instructions", no: 6, label: "Subscription Instructions", blurb: "How to subscribe and fund, after the Manager accepts." },
+  { key: "instructions", no: 2, label: "Subscription Instructions", blurb: "How to subscribe and fund, after the Manager accepts." },
+  { key: "signature_pages", no: 3, label: "Signature Pages", blurb: "Subscription Agreement, LLC Agreement and, where required, the Agreement of Spouse." },
+  { key: "forms", no: 4, label: "Forms", blurb: "IRS Forms W-9, W-8BEN-E and W-8BEN, and the Accredited Investor Verification Letter. The one that applies to the subscriber is marked." },
+  { key: "ppm", no: 5, label: "Private Placement Memorandum", blurb: "The Memorandum with Exhibits A to E." },
+  { key: "agreement", no: 6, label: "Subscription Agreement", blurb: "The Agreement with Attachments A to F." },
 ];
 
 export const PART_LABEL: Record<PartKey, string> = Object.fromEntries(PARTS.map((p) => [p.key, p.label])) as Record<PartKey, string>;
@@ -41,31 +41,41 @@ export const FORM_TITLE: Record<FormKey | "w8ben", string> = {
 
 export type PackageItem =
   | { source: "template"; part: PartKey; templateKey: string }
-  | { source: "pdf"; part: "forms"; formKey: FormKey; title: string }
+  | { source: "pdf"; part: "forms"; formKey: FormKey; title: string; applies: boolean }
   /** A form the package should carry but the source file does not include. */
-  | { source: "missing"; part: "forms"; title: string; note: string };
+  | { source: "missing"; part: "forms"; title: string; note: string; applies: boolean };
 
-/** Documents for a subscriber, in package order. */
+/**
+ * Documents for a subscriber, in package order. The Forms part always lists the three
+ * IRS forms; `applies` marks the one the Subscription Instructions require of this subscriber.
+ */
 export function packageItems(p: SubscriberProfile): PackageItem[] {
   const individual = p.type === "individual";
   const items: PackageItem[] = [];
   items.push({ source: "template", part: "cover_index", templateKey: "sub_cover_index" });
+  items.push({ source: "template", part: "instructions", templateKey: "sub_instructions" });
   items.push({ source: "template", part: "signature_pages", templateKey: individual ? "sub_sig_subscription_individual" : "sub_sig_subscription_entity" });
   if (p.spouseSigns && individual) items.push({ source: "template", part: "signature_pages", templateKey: "sub_sig_spouse" });
   items.push({ source: "template", part: "signature_pages", templateKey: individual ? "sub_sig_llc_individual" : "sub_sig_llc_entity" });
-  if (p.usPerson) items.push({ source: "pdf", part: "forms", formKey: "w9", title: FORM_TITLE.w9 });
-  else if (!individual) items.push({ source: "pdf", part: "forms", formKey: "w8bene", title: FORM_TITLE.w8bene });
-  else items.push({ source: "missing", part: "forms", title: FORM_TITLE.w8ben, note: "The source package has no W-8BEN. Upload it as a contract PDF and send it with this package." });
+  items.push({ source: "pdf", part: "forms", formKey: "w9", title: FORM_TITLE.w9, applies: p.usPerson });
+  items.push({ source: "pdf", part: "forms", formKey: "w8bene", title: FORM_TITLE.w8bene, applies: !p.usPerson && !individual });
+  items.push({
+    source: "missing",
+    part: "forms",
+    title: FORM_TITLE.w8ben,
+    note: "The source package has no W-8BEN. Upload the official IRS PDF as a contract PDF and send it with this package.",
+    applies: !p.usPerson && individual,
+  });
   items.push({ source: "template", part: "forms", templateKey: individual ? "sub_form_ai_individual" : "sub_form_ai_entity" });
   items.push({ source: "template", part: "ppm", templateKey: "sub_ppm" });
   items.push({ source: "template", part: "agreement", templateKey: "sub_agreement" });
-  items.push({ source: "template", part: "instructions", templateKey: "sub_instructions" });
   return items;
 }
 
 /** Every template key any profile can use, in package order. */
 export const SUBSCRIPTION_TEMPLATE_KEYS = [
   "sub_cover_index",
+  "sub_instructions",
   "sub_sig_subscription_entity",
   "sub_sig_subscription_individual",
   "sub_sig_spouse",
@@ -75,7 +85,6 @@ export const SUBSCRIPTION_TEMPLATE_KEYS = [
   "sub_form_ai_individual",
   "sub_ppm",
   "sub_agreement",
-  "sub_instructions",
 ] as const;
 
 /** Why a spouse page does or does not apply, in words for the profile card. */
@@ -144,6 +153,6 @@ export function leftoverPlaceholders(text: string): string[] {
  */
 export const TEMPLATE_NOTES: Record<string, string> = {
   sub_ppm:
-    "Exhibit A (the issuer's Information Statement) and Exhibit E (the Fund's Certificate of Formation) are blank in this master, marked (INFO HERE): write or paste them in with the editor. Exhibit B's financial statements show 000,000.00 placeholders to replace. One sentence in the Portfolio Company Securities section still gives the valuation cap as ($30) million. None of this can be sent while a blank remains.",
+    "Exhibit A and Exhibit E hold only their heading page in this master: write or paste the issuer's Information Statement and the Fund's Certificate of Formation in with the editor, or confirm them supplied in the next step. Exhibit B's financial statements show 000,000.00 placeholders to replace. One sentence in the Portfolio Company Securities section still gives the valuation cap as ($30) million. The Table of Contents page numbers are refreshed when the Memorandum is sent.",
   sub_instructions: "The Fund EIN in this master belongs to the previous Fund. Enter this Fund's EIN and its bank details.",
 };

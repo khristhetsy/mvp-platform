@@ -13,6 +13,7 @@
 
 import PDFDocument from "pdfkit";
 import { FONT_DATA } from "./fonts-data";
+import { CHECK_BOX } from "./model";
 import type { Block, Cell, DocModel, Family, Inline, Para, ParaProps, RunStyle, Section, Table } from "./model";
 
 // ── Fonts ──────────────────────────────────────────────────────────────────
@@ -43,6 +44,7 @@ class Measurer {
   constructor(private doc: Doc) {}
   width(text: string, s: RunStyle): number {
     if (!text) return 0;
+    if (text === CHECK_BOX) return effSize(s) * 0.85; // drawn as a square, not a glyph
     const key = `${fontKey(s)}|${effSize(s)}|${text}`;
     let w = this.cache.get(key);
     if (w === undefined) {
@@ -61,7 +63,7 @@ const glyphs = (t: string) => t.replace(/\u2011/g, "-");
 
 // ── Line layout ────────────────────────────────────────────────────────────
 type Piece =
-  | { kind: "text"; text: string; style: RunStyle; x: number; w: number; space: boolean }
+  | { kind: "text"; text: string; style: RunStyle; x: number; w: number; space: boolean; leader?: "dot" | "hyphen" | "underscore" }
   | { kind: "image"; data: Uint8Array; w: number; h: number; x: number; style: RunStyle }
   | { kind: "field"; field: "PAGE" | "NUMPAGES"; style: RunStyle; x: number; w: number };
 type Line = { pieces: Piece[]; asc: number; desc: number; gap: number; height: number; pageAfter: boolean };
@@ -182,7 +184,7 @@ function layoutParagraph(p: Para, width: number, m: Measurer, defaultTab: number
     pendingSpaces = [];
   };
 
-  const nextTab = (pos: number): { pos: number; type: "left" | "right" | "center" | "decimal" } => {
+  const nextTab = (pos: number): { pos: number; type: "left" | "right" | "center" | "decimal"; leader?: "dot" | "hyphen" | "underscore" } => {
     const explicit = props.tabs.find((t) => t.pos > pos + 0.01);
     // The hanging indent is an implicit tab stop for the first line.
     if (first && props.firstLine < 0 && props.left > pos + 0.01 && (!explicit || props.left < explicit.pos)) return { pos: props.left, type: "left" };
@@ -224,7 +226,7 @@ function layoutParagraph(p: Para, width: number, m: Measurer, defaultTab: number
         finish(true);
         continue;
       }
-      line.pieces.push({ kind: "text", text: "", style: a.style, x, w: target - x, space: false });
+      line.pieces.push({ kind: "text", text: "", style: a.style, x, w: target - x, space: false, ...(stop.leader ? { leader: stop.leader } : {}) });
       x = target;
       tabIdx.push(line.pieces.length);
       lastTabIndex = line.pieces.length;
@@ -596,6 +598,26 @@ function drawLine(doc: Doc, op: Op, pageNo: number, pageCount: number) {
     const s = pc.style;
     const text = pc.kind === "field" ? String(pc.field === "PAGE" ? pageNo : pageCount) : pc.text;
     const rise = s.vert === "super" ? s.size * 0.33 : s.vert === "sub" ? -s.size * 0.14 : 0;
+    if (pc.kind === "text" && text === CHECK_BOX) {
+      // An empty check box, drawn as a square sitting on the baseline.
+      const side = effSize(s) * 0.7;
+      doc.save().lineWidth(0.7).strokeColor(`#${s.color}`).rect(x0 + pc.x + effSize(s) * 0.05, baseline - side, side, side).stroke().restore();
+      continue;
+    }
+    if (pc.kind === "text" && !text && pc.w > 0) {
+      // A tab: underlined (a blank to fill in) or with a leader (dots to a page number).
+      const y = baseline + s.size * 0.12;
+      const thick = Math.max(0.5, s.size / 20);
+      if (s.underline && !pc.leader) {
+        doc.save().lineWidth(thick).strokeColor(`#${s.color}`).moveTo(x0 + pc.x, y).lineTo(x0 + pc.x + pc.w, y).stroke().restore();
+      } else if (pc.leader === "underscore") {
+        doc.save().lineWidth(thick).strokeColor(`#${s.color}`).moveTo(x0 + pc.x, y).lineTo(x0 + pc.x + pc.w, y).stroke().restore();
+      } else if (pc.leader === "dot" || pc.leader === "hyphen") {
+        const dot = pc.leader === "dot";
+        doc.save().lineWidth(dot ? 0.8 : thick).lineCap(dot ? "round" : "butt").strokeColor(`#${s.color}`).dash(dot ? 0.01 : 2.5, { space: dot ? 2.6 : 2 }).moveTo(x0 + pc.x + 1, baseline - s.size * 0.05).lineTo(x0 + pc.x + pc.w - 1, baseline - s.size * 0.05).stroke().undash().restore();
+      }
+      continue;
+    }
     if (text && !(pc.kind === "text" && pc.space)) {
       doc.font(fontKey(s)).fontSize(effSize(s)).fillColor(`#${s.color}`);
       doc.text(glyphs(text), x0 + pc.x, baseline - rise, { lineBreak: false, baseline: "alphabetic", characterSpacing: s.charSpacing || undefined });

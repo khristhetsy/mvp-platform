@@ -2,6 +2,7 @@
 // properties (styles, direct formatting, numbering), plus the section's page
 // setup, headers and footers. Server only; pure apart from unzipping.
 
+import type { ParaHint } from "../types";
 import JSZip from "jszip";
 import { DOMParser } from "@xmldom/xmldom";
 
@@ -32,7 +33,7 @@ export type Inline =
   | { kind: "page" }
   | { kind: "image"; data: Uint8Array; w: number; h: number; style: RunStyle }
   | { kind: "field"; field: "PAGE" | "NUMPAGES"; style: RunStyle };
-export type Tab = { pos: number; type: "left" | "right" | "center" | "decimal" };
+export type Tab = { pos: number; type: "left" | "right" | "center" | "decimal"; leader?: "dot" | "hyphen" | "underscore" };
 export type ParaProps = {
   align: "left" | "center" | "right" | "both";
   left: number;
@@ -205,7 +206,9 @@ function applyPPr(base: ParaProps, pPr: El | null): ParaProps {
       const val = attr(t, "w:val") ?? "left";
       p.tabs = p.tabs.filter((x) => Math.abs(x.pos - pos / TW) > 0.01);
       if (val === "clear") continue;
-      p.tabs.push({ pos: pos / TW, type: val === "right" || val === "end" ? "right" : val === "center" ? "center" : val === "decimal" ? "decimal" : "left" });
+      const ld = attr(t, "w:leader");
+      const leader = ld === "dot" || ld === "middleDot" ? "dot" : ld === "hyphen" ? "hyphen" : ld === "underscore" || ld === "heavy" ? "underscore" : undefined;
+      p.tabs.push({ pos: pos / TW, type: val === "right" || val === "end" ? "right" : val === "center" ? "center" : val === "decimal" ? "decimal" : "left", ...(leader ? { leader } : {}) });
     }
     p.tabs.sort((a, b) => a.pos - b.pos);
   }
@@ -253,6 +256,15 @@ class Styles {
 }
 
 // ── Numbering ──────────────────────────────────────────────────────────────
+/** An empty check box (Word "☐", or the box in Wingdings 2), which the PDF draws as a square. Any other bullet is a dot. */
+export const CHECK_BOX = "\u2610";
+function bulletGlyph(level: { text: string; rPr: El | null }): string {
+  const font = attr(kid(level.rPr, "w:rFonts"), "w:ascii") ?? "";
+  const ch = level.text.codePointAt(0) ?? 0;
+  if (ch === 0x2610 || (ch === 0xf0a3 && /wingdings 2/i.test(font)) || (ch === 0xf071 && /wingdings/i.test(font))) return CHECK_BOX;
+  return "•";
+}
+
 type Level = { start: number; fmt: string; text: string; suff: "tab" | "space" | "nothing"; pPr: El | null; rPr: El | null };
 class Numbering {
   abstracts = new Map<string, Level[]>();
@@ -308,7 +320,7 @@ class Numbering {
       const lv = Number(d) - 1;
       return formatNum(c![lv] ?? 1, levels[lv]?.fmt ?? "decimal");
     });
-    return { level, label: level.fmt === "bullet" ? "•" : level.fmt === "none" ? "" : label };
+    return { level, label: level.fmt === "bullet" ? bulletGlyph(level) : level.fmt === "none" ? "" : label };
   }
 }
 function roman(n: number): string {
@@ -334,6 +346,9 @@ function formatNum(n: number, fmt: string): string {
 
 // ── Reader ─────────────────────────────────────────────────────────────────
 class Reader {
+  /** Called for every paragraph read, with its numbering label if it has one. */
+  paraHook: ((p: El, para: Para, label: string | null) => void) | null = null;
+
   constructor(
     private styles: Styles,
     private numbering: Numbering,
@@ -388,12 +403,14 @@ class Reader {
     const inlines: Inline[] = [];
     // Numbering: level indent sits between the style and direct formatting.
     const numPr = st.numPr;
+    let label: string | null = null;
     if (numPr) {
       const numId = attr(kid(numPr, "w:numId"), "w:val");
       const ilvl = Number(attr(kid(numPr, "w:ilvl"), "w:val") ?? 0);
       const n = numId && numId !== "0" ? this.numbering.next(numId, ilvl) : null;
       if (n) {
         props = applyPPr(props, n.level.pPr);
+        label = n.label || null;
         if (n.label) {
           const labelStyle = applyRPr(this.runStyle(st.run, kid(pPr, "w:rPr")), n.level.rPr, this.ctx);
           inlines.push({ kind: "text", text: n.label, style: { ...labelStyle, underline: false, highlight: null } });
@@ -405,7 +422,9 @@ class Reader {
     props = applyPPr(props, pPr);
     const mark = this.runStyle(st.run, kid(pPr, "w:rPr"));
     this.inlines(p, st.run, inlines, { inField: null });
-    return { kind: "p", props, inlines, mark };
+    const para: Para = { kind: "p", props, inlines, mark };
+    this.paraHook?.(p, para, label);
+    return para;
   }
 
   private inlines(n: El, base: RunStyle, out: Inline[], state: { inField: null | { code: string; result: boolean; style: RunStyle } }) {
@@ -462,7 +481,7 @@ class Reader {
         if (!state.inField.result || code === "PAGE" || code === "NUMPAGES") continue;
       }
       if (style.hidden) continue;
-      if (name === "w:t") out.push({ kind: "text", text: c.textContent ?? "", style });
+      if (name === "w:t") out.push({ kind: "text", text: (c.textContent ?? "").replace(/[\uf0a3\uf071]/g, CHECK_BOX), style });
       else if (name === "w:tab") out.push({ kind: "tab", style });
       else if (name === "w:br") out.push(attr(c, "w:type") === "page" ? { kind: "page" } : { kind: "br", style });
       else if (name === "w:cr") out.push({ kind: "br", style });
@@ -632,4 +651,58 @@ export async function readDocx(docx: Uint8Array | Buffer): Promise<DocModel> {
     }
   }
   return { section, body: blocks };
+}
+
+/**
+ * How Word lays out each paragraph (alignment, indents, tab stops with leaders, list label,
+ * dominant size, weight and underline), keyed by the editor's paragraph id (w:p order in the body).
+ * The editor uses it to look like the document instead of a flat list of lines.
+ */
+export async function paragraphHints(docx: Uint8Array | Buffer): Promise<Record<string, ParaHint>> {
+  const zip = await JSZip.loadAsync(docx);
+  const text = async (p: string) => (await zip.file(p)?.async("string")) ?? null;
+  const stylesXml = await text("word/styles.xml");
+  const numberingXml = await text("word/numbering.xml");
+  const themeXml = await text("word/theme/theme1.xml");
+  const ctx: Ctx = {
+    theme: {
+      minor: themeXml ? /<a:minorFont>\s*<a:latin typeface="([^"]*)"/.exec(themeXml)?.[1] ?? null : null,
+      major: themeXml ? /<a:majorFont>\s*<a:latin typeface="([^"]*)"/.exec(themeXml)?.[1] ?? null : null,
+    },
+  };
+  const doc = parse((await text("word/document.xml")) ?? "");
+  const body = kid(doc.documentElement, "w:body");
+  if (!body) return {};
+  const found = new Map<El, ParaHint>();
+  const reader = new Reader(new Styles(stylesXml ? parse(stylesXml) : null), new Numbering(numberingXml ? parse(numberingXml) : null), ctx, new Map());
+  reader.paraHook = (el, para, label) => {
+    let chars = 0, bold = 0, under = 0, size = 0;
+    for (const i of para.inlines) {
+      if (i.kind !== "text" || !i.text.trim()) continue;
+      const n = i.text.length;
+      chars += n;
+      if (i.style.bold) bold += n;
+      if (i.style.underline) under += n;
+      size += i.style.size * n;
+    }
+    found.set(el, {
+      align: para.props.align,
+      left: para.props.left,
+      right: para.props.right,
+      firstLine: para.props.firstLine,
+      tabs: para.props.tabs.map((t) => ({ pos: t.pos, type: t.type, leader: t.leader ?? null })),
+      label,
+      size: chars ? size / chars : para.mark.size,
+      bold: chars > 0 && bold / chars > 0.5,
+      underline: chars > 0 && under / chars > 0.5,
+    });
+  };
+  reader.blocks(body);
+  const out: Record<string, ParaHint> = {};
+  const all = body.getElementsByTagName("w:p");
+  for (let i = 0; i < all.length; i++) {
+    const h = found.get(all[i] as El);
+    if (h) out[String(i)] = h;
+  }
+  return out;
 }

@@ -91,6 +91,8 @@ export function SendFlowClient({ contact, isAdmin, senderName, gmail, autoResume
   const [docSet, setDocSet] = useState<"contracts" | "subscription">("contracts");
   const [profile, setProfile] = useState<SubscriberProfile>(DEFAULT_PROFILE);
   const [packageNotes, setPackageNotes] = useState<string[]>([]);
+  // Exhibits A and E of the Memorandum hold only their heading in the master; the sender confirms they were supplied.
+  const [exhibitsSupplied, setExhibitsSupplied] = useState(false);
 
   const applyTemplates = useCallback((r: Awaited<ReturnType<typeof fetchTemplates>>) => {
     if (!r.ok) return setError(r.data.error ?? "Could not load templates.");
@@ -416,7 +418,9 @@ export function SendFlowClient({ contact, isAdmin, senderName, gmail, autoResume
   const onOpenChange = useCallback((n: number) => setOpenCounts((m) => (active ? { ...m, [active]: n } : m)), [active]);
   const totalOpen = docs.reduce((a, d) => a + (openCounts[d.id] ?? 0), 0);
   const unopened = docs.filter((d) => !reviewed.has(d.id)).length;
-  const blocked = totalOpen > 0 || unopened > 0;
+  const hasMemorandum = docs.some((d) => templates?.find((t) => t.id === d.templateId)?.key === "sub_ppm");
+  const exhibitsMissing = hasMemorandum && !exhibitsSupplied;
+  const blocked = totalOpen > 0 || unopened > 0 || exhibitsMissing;
   const tabStatus = (id: string) => {
     const n = openCounts[id] ?? 0;
     if (!reviewed.has(id)) return { short: "not opened", long: "open this tab to review", warn: true };
@@ -697,6 +701,12 @@ export function SendFlowClient({ contact, isAdmin, senderName, gmail, autoResume
               <span style={{ fontSize: 12, color: blocked ? "#8a6500" : "#1a7f43" }}>
                 {docs.map((d) => `${d.name}: ${tabStatus(d.id).long}`).join(" · ")}
               </span>
+              {hasMemorandum ? (
+                <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 12, color: NAVY }}>
+                  <input type="checkbox" checked={exhibitsSupplied} onChange={(e) => setExhibitsSupplied(e.target.checked)} />
+                  Exhibit A and Exhibit E supplied
+                </label>
+              ) : null}
               <button type="button" disabled={busy || blocked} onClick={() => void toEmail()} style={{ ...btn(true), background: blocked ? "#c9d4e5" : BLUE }}>Next: choose email</button>
             </div>
           </Card>
@@ -724,6 +734,7 @@ export function SendFlowClient({ contact, isAdmin, senderName, gmail, autoResume
             setEmail(null);
             setSavedAt(null);
             setDocs([]);
+            setExhibitsSupplied(false);
             setEditorData({});
             setTermSheet(null);
             setExtras(new Set());

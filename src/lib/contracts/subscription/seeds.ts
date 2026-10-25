@@ -78,6 +78,25 @@ export const SUBSCRIPTION_SEEDS: SubscriptionSeed[] = [
     fields: [SPV_BOTH, ISSUER, DATE],
   },
   {
+    key: "sub_instructions",
+    name: "Subscription Instructions",
+    part: "instructions",
+    filename: "Subscription Package - Subscription Instructions.docx",
+    base64: INSTRUCTIONS,
+    delivery: "review",
+    anchors: NO_SIGNATURE,
+    fields: [
+      SPV_BOTH,
+      ISSUER,
+      f("bank", "Bank", "text", ["(BANK)"]),
+      // The three (00000) blanks are claimed in document order: routing, account, reference.
+      f("ach_routing", "ACH routing number", "text", [{ find: "(00000)", nth: 0 }]),
+      f("account_number", "Account number", "text", [{ find: "(00000)", nth: 0 }]),
+      f("reference_code", "Reference code", "text", [{ find: "(00000)", nth: 0 }]),
+      f("fund_ein", "Fund EIN", "text", ["99-5021106"]),
+    ],
+  },
+  {
     key: "sub_sig_subscription_entity",
     name: "Signature Page, Subscription Agreement (entity)",
     part: "signature_pages",
@@ -167,6 +186,14 @@ export const SUBSCRIPTION_SEEDS: SubscriptionSeed[] = [
       f("conversion_discount", "Conversion discount", "percent", [{ find: "(20%)", replace: "20" }], true, "20"),
       f("valuation_cap", "Valuation cap", "currency", [{ find: "($30,000,000)", replace: "30,000,000" }, { find: "$30,000,000.", replace: "30,000,000" }]),
       f("qualified_financing", "Qualified financing minimum", "currency", [{ find: "minimum size of $5,000,000", replace: "5,000,000" }], true, "5,000,000"),
+      // The offering table. The three typed figures are the master's own; the rest of the table is calculated from them.
+      f("offering_price", "Price per Interest", "currency", ["(OFFERING PRICE)"], true, "50,000"),
+      f("offering_max", "Maximum offering", "currency", ["(OFFERING MAX)", { find: "maximum offering amount of $5,000,000", replace: "5,000,000" }], true, "5,000,000"),
+      f("offering_expenses", "Estimated offering expenses", "currency", ["(OFFERING EXPENSES)"], true, "35,100"),
+      f("offering_interests", "Number of Interests offered", "derived", [{ find: "subscription for 100 Interests in the maximum", replace: "100" }]),
+      f("expense_per_interest", "Expenses per Interest", "derived", ["(EXPENSE PER INTEREST)"]),
+      f("proceeds_per_interest", "Proceeds per Interest", "derived", ["(PROCEEDS PER INTEREST)"]),
+      f("offering_proceeds", "Aggregate proceeds", "derived", ["(OFFERING PROCEEDS)"]),
     ],
   },
   {
@@ -178,24 +205,5 @@ export const SUBSCRIPTION_SEEDS: SubscriptionSeed[] = [
     delivery: "review",
     anchors: NO_SIGNATURE,
     fields: [SPV, ISSUER, DATE],
-  },
-  {
-    key: "sub_instructions",
-    name: "Subscription Instructions",
-    part: "instructions",
-    filename: "Subscription Package - Subscription Instructions.docx",
-    base64: INSTRUCTIONS,
-    delivery: "review",
-    anchors: NO_SIGNATURE,
-    fields: [
-      SPV_BOTH,
-      ISSUER,
-      f("bank", "Bank", "text", ["(BANK)"]),
-      // The three (00000) blanks are claimed in document order: routing, account, reference.
-      f("ach_routing", "ACH routing number", "text", [{ find: "(00000)", nth: 0 }]),
-      f("account_number", "Account number", "text", [{ find: "(00000)", nth: 0 }]),
-      f("reference_code", "Reference code", "text", [{ find: "(00000)", nth: 0 }]),
-      f("fund_ein", "Fund EIN", "text", ["99-5021106"]),
-    ],
   },
 ];

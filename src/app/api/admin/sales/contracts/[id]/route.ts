@@ -4,6 +4,8 @@ import { bad, canCancelOrArchive } from "@/lib/contracts/access";
 import { getMaster, listEntities, updateDraft } from "@/lib/contracts/store";
 import { bundleOpenFields } from "@/lib/contracts/service";
 import { buildModel, loadDocx, tokenizeDoc } from "@/lib/contracts/docx-engine";
+import { paragraphHints } from "@/lib/contracts/docx-pdf/model";
+import type { ParaHint } from "@/lib/contracts/types";
 import { actorAndBundle } from "@/lib/contracts/route-helpers";
 import { renderConfigured } from "@/lib/contracts/render-pdf";
 import { writeAuditLog } from "@/lib/data/audit";
@@ -21,9 +23,19 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   // Uploaded contracts have no Word master: no editor blocks, the PDF is the document.
   let blocks: ReturnType<typeof buildModel> = [];
   if (b.doc.source !== "upload") {
-    const { doc } = await loadDocx(await getMaster(db, b.template.id));
+    const master = await getMaster(db, b.template.id);
+    const { doc } = await loadDocx(master);
     tokenizeDoc(doc, b.fields, b.template.entity_match, { strict: false });
     blocks = buildModel(doc);
+    // Layout from the master, so the editor reads like the document (a missing hint just means plain lines).
+    const hints = await paragraphHints(master).catch(() => ({}) as Record<string, ParaHint>);
+    const attach = (p: { id: string; hint?: ParaHint }) => {
+      if (hints[p.id]) p.hint = hints[p.id];
+    };
+    for (const blk of blocks) {
+      if (blk.type === "p") attach(blk.p);
+      else for (const row of blk.rows) for (const cell of row) for (const p of cell) attach(p);
+    }
   }
 
   const [entities, events, versions, request, packet] = await Promise.all([
