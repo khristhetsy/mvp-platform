@@ -620,7 +620,6 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
           )}
         </div>
         <div style={{ position: "relative" }}>
-          <button type="button" onClick={() => { setOpenColPicker((v) => !v); setOpenFilter(null); setFiltersOpen(false); }} style={{ fontSize: 12, color: "var(--foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, padding: "8px 12px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}><i className="ti ti-columns-3" style={{ fontSize: 15 }} aria-hidden="true" /> Columns</button>
           {openColPicker && (
             <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 30, width: 190, background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", padding: 8 }}>
               <div style={{ fontSize: 10.5, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".04em", padding: "2px 4px 6px" }}>Show columns</div>

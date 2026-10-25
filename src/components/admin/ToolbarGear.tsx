@@ -5,15 +5,16 @@ import Link from "next/link";
 
 /** Odoo-style ⚙ menu beside the New button: imports, exports, page-level settings. */
 export type GearItem =
-  | { key: string; icon: string; label: string; onClick: () => void; hint?: string; sep?: boolean }
-  | { key: string; icon: string; label: string; href: string; hint?: string; sep?: boolean };
+  | { key: string; icon: string; label: string; onClick: () => void; hint?: string; sep?: boolean; active?: boolean; section?: string }
+  | { key: string; icon: string; label: string; href: string; hint?: string; sep?: boolean; active?: boolean; section?: string };
 
 /**
  * `top`: an optional section rendered above the page items (Sales puts its View
  * Me / Team / Someone else section here); it gets a close callback.
  * `after`: rendered right of the gear button (Sales shows whose data is in view).
  */
-export function ToolbarGear({ items, heading, top, after }: { items: GearItem[]; heading?: string; top?: (close: () => void) => ReactNode; after?: ReactNode }) {
+/** `align="right"` opens the menu leftward from the gear, for gears at the right edge of a header. */
+export function ToolbarGear({ items, heading, top, after, align = "left" }: { items: GearItem[]; heading?: string; top?: (close: () => void) => ReactNode; after?: ReactNode; align?: "left" | "right" }) {
   const [open, setOpen] = useState(false);
   if (items.length === 0 && !top) return null;
   return (
@@ -25,22 +26,24 @@ export function ToolbarGear({ items, heading, top, after }: { items: GearItem[];
       {open && (
         <>
           <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 39 }} />
-          <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 40, width: 230, background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 10, boxShadow: "0 10px 28px rgba(0,0,0,0.14)", padding: "5px 0" }}>
+          <div style={{ position: "absolute", top: "calc(100% + 6px)", ...(align === "right" ? { right: 0 } : { left: 0 }), zIndex: 40, width: 230, background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 10, boxShadow: "0 10px 28px rgba(0,0,0,0.14)", padding: "5px 0" }}>
             {top && top(() => setOpen(false))}
             {top && items.length > 0 && <div style={{ borderTop: "0.5px solid #eef1f5", margin: "4px 0" }} />}
             {heading && items.length > 0 && <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".05em", color: "var(--muted-foreground)", padding: "6px 13px 4px" }}>{heading}</div>}
             {items.map((it) => {
               const inner = (
                 <>
-                  <i className={`ti ${it.icon}`} style={{ fontSize: 15, color: "var(--muted-foreground)" }} aria-hidden="true" />
+                  <i className={`ti ${it.icon}`} style={{ fontSize: 15, color: it.active ? "#4338CA" : "var(--muted-foreground)" }} aria-hidden="true" />
                   <span style={{ flex: 1 }}>{it.label}</span>
                   {it.hint && <span style={{ fontSize: 10, color: "var(--muted-foreground)" }}>{it.hint}</span>}
+                  {it.active && <i className="ti ti-check" style={{ fontSize: 14 }} aria-hidden="true" />}
                 </>
               );
-              const style: React.CSSProperties = { width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 9, padding: "8px 13px", background: "none", border: "none", cursor: "pointer", fontSize: 12.5, color: "var(--foreground)", textDecoration: "none" };
+              const style: React.CSSProperties = { width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 9, padding: "8px 13px", background: it.active ? "#EEF2FF" : "none", border: "none", cursor: "pointer", fontSize: 12.5, color: it.active ? "#4338CA" : "var(--foreground)", fontWeight: it.active ? 600 : 400, textDecoration: "none" };
               return (
                 <div key={it.key}>
                   {it.sep && <div style={{ borderTop: "0.5px solid #eef1f5", margin: "4px 0" }} />}
+                  {it.section && <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".05em", color: "var(--muted-foreground)", padding: "6px 13px 4px" }}>{it.section}</div>}
                   {"href" in it
                     ? <Link href={it.href} onClick={() => setOpen(false)} style={style}>{inner}</Link>
                     : <button type="button" onClick={() => { setOpen(false); it.onClick(); }} style={style}>{inner}</button>}

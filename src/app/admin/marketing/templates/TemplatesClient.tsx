@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ToolbarGear, type GearItem } from "@/components/admin/ToolbarGear";
 import { confirmDialog } from "@/components/ui/ConfirmDialog";
 import type { MarketingTemplate } from "@/lib/marketing/types";
 import { BrandedTemplateEditor } from "@/components/marketing/BrandedTemplateEditor";
@@ -155,8 +156,7 @@ export function TemplatesClient({ templates, initialEditId }: { templates: Marke
   const [sort, setSort] = useState<SortKey>("name");
   const [groupByDept, setGroupByDept] = useState(true);
   const [showArchived, setShowArchived] = useState(false);
-  const [sortOpen, setSortOpen] = useState(false);
-  const sortRef = useRef<HTMLDivElement>(null);
+  const uploadRef = useRef<HTMLInputElement>(null);
   // Optimistic department overrides so a "Move" reflects instantly before refresh.
   const [deptOverride, setDeptOverride] = useState<Record<string, string>>({});
   const [moveOpen, setMoveOpen] = useState<string | null>(null);
@@ -271,14 +271,6 @@ export function TemplatesClient({ templates, initialEditId }: { templates: Marke
     const id = setTimeout(() => openEditor(t), 0);
     return () => clearTimeout(id);
   }, [initialEditId, templates]);
-
-  // Close the sort dropdown on an outside click.
-  useEffect(() => {
-    if (!sortOpen) return;
-    const onDown = (e: MouseEvent) => { if (sortRef.current && !sortRef.current.contains(e.target as Node)) setSortOpen(false); };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [sortOpen]);
 
   /**
    * Duplicate a template: copies subject/body/blocks into a new DRAFT named
@@ -406,37 +398,17 @@ export function TemplatesClient({ templates, initialEditId }: { templates: Marke
           <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{templates.length} total</div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <div style={{ display: "flex", border: "0.5px solid #cdd9ec", borderRadius: 6, overflow: "hidden" }}>
-            <button type="button" onClick={() => setView("list")} style={{ fontSize: 12, padding: "5px 10px", background: view === "list" ? "#2E78F5" : "transparent", color: view === "list" ? "#fff" : "var(--muted-foreground)", border: "none", cursor: "pointer" }}><i className="ti ti-menu-2" aria-hidden="true" /> List</button>
-            <button type="button" onClick={() => setView("grid")} style={{ fontSize: 12, padding: "5px 10px", background: view === "grid" ? "#2E78F5" : "transparent", color: view === "grid" ? "#fff" : "var(--muted-foreground)", border: "none", cursor: "pointer" }}><i className="ti ti-layout-grid" aria-hidden="true" /> Grid</button>
-          </div>
-          <button type="button" onClick={() => setGroupByDept((v) => !v)} style={{ fontSize: 12, padding: "5px 11px", borderRadius: 6, border: "0.5px solid #cdd9ec", background: groupByDept ? "#E6F1FB" : "#fff", color: groupByDept ? "#185FA5" : "var(--muted-foreground)", cursor: "pointer", fontWeight: 500 }}><i className="ti ti-layout-list" aria-hidden="true" /> Group: Department</button>
-          <div style={{ position: "relative" }} ref={sortRef}>
-            <button type="button" onClick={() => setSortOpen((v) => !v)} style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid #cdd9ec", background: sortOpen ? "#F5F9FF" : "#fff", color: "var(--foreground)", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}>
-              {SORT_LABELS[sort]} <i className="ti ti-chevron-down" style={{ fontSize: 12 }} aria-hidden="true" />
-            </button>
-            {sortOpen && (
-              <div style={{ position: "absolute", top: "calc(100% + 5px)", right: 0, zIndex: 30, width: 220, background: "#fff", border: "0.5px solid #cbd5e1", borderRadius: 9, boxShadow: "0 12px 28px rgba(0,0,0,0.16)", overflow: "hidden" }}>
-                <div style={{ padding: "7px 12px", fontSize: 10, textTransform: "uppercase", letterSpacing: ".05em", color: "var(--muted-foreground)", borderBottom: "0.5px solid #eef1f5" }}>Sort by</div>
-                {(["edited", "name", "status", "department"] as const).map((val) => (
-                  <button type="button" key={val} onClick={() => { setSort(val); setSortOpen(false); }} style={{ display: "flex", width: "100%", alignItems: "center", gap: 8, padding: "8px 12px", fontSize: 12, background: sort === val ? "#EEF0F4" : "transparent", border: "none", cursor: "pointer", textAlign: "left", color: "var(--foreground)" }}>
-                    {SORT_LABELS[val]}{sort === val && <i className="ti ti-check" style={{ marginLeft: "auto", color: "#185FA5" }} aria-hidden="true" />}
-                  </button>
-                ))}
-                {archivedCount > 0 && (
-                  <>
-                    <div style={{ borderTop: "0.5px solid #eef1f5" }} />
-                    <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", fontSize: 12, cursor: "pointer", color: "var(--foreground)" }}>
-                      <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} style={{ width: 13, height: 13 }} /> Show archived <span style={{ color: "var(--muted-foreground)" }}>({archivedCount})</span>
-                    </label>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-          <label style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "0.5px solid #C7D2E4", background: "#EEF3FC", color: "#185FA5", cursor: "pointer", fontWeight: 500 }}>
-            ↑ Upload HTML
-            <input
+          <ToolbarGear align="right" items={[
+            { key: "v-list", section: "Layout", icon: "ti-menu-2", label: "List", active: view === "list", onClick: () => setView("list") },
+            { key: "v-grid", icon: "ti-layout-grid", label: "Grid", active: view === "grid", onClick: () => setView("grid") },
+            { key: "g-dept", section: "Group by", sep: true, icon: "ti-layout-list", label: "Department", active: groupByDept, onClick: () => setGroupByDept(true) },
+            { key: "g-none", icon: "ti-folder", label: "None", active: !groupByDept, onClick: () => setGroupByDept(false) },
+            ...(["edited", "name", "status", "department"] as const).map((val, i) => ({ key: `s-${val}`, section: i === 0 ? "Sort by" : undefined, sep: i === 0, icon: "ti-arrows-sort", label: SORT_LABELS[val], active: sort === val, onClick: () => setSort(val) } as GearItem)),
+            ...(archivedCount > 0 ? [{ key: "archived", sep: true, icon: "ti-archive", label: "Show archived", hint: `(${archivedCount})`, active: showArchived, onClick: () => setShowArchived(!showArchived) } as GearItem] : []),
+            { key: "upload", sep: true, icon: "ti-upload", label: "Upload HTML", onClick: () => uploadRef.current?.click() },
+          ]} />
+          <input
+              ref={uploadRef}
               type="file"
               accept=".html,.htm,text/html"
               style={{ display: "none" }}
@@ -450,7 +422,6 @@ export function TemplatesClient({ templates, initialEditId }: { templates: Marke
                 setActiveTab("write");
               }}
             />
-          </label>
           <button type="button"
             onClick={() => openEditor({ name: "", subject: "", html_body: "", status: "draft" }, "visual")}
             style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}>

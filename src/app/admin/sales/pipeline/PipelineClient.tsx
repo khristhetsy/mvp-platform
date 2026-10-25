@@ -230,12 +230,14 @@ export function PipelineClient({ canExport = false, meId = "" }: { canExport?: b
   ];
 
   const gearItems: GearItem[] = [
+    { key: "v-board", section: "View", icon: "ti-layout-kanban", label: "Board", active: view === "board", onClick: () => setView("board") },
+    { key: "v-list", icon: "ti-list", label: "List", active: view === "list", onClick: () => setView("list") },
+    ...pipelines.map((p, i) => ({ key: `pl-${p.id}`, section: i === 0 ? "Pipeline" : undefined, sep: i === 0, icon: "ti-filter", label: p.name, hint: p.is_default ? "default" : undefined, active: p.id === selId, onClick: () => setSelId(p.id) } as GearItem)),
     ...(canExport ? [{ key: "export", icon: "ti-download", label: "Export all", hint: `${filtered.length.toLocaleString()} matching`, onClick: () => downloadCsv(`pipeline-${new Date().toISOString().slice(0, 10)}.csv`, ["Deal", "Contact", "Stage", "Owner", "Value", "Probability", "Expected close", "Source", "Created"], filtered.map((o) => [o.title, o.contact_name, stageName.get(o.stage_id ?? "") ?? "", ownerLabel(o), o.value_cents == null ? "" : (o.value_cents / 100).toFixed(2), o.probability ?? "", o.expected_close ?? "", sourceLabel(o), o.created_at.slice(0, 10)])) } as GearItem] : []),
-    { key: "stages", icon: "ti-adjustments", label: "Edit stages", sep: canExport, onClick: () => setView("stages") },
+    { key: "stages", icon: "ti-adjustments", label: "Edit stages", sep: true, active: view === "stages", onClick: () => setView("stages") },
     { key: "newp", icon: "ti-plus", label: "New pipeline", onClick: () => void newPipeline() },
     ...(pipeline ? [{ key: "rename", icon: "ti-pencil", label: "Rename pipeline", onClick: () => void renamePipeline() } as GearItem] : []),
   ];
-  const segBtn = (on: boolean, first = false): React.CSSProperties => ({ fontSize: 12, padding: "6px 12px", border: "none", borderLeft: first ? "none" : "0.5px solid var(--border-strong, #cbd5e1)", background: on ? "#EFF6FF" : "#fff", color: on ? "#1A6CE4" : "var(--muted-foreground)", fontWeight: on ? 600 : 400, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 });
   const LIST_COLS = "30px 1.8fr 1.1fr 130px 1fr 90px 100px 80px";
 
   return (
@@ -249,18 +251,11 @@ export function PipelineClient({ canExport = false, meId = "" }: { canExport?: b
       )}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
         <NewButton onClick={() => setAdding((v) => !v)} />
-        <SalesGear items={gearItems} heading="Pipeline" />
-        <select value={selId} onChange={(e) => setSelId(e.target.value)} style={{ fontSize: 12.5, fontWeight: 600, padding: "6px 10px", borderRadius: 8, border: "1px solid #2E78F5", background: "#EFF6FF", color: "#1A6CE4" }}>
-          {pipelines.map((p) => <option key={p.id} value={p.id}>{p.name}{p.is_default ? " (default)" : ""}</option>)}
-        </select>
+        <SalesGear items={gearItems} />
+        {pipeline && <span style={{ fontSize: 12, fontWeight: 600, padding: "5px 10px", borderRadius: 8, background: "#EFF6FF", color: "#1A6CE4", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pipeline.name}</span>}
         {view !== "stages" && (
           <OdooSearchBar scope="opportunities" state={search} onChange={setSearch} quick={PIPE_QUICK} fields={searchFields} groups={PIPE_GROUPS} noGroupId="none" placeholder={view === "board" ? "Search cards…" : "Search deals…"} width={480} />
         )}
-        <div style={{ marginLeft: "auto", display: "inline-flex", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, overflow: "hidden" }}>
-          <button type="button" onClick={() => setView("board")} style={segBtn(view === "board", true)}><i className="ti ti-layout-kanban" aria-hidden="true" /> Board</button>
-          <button type="button" onClick={() => setView("list")} style={segBtn(view === "list")}><i className="ti ti-list" aria-hidden="true" /> List</button>
-          <button type="button" onClick={() => setView("stages")} style={segBtn(view === "stages")}>Edit stages</button>
-        </div>
       </div>
 
       {adding && (
