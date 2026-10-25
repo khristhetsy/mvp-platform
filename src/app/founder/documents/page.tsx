@@ -104,7 +104,7 @@ export default async function DocumentUploadPage() {
               <p className="text-sm font-semibold text-slate-900">Accepted file types</p>
             </div>
             <p className="mt-1.5 text-[13px] leading-6 text-slate-600">
-              Upload <span className="font-medium text-slate-800">PDF (.pdf)</span> files only, up to 25&nbsp;MB each.
+              Upload <span className="font-medium text-slate-800">PDF (.pdf)</span> files only, up to {uploadLimits.maxMb}&nbsp;MB each.
               Other formats — Word, Excel, PowerPoint, CSV — aren&rsquo;t accepted; export or print them to PDF first.
             </p>
             <ul className="mt-2.5 space-y-1.5 text-[12.5px] leading-5 text-slate-600">
