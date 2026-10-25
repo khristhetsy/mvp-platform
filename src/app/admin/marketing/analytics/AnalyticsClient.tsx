@@ -239,13 +239,13 @@ export default function AnalyticsClient({ metrics, dailyOpens, completedCampaign
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: selectedCampaign ? 12 : 0 }}>
             <span style={{ fontSize: 13, fontWeight: 600 }}>Campaign results</span>
             <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>completed campaign:</span>
-            <select value={selectedCampaignId} onChange={(e) => setSelectedCampaignId(e.target.value)}
+            <select className="mk-m-fullsel" value={selectedCampaignId} onChange={(e) => setSelectedCampaignId(e.target.value)}
               style={{ fontSize: 12, fontWeight: 600, border: "1px solid #2E78F5", background: "#EFF6FF", color: "#1A6CE4", borderRadius: 7, padding: "6px 10px" }}>
               {completedCampaigns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
           {selectedCampaign && (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", gap: 10 }}>
+            <div className="mk-m-2col" style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", gap: 10 }}>
               {[
                 { label: "Sent", value: selectedCampaign.sent.toLocaleString(), color: "var(--foreground)" },
                 { label: "Open rate", value: selectedCampaign.sent > 0 ? `${((selectedCampaign.opened / selectedCampaign.sent) * 100).toFixed(1)}%` : "—", color: "#0F6E56" },
@@ -268,14 +268,14 @@ export default function AnalyticsClient({ metrics, dailyOpens, completedCampaign
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: selectedList ? 12 : 0 }}>
             <span style={{ fontSize: 13, fontWeight: 600 }}>By contact list</span>
             <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>saved list:</span>
-            <select value={selectedListId} onChange={(e) => setSelectedListId(e.target.value)}
+            <select className="mk-m-fullsel" value={selectedListId} onChange={(e) => setSelectedListId(e.target.value)}
               style={{ fontSize: 12, fontWeight: 600, border: "1px solid #2E78F5", background: "#EFF6FF", color: "#1A6CE4", borderRadius: 7, padding: "6px 10px" }}>
               {lists.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
             </select>
           </div>
           {selectedList && (
             <>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", gap: 10 }}>
+              <div className="mk-m-2col" style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", gap: 10 }}>
                 {[
                   { label: "Contacts in list", value: selectedList.count.toLocaleString(), color: "var(--foreground)" },
                   { label: "Campaigns run", value: listCamps.length.toLocaleString(), color: "var(--foreground)" },
@@ -290,11 +290,11 @@ export default function AnalyticsClient({ metrics, dailyOpens, completedCampaign
               </div>
               {listCamps.length > 0 ? (
                 <div style={{ marginTop: 12, border: "0.5px solid var(--border)", borderRadius: 9, overflow: "hidden" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr 1fr 1fr", padding: "7px 12px", background: "var(--muted)", fontSize: 10.5, fontWeight: 700, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                  <div className="mk-m-tbl" style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr 1fr 1fr", padding: "7px 12px", background: "var(--muted)", fontSize: 10.5, fontWeight: 700, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
                     <div>Campaign</div><div style={{ textAlign: "right" }}>Sent</div><div style={{ textAlign: "right" }}>Open</div><div style={{ textAlign: "right" }}>Click</div>
                   </div>
                   {listCamps.map((c) => (
-                    <div key={c.id} style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr 1fr 1fr", padding: "8px 12px", borderTop: "0.5px solid var(--border)", fontSize: 12, alignItems: "center" }}>
+                    <div key={c.id} className="mk-m-tbl" style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr 1fr 1fr", padding: "8px 12px", borderTop: "0.5px solid var(--border)", fontSize: 12, alignItems: "center" }}>
                       <div style={{ fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.name}</div>
                       <div style={{ textAlign: "right", color: "var(--muted-foreground)" }}>{c.sent.toLocaleString()}</div>
                       <div style={{ textAlign: "right", color: "#0F6E56" }}>{c.sent > 0 ? `${((c.opened / c.sent) * 100).toFixed(1)}%` : "—"}</div>
@@ -311,7 +311,7 @@ export default function AnalyticsClient({ metrics, dailyOpens, completedCampaign
       )}
 
       {/* Stat cards — white cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 10, marginBottom: 16 }}>
+      <div className="mk-m-2col" style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 10, marginBottom: 16 }}>
         {statCards.map((s) => (
           <div key={s.label} style={{ ...card, padding: "14px 16px" }}>
             <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 6 }}>{s.label}</div>
@@ -324,7 +324,7 @@ export default function AnalyticsClient({ metrics, dailyOpens, completedCampaign
       </div>
 
       {/* Benchmarks + Funnel */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+      <div className="mk-m-1col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
         <div style={{ ...card, padding: "16px 18px" }}>
           <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--muted-foreground)", marginBottom: 14 }}>
             vs. industry benchmarks
@@ -377,7 +377,7 @@ export default function AnalyticsClient({ metrics, dailyOpens, completedCampaign
       </div>
 
       {/* Daily opens + Domain health */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+      <div className="mk-m-1col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
         <div style={{ ...card, padding: "16px 18px" }}>
           <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 16 }}>Opens by day (last 7 days)</div>
           <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 100 }}>
