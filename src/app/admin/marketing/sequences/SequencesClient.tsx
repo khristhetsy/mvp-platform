@@ -302,11 +302,11 @@ export function SequencesClient({ sequences, templates, lists, defaultSender }: 
       );
     }
     return (
-              <div style={{ ...card, padding: "16px 18px" }}>
+              <div className="ma-seqcard" style={{ ...card, padding: "16px 18px" }}>
                 {/* Header */}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
+                <div className="ma-seq-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
                   <div style={{ fontWeight: 500, fontSize: 14, color: "var(--foreground)" }}>{seq.name}</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div className="ma-seq-meta" style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <button type="button" onClick={() => setScheduleFor({ id: seq.id, name: seq.name })} title={schedules[seq.id]?.label ?? "Schedule sends"} style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6, border: "0.5px solid var(--border)", background: "#fff", cursor: "pointer", color: schedules[seq.id] ? "#185FA5" : "var(--muted-foreground)", display: "inline-flex", alignItems: "center", gap: 4, maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><i className="ti ti-clock" aria-hidden="true" />{schedules[seq.id] ? schedules[seq.id].label : "Schedule"}</button>
                     <ApproverPicker sequenceId={seq.id} initialApproverId={(seq as { approver_id?: string | null }).approver_id ?? null} />
                     <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: sc.bg, color: sc.color, fontWeight: 500 }}>
@@ -419,7 +419,7 @@ export function SequencesClient({ sequences, templates, lists, defaultSender }: 
                 )}
 
                 {/* Status actions */}
-                <div style={{ display: "flex", gap: 6, marginTop: 12, paddingTop: 12, borderTop: "0.5px solid var(--border)" }}>
+                <div className="ma-actions3" style={{ display: "flex", gap: 6, marginTop: 12, paddingTop: 12, borderTop: "0.5px solid var(--border)" }}>
                   {seq.status === "draft" && (
                     <button type="button" onClick={() => handleStatusChange(seq.id, "active")}
                       style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}>
@@ -453,14 +453,14 @@ export function SequencesClient({ sequences, templates, lists, defaultSender }: 
                     style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "none", background: "transparent", cursor: "pointer", color: "#A32D2D" }}>
                     Delete
                   </button>
-                  <div style={{ fontSize: 11, color: "var(--muted-foreground)", display: "flex", alignItems: "center", marginLeft: "auto" }}>
+                  <div className="ma-stepcount" style={{ fontSize: 11, color: "var(--muted-foreground)", display: "flex", alignItems: "center", marginLeft: "auto" }}>
                     {steps.length} step{steps.length !== 1 ? "s" : ""}
                   </div>
                 </div>
 
                 {/* Enroll a list */}
                 {steps.length > 0 ? (
-                  <div style={{ display: "flex", gap: 6, marginTop: 10, alignItems: "center" }}>
+                  <div className="ma-enroll" style={{ display: "flex", gap: 6, marginTop: 10, alignItems: "center" }}>
                     <select
                       value={listForSeq(seq.id)}
                       onChange={(e) => setEnrollListId((m) => ({ ...m, [seq.id]: e.target.value }))}
@@ -485,7 +485,7 @@ export function SequencesClient({ sequences, templates, lists, defaultSender }: 
 
                 {/* Send a test to yourself */}
                 {steps.length > 0 ? (
-                  <div style={{ display: "flex", gap: 6, marginTop: 8, alignItems: "center", flexWrap: "wrap" }}>
+                  <div className="ma-test" style={{ display: "flex", gap: 6, marginTop: 8, alignItems: "center", flexWrap: "wrap" }}>
                     <input
                       type="email"
                       value={testEmail[seq.id] ?? ""}
@@ -509,7 +509,7 @@ export function SequencesClient({ sequences, templates, lists, defaultSender }: 
   }
 
   return (
-    <div style={{ padding: 24 }}>
+    <div className="ma-pad" style={{ padding: 24 }}>
       {/* Toolbar — same pattern as every admin list: New, gear, search, view toggle. */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
         <NewButton onClick={() => setShowCreate(!showCreate)} />
@@ -575,7 +575,7 @@ export function SequencesClient({ sequences, templates, lists, defaultSender }: 
           {grouped.map(([gk, list]) => (
             <div key={gk || "_all"}>
               {gk && (
-                <button type="button" onClick={() => setCollapsed((c) => ({ ...c, [gk]: !c[gk] }))} style={{ width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "#E6F1FB", border: "none", borderRadius: 8, cursor: "pointer", marginBottom: 8 }}>
+                <button type="button" className="ma-grouphead" onClick={() => setCollapsed((c) => ({ ...c, [gk]: !c[gk] }))} style={{ width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "#E6F1FB", border: "none", borderRadius: 8, cursor: "pointer", marginBottom: 8 }}>
                   <i className={`ti ti-chevron-${collapsed[gk] ? "right" : "down"}`} style={{ color: "#0C447C", fontSize: 13 }} aria-hidden="true" />
                   <span style={{ fontSize: 12.5, fontWeight: 600, color: "#0C447C" }}>{gk}</span>
                   <span style={{ fontSize: 11, color: "#185FA5", background: "#B5D4F4", borderRadius: 10, padding: "1px 8px" }}>{list.length}</span>
@@ -583,7 +583,7 @@ export function SequencesClient({ sequences, templates, lists, defaultSender }: 
                 </button>
               )}
               {!collapsed[gk] && (view === "grid" ? (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>{list.map((seq) => <div key={seq.id}>{renderCard(seq)}</div>)}</div>
+                <div className="ma-stack" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>{list.map((seq) => <div key={seq.id}>{renderCard(seq)}</div>)}</div>
               ) : (
                 <div style={{ ...card, overflow: "hidden" }}>
                   <div style={{ display: "grid", gridTemplateColumns: "1.6fr 130px 80px 50px 70px 1fr 1.3fr 150px", gap: 8, padding: "8px 14px", background: "var(--muted)", fontSize: 10.5, fontWeight: 500, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em" }}>

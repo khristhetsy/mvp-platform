@@ -706,7 +706,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
         };
         const rowMenuItem: React.CSSProperties = { display: "flex", width: "100%", alignItems: "center", gap: 8, padding: "8px 12px", fontSize: 12, background: "transparent", border: "none", cursor: "pointer", textAlign: "left", color: "var(--foreground)" };
         const listHeader = (
-          <div style={{ display: "grid", gridTemplateColumns: "2.4fr 0.9fr 1.5fr 40px", gap: 10, padding: "7px 13px", background: "var(--muted)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--muted-foreground)", fontWeight: 600, borderBottom: "0.5px solid var(--border)" }}>
+          <div className="ma-hide-m" style={{ display: "grid", gridTemplateColumns: "2.4fr 0.9fr 1.5fr 40px", gap: 10, padding: "7px 13px", background: "var(--muted)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--muted-foreground)", fontWeight: 600, borderBottom: "0.5px solid var(--border)" }}>
             <span>Campaign</span><span>Status</span><span>Sent · Open · Click</span><span style={{ textAlign: "right" }}>Actions</span>
           </div>
         );
@@ -715,7 +715,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
           const scheduledAt = (c as Record<string, unknown>).scheduled_at as string | null | undefined;
           const menuOpen = rowMenuOpen === c.id;
           return (
-            <div key={c.id} style={{ display: "grid", gridTemplateColumns: "2.4fr 0.9fr 1.5fr 40px", gap: 10, alignItems: "center", padding: "9px 13px", fontSize: 12.5, borderTop: i > 0 ? "0.5px solid var(--border)" : "none", background: c.archived ? "#FAFBFC" : "#fff" }}>
+            <div key={c.id} className="ma-camp" style={{ display: "grid", gridTemplateColumns: "2.4fr 0.9fr 1.5fr 40px", gap: 10, alignItems: "center", padding: "9px 13px", fontSize: 12.5, borderTop: i > 0 ? "0.5px solid var(--border)" : "none", background: c.archived ? "#FAFBFC" : "#fff" }}>
               <div style={{ minWidth: 0 }}>
                 <button type="button" onClick={() => openAnalytics(c.id)} style={{ display: "inline-flex", alignItems: "center", gap: 6, maxWidth: "100%", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
                   <span style={{ fontWeight: 500, color: "var(--foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.name}</span>
@@ -761,7 +761,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
         };
         if (!groupByDept) return view === "list"
           ? <div style={{ border: "0.5px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>{listHeader}{visible.map(renderRow)}</div>
-          : <div style={gridStyle}>{visible.map(renderCard)}</div>;
+          : <div className="ma-stack" style={gridStyle}>{visible.map(renderCard)}</div>;
         const grouped = groupByDepartment(visible, deptOf);
         return (
           <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
@@ -778,7 +778,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
                   </button>
                   {open && (view === "list"
                     ? <div style={{ background: "#fff" }}>{listHeader}{items.map(renderRow)}</div>
-                    : <div style={{ ...gridStyle, padding: 12 }}>{items.map(renderCard)}</div>)}
+                    : <div className="ma-stack" style={{ ...gridStyle, padding: 12 }}>{items.map(renderCard)}</div>)}
                 </div>
               );
             })}

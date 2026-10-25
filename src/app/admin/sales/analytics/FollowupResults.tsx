@@ -81,7 +81,7 @@ export function FollowupResults({ grain, compare }: { grain: Grain; compare: Com
               <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, background: m.color, marginRight: 5, verticalAlign: "middle", opacity: on ? 1 : 0.4 }} />{m.label}
             </button>;
           })}
-          <label style={{ marginLeft: "auto", fontSize: 11, color: MUTED, display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+          <label className="ma-values" style={{ marginLeft: "auto", fontSize: 11, color: MUTED, display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
             Values on chart <input type="checkbox" checked={showValues} onChange={(e) => setShowValues(e.target.checked)} />
           </label>
         </div>
@@ -113,7 +113,7 @@ export function FollowupResults({ grain, compare }: { grain: Grain; compare: Com
       {data && !error && (
         <div style={{ marginTop: 12, border: "0.5px solid #e2e6ed", borderRadius: 10, overflow: "hidden" }}>
           <div style={{ fontSize: 10.5, color: MUTED, textTransform: "uppercase", letterSpacing: ".04em", padding: "8px 10px 0" }}>By sequence</div>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5, tableLayout: "fixed" }}>
+          <table className="ma-cards ma-seqtab" style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5, tableLayout: "fixed" }}>
             <thead>
               <tr style={{ textAlign: "left", fontSize: 10.5, textTransform: "uppercase", letterSpacing: ".04em", color: MUTED }}>
                 {["Sequence", "Enrolled", "Sent", "Open rate", "Reply rate", "Meetings", "Won", "Conversion"].map((h, i) => (
@@ -148,7 +148,7 @@ export function FollowupResults({ grain, compare }: { grain: Grain; compare: Com
                   </FragmentRow>
                 );
               })}
-              <tr>
+              <tr className="ma-oneoff">
                 <td style={{ padding: "9px 10px", borderTop: "0.5px solid #eef1f5", color: MUTED }}>One-off emails (Inbox compose)</td>
                 <Td>—</Td><Td>{data.oneOff.sent.toLocaleString()}</Td><Td>—</Td><Td>—</Td><Td>—</Td><Td>—</Td><Td>—</Td>
               </tr>

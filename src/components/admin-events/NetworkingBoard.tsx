@@ -328,7 +328,7 @@ export function NetworkingBoard({ board, events, eventId, gmail }: Readonly<{
                 : "No match matches that search."}
           </p>
         ) : (
-          <table className="w-full text-xs">
+          <table className="ma-cards ma-net w-full text-xs">
             <thead>
               <tr className="bg-slate-50 text-left text-[10.4px] uppercase tracking-wide text-[var(--text-muted)]">
                 <th className="w-6 px-3.5 py-2">
