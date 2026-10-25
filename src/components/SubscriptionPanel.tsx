@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import type { FeatureKey, SubscriptionRecord } from "@/lib/subscriptions/plans";
@@ -154,9 +155,12 @@ export function SubscriptionPlanBadge({
 export function FounderSubscriptionSettingsCard({
   subscription,
   requestedPlan,
+  actions,
 }: Readonly<{
   subscription: SubscriptionRecord;
   requestedPlan?: PlanType | null;
+  /** Plan change controls (downgrade, stop payment) for card plans. */
+  actions?: ReactNode;
 }>) {
   const t = useTranslations("sharedCmp");
   const daysLeft =
@@ -215,6 +219,7 @@ export function FounderSubscriptionSettingsCard({
           </dd>
         </div>
       </dl>
+      {actions}
       {daysLeft != null ? (
         <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           {daysLeft > 0

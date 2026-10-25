@@ -17,6 +17,24 @@ describe("mapStatus", () => {
     expect(mapStatus("on_trial").status).toBe("trialing");
   });
 
+  it("keeps a cancelled subscriber active until the paid period ends", () => {
+    const now = new Date("2026-10-25T00:00:00.000Z");
+    const result = mapStatus("cancelled", now, "2027-10-15T00:00:00.000Z");
+    expect(result.status).toBe("active");
+    expect(result.cancelAtPeriodEnd).toBe(true);
+    expect(result.gracePeriodEndsAt).toBe("2027-10-15T00:00:00.000Z");
+  });
+
+  it("treats a cancelled subscription with no future end date as canceled", () => {
+    const now = new Date("2026-10-25T00:00:00.000Z");
+    expect(mapStatus("cancelled", now, "2026-10-01T00:00:00.000Z").status).toBe("canceled");
+    expect(mapStatus("cancelled", now, null).status).toBe("canceled");
+  });
+
+  it("clears the cancel flag when the subscription is active again", () => {
+    expect(mapStatus("active").cancelAtPeriodEnd).toBe(false);
+  });
+
   it("maps cancelled, paused, unpaid, and expired to canceled", () => {
     for (const s of ["cancelled", "paused", "unpaid", "expired"] as const) {
       expect(mapStatus(s).status).toBe("canceled");

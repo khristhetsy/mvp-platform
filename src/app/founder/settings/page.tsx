@@ -14,6 +14,7 @@ import { OnePagerPublishCard } from "@/components/founder/OnePagerPublishCard";
 import { FounderProfileTabs } from "@/components/founder/FounderProfileTabs";
 import { TipsPreferenceToggle } from "@/components/tips/TipsPreferenceToggle";
 import { SignatureSettings } from "@/components/email/SignatureSettings";
+import { AccountSection } from "@/components/account/AccountSection";
 
 export const dynamic = "force-dynamic";
 
@@ -83,6 +84,8 @@ export default async function FounderSettingsPage() {
               <TipsPreferenceToggle />
               <SignatureSettings />
             </section>
+
+            <AccountSection companyName={company?.company_name ?? null} />
           </>
         }
         onePagerTab={
