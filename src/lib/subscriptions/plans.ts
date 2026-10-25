@@ -55,6 +55,13 @@ export type SubscriptionRecord = {
   // admin billing (updateBillingCustomer). The ONLY grandfather flag access reads.
   // Optional so fixtures without it fail open; only an explicit false paywalls.
   is_grandfathered?: boolean | null;
+  // Stop payment and scheduled downgrades. Optional so older fixtures still type.
+  cancel_at_period_end?: boolean | null;
+  cancel_reason?: string | null;
+  pending_plan_type?: PlanType | null;
+  pending_plan_effective_at?: string | null;
+  // Billing address for wire invoices (validated by lib/billing/address).
+  billing_address?: unknown;
   // LemonSqueezy
   ls_customer_id:     string | null;
   ls_subscription_id: string | null;

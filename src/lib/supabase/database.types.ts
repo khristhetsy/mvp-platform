@@ -20480,6 +20480,8 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          deletion_requested_at: string | null
+          deletion_scheduled_for: string | null
           created_at: string | null
           email: string | null
           full_name: string | null
@@ -20501,6 +20503,8 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          deletion_requested_at?: string | null
+          deletion_scheduled_for?: string | null
           created_at?: string | null
           email?: string | null
           full_name?: string | null
@@ -20522,6 +20526,8 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          deletion_requested_at?: string | null
+          deletion_scheduled_for?: string | null
           created_at?: string | null
           email?: string | null
           full_name?: string | null
@@ -24542,6 +24548,11 @@ export type Database = {
       subscriptions: {
         Row: {
           created_at: string
+          cancel_at_period_end: boolean
+          billing_address: Json | null
+          cancel_reason: string | null
+          pending_plan_type: string | null
+          pending_plan_effective_at: string | null
           currency: string
           current_period_end: string | null
           current_period_start: string | null
@@ -24566,6 +24577,11 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          cancel_at_period_end?: boolean
+          billing_address?: Json | null
+          cancel_reason?: string | null
+          pending_plan_type?: string | null
+          pending_plan_effective_at?: string | null
           currency?: string
           current_period_end?: string | null
           current_period_start?: string | null
@@ -24590,6 +24606,11 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          cancel_at_period_end?: boolean
+          billing_address?: Json | null
+          cancel_reason?: string | null
+          pending_plan_type?: string | null
+          pending_plan_effective_at?: string | null
           currency?: string
           current_period_end?: string | null
           current_period_start?: string | null

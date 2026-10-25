@@ -11,6 +11,7 @@
  * No money moves through iCapOS: this records invoices and their status only.
  * Pure helpers live in wire-core.ts (tested); founder emails in wire-emails.ts.
  */
+import { cancelSubscription } from "@/lib/lemonsqueezy";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/send-email";
 import { absoluteUrl } from "@/lib/activity/email-templates";
@@ -294,9 +295,18 @@ export async function markWireReceived(invoiceId: string, staffId: string, clien
     const { error: subError } = await client.from("subscriptions").insert({ ...subPatch, profile_id: paid.profile_id, role: "founder", currency: "USD" });
     if (subError) throw new Error(`Invoice marked received, but Premium could not be activated: ${subError.message}`);
   }
-  const warning = ex?.ls_subscription_id
-    ? "This founder still has a Lemon Squeezy subscription on file. Cancel it in Lemon Squeezy so they are not charged twice."
-    : null;
+  // Premium replaces any card subscription: cancel it so the founder is not charged
+  // twice. It runs to the end of its paid period. The webhook ignores later events
+  // for it because the row is now Premium.
+  let warning: string | null = null;
+  if (ex?.ls_subscription_id && ex.plan_type !== "founder_premium") {
+    try {
+      await cancelSubscription(ex.ls_subscription_id);
+    } catch (e) {
+      console.warn("[billing/wire] could not cancel the card subscription", e);
+      warning = "This founder still has a Lemon Squeezy subscription on file and it could not be cancelled automatically. Cancel it in Lemon Squeezy so they are not charged twice.";
+    }
+  }
 
   let emailed = false;
   try {
@@ -361,10 +371,10 @@ export async function voidWireInvoice(invoiceId: string, staffId: string | null,
 
 // ── Daily cron ───────────────────────────────────────────────────────────────
 
-export type WireCronResult = { markedOverdue: number; renewalsCreated: number; paused: number; errors: string[] };
+export type WireCronResult = { markedOverdue: number; renewalsCreated: number; paused: number; ended: number; errors: string[] };
 
 export async function runWireInvoiceCron(now: Date = new Date(), client: Db = db()): Promise<WireCronResult> {
-  const result: WireCronResult = { markedOverdue: 0, renewalsCreated: 0, paused: 0, errors: [] };
+  const result: WireCronResult = { markedOverdue: 0, renewalsCreated: 0, paused: 0, ended: 0, errors: [] };
 
   // (a) Awaiting invoices past their due date become overdue.
   {
@@ -386,6 +396,7 @@ export async function runWireInvoiceCron(now: Date = new Date(), client: Db = db
       .select("profile_id, plan_type, subscription_status, current_period_end")
       .eq("plan_type", "founder_premium")
       .eq("subscription_status", "active")
+      .eq("cancel_at_period_end", false)
       .lte("current_period_end", horizon);
     if (error) result.errors.push(`renewals: ${error.message}`);
     for (const sub of (subs ?? []) as Array<{ profile_id: string; plan_type: string; subscription_status: string; current_period_end: string | null }>) {
@@ -410,6 +421,37 @@ export async function runWireInvoiceCron(now: Date = new Date(), client: Db = db
       } catch (e) {
         result.errors.push(`renewal ${sub.profile_id}: ${e instanceof Error ? e.message.slice(0, 160) : "failed"}`);
       }
+    }
+  }
+
+  // (b2) Premium the founder chose not to renew: when the paid period ends they move
+  // to the Free plan, and no renewal invoice is issued (see (b)).
+  {
+    const { data: ending, error } = await client
+      .from("subscriptions")
+      .select("id, profile_id")
+      .eq("plan_type", "founder_premium")
+      .eq("cancel_at_period_end", true)
+      .lte("current_period_end", now.toISOString());
+    if (error) result.errors.push(`ended: ${error.message}`);
+    for (const row of (ending ?? []) as Array<{ id: string; profile_id: string }>) {
+      const { error: upErr } = await client
+        .from("subscriptions")
+        .update({
+          plan_type: "founder_free",
+          subscription_status: "free",
+          monthly_price_cents: 0,
+          cancel_at_period_end: false,
+          cancel_reason: null,
+          pending_plan_type: null,
+          pending_plan_effective_at: null,
+          grace_period_ends_at: null,
+          updated_at: now.toISOString(),
+        })
+        .eq("id", row.id)
+        .eq("plan_type", "founder_premium");
+      if (upErr) result.errors.push(`ended ${row.profile_id}: ${upErr.message}`);
+      else result.ended += 1;
     }
   }
 

@@ -11,6 +11,12 @@ import { SettingsSidebarNav } from "../SettingsSidebarNav";
 import { loadFounderWireState } from "@/lib/billing/wire";
 import { wireDatePT } from "@/lib/billing/wire-core";
 import { WireCheckoutPanel, WireInvoiceList } from "@/components/billing/WireCheckoutPanel";
+import { PlanActions } from "@/components/billing/PlanActions";
+import { PortalCards } from "@/components/billing/PortalCards";
+import { BillingAddressCard } from "@/components/billing/BillingAddressCard";
+import { readStoredAddress } from "@/lib/billing/address";
+import { isCardPlan } from "@/lib/billing/plan-change";
+import { getCustomerDetails, getSubscriptionDetails } from "@/lib/lemonsqueezy";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +29,11 @@ export default async function FounderSettingsBillingPage() {
     (await ensureSubscriptionForProfile({ profileId: profile.id, role: profile.role }));
   const requestedPlan = await getRequestedPlanForProfile(profile.id);
   const wire = await loadFounderWireState(profile.id);
+  const cardPlan = isCardPlan(subscription.plan_type) && Boolean(subscription.ls_subscription_id);
+  const lsDetails = cardPlan && subscription.ls_subscription_id ? await getSubscriptionDetails(subscription.ls_subscription_id) : null;
+  const lsCustomer = cardPlan && subscription.ls_customer_id ? await getCustomerDetails(subscription.ls_customer_id) : null;
+  const place = lsCustomer ? [lsCustomer.city, lsCustomer.region, lsCustomer.country].filter(Boolean).join(", ") : "";
+  const wirePlan = subscription.plan_type === "founder_premium" && subscription.subscription_status === "active";
   const premiumActive = subscription.plan_type === "founder_premium" && subscription.subscription_status === "active";
 
   return (
@@ -45,8 +56,29 @@ export default async function FounderSettingsBillingPage() {
         </div>
         <div className="p-6">
           <Suspense fallback={<p className="text-sm text-slate-500">{t("loading_subscription")}</p>}>
-            <FounderSubscriptionSettingsCard subscription={subscription} requestedPlan={requestedPlan} />
+            <FounderSubscriptionSettingsCard
+              subscription={subscription}
+              requestedPlan={requestedPlan}
+              actions={
+                cardPlan || wirePlan ? (
+                  <PlanActions
+                    planType={subscription.plan_type}
+                    mode={wirePlan ? "wire" : "card"}
+                    cancelAtPeriodEnd={Boolean(subscription.cancel_at_period_end)}
+                    cancelReason={subscription.cancel_reason ?? null}
+                    pendingPlan={subscription.pending_plan_type ?? null}
+                    periodEnd={subscription.current_period_end}
+                  />
+                ) : null
+              }
+            />
           </Suspense>
+          {cardPlan ? (
+            <PortalCards cardBrand={lsDetails?.cardBrand ?? null} cardLast4={lsDetails?.cardLastFour ?? null} place={place || null} />
+          ) : null}
+          {subscription.plan_type === "founder_premium" ? (
+            <BillingAddressCard initial={readStoredAddress(subscription.billing_address)} defaultCompany={company?.company_name ?? null} />
+          ) : null}
         </div>
       </section>
 
