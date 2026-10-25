@@ -320,33 +320,53 @@ export function OpportunitiesClient({ canExport = false, meId = "" }: { canExpor
 
   function Row({ o }: { o: Opp }) {
     return (
-      <div style={{ display: "grid", gridTemplateColumns: gridCols, padding: "11px 14px", borderTop: "0.5px solid #eef1f5", alignItems: "center", fontSize: 12.5, background: selected.has(o.id) ? "#F5F9FF" : undefined }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div className="opRow" style={{ display: "grid", gridTemplateColumns: gridCols, padding: "11px 14px", borderTop: "0.5px solid #eef1f5", alignItems: "center", fontSize: 12.5, background: selected.has(o.id) ? "#F5F9FF" : undefined }}>
+        <div className="opChk" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
           <input type="checkbox" checked={selected.has(o.id)} onChange={() => toggleRow(o.id)} aria-label={`Select ${o.title}`} style={{ width: 14, height: 14, cursor: "pointer" }} />
         </div>
-        <div style={{ minWidth: 0 }}>
+        <div className="opTitle" style={{ minWidth: 0 }}>
           <Link href={`/admin/sales/opportunities/${o.id}`} style={{ fontWeight: 500, color: "var(--foreground)", textDecoration: "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" }}>{o.title}</Link>
           <div style={{ fontSize: 11, color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{o.contact_email ?? o.contact_name ?? "—"}</div>
         </div>
-        <div>
+        <div className="opStage">
           <select value={o.stage_id && stageNameById.has(o.stage_id) ? o.stage_id : ""} onChange={(e) => patch(o.id, { stageId: e.target.value })} disabled={busy || o.status === "archived"} style={{ ...inp, maxWidth: 140, color: o.stage_id && stageNameById.has(o.stage_id) ? undefined : "#A32D2D" }}>
             {!(o.stage_id && stageNameById.has(o.stage_id)) && <option value="">— No stage —</option>}
             {stages.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </div>
-        {cols.map((c) => <div key={c.key} style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cellValue(o, c.key)}</div>)}
-        <div style={{ display: "flex", gap: 5, justifyContent: "flex-end", flexWrap: "wrap" }}>
-          {o.status === "open" && <button type="button" onClick={() => patch(o.id, { status: "won" })} disabled={busy} style={btn("#0F6E56")}>Mark sold</button>}
-          <Link href={`/admin/sales/opportunities/${o.id}`} style={{ ...btn("#fff", "#185FA5"), textDecoration: "none" }}>Open</Link>
-          {o.status !== "archived" && <button type="button" onClick={() => patch(o.id, { status: "archived" })} disabled={busy} style={btn("#fff", "var(--muted-foreground)")}>Archive</button>}
-          <button type="button" onClick={() => del(o.id)} disabled={busy} style={btn("#fff", "#A32D2D")}>Delete</button>
+        {cols.map((c) => <div key={c.key} className="opCell" style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cellValue(o, c.key)}</div>)}
+        <div className="opActs" style={{ display: "flex", gap: 5, justifyContent: "flex-end", flexWrap: "wrap" }}>
+          {o.status === "open" && <button type="button" className="opPri" onClick={() => patch(o.id, { status: "won" })} disabled={busy} style={btn("#0F6E56")}>Mark sold</button>}
+          <Link href={`/admin/sales/opportunities/${o.id}`} className="opPri" style={{ ...btn("#fff", "#185FA5"), textDecoration: "none" }}>Open</Link>
+          {o.status !== "archived" && <button type="button" className="opSec" onClick={() => patch(o.id, { status: "archived" })} disabled={busy} style={btn("#fff", "var(--muted-foreground)")}>Archive</button>}
+          <button type="button" className="opSec" onClick={() => del(o.id)} disabled={busy} style={btn("#fff", "#A32D2D")}>Delete</button>
         </div>
       </div>
     );
   }
 
   return (
-    <div>
+    <div className="opMob">
+      <style>{`
+        .opSelTxt{display:none;}
+        @media (max-width:639px){
+          .opMob{padding-bottom:90px;}
+          .opColPop{position:fixed !important;left:16px !important;right:auto !important;width:min(260px, calc(100vw - 32px)) !important;max-height:60vh;overflow-y:auto;}
+          .opHead{grid-template-columns:auto 1fr !important;gap:8px;}
+          .opHead > div:not(:first-child){display:none !important;}
+          .opSelTxt{display:inline;text-transform:none;letter-spacing:0;font-size:12px;align-self:center;}
+          .opRow{grid-template-columns:30px minmax(0,1fr) !important;row-gap:6px;align-items:start !important;}
+          .opChk{grid-column:1;grid-row:1;padding-top:2px;}
+          .opTitle{grid-column:2;}
+          .opTitle a{white-space:normal !important;}
+          .opStage{grid-column:2;}
+          .opStage select{max-width:none !important;width:100% !important;height:38px;}
+          .opCell{grid-column:2;font-size:11.5px;color:var(--muted-foreground);}
+          .opActs{grid-column:1 / -1;display:flex !important;flex-wrap:wrap !important;justify-content:stretch !important;gap:6px !important;}
+          .opPri{flex:1 1 40%;text-align:center;padding:8px 10px !important;font-size:12.5px !important;white-space:nowrap;}
+          .opSec{flex:1 1 40%;order:2;text-align:center;padding:5px 8px !important;font-size:11px !important;white-space:nowrap;}
+        }
+      `}</style>
       <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, overflow: "visible" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderBottom: "0.5px solid #eef1f5", flexWrap: "wrap" }}>
           <NewButton onClick={() => setAdding((v) => !v)} />
@@ -358,7 +378,7 @@ export function OpportunitiesClient({ canExport = false, meId = "" }: { canExpor
             <button type="button" onClick={() => setColsOpen((v) => !v)} style={toolBtn()}><i className="ti ti-columns" aria-hidden="true" /> Columns</button>
             {colsOpen && <>
               <div style={backdrop} onClick={() => setColsOpen(false)} />
-              <div style={pop}>
+              <div className="opColPop" style={pop}>
                 {OPT_COLS.map((c) => (
                   <label key={c.key} style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12.5, padding: "4px 0", cursor: "pointer" }}>
                     <input type="checkbox" checked={visibleCols.includes(c.key)} onChange={() => toggleCol(c.key)} /> {c.label}
@@ -387,8 +407,8 @@ export function OpportunitiesClient({ canExport = false, meId = "" }: { canExpor
         <ActionResult text={actionResult} onClose={() => setActionResult(null)} />
         <SelectionBar count={selectionCount} total={filteredIds.length} onSelectAll={() => setSelected(new Set(filteredIds))} onClear={clearSelection} actions={selectionActions} busy={busy} heading="Selected opportunities" />
 
-        <div style={{ display: "grid", gridTemplateColumns: gridCols, padding: "8px 14px", background: "var(--muted)", fontSize: 10.5, fontWeight: 500, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}><input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Select all" style={{ width: 14, height: 14, cursor: "pointer" }} /></div>
+        <div className="opHead" style={{ display: "grid", gridTemplateColumns: gridCols, padding: "8px 14px", background: "var(--muted)", fontSize: 10.5, fontWeight: 500, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}><input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Select all" style={{ width: 14, height: 14, cursor: "pointer" }} /><span className="opSelTxt">Select all</span></div>
           <div>Opportunity</div><div>Stage</div>{cols.map((c) => <div key={c.key}>{c.label}</div>)}<div></div>
         </div>
 

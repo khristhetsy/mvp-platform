@@ -537,7 +537,21 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
   }
 
   return (
-    <div>
+    <div className="scMob">
+      <style>{`
+        .scSelAll{display:none;}
+        @media (max-width:639px){
+          .scMob{padding-bottom:90px;}
+          .scColPop{position:fixed !important;left:16px !important;right:auto !important;width:min(260px, calc(100vw - 32px)) !important;max-height:60vh;overflow-y:auto;}
+          .scHead{display:none !important;}
+          .scSelAll{display:flex;align-items:center;gap:8px;padding:9px 14px;font-size:12px;color:var(--muted-foreground);background:var(--muted);border-top-left-radius:12px;border-top-right-radius:12px;}
+          .scRow{grid-template-columns:34px minmax(0,1fr) !important;}
+          .scRowLink{display:flex !important;flex-wrap:wrap;align-items:center;gap:2px 10px;padding:10px 12px 10px 0 !important;min-width:0;}
+          .scRowLink > div{min-width:0;max-width:100%;}
+          .scRowLink > div:first-child{flex:1 1 55%;font-weight:600;}
+          .scRowOnly{padding-left:14px !important;}
+        }
+      `}</style>
       {mergeBanner}
       {mergeIds && (
         <MergeContactsDialog ids={mergeIds} onClose={() => setMergeIds(null)}
@@ -619,9 +633,9 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
             </div>
           )}
         </div>
-        <div style={{ position: "relative" }}>
+        <div className="scColWrap" style={{ position: "relative" }}>
           {openColPicker && (
-            <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 30, width: 190, background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", padding: 8 }}>
+            <div className="scColPop" style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 30, width: 190, background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", padding: 8 }}>
               <div style={{ fontSize: 10.5, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".04em", padding: "2px 4px 6px" }}>Show columns</div>
               {ALL_COLUMNS.map((col) => (
                 <label key={col.key} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 4px", fontSize: 12, cursor: col.always ? "default" : "pointer", opacity: col.always ? 0.55 : 1 }}>
@@ -819,7 +833,13 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
       )}
 
       <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, position: "relative" }}>
-        <div style={{ display: "grid", gridTemplateColumns: gridColsSel, padding: "9px 14px", background: "var(--muted)", fontSize: 10.5, fontWeight: 500, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em", borderTopLeftRadius: 12, borderTopRightRadius: 12 }}>
+        {canSelect && (
+          <label className="scSelAll">
+            <input type="checkbox" checked={allLoadedSelected || selectAllMatching} onChange={toggleAllLoaded} aria-label="Select all loaded" style={{ width: 14, height: 14, cursor: "pointer" }} />
+            Select all
+          </label>
+        )}
+        <div className="scHead" style={{ display: "grid", gridTemplateColumns: gridColsSel, padding: "9px 14px", background: "var(--muted)", fontSize: 10.5, fontWeight: 500, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em", borderTopLeftRadius: 12, borderTopRightRadius: 12 }}>
           {canSelect && (
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
               <input type="checkbox" checked={allLoadedSelected || selectAllMatching} onChange={toggleAllLoaded} aria-label="Select all loaded" style={{ width: 14, height: 14, cursor: "pointer" }} />
@@ -936,16 +956,16 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
                   ) : (
                     <>
                       {gs!.rows.map((c) => canSelect ? (
-                        <div key={c.id} style={{ display: "grid", gridTemplateColumns: gridColsSel, borderTop: "0.5px solid #eef1f5", alignItems: "center", fontSize: 12.5, background: selected.has(c.id) || selectAllMatching ? "#F5F9FF" : undefined }}>
+                        <div key={c.id} className="scRow" style={{ display: "grid", gridTemplateColumns: gridColsSel, borderTop: "0.5px solid #eef1f5", alignItems: "center", fontSize: 12.5, background: selected.has(c.id) || selectAllMatching ? "#F5F9FF" : undefined }}>
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
                             <input type="checkbox" checked={selected.has(c.id) || selectAllMatching} onChange={() => toggleRow(c.id)} aria-label={`Select ${c.name}`} style={{ width: 14, height: 14, cursor: "pointer" }} />
                           </div>
-                          <Link href={`${basePath}/${c.id}`} style={{ display: "grid", gridTemplateColumns: gridCols, gridColumn: "2 / -1", padding: "10px 14px", alignItems: "center", textDecoration: "none", color: "var(--foreground)" }}>
+                          <Link href={`${basePath}/${c.id}`} className="scRowLink" style={{ display: "grid", gridTemplateColumns: gridCols, gridColumn: "2 / -1", padding: "10px 14px", alignItems: "center", textDecoration: "none", color: "var(--foreground)" }}>
                             {visibleColumns.map((col) => <div key={col.key} style={{ minWidth: 0 }}>{renderCell(col.key, c)}</div>)}
                           </Link>
                         </div>
                       ) : (
-                        <Link key={c.id} href={`${basePath}/${c.id}`} style={{ display: "grid", gridTemplateColumns: gridCols, padding: "10px 14px", borderTop: "0.5px solid #eef1f5", alignItems: "center", fontSize: 12.5, textDecoration: "none", color: "var(--foreground)" }}>
+                        <Link key={c.id} href={`${basePath}/${c.id}`} className="scRowLink scRowOnly" style={{ display: "grid", gridTemplateColumns: gridCols, padding: "10px 14px", borderTop: "0.5px solid #eef1f5", alignItems: "center", fontSize: 12.5, textDecoration: "none", color: "var(--foreground)" }}>
                           {visibleColumns.map((col) => <div key={col.key} style={{ minWidth: 0 }}>{renderCell(col.key, c)}</div>)}
                         </Link>
                       ))}
