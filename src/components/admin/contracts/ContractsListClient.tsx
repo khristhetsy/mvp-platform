@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { OdooSearchBar, EMPTY_SEARCH, type SearchState } from "@/components/admin/OdooSearchBar";
-import { ToolbarGear, NewButton, downloadCsv, type GearItem } from "@/components/admin/ToolbarGear";
+import { ToolbarGear, downloadCsv, type GearItem } from "@/components/admin/ToolbarGear";
 import { Highlight, NoSearchMatches, SearchCount } from "@/components/ui/SearchStatus";
 import { matchRows, type SearchField } from "@/lib/ui/live-search";
 import { CONTRACT_TYPES, CONTRACT_TYPE_LABEL, STATUS_LABEL, type ContractStatus, type ContractType } from "@/lib/contracts/types";
@@ -54,6 +54,20 @@ const GROUPS = [
   { id: "document", label: "Document" },
 ];
 
+/** Columns of the All view, chosen from the gear menu (same picker as Contacts). Document is always shown. */
+const ALL_COLUMNS: { key: string; label: string; width: string; always?: boolean; off?: boolean }[] = [
+  { key: "document", label: "Document", width: "minmax(220px,2fr)", always: true },
+  { key: "contact", label: "Contact", width: "minmax(170px,1.5fr)" },
+  { key: "entity", label: "Entity", width: "minmax(130px,1.1fr)" },
+  { key: "version", label: "Ver.", width: "60px" },
+  { key: "sent", label: "Sent", width: "70px" },
+  { key: "opened", label: "Opened", width: "minmax(110px,1fr)" },
+  { key: "status", label: "Status", width: "160px" },
+  { key: "created", label: "Created on", width: "100px", off: true },
+];
+const COLS_KEY = "salesContracts.cols.v1";
+const DEFAULT_COLS = ALL_COLUMNS.filter((c) => !c.off).map((c) => c.key);
+
 const SEARCH_FIELDS: SearchField<Row>[] = [
   { label: "document", get: (r) => r.template?.name },
   { label: "contact", get: (r) => r.contact?.name },
@@ -84,9 +98,26 @@ export function ContractsListClient() {
   const [uploading, setUploading] = useState(false);
   const [view, setView] = useState<"all" | "uploaded">("all");
   const [type, setType] = useState<ContractType | "">("");
+  const [visibleCols, setVisibleCols] = useState<string[]>(DEFAULT_COLS);
   const withArchived = search.quick.includes("archived");
   const showDrafts = search.quick.includes("drafts") && view === "all";
   const [sends, setSends] = useState<SavedSend[]>([]);
+
+  // Saved column choice is read after mount so the server and first client render match.
+  useEffect(() => {
+    try {
+      const v = window.localStorage.getItem(COLS_KEY);
+      const saved = v ? (JSON.parse(v) as unknown) : null;
+      if (Array.isArray(saved) && saved.every((k) => typeof k === "string")) setVisibleCols(saved as string[]);
+    } catch { /* ignore */ }
+  }, []);
+  function toggleCol(key: string) {
+    setVisibleCols((cur) => {
+      const next = cur.includes(key) ? cur.filter((k) => k !== key) : [...cur, key];
+      try { window.localStorage.setItem(COLS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }
 
   // Drafts also lists saved sends, each resumable where it was left.
   useEffect(() => {
@@ -158,24 +189,85 @@ export function ContractsListClient() {
   ];
 
   const upGrid = "minmax(240px,2.4fr) minmax(150px,1.2fr) 150px 70px 80px";
-  const grid = "minmax(220px,2fr) minmax(170px,1.5fr) minmax(130px,1.1fr) 60px 70px minmax(110px,1fr) 160px";
   const q = search.q;
+  const shownCols = ALL_COLUMNS.filter((c) => c.always || visibleCols.includes(c.key));
+  const grid = shownCols.map((c) => c.width).join(" ");
+
+  const secHead: React.CSSProperties = { fontSize: 10, textTransform: "uppercase", letterSpacing: ".05em", color: "var(--muted-foreground)", padding: "6px 0 5px" };
+  /** Top of the gear menu: New, Upload, the All / Uploaded switch and the column picker. */
+  const gearTop = (close: () => void) => (
+    <div style={{ padding: "2px 13px 4px" }}>
+      <div style={secHead}>Actions</div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+        <button type="button" onClick={() => { close(); setPicking(true); }} style={{ flex: 1, fontSize: 12.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "7px 0", cursor: "pointer" }}>New</button>
+        <button type="button" onClick={() => { close(); setUploading(true); }} style={{ flex: 1, fontSize: 12.5, fontWeight: 600, color: "#185FA5", background: "#fff", border: "0.5px solid #B5D4F4", borderRadius: 8, padding: "7px 0", cursor: "pointer" }}>Upload</button>
+      </div>
+      <div style={secHead}>Show</div>
+      <div style={{ display: "flex", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, overflow: "hidden", marginBottom: 6 }}>
+        {(["all", "uploaded"] as const).map((v) => (
+          <button key={v} type="button" onClick={() => { setView(v); close(); }} style={{ flex: 1, fontSize: 12.5, fontWeight: view === v ? 600 : 400, border: "none", borderLeft: v === "uploaded" ? "0.5px solid var(--border-strong, #cbd5e1)" : "none", padding: "6px 0", cursor: "pointer", background: view === v ? "#E6F1FB" : "#fff", color: view === v ? "#185FA5" : "var(--foreground)" }}>
+            {v === "all" ? "All" : "Uploaded"}
+            {v === "uploaded" ? <span style={{ marginLeft: 5, fontSize: 10, background: "#185FA5", color: "#fff", borderRadius: 9, padding: "0 6px" }}>{uploads.length}</span> : null}
+          </button>
+        ))}
+      </div>
+      {view === "all" ? (
+        <>
+          <div style={secHead}>Show columns</div>
+          {ALL_COLUMNS.map((col) => (
+            <label key={col.key} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", fontSize: 12.5, cursor: col.always ? "default" : "pointer", opacity: col.always ? 0.55 : 1 }}>
+              <input type="checkbox" checked={col.always || visibleCols.includes(col.key)} disabled={col.always} onChange={() => toggleCol(col.key)} style={{ width: 14, height: 14 }} />
+              {col.label === "Ver." ? "Version" : col.label}
+            </label>
+          ))}
+        </>
+      ) : null}
+    </div>
+  );
+
+  function renderCell(key: string, r: Row) {
+    switch (key) {
+      case "document":
+        return (
+          <div key={key} style={{ fontWeight: 600, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <Highlight text={r.template?.name} query={q} />
+            {(copyNo[r.id] ?? 1) > 1 ? <span style={{ color: MUTED, fontWeight: 400 }}> #{copyNo[r.id]}</span> : null}
+            {r.template?.kind === "upload" ? <span style={{ marginLeft: 6, fontSize: 9.5, fontWeight: 700, background: "#FCEBEB", color: "#A32D2D", borderRadius: 4, padding: "1px 5px" }}>PDF</span> : null}
+          </div>
+        );
+      case "contact":
+        return (
+          <div key={key} style={{ minWidth: 0 }}>
+            <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: r.contact ? undefined : MUTED }}>{r.contact ? <Highlight text={r.contact.name} query={q} /> : "Not chosen"}</div>
+            <div style={{ fontSize: 11, color: MUTED, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><Highlight text={r.contact?.company ?? r.contact?.email} query={q} /></div>
+          </div>
+        );
+      case "entity":
+        return <div key={key} style={{ fontSize: 12, color: MUTED, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><Highlight text={r.entity?.short_name} query={q} /></div>;
+      case "version":
+        return <div key={key} style={{ color: MUTED }}>v{r.version}</div>;
+      case "sent":
+        return <div key={key} style={{ color: MUTED }}>{fmtDate(r.sent_at)}</div>;
+      case "opened":
+        return (
+          <div key={key} style={{ fontSize: 12, color: r.request?.open_count ? "#1a7f43" : MUTED }} title={r.request?.last_opened_at ? `Last opened ${fmtDateTime(r.request.last_opened_at)}` : undefined}>
+            {r.sent_at ? `${r.request?.open_count ?? 0}×${r.request?.last_opened_at ? ` · ${fmtDate(r.request.last_opened_at)}` : ""}` : "—"}
+          </div>
+        );
+      case "status":
+        return <div key={key}><StatusPill status={r.status} archived={Boolean(r.archived_at)} /></div>;
+      case "created":
+        return <div key={key} style={{ color: MUTED }}>{fmtDate(r.created_at)}</div>;
+      default:
+        return null;
+    }
+  }
 
   return (
     <div>
       <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, overflow: "visible" }}>
         <div className="ma-ctool" style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderBottom: "0.5px solid #eef1f5", flexWrap: "wrap" }}>
-          <NewButton onClick={() => setPicking(true)} />
-          <button type="button" onClick={() => setUploading(true)} style={{ fontSize: 12.5, fontWeight: 600, color: "#185FA5", background: "#fff", border: "0.5px solid #B5D4F4", borderRadius: 8, padding: "7px 14px", cursor: "pointer" }}>Upload</button>
-          <div style={{ display: "flex", gap: 2 }}>
-            {(["all", "uploaded"] as const).map((v) => (
-              <button key={v} type="button" onClick={() => setView(v)} style={{ fontSize: 12.5, fontWeight: 600, border: "none", borderRadius: 7, padding: "6px 12px", cursor: "pointer", background: view === v ? "#E6F1FB" : "transparent", color: view === v ? "#185FA5" : MUTED }}>
-                {v === "all" ? "All" : "Uploaded"}
-                {v === "uploaded" ? <span style={{ marginLeft: 5, fontSize: 10, background: "#185FA5", color: "#fff", borderRadius: 9, padding: "0 6px" }}>{uploads.length}</span> : null}
-              </button>
-            ))}
-          </div>
-          <ToolbarGear items={gear} heading="Contracts" />
+          <ToolbarGear items={gear} heading="Contracts" top={gearTop} />
           <SearchCount result={result} noun="documents" />
           <OdooSearchBar
             scope="spv_contracts"
@@ -260,9 +352,9 @@ export function ContractsListClient() {
           </div>
         ) : (
         <div className="ma-cscroll" style={{ overflowX: "auto" }}>
-          <div className="ma-cmin" style={{ minWidth: 940 }}>
+          <div className="ma-cmin" style={{ minWidth: Math.max(520, shownCols.length * 130) }}>
             <div className="ma-hide-m" style={{ display: "grid", gridTemplateColumns: grid, padding: "8px 14px", background: "var(--muted)", fontSize: 10.5, fontWeight: 500, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-              <div>Document</div><div>Contact</div><div>Entity</div><div>Ver.</div><div>Sent</div><div>Opened</div><div>Status</div>
+              {shownCols.map((c) => <div key={c.key}>{c.label}</div>)}
             </div>
             {loading ? <p style={{ padding: 24, textAlign: "center", fontSize: 12.5, color: MUTED }}>Loading…</p> : null}
             {!loading && rows.length === 0 ? (
@@ -281,22 +373,7 @@ export function ContractsListClient() {
                 {g.key ? <div style={{ padding: "7px 14px", background: "#f6f8fc", fontSize: 11.5, fontWeight: 700, color: "#3a4a63", borderTop: "0.5px solid #eef1f5" }}>{g.key} <span style={{ color: MUTED, fontWeight: 400 }}>· {g.rows.length}</span></div> : null}
                 {g.rows.map((r) => (
                   <Link key={r.id} className="ma-crow" href={`/admin/sales/contracts/${r.id}`} style={{ display: "grid", gridTemplateColumns: grid, padding: "11px 14px", borderTop: "0.5px solid #eef1f5", alignItems: "center", fontSize: 12.5, color: NAVY, textDecoration: "none" }}>
-                    <div style={{ fontWeight: 600, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      <Highlight text={r.template?.name} query={q} />
-                      {(copyNo[r.id] ?? 1) > 1 ? <span style={{ color: MUTED, fontWeight: 400 }}> #{copyNo[r.id]}</span> : null}
-                      {r.template?.kind === "upload" ? <span style={{ marginLeft: 6, fontSize: 9.5, fontWeight: 700, background: "#FCEBEB", color: "#A32D2D", borderRadius: 4, padding: "1px 5px" }}>PDF</span> : null}
-                    </div>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: r.contact ? undefined : MUTED }}>{r.contact ? <Highlight text={r.contact.name} query={q} /> : "Not chosen"}</div>
-                      <div style={{ fontSize: 11, color: MUTED, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><Highlight text={r.contact?.company ?? r.contact?.email} query={q} /></div>
-                    </div>
-                    <div style={{ fontSize: 12, color: MUTED, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><Highlight text={r.entity?.short_name} query={q} /></div>
-                    <div style={{ color: MUTED }}>v{r.version}</div>
-                    <div style={{ color: MUTED }}>{fmtDate(r.sent_at)}</div>
-                    <div style={{ fontSize: 12, color: r.request?.open_count ? "#1a7f43" : MUTED }} title={r.request?.last_opened_at ? `Last opened ${fmtDateTime(r.request.last_opened_at)}` : undefined}>
-                      {r.sent_at ? `${r.request?.open_count ?? 0}×${r.request?.last_opened_at ? ` · ${fmtDate(r.request.last_opened_at)}` : ""}` : "—"}
-                    </div>
-                    <div><StatusPill status={r.status} archived={Boolean(r.archived_at)} /></div>
+                    {shownCols.map((c) => renderCell(c.key, r))}
                   </Link>
                 ))}
               </div>
