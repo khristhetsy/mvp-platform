@@ -13,7 +13,7 @@ export default async function SalesSettingsTasksPage() {
   return (
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle={profile.role} profileEmail={profile.email ?? undefined}>
       <SalesHubHeader />
-      <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+      <div className="ma-split ma-pad" style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
         <SettingsSubNav />
         <SettingsTasksClient staff={staff} />
       </div>

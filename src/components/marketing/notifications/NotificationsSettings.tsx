@@ -40,7 +40,7 @@ function Switch({ on, disabled, onToggle, label }: { on: boolean; disabled?: boo
       style={{
         width: 38, height: 22, borderRadius: 999, border: "none", cursor: disabled ? "not-allowed" : "pointer",
         background: on ? PURPLE : "#cbd2dd", padding: 2, transition: "background .15s", opacity: disabled ? 0.5 : 1,
-        display: "inline-flex", alignItems: "center",
+        display: "inline-flex", alignItems: "center", flexShrink: 0,
       }}
     >
       <span style={{
@@ -171,7 +171,7 @@ export function NotificationsSettings() {
   };
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 300px", gap: 20, alignItems: "start" }}>
+    <div className="ma-notif ma-pad" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 300px", gap: 20, alignItems: "start" }}>
       {/* Left: grouped list */}
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {!settings.master_on ? (
@@ -229,7 +229,7 @@ export function NotificationsSettings() {
                           <ChannelChips value={p.channels} disabled={off} onChange={(ch) => updatePref(t.id, { channels: ch })} />
                         </div>
                       </div>
-                      <div style={{ paddingTop: 2 }}>
+                      <div style={{ paddingTop: 2, flexShrink: 0 }}>
                         <Switch on={p.enabled} label={`${t.label} on/off`} onToggle={() => updatePref(t.id, { enabled: !p.enabled })} />
                       </div>
                     </div>
@@ -242,7 +242,7 @@ export function NotificationsSettings() {
       </div>
 
       {/* Right: master control + live preview */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 16, position: "sticky", top: 12 }}>
+      <div className="ma-notif-side" style={{ display: "flex", flexDirection: "column", gap: 16, position: "sticky", top: 12 }}>
         <div style={card}>
           <div style={{ padding: "12px 16px", borderBottom: "0.5px solid #eef1f5", fontSize: 13, fontWeight: 600, color: "#0f2147" }}>{t("controls")}</div>
           <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 14 }}>

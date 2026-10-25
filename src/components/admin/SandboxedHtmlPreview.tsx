@@ -20,6 +20,7 @@ export function SandboxedHtmlPreview({
   fontSize = 14,
   color = "#222222",
   showBadge = true,
+  fluidOnPhone = false,
   style,
 }: Readonly<{
   html: string;
@@ -30,6 +31,8 @@ export function SandboxedHtmlPreview({
   fontSize?: number;
   color?: string;
   showBadge?: boolean;
+  /** Preview only: on a phone-width frame, shrink images and tables to fit. The stored HTML is never changed. */
+  fluidOnPhone?: boolean;
   style?: CSSProperties;
 }>) {
   const [height, setHeight] = useState(minHeight);
@@ -50,7 +53,8 @@ export function SandboxedHtmlPreview({
   const base =
     `<base target="_blank"><style>html,body{margin:0}body{padding:${padding}px;` +
     `font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:${fontSize}px;` +
-    `line-height:1.6;color:${color}}</style>`;
+    `line-height:1.6;color:${color}}</style>` +
+    (fluidOnPhone ? `<style>@media(max-width:639px){img,table{max-width:100%!important}img{height:auto!important}}</style>` : "");
 
   return (
     <div>

@@ -60,6 +60,9 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const [open, setOpen] = useState<string | null>(null);
   const barRef = useRef<HTMLDivElement>(null);
+  // Phone width: Dashboard, Prospects and the active tab stay visible, the rest live under "More".
+  const keptOnPhone = (g: NavGroup) => g.label === "Dashboard" || g.label === "Prospects" || groupActive(g, pathname);
+  const extraGroups = GROUPS.filter((g) => !keptOnPhone(g));
 
   // Close the open dropdown on an outside click or Escape.
   useEffect(() => {
@@ -88,19 +91,19 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
         position: "relative",
         zIndex: 20,
       }}>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+        <div className="ma-mk-head" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
           <div>
             <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".14em", color: "var(--muted-foreground)" }}>Admin workspace</div>
             <h1 style={{ fontSize: 22, fontWeight: 600, margin: "3px 0 0", letterSpacing: "-0.01em", color: "var(--foreground)" }}>Marketing</h1>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, paddingTop: 4 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--muted)", borderRadius: 999, padding: "4px 11px" }}>
+          <div className="ma-mk-right" style={{ display: "flex", alignItems: "center", gap: 12, paddingTop: 4 }}>
+            <div className="ma-mk-pill" style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--muted)", borderRadius: 999, padding: "4px 11px" }}>
               <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#1D9E75" }} />
               <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
                 Sending via <span style={{ color: "#2E78F5", fontWeight: 500 }}>icapos.com</span>
               </span>
             </div>
-            <MarketingBell />
+            <div className="ma-mk-bell"><MarketingBell /></div>
           </div>
         </div>
 
@@ -119,14 +122,14 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             };
             if (!group.children) {
               return (
-                <Link key={group.href} href={group.href} style={tabStyle}>
+                <Link key={group.href} href={group.href} className={keptOnPhone(group) ? undefined : "ma-tab-extra"} style={tabStyle}>
                   {group.label}
                 </Link>
               );
             }
             const isOpen = open === group.label;
             return (
-              <div key={group.href} style={{ position: "relative" }}>
+              <div key={group.href} className={keptOnPhone(group) ? undefined : "ma-tab-extra"} style={{ position: "relative" }}>
                 <button
                   type="button"
                   aria-haspopup="menu"
@@ -173,6 +176,38 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
               </div>
             );
           })}
+          {extraGroups.length > 0 && (
+            <div className="ma-more" style={{ position: "relative" }}>
+              <button
+                type="button"
+                aria-haspopup="menu"
+                aria-expanded={open === "__more"}
+                onClick={() => setOpen(open === "__more" ? null : "__more")}
+                style={{ padding: "9px 14px", fontSize: 13, fontWeight: 500, color: "var(--muted-foreground)", background: "none", border: 0, borderBottom: "2px solid transparent", cursor: "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center", gap: 6 }}
+              >
+                More
+                <span aria-hidden style={{ fontSize: 9, opacity: 0.7 }}>{open === "__more" ? "\u25B4" : "\u25BE"}</span>
+              </button>
+              {open === "__more" && (
+                <div
+                  role="menu"
+                  style={{ position: "absolute", top: "100%", right: 0, minWidth: 210, padding: 6, zIndex: 40, background: "var(--background)", border: "0.5px solid var(--border)", borderRadius: 12, boxShadow: "0 12px 30px rgba(11,19,48,.18)" }}
+                >
+                  {extraGroups.flatMap((g) => g.children ?? [{ label: g.label, href: g.href }]).map((child) => (
+                    <Link
+                      key={child.href}
+                      href={child.href}
+                      role="menuitem"
+                      onClick={() => setOpen(null)}
+                      style={{ display: "flex", alignItems: "center", minHeight: 44, padding: "0 12px", borderRadius: 8, fontSize: 13, fontWeight: 500, color: "var(--foreground)", textDecoration: "none", whiteSpace: "nowrap" }}
+                    >
+                      {child.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

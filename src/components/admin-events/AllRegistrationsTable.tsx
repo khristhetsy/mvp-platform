@@ -82,14 +82,14 @@ export function AllRegistrationsTable({ rows, events }: Readonly<{
   const types = [...new Set(rows.map((r) => r.attendeeType).filter(Boolean))] as string[];
 
   return (
-    <div className="overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-white">
-      <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border-subtle)] px-3.5 py-2.5">
-        <select value={eventId} onChange={(e) => setEventId(e.target.value)} className={I}>
+    <div className="ma-pad overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-white">
+      <div className="ma-filters flex flex-wrap items-center gap-2 border-b border-[var(--border-subtle)] px-3.5 py-2.5">
+        <select value={eventId} onChange={(e) => setEventId(e.target.value)} className={`${I} ma-full`}>
           <option value="">All events</option>
           {events.map((e) => <option key={e.id} value={e.id}>{e.title}</option>)}
         </select>
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, email or company…"
-          className={`${I} min-w-[180px] flex-1`} />
+          className={`${I} ma-full min-w-[180px] flex-1`} />
         <select value={type} onChange={(e) => setType(e.target.value)} className={I}>
           <option value="">Any type</option>
           {types.map((t) => <option key={t} value={t}>{t}</option>)}
@@ -100,10 +100,10 @@ export function AllRegistrationsTable({ rows, events }: Readonly<{
           <option value="self">Registered themselves</option>
         </select>
         <button type="button" onClick={exportCsv}
-          className="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)]">
+          className="ma-export rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)]">
           Export CSV
         </button>
-        <span className="text-[11.5px] text-[var(--text-muted)]">
+        <span className="ma-count text-[11.5px] text-[var(--text-muted)]">
           {shown.length === rows.length ? `${rows.length}` : `${shown.length} of ${rows.length}`}
           {" · "}staff {staffCount} · self {shown.length - staffCount}
         </span>
@@ -114,7 +114,7 @@ export function AllRegistrationsTable({ rows, events }: Readonly<{
           {rows.length === 0 ? "Nobody has registered yet." : "No registration matches that search."}
         </p>
       ) : (
-        <table className="w-full text-xs">
+        <table className="ma-cards ma-reg w-full text-xs">
           <thead>
             <tr className="bg-slate-50 text-left text-[10.4px] uppercase tracking-wide text-[var(--text-muted)]">
               <th className="px-3.5 py-2 font-bold">Attendee</th>
@@ -127,22 +127,22 @@ export function AllRegistrationsTable({ rows, events }: Readonly<{
           <tbody>
             {shown.map((r) => (
               <tr key={r.id} className="border-t border-[var(--border-subtle)]">
-                <td className="px-3.5 py-2">
+                <td className="ma-a px-3.5 py-2">
                   <span className="block font-medium text-[var(--navy)]">{r.contactName ?? "—"}</span>
                   <span className="block text-[10.4px] text-[var(--text-muted)]">
                     {[r.contactEmail, r.company].filter(Boolean).join(" · ") || "—"}
                   </span>
                 </td>
-                <td className="px-3.5 py-2">
+                <td className="ma-t px-3.5 py-2">
                   {r.attendeeType ? (
                     <span className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase ${TYPE_STYLE[r.attendeeType] ?? "bg-slate-100 text-slate-600"}`}>
                       {r.attendeeType}
                     </span>
                   ) : <span className="text-[var(--text-muted)]">—</span>}
                 </td>
-                <td className="px-3.5 py-2 text-[var(--text-secondary)]">{r.registeredBy === "staff" ? "Staff" : "Self"}</td>
-                <td className="px-3.5 py-2 text-[var(--text-secondary)]">{r.eventTitle ?? "—"}</td>
-                <td className="px-3.5 py-2 text-[var(--text-muted)]">{fmt(r.createdAt)}</td>
+                <td className="ma-b px-3.5 py-2 text-[var(--text-secondary)]">{r.registeredBy === "staff" ? "Staff" : "Self"}</td>
+                <td className="ma-e px-3.5 py-2 text-[var(--text-secondary)]">{r.eventTitle ?? "—"}</td>
+                <td className="ma-d px-3.5 py-2 text-[var(--text-muted)]">{fmt(r.createdAt)}</td>
               </tr>
             ))}
           </tbody>

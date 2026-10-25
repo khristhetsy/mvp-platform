@@ -164,7 +164,7 @@ export function ContractsListClient() {
   return (
     <div>
       <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, overflow: "visible" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderBottom: "0.5px solid #eef1f5", flexWrap: "wrap" }}>
+        <div className="ma-ctool" style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderBottom: "0.5px solid #eef1f5", flexWrap: "wrap" }}>
           <NewButton onClick={() => setPicking(true)} />
           <button type="button" onClick={() => setUploading(true)} style={{ fontSize: 12.5, fontWeight: 600, color: "#185FA5", background: "#fff", border: "0.5px solid #B5D4F4", borderRadius: 8, padding: "7px 14px", cursor: "pointer" }}>Upload</button>
           <div style={{ display: "flex", gap: 2 }}>
@@ -233,7 +233,7 @@ export function ContractsListClient() {
         {view === "uploaded" ? (
           <div style={{ overflowX: "auto" }}>
             <div style={{ minWidth: 640 }}>
-              <div style={{ display: "grid", gridTemplateColumns: upGrid, padding: "8px 14px", background: "var(--muted)", fontSize: 10.5, fontWeight: 500, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+              <div className="ma-hide-m" style={{ display: "grid", gridTemplateColumns: upGrid, padding: "8px 14px", background: "var(--muted)", fontSize: 10.5, fontWeight: 500, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
                 <div>Contract</div><div>Type</div><div>Uploaded</div><div>Pages</div><div />
               </div>
               {loading ? <p style={{ padding: 24, textAlign: "center", fontSize: 12.5, color: MUTED }}>Loading…</p> : null}
@@ -245,7 +245,7 @@ export function ContractsListClient() {
                 )
               ) : null}
               {result.rows.map((r) => (
-                <Link key={r.id} href={`/admin/sales/contracts/${r.id}`} style={{ display: "grid", gridTemplateColumns: upGrid, padding: "11px 14px", borderTop: "0.5px solid #eef1f5", alignItems: "center", fontSize: 12.5, color: NAVY, textDecoration: "none" }}>
+                <Link key={r.id} className="ma-crow" href={`/admin/sales/contracts/${r.id}`} style={{ display: "grid", gridTemplateColumns: upGrid, padding: "11px 14px", borderTop: "0.5px solid #eef1f5", alignItems: "center", fontSize: 12.5, color: NAVY, textDecoration: "none" }}>
                   <div style={{ fontWeight: 600, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     <Highlight text={r.template?.name} query={q} />
                     <span style={{ marginLeft: 6, fontSize: 9.5, fontWeight: 700, background: "#FCEBEB", color: "#A32D2D", borderRadius: 4, padding: "1px 5px" }}>PDF</span>
@@ -259,9 +259,9 @@ export function ContractsListClient() {
             </div>
           </div>
         ) : (
-        <div style={{ overflowX: "auto" }}>
-          <div style={{ minWidth: 940 }}>
-            <div style={{ display: "grid", gridTemplateColumns: grid, padding: "8px 14px", background: "var(--muted)", fontSize: 10.5, fontWeight: 500, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+        <div className="ma-cscroll" style={{ overflowX: "auto" }}>
+          <div className="ma-cmin" style={{ minWidth: 940 }}>
+            <div className="ma-hide-m" style={{ display: "grid", gridTemplateColumns: grid, padding: "8px 14px", background: "var(--muted)", fontSize: 10.5, fontWeight: 500, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
               <div>Document</div><div>Contact</div><div>Entity</div><div>Ver.</div><div>Sent</div><div>Opened</div><div>Status</div>
             </div>
             {loading ? <p style={{ padding: 24, textAlign: "center", fontSize: 12.5, color: MUTED }}>Loading…</p> : null}
@@ -280,7 +280,7 @@ export function ContractsListClient() {
               <div key={g.key || "all"}>
                 {g.key ? <div style={{ padding: "7px 14px", background: "#f6f8fc", fontSize: 11.5, fontWeight: 700, color: "#3a4a63", borderTop: "0.5px solid #eef1f5" }}>{g.key} <span style={{ color: MUTED, fontWeight: 400 }}>· {g.rows.length}</span></div> : null}
                 {g.rows.map((r) => (
-                  <Link key={r.id} href={`/admin/sales/contracts/${r.id}`} style={{ display: "grid", gridTemplateColumns: grid, padding: "11px 14px", borderTop: "0.5px solid #eef1f5", alignItems: "center", fontSize: 12.5, color: NAVY, textDecoration: "none" }}>
+                  <Link key={r.id} className="ma-crow" href={`/admin/sales/contracts/${r.id}`} style={{ display: "grid", gridTemplateColumns: grid, padding: "11px 14px", borderTop: "0.5px solid #eef1f5", alignItems: "center", fontSize: 12.5, color: NAVY, textDecoration: "none" }}>
                     <div style={{ fontWeight: 600, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       <Highlight text={r.template?.name} query={q} />
                       {(copyNo[r.id] ?? 1) > 1 ? <span style={{ color: MUTED, fontWeight: 400 }}> #{copyNo[r.id]}</span> : null}

@@ -347,13 +347,13 @@ export function PresentersManager({ initialPresenters, events, sessions = [] }: 
   }
 
   return (
-    <section className="rounded-xl border border-[var(--border-subtle)] bg-white p-5 shadow-[var(--shadow-panel)]">
-      <div className="flex items-start justify-between gap-3">
+    <section className="ma-pad rounded-xl border border-[var(--border-subtle)] bg-white p-5 shadow-[var(--shadow-panel)]">
+      <div className="ma-head flex items-start justify-between gap-3">
         <div>
           <h2 className="font-semibold text-[var(--navy)]">Presenters</h2>
           <p className="mt-1 text-sm text-[var(--text-muted)]">Add speakers directly to the roster, schedule their slot, and manage the details attendees see.</p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="ma-head-actions flex shrink-0 items-center gap-2">
           {events.length > 0 && (
             <button type="button" onClick={() => { setReusing((v) => !v); setAdding(false); setEditId(null); }} className="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] hover:bg-slate-50">
               <i className="ti ti-history" aria-hidden="true" /> Reuse previous
@@ -367,7 +367,7 @@ export function PresentersManager({ initialPresenters, events, sessions = [] }: 
 
       {events.length > 1 && (
         <div className="mt-3">
-          <select value={eventFilter} onChange={(e) => setEventFilter(e.target.value)} className="rounded-md border border-[var(--border-subtle)] px-2.5 py-1.5 text-xs">
+          <select value={eventFilter} onChange={(e) => setEventFilter(e.target.value)} className="ma-full-select rounded-md border border-[var(--border-subtle)] px-2.5 py-1.5 text-xs">
             <option value="all">All events</option>
             {events.map((e) => <option key={e.id} value={e.id}>{e.title}</option>)}
           </select>
@@ -397,12 +397,12 @@ export function PresentersManager({ initialPresenters, events, sessions = [] }: 
         <p className="mt-6 text-sm text-[var(--text-muted)]">No presenters yet. Use “Add presenter” to build the roster.</p>
       ) : (
         <div className="mt-4 overflow-hidden rounded-lg border border-[var(--border-subtle)]">
-          <div className="grid grid-cols-[1.3fr_1.4fr_0.9fr_1fr_1.1fr] gap-2 border-b border-[var(--border-subtle)] bg-slate-50 px-3 py-2 text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
+          <div className="ma-hide-m grid grid-cols-[1.3fr_1.4fr_0.9fr_1fr_1.1fr] gap-2 border-b border-[var(--border-subtle)] bg-slate-50 px-3 py-2 text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
             <span>Name</span><span>Topic</span><span>When</span><span>Meet</span><span className="text-right">Actions</span>
           </div>
           {visible.map((p) => (
             <div key={p.id}>
-              <div className="grid grid-cols-[1.3fr_1.4fr_0.9fr_1fr_1.1fr] items-center gap-2 border-b border-[var(--border-subtle)] px-3 py-2.5 text-xs">
+              <div className="ma-pres grid grid-cols-[1.3fr_1.4fr_0.9fr_1fr_1.1fr] items-center gap-2 border-b border-[var(--border-subtle)] px-3 py-2.5 text-xs">
                 <span className="min-w-0">
                   <span className="block truncate font-medium text-[var(--navy)]">{p.displayName}</span>
                   <span className="block truncate text-[10px] text-[var(--text-muted)]">{p.roleLabel} · {eventTitle[p.eventId] ?? p.eventTitle ?? ""}</span>

@@ -59,17 +59,17 @@ export function SalesAnalyticsClient({ metrics: initialMetrics }: { metrics: Sal
           <h1 style={{ fontSize: 20, fontWeight: 600, color: NAVY, margin: 0 }}>Sales analytics</h1>
           <p style={{ fontSize: 12.5, color: MUTED, margin: "2px 0 0" }}>Follow-up results, pipeline health and team activity. Click any card for its trend and an AI read.</p>
         </div>
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
-          <span style={lab}>Period</span>
-          <span style={{ display: "inline-flex", border: "0.5px solid var(--border)", borderRadius: 7, overflow: "hidden" }}>
+        <div className="ma-period" style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+          <span className="ma-lab" style={lab}>Period</span>
+          <span className="ma-seg" style={{ display: "inline-flex", border: "0.5px solid var(--border)", borderRadius: 7, overflow: "hidden" }}>
             {GRAINS.map((g) => <button key={g.id} type="button" onClick={() => setGrain(g.id)} style={seg(grain === g.id)}>{g.label}</button>)}
           </span>
-          <span style={lab}>Compare to</span>
-          <span style={{ display: "inline-flex", border: "0.5px solid var(--border)", borderRadius: 7, overflow: "hidden" }}>
+          <span className="ma-lab" style={lab}>Compare to</span>
+          <span className="ma-seg" style={{ display: "inline-flex", border: "0.5px solid var(--border)", borderRadius: 7, overflow: "hidden" }}>
             <button type="button" onClick={() => setCompare("prev")} style={seg(compare === "prev")}>Previous period</button>
-            <button type="button" onClick={() => setCompare("yoy")} style={seg(compare === "yoy")}>Same period last year</button>
+            <button type="button" onClick={() => setCompare("yoy")} style={seg(compare === "yoy")}><span className="ma-desk">Same period last year</span><span className="ma-mob">Last year</span></button>
           </span>
-          <span style={{ flexBasis: "100%", textAlign: "right", fontSize: 11, color: MUTED }}>
+          <span className="ma-dates" style={{ flexBasis: "100%", textAlign: "right", fontSize: 11, color: MUTED }}>
             <b style={{ fontWeight: 500, color: "var(--foreground)" }}>This period</b> {fmtDate(cur.start)} – {fmtDate(cur.end)} · <b style={{ fontWeight: 500, color: "var(--foreground)" }}>Compared to</b> {fmtDate(cmp.start)} – {fmtDate(cmp.end)}
           </span>
         </div>

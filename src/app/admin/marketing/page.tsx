@@ -101,7 +101,7 @@ export default async function MarketingDashboardPage({ searchParams }: { searchP
     nextActions.push({ icon: "★", tone: "#0F6E56", title: `${activeSequenceCount} active sequence${activeSequenceCount === 1 ? "" : "s"}`, detail: "— review cadence and performance.", cta: "Open sequences", href: "/admin/marketing/sequences" });
 
   return (
-    <div style={{ padding: 24, maxWidth: 1100 }}>
+    <div className="ma-pad" style={{ padding: 24, maxWidth: 1100 }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
         <div>
@@ -121,7 +121,7 @@ export default async function MarketingDashboardPage({ searchParams }: { searchP
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
           <span style={{ fontSize: 14, fontWeight: 600 }}>Lead lifecycle</span>
           <span style={{ fontSize: 11.5, color: "var(--muted-foreground)" }}>{lifecycleTotal.toLocaleString()} in funnel</span>
-          <div style={{ display: "flex", border: "0.5px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
+          <div className="ma-seg" style={{ display: "flex", border: "0.5px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
             {PERIODS.map((p) => (
               <Link key={p.key} href={p.key === "30d" ? "/admin/marketing" : `/admin/marketing?period=${p.key}`} style={{ fontSize: 11, padding: "4px 10px", textDecoration: "none", background: period === p.key ? "#6D28D9" : "transparent", color: period === p.key ? "#fff" : "var(--muted-foreground)", borderLeft: p.key !== "week" ? "0.5px solid var(--border)" : "none" }}>{p.short}</Link>
             ))}
@@ -129,7 +129,7 @@ export default async function MarketingDashboardPage({ searchParams }: { searchP
           <span style={{ marginLeft: "auto", fontSize: 11, color: openRate >= 21 ? "#3B6D11" : "#854F0B", background: openRate >= 21 ? "#EAF3DE" : "#FAEEDA", borderRadius: 999, padding: "3px 11px" }}>Open {openRate.toFixed(1)}% {openRate >= 21 ? "· above benchmark" : ""}</span>
         </div>
         {marketingStages.length === 0 ? <p style={{ fontSize: 12.5, color: "var(--muted-foreground)" }}>No lifecycle stages yet.</p> : (
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 0, flexWrap: "nowrap", overflowX: "auto", paddingBottom: 4 }}>
+          <div className="ma-funnel" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 0, flexWrap: "nowrap", overflowX: "auto", paddingBottom: 4 }}>
             {marketingStages.map((s, i) => {
               const share = lifecycleTotal > 0 ? Math.round((s.count / lifecycleTotal) * 100) : 0;
               const C = 175.93; const off = C * (1 - Math.min(100, share) / 100);
@@ -152,12 +152,12 @@ export default async function MarketingDashboardPage({ searchParams }: { searchP
             })}
           </div>
         )}
-        <div style={{ borderTop: "0.5px solid #eef1f5", marginTop: 12, paddingTop: 9, display: "flex", gap: 18, flexWrap: "wrap", fontSize: 11.5, color: "var(--muted-foreground)" }}>
+        <div className="ma-stats" style={{ borderTop: "0.5px solid #eef1f5", marginTop: 12, paddingTop: 9, display: "flex", gap: 18, flexWrap: "wrap", fontSize: 11.5, color: "var(--muted-foreground)" }}>
           <Link href="/admin/marketing/contacts" style={{ textDecoration: "none", color: "var(--muted-foreground)" }}><b style={{ color: "var(--foreground)" }}>{(totalContacts ?? 0).toLocaleString()}</b> contacts <span style={{ opacity: 0.8 }}>(+{newContacts7d ?? 0} this week)</span></Link>
           <span><b style={{ color: "var(--foreground)" }}>{sent.toLocaleString()}</b> emails sent (30d)</span>
           <span><b style={{ color: "var(--foreground)" }}>{openRate.toFixed(1)}%</b> open</span>
           <span><b style={{ color: "var(--foreground)" }}>{clickRate.toFixed(1)}%</b> click</span>
-          {lifecycleBottleneck && <span style={{ color: "#A32D2D" }}>Bottleneck → <b>{lifecycleBottleneck}</b></span>}
+          {lifecycleBottleneck && <span className="ma-bottleneck" style={{ color: "#A32D2D" }}>Bottleneck → <b>{lifecycleBottleneck}</b></span>}
         </div>
       </div>
 
@@ -175,7 +175,7 @@ export default async function MarketingDashboardPage({ searchParams }: { searchP
       <MarketingAdvisor funnelSummary={marketingStages.map((s) => `${s.label} ${s.count}`).join(", ")} />
 
       {/* Campaigns + Sequences */}
-      <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 14, marginBottom: 14 }}>
+      <div className="ma-stack" style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 14, marginBottom: 14 }}>
         {/* Active campaigns */}
         <div style={{ ...card, overflow: "hidden" }}>
           <div style={{ padding: "12px 16px", borderBottom: "0.5px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -191,7 +191,7 @@ export default async function MarketingDashboardPage({ searchParams }: { searchP
               const openR = c.stat_sent > 0 ? ((c.stat_opened / c.stat_sent) * 100).toFixed(1) : "—";
               const prog = c.stat_sent > 0 ? Math.min((c.stat_sent / Math.max(c.stat_sent, 500)) * 100, 100) : 0;
               return (
-                <div key={c.id} style={{ padding: "12px 16px", borderBottom: "0.5px solid var(--border)", display: "grid", gridTemplateColumns: "1fr auto auto", gap: 12, alignItems: "center" }}>
+                <div key={c.id} className="ma-camprow" style={{ padding: "12px 16px", borderBottom: "0.5px solid var(--border)", display: "grid", gridTemplateColumns: "1fr auto auto", gap: 12, alignItems: "center" }}>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 500, color: "var(--foreground)", marginBottom: 2 }}>{c.name}</div>
                     <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
@@ -226,9 +226,9 @@ export default async function MarketingDashboardPage({ searchParams }: { searchP
             (sequences.data ?? []).map((s: { id: string; name: string; status: string }) => {
               const sc = SEQ_STATUS_MAP[s.status] ?? SEQ_STATUS_MAP.draft;
               return (
-                <div key={s.id} style={{ padding: "12px 16px", borderBottom: "0.5px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div key={s.id} className="ma-seqrow" style={{ padding: "12px 16px", borderBottom: "0.5px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                   <div style={{ fontSize: 13, fontWeight: 500 }}>{s.name}</div>
-                  <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: sc.bg, color: sc.color, fontWeight: 500 }}>
+                  <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: sc.bg, color: sc.color, fontWeight: 500, flexShrink: 0, whiteSpace: "nowrap" }}>
                     {s.status.charAt(0).toUpperCase() + s.status.slice(1)}
                   </span>
                 </div>
