@@ -167,7 +167,7 @@ export default function AnalyticsClient({ metrics, dailyOpens, completedCampaign
 
   const statCards = [
     { label: "Deliverability", value: `${metrics.deliverability}%`, delta: parseFloat(metrics.deliverability) >= 95 ? "Above 95% benchmark" : "Below 95% benchmark", good: parseFloat(metrics.deliverability) >= 95 },
-    { label: "Open rate",      value: `${metrics.openRate}%`,      delta: parseFloat(metrics.openRate) >= 21 ? "Above 21% benchmark" : `${(22 - parseFloat(metrics.openRate)).toFixed(1)}pts below`, good: parseFloat(metrics.openRate) >= 21 },
+    { label: "Open rate",      value: `${metrics.openRate}%`,      delta: parseFloat(metrics.openRate) >= 22 ? "Above 22% benchmark" : `${(22 - parseFloat(metrics.openRate)).toFixed(1)}pts below`, good: parseFloat(metrics.openRate) >= 22 },
     { label: "Click rate",     value: `${metrics.clickRate}%`,     delta: parseFloat(metrics.clickRate) >= 3.5 ? "Above 3.5% benchmark" : `${(3.5 - parseFloat(metrics.clickRate)).toFixed(1)}pts below`, good: parseFloat(metrics.clickRate) >= 3.5 },
     { label: "Unsubscribes",   value: `${metrics.unsubRate}%`,     delta: parseFloat(metrics.unsubRate) <= 0.5 ? "Healthy (< 0.5%)" : "Above 0.5% threshold", good: parseFloat(metrics.unsubRate) <= 0.5 },
   ];
