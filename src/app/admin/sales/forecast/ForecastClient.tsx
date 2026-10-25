@@ -189,7 +189,7 @@ function Overview({ currentMrr, currentArr, projectedArr, varianceToDate, snapsh
         <Card label="Projected ARR" value={projectedArr != null ? money(projectedArr) : "—"} sub={projectedArr != null ? "end of horizon" : "compute a forecast"} onClick={() => onOpenInsight("proj")} />
         <Card label="Variance to date" value={varianceToDate != null ? `${varianceToDate >= 0 ? "+" : ""}${money(varianceToDate)}` : "—"} sub="actual vs projection" onClick={() => onOpenInsight("variance")} />
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1.6fr) minmax(0,1fr)", gap: 14, alignItems: "start" }}>
+      <div className="ma-stack" style={{ display: "grid", gridTemplateColumns: "minmax(0,1.6fr) minmax(0,1fr)", gap: 14, alignItems: "start" }}>
         <div style={{ background: "#fff", border: "0.5px solid var(--border)", borderRadius: 12, padding: 16 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: NAVY, marginBottom: 10 }}>MRR — actuals vs projection</div>
           {snapshot ? <MrrChart snapshot={snapshot} actualsByMonth={actualsByMonth} /> : <p style={{ fontSize: 12.5, color: MUTED }}>Compute a forecast to see the projection curve.</p>}

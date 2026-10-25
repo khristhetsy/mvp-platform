@@ -2,6 +2,8 @@
 /* Tabler icon webfont — powers every `ti ti-*` icon across the app (189 files).
    Bundled via the package so there's no CDN runtime dependency. */
 @import "@tabler/icons-webfont/dist/tabler-icons.min.css";
+/* Phone width layout fixes (admin tables, settings, notifications). */
+@import "../styles/mobile-alignment.css";
 
 :root {
   --background: #f5f6f8;

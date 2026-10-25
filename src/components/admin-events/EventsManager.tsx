@@ -167,8 +167,8 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6">
-      <div className="flex items-center justify-between">
+    <div className="ma-pad mx-auto max-w-5xl px-4 py-6">
+      <div className="ma-ev-head flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-[var(--text-primary)]">Events</h1>
           <p className="mt-1 text-sm text-[var(--text-muted)]">
@@ -285,7 +285,7 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
             No events yet. Create your first draft to get started.
           </div>
         ) : (
-          <table className="w-full text-sm">
+          <table className="ma-cards ma-ev w-full text-sm">
             <thead>
               <tr className="border-b border-[var(--border-subtle)] text-left text-xs uppercase tracking-wide text-[var(--text-muted)]">
                 <th className="px-4 py-3 font-semibold">Event</th>

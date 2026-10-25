@@ -105,7 +105,7 @@ function LetterPreview({ template, compact = false }: { template: Partial<Market
  *  no synthetic letterhead/greeting scaffold and no cropping. */
 function RawEmailPreview({ template }: { template: Partial<MarketingTemplate> }) {
   return (
-    <div style={{ background: "#eef2f8", borderRadius: 10, padding: 16, overflowX: "auto" }}>
+    <div className="ma-rawpad" style={{ background: "#eef2f8", borderRadius: 10, padding: 16, overflowX: "auto" }}>
       {template.subject && (
         <div style={{ maxWidth: 600, margin: "0 auto 12px", padding: "8px 14px", background: "#fff", border: "1px solid #E5E3DC", borderRadius: 8, fontSize: 12, color: "#5a6b8c" }}>
           Subject: <b style={{ color: "#13213f" }}>{template.subject}</b>
@@ -114,7 +114,7 @@ function RawEmailPreview({ template }: { template: Partial<MarketingTemplate> })
       {/* Render the email directly — it carries its own page background and
           centred card, so wrapping it in another card hid the page colour. */}
       {template.html_body
-        ? <div style={{ minWidth: 600 }}><SandboxedHtmlPreview html={template.html_body} title="Full template" minHeight={200} /></div>
+        ? <div className="ma-rawmin" style={{ minWidth: 600 }}><SandboxedHtmlPreview html={template.html_body} title="Full template" minHeight={200} fluidOnPhone /></div>
         : <div style={{ maxWidth: 600, margin: "0 auto", padding: 24, background: "#fff", borderRadius: 10, color: "#B4B2A9", fontStyle: "italic" }}>No content yet.</div>}
       <div style={{ textAlign: "center", fontSize: 11, color: "#8fa0bf", marginTop: 10 }}>Full template as it renders in delivered mail — no cropping.</div>
     </div>
@@ -197,7 +197,7 @@ export function TemplatesClient({ templates, initialEditId }: { templates: Marke
   const listRow = (t: MarketingTemplate, i: number) => {
     const sc = STATUS_MAP[t.status] ?? STATUS_MAP.draft;
     return (
-      <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 16px", borderTop: i ? "0.5px solid var(--border)" : "none" }}>
+      <div key={t.id} className="ma-trow" style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 16px", borderTop: i ? "0.5px solid var(--border)" : "none" }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>{t.name}</div>
           <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.subject}</div>
@@ -205,7 +205,7 @@ export function TemplatesClient({ templates, initialEditId }: { templates: Marke
         <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: sc.bg, color: sc.color, fontWeight: 500, whiteSpace: "nowrap" }}>{t.status.charAt(0).toUpperCase() + t.status.slice(1)}</span>
         <button type="button" onClick={() => setPreview(t)} style={ghostBtn}>Preview</button>
         <button type="button" onClick={() => openEditor(t)} style={ghostBtn}>Edit</button>
-        <div style={{ position: "relative" }}>
+        <div className="ma-move" style={{ position: "relative" }}>
           <button type="button" onClick={() => setMoveOpen(moveOpen === t.id ? null : t.id)} style={{ fontSize: 12, padding: "4px 9px", borderRadius: 6, border: "0.5px solid #B5D4F4", background: "#E6F1FB", cursor: "pointer", color: "#185FA5" }}><i className="ti ti-arrows-exchange" aria-hidden="true" /> Move</button>
           {moveOpen === t.id && (
             <div style={{ position: "absolute", top: "calc(100% + 4px)", right: 0, zIndex: 40, width: 200, background: "#fff", border: "0.5px solid #cbd5e1", borderRadius: 9, boxShadow: "0 10px 26px rgba(0,0,0,0.14)", overflow: "hidden" }}>
@@ -383,7 +383,7 @@ export function TemplatesClient({ templates, initialEditId }: { templates: Marke
   }
 
   return (
-    <div style={{ padding: 24, maxWidth: 1100 }}>
+    <div className="ma-pad" style={{ padding: 24, maxWidth: 1100 }}>
       {brandedEditId ? (
         <BrandedTemplateEditor
           templateId={brandedEditId}
@@ -559,11 +559,11 @@ export function TemplatesClient({ templates, initialEditId }: { templates: Marke
 
       {/* Letter preview modal */}
       {preview && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+        <div className="ma-modal-wrap" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
           onClick={() => setPreview(null)}>
-          <div style={{ background: "#ffffff", borderRadius: 14, padding: 24, maxWidth: 720, width: "100%", maxHeight: "90vh", overflow: "auto", scrollbarGutter: "stable" }}
+          <div className="ma-modal" style={{ background: "#ffffff", borderRadius: 14, padding: 24, maxWidth: 720, width: "100%", maxHeight: "90vh", overflow: "auto", scrollbarGutter: "stable" }}
             onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <div className="ma-modal-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <div>
                 <div style={{ fontWeight: 500, fontSize: 14 }}>{preview.name}</div>
                 <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>Letter preview</div>

@@ -1,0 +1,184 @@
+/* Mobile alignment fixes (specs 2 and 3). Phone width only: nothing here
+   applies above 639px, so desktop layouts are untouched. Layout only: no data,
+   query or logic changes. Class hooks are prefixed "ma-". */
+
+/* Defaults: elements that exist only for the phone layout stay hidden. */
+.ma-rail-select { display: none; }
+
+@media (max-width: 639px) {
+  /* ---- Shared ---- */
+  .ma-pad { padding-bottom: 90px; }
+  .ma-hide-m { display: none !important; }
+
+  /* Table rows become cards. Header row hidden, cells lose their padding. */
+  .ma-cards, .ma-cards tbody { display: block; width: 100%; }
+  .ma-cards thead { display: none; }
+  .ma-cards tr { display: grid; gap: 4px 10px; padding: 12px; border-top: 1px solid var(--border-subtle); }
+  .ma-cards td { display: block; padding: 0 !important; border-top: 0 !important; min-width: 0; overflow-wrap: anywhere; }
+
+  /* ---- Screen 1: Sales settings ---- */
+  .ma-split { flex-direction: column !important; align-items: stretch !important; }
+  .ma-rail { width: 100% !important; padding: 8px !important; align-self: stretch !important; }
+  .ma-rail-full { display: none !important; }
+  .ma-rail-select {
+    display: block; width: 100%; font-size: 13px; font-weight: 600; padding: 10px 12px;
+    border-radius: 10px; border: 0.5px solid var(--border); background: #fff; color: var(--foreground);
+  }
+  .ma-fill { max-width: none !important; width: 100% !important; min-width: 0; }
+
+  /* ---- Screen 2: Networking board matches ---- */
+  .ma-net tr {
+    grid-template-columns: 24px minmax(0, 1fr) auto;
+    grid-template-areas: "c a sc" ". b st" ". w w";
+  }
+  .ma-net td:nth-child(1) { grid-area: c; }
+  .ma-net td:nth-child(2) { grid-area: a; }
+  .ma-net td:nth-child(3) { grid-area: b; }
+  .ma-net td:nth-child(3)::before { content: "With"; display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); }
+  .ma-net td:nth-child(4) { grid-area: w; }
+  .ma-net td:nth-child(5) { grid-area: sc; text-align: right; }
+  .ma-net td:nth-child(6) { grid-area: st; text-align: right; }
+
+  /* ---- Screen 3: Registrations ---- */
+  .ma-filters > .ma-full { flex: 1 1 100% !important; min-width: 0 !important; }
+  .ma-filters > select { flex: 1 1 40%; min-width: 0; max-width: 100%; }
+  .ma-filters .ma-export { margin-left: auto; }
+  .ma-reg tr {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "a t" "b d" "e e";
+  }
+  .ma-reg .ma-a { grid-area: a; }
+  .ma-reg .ma-t { grid-area: t; align-self: start; }
+  .ma-reg .ma-b { grid-area: b; font-size: 10.4px; color: var(--text-muted); }
+  .ma-reg .ma-b::before { content: "Registered by "; }
+  .ma-reg .ma-d { grid-area: d; text-align: right; }
+  .ma-reg .ma-e { grid-area: e; }
+
+  /* ---- Screen 4: Presenters ---- */
+  .ma-head { flex-direction: column; align-items: stretch !important; }
+  .ma-head-actions { width: 100%; }
+  .ma-head-actions > button { flex: 1 1 0; min-width: 0; text-align: center; white-space: nowrap; }
+  .ma-full-select { width: 100%; min-width: 0; }
+  .ma-pres {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    grid-template-areas: "n x" "t t" "w m";
+    row-gap: 6px;
+  }
+  .ma-pres > :nth-child(1) { grid-area: n; }
+  .ma-pres > :nth-child(2) { grid-area: t; white-space: normal !important; }
+  .ma-pres > :nth-child(3) { grid-area: w; }
+  .ma-pres > :nth-child(4) { grid-area: m; text-align: right; }
+  .ma-pres > :nth-child(5) { grid-area: x; white-space: nowrap; }
+
+  /* ---- Screen 5: Events ---- */
+  .ma-ev-head { align-items: flex-start !important; gap: 12px; }
+  .ma-ev-head > button { flex-shrink: 0; white-space: nowrap; }
+  .ma-ev tr {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "e s" "f d" "x x";
+  }
+  .ma-ev td:nth-child(1) { grid-area: e; }
+  .ma-ev td:nth-child(2) { grid-area: f; font-size: 11px; }
+  .ma-ev td:nth-child(3) { grid-area: d; font-size: 11px; text-align: right; }
+  .ma-ev td:nth-child(4) { grid-area: s; white-space: nowrap; text-align: right; }
+  .ma-ev td:nth-child(5) { grid-area: x; }
+  .ma-ev td:nth-child(5) > div { flex-wrap: wrap; justify-content: flex-start; }
+
+}
+
+/* ---- Spec 3 ---- */
+.ma-more, .ma-mob { display: none; }
+
+@media (max-width: 639px) {
+  .ma-stack { grid-template-columns: minmax(0, 1fr) !important; }
+  .ma-stack > * { min-width: 0; }
+  .ma-more { display: block; }
+  .ma-mob { display: inline; }
+  .ma-desk { display: none; }
+  .ma-tab-extra { display: none !important; }
+
+  /* Tab 2: Analytics filters. Label above each control, segmented controls full width. */
+  .ma-period { margin-left: 0 !important; width: 100%; flex-direction: column; align-items: stretch !important; justify-content: flex-start !important; gap: 6px !important; }
+  .ma-lab { display: block; }
+  .ma-seg { display: flex !important; width: 100%; }
+  .ma-seg > button, .ma-seg > a { flex: 1 1 0; min-width: 0; white-space: nowrap; text-align: center; }
+  .ma-dates { text-align: left !important; }
+  .ma-values { flex-basis: 100%; margin-left: 0 !important; }
+
+  /* Tab 3: By sequence becomes one card per sequence, 3 by 2 stat grid. */
+  .ma-seqtab tr { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .ma-seqtab td { white-space: normal !important; overflow: visible !important; }
+  .ma-seqtab td:nth-child(1), .ma-seqtab td[colspan] { grid-column: 1 / -1; }
+  .ma-seqtab td:nth-child(1) { font-weight: 600; }
+  .ma-seqtab td:nth-child(n+2)::before { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted-foreground); }
+  .ma-seqtab td:nth-child(2)::before { content: "Enrolled"; }
+  .ma-seqtab td:nth-child(3)::before { content: "Sent"; }
+  .ma-seqtab td:nth-child(4)::before { content: "Open rate"; }
+  .ma-seqtab td:nth-child(5)::before { content: "Reply rate"; }
+  .ma-seqtab td:nth-child(6)::before { content: "Meetings"; }
+  .ma-seqtab td:nth-child(7)::before { content: "Won"; }
+  .ma-seqtab td:nth-child(8)::before { content: "Conversion"; }
+  .ma-seqtab .ma-oneoff td:nth-child(2), .ma-seqtab .ma-oneoff td:nth-child(n+4) { display: none; }
+
+  /* Tabs 4 and 5: Sequence cards. */
+  .ma-seqcard { min-width: 0; max-width: 100%; }
+  .ma-seq-head { flex-direction: column; align-items: stretch !important; }
+  .ma-seq-meta { flex-direction: column; align-items: stretch !important; gap: 8px !important; }
+  .ma-seq-meta > span { align-self: flex-start; }
+  .ma-seq-meta > button { max-width: 100% !important; white-space: normal !important; text-align: left; }
+  .ma-actions3 { display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .ma-actions3 > button { width: 100%; white-space: nowrap; }
+  .ma-actions3 .ma-stepcount { grid-column: 1 / -1; margin-left: 0 !important; }
+  .ma-enroll { flex-wrap: wrap; }
+  .ma-enroll select { flex: 1 1 100%; min-width: 0; }
+  .ma-enroll button { flex: 1 1 0; }
+  .ma-test input { flex: 1 1 0; min-width: 0 !important; }
+  .ma-test button { flex: none; }
+  .ma-grouphead { flex-wrap: wrap; }
+
+  /* Tab 6: Contracts. */
+  .ma-cscroll { overflow-x: visible !important; }
+  .ma-cmin { min-width: 0 !important; }
+  .ma-crow { display: flex !important; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; padding: 12px 14px !important; }
+  .ma-crow > :nth-child(1) { order: 1; flex: 1 1 0; min-width: 0; white-space: normal !important; text-overflow: clip !important; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .ma-crow > :nth-child(7) { order: 2; flex: none; }
+  .ma-crow > :nth-child(2) { order: 3; flex: 0 0 100%; min-width: 0; }
+  .ma-crow > :nth-child(n+3):not(:nth-child(7)) { order: 4; flex: none; font-size: 11px; }
+  .ma-ctool > :last-child, .ma-ctool > :last-child > * { flex: 1 1 100%; width: 100% !important; max-width: 100% !important; min-width: 0; }
+
+  /* Tab 7: Marketing dashboard. */
+  .ma-funnel { display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 0 !important; overflow: visible !important; }
+  .ma-funnel > div { justify-content: center; }
+  .ma-funnel > div > span { display: none; }
+  .ma-funnel a { width: 100% !important; }
+  .ma-stats { display: grid !important; grid-template-columns: 1fr 1fr; gap: 6px 12px !important; }
+  .ma-bottleneck { grid-column: 1 / -1; }
+
+  /* Tab 8: Campaigns list. */
+  .ma-camp { grid-template-columns: minmax(0, 1fr) auto !important; grid-template-areas: "n s" "t k"; row-gap: 8px !important; }
+  .ma-camp > :nth-child(1) { grid-area: n; }
+  .ma-camp > :nth-child(1) button { flex-wrap: wrap; text-align: left; }
+  .ma-camp > :nth-child(1) button > span:first-child { white-space: normal !important; }
+  .ma-camp > :nth-child(2) { grid-area: s; align-self: start; }
+  .ma-camp > :nth-child(3) { grid-area: t; padding-top: 8px; border-top: 1px solid var(--border); }
+  .ma-camp > :nth-child(4) { grid-area: k; padding-top: 2px; border-top: 1px solid var(--border); }
+
+  /* Tab 9: Template preview modal fills the screen. */
+  .ma-modal-wrap { padding: 12px !important; align-items: stretch !important; }
+  .ma-modal { padding: 14px !important; max-height: none !important; height: 100%; border-radius: 12px !important; }
+  .ma-modal-head { position: sticky; top: 0; margin-top: -14px; padding-top: 14px !important; padding-bottom: 6px; background: #fff; z-index: 2; flex-wrap: wrap; gap: 8px; }
+  .ma-rawpad { padding: 8px !important; }
+  .ma-rawmin { min-width: 0 !important; }
+
+  /* Tab 10: Template rows. */
+  .ma-trow { flex-wrap: wrap; }
+  .ma-trow > :nth-child(1) { flex: 1 1 0; min-width: 0; }
+  .ma-trow > :nth-child(n+3) { flex: 1 1 28%; min-width: 0; }
+  .ma-move > button { width: 100%; }
+
+  /* Tab 11: Marketing header (the Templates toolbar is now the gear menu). */
+  .ma-mk-head { flex-wrap: wrap; }
+  .ma-mk-right { display: contents !important; }
+  .ma-mk-bell { order: 2; margin-left: auto; }
+  .ma-mk-pill { order: 3; flex: 0 0 100%; background: none !important; padding: 0 !important; margin-top: 2px; }
+}
