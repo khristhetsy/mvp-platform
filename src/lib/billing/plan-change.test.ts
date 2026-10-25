@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canDowngrade, isCardPlan, isDowngradeDue, pendingPlanFor } from "./plan-change";
+import { awaitingCardCheckout, canDowngrade, canSwitchFromPremium, cardPlanFor, isCardPlan, isDowngradeDue, pendingPlanFor } from "./plan-change";
 
 describe("plan change rules", () => {
   it("allows only real downgrades", () => {
@@ -21,6 +21,21 @@ describe("plan change rules", () => {
   it("maps a target to the pending plan type", () => {
     expect(pendingPlanFor("basic")).toBe("founder_basic");
     expect(pendingPlanFor("free")).toBe("founder_free");
+  });
+
+  it("lets only Premium switch to a card plan", () => {
+    expect(canSwitchFromPremium("founder_premium", "professional")).toBe(true);
+    expect(canSwitchFromPremium("founder_premium", "basic")).toBe(true);
+    expect(canSwitchFromPremium("founder_professional", "basic")).toBe(false);
+    expect(cardPlanFor("professional")).toBe("founder_professional");
+    expect(cardPlanFor("basic")).toBe("founder_basic");
+  });
+
+  it("prompts checkout only for a free account that chose a card plan and has no subscription", () => {
+    expect(awaitingCardCheckout({ plan_type: "founder_free", pending_plan_type: "founder_professional", ls_subscription_id: null })).toBe(true);
+    expect(awaitingCardCheckout({ plan_type: "founder_free", pending_plan_type: "founder_free" })).toBe(false);
+    expect(awaitingCardCheckout({ plan_type: "founder_free", pending_plan_type: "founder_basic", ls_subscription_id: "123" })).toBe(false);
+    expect(awaitingCardCheckout({ plan_type: "founder_premium", pending_plan_type: "founder_basic" })).toBe(false);
   });
 
   it("applies a scheduled change one day before the period ends", () => {

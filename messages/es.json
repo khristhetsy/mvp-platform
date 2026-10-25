@@ -3623,6 +3623,16 @@
     "addr_save": "Guardar dirección",
     "addr_saved": "Dirección de facturación guardada. Se aplica a tu próxima factura.",
     "addr_none": "Aún no hay dirección de facturación. Agrega una para imprimirla en tus facturas.",
-    "addr_tax_line": "ID fiscal: {tax}"
+    "addr_tax_line": "ID fiscal: {tax}",
+    "switch_to_card": "Cambiar a un plan con tarjeta",
+    "switch_title": "Elige un plan con tarjeta",
+    "switch_desc": "La renovación de Premium se detiene. Conservas Premium hasta el {date}.",
+    "option_professional": "Profesional",
+    "per_month": "al mes",
+    "switch_note": "No habrá más facturas por transferencia después del {date}. Después inicias tu plan con tarjeta desde la pestaña de facturación, y se cobra tu tarjeta al pagar.",
+    "switch_confirm": "Programar cambio",
+    "banner_switch_scheduled": "El cambio a {target} está programado. Conservas Premium hasta el {date} y luego inicias {target} desde esta página.",
+    "start_plan_prompt": "Terminó tu periodo Premium. Inicia {plan} para recuperar tu plan de pago.",
+    "start_plan_button": "Iniciar {plan}"
   }
 }

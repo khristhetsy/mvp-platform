@@ -3623,6 +3623,16 @@
     "addr_save": "Save address",
     "addr_saved": "Billing address saved. It applies to your next invoice.",
     "addr_none": "No billing address on file yet. Add one to print it on your invoices.",
-    "addr_tax_line": "Tax ID: {tax}"
+    "addr_tax_line": "Tax ID: {tax}",
+    "switch_to_card": "Switch to a card plan",
+    "switch_title": "Choose a card plan",
+    "switch_desc": "Premium renewal stops. You keep Premium until {date}.",
+    "option_professional": "Professional",
+    "per_month": "a month",
+    "switch_note": "No more wire invoices after {date}. After that you start your card plan from the Billing tab, and your card is charged when you check out.",
+    "switch_confirm": "Schedule switch",
+    "banner_switch_scheduled": "Switch to {target} is scheduled. You keep Premium until {date}, then start {target} from this page.",
+    "start_plan_prompt": "Your Premium period ended. Start {plan} to get your paid plan back.",
+    "start_plan_button": "Start {plan}"
   }
 }
