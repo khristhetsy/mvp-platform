@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CourseBannerUpload } from "@/components/admin/learning/CourseBannerUpload";
 import { formatApiError } from "@/lib/api/errors";
+import { confirmDialog } from "@/components/ui/ConfirmDialog";
 
 export type LearningContentStatus = "draft" | "pending_review" | "approved" | "published" | "archived";
 export type LearningDifficulty = "introductory" | "intermediate" | "advanced";
@@ -113,6 +114,35 @@ export function AdminCourseEditor({ mode, initial, onSaved }: Props) {
     } catch (e) {
       setError(formatApiError(e, "Unable to save course."));
     } finally {
+      setLoading(false);
+    }
+  }
+
+  // ── Delete ─────────────────────────────────────────────────────────────────
+
+  async function deleteCourse() {
+    if (!form.id) return;
+    const ok = await confirmDialog({
+      title: `Delete "${form.title}"?`,
+      message:
+        "This permanently removes the course, its module links, enrollments, and certificates. This can't be undone.",
+      confirmLabel: "Delete course",
+      danger: true,
+    });
+    if (!ok) return;
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await fetch(`/api/admin/learning/courses/${encodeURIComponent(String(form.id))}`, {
+        method: "DELETE",
+      });
+      const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+      if (!res.ok) throw json;
+      router.push("/admin/learning/courses");
+      router.refresh();
+    } catch (e) {
+      setError(formatApiError(e, "Unable to delete course."));
       setLoading(false);
     }
   }
@@ -525,6 +555,17 @@ export function AdminCourseEditor({ mode, initial, onSaved }: Props) {
             >
               {loading ? "Saving…" : mode === "create" ? "Create course" : "Save changes"}
             </button>
+            {mode === "edit" && form.id ? (
+              <button
+                type="button"
+                onClick={() => void deleteCourse()}
+                disabled={loading}
+                className="ml-auto rounded-lg border border-rose-300 bg-white px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-60"
+              >
+                <i className="ti ti-trash mr-1.5" aria-hidden="true" />
+                Delete course
+              </button>
+            ) : null}
           </div>
         </>
       )}
