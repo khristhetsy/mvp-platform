@@ -9,6 +9,7 @@ import { countPdfPages } from "@/lib/esignature/pdf";
 import { MIME_PDF } from "@/lib/esignature/types";
 import { FORM_TITLE, packageItems, PART_LABEL, type FormKey, type PartKey, type SubscriberProfile } from "./package";
 import { W8BENE_PDF_BASE64, W9_PDF_BASE64 } from "./form-pdfs";
+import { W8BEN_PDF_BASE64 } from "./form-pdf-w8ben";
 
 export type PackageDoc = {
   id: string;
@@ -29,7 +30,7 @@ export class PackageMastersMissing extends Error {
   }
 }
 
-const FORM_BASE64: Record<FormKey, string> = { w9: W9_PDF_BASE64, w8bene: W8BENE_PDF_BASE64 };
+const FORM_BASE64: Record<FormKey, string> = { w9: W9_PDF_BASE64, w8bene: W8BENE_PDF_BASE64, w8ben: W8BEN_PDF_BASE64 };
 
 export async function createPackageDocuments(db: Db, input: { contactId: string; userId: string; profile: SubscriberProfile }): Promise<PackageResult> {
   const items = packageItems(input.profile);
@@ -87,8 +88,6 @@ export async function createPackageDocuments(db: Db, input: { contactId: string;
         if (error) throw new Error(`Could not add ${item.title}: ${error.message}`);
       }
       documents.push({ id, templateId: null, name: item.title, part: item.part, partLabel: PART_LABEL[item.part], kind: "form" });
-    } else {
-      if (item.applies) notes.push(`${item.title}: ${item.note}`);
     }
   }
   return { documents, notes };

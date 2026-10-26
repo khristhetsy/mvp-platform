@@ -36,10 +36,10 @@ describe("Step 1 for the subscription package", () => {
     expect(h).toContain(names.sub_form_ai_individual);
   });
 
-  it("lists the W-8BEN with its note, and marks it as applying to a non-U.S. individual", () => {
+  it("lists all three IRS forms and marks the W-8BEN as applying to a non-U.S. individual", () => {
     const h = html({ type: "individual", usPerson: false, spouseSigns: false });
-    expect(h).toContain("The source package has no W-8BEN");
-    expect(h).toContain("(applies to this subscriber)");
+    for (const f of ["IRS Form W-9", "IRS Form W-8BEN-E", "IRS Form W-8BEN"]) expect(h).toContain(f);
+    expect(h).toContain("applies to this subscriber");
   });
 
   it("warns, and offers Install to an admin, when masters are missing; no Replace file for a master that is not there", () => {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { leftoverPlaceholders, packageItems, packageLinkedValues, packageLinkValue, SUBSCRIPTION_TEMPLATE_KEYS, type SubscriberProfile } from "./package";
 
-const keysOf = (p: SubscriberProfile) => packageItems(p).map((i) => (i.source === "template" ? i.templateKey : i.source === "pdf" ? `pdf:${i.formKey}` : `missing:${i.title}`));
+const keysOf = (p: SubscriberProfile) => packageItems(p).map((i) => (i.source === "template" ? i.templateKey : `pdf:${i.formKey}`));
 
 describe("which documents a subscriber gets", () => {
   it("U.S. entity: entity pages, W-9, entity verification letter, no spouse page", () => {
@@ -12,7 +12,7 @@ describe("which documents a subscriber gets", () => {
       "sub_sig_llc_entity",
       "pdf:w9",
       "pdf:w8bene",
-      "missing:IRS Form W-8BEN",
+      "pdf:w8ben",
       "sub_form_ai_entity",
       "sub_ppm",
       "sub_agreement",
@@ -20,11 +20,11 @@ describe("which documents a subscriber gets", () => {
   });
 
   const applies = (p: SubscriberProfile) =>
-    packageItems(p).flatMap((i) => (i.source === "template" ? [] : i.applies ? [i.source === "pdf" ? i.formKey : "w8ben"] : []));
+    packageItems(p).flatMap((i) => (i.source === "template" ? [] : i.applies ? [i.formKey] : []));
 
   it("the Forms part always lists all three IRS forms and marks the one that applies", () => {
     for (const type of ["entity", "individual"] as const)
-      expect(keysOf({ type, usPerson: true, spouseSigns: false })).toEqual(expect.arrayContaining(["pdf:w9", "pdf:w8bene", "missing:IRS Form W-8BEN"]));
+      expect(keysOf({ type, usPerson: true, spouseSigns: false })).toEqual(expect.arrayContaining(["pdf:w9", "pdf:w8bene", "pdf:w8ben"]));
     expect(applies({ type: "entity", usPerson: true, spouseSigns: false })).toEqual(["w9"]);
     expect(applies({ type: "entity", usPerson: false, spouseSigns: false })).toEqual(["w8bene"]);
     expect(applies({ type: "individual", usPerson: false, spouseSigns: false })).toEqual(["w8ben"]);
@@ -56,11 +56,10 @@ describe("which documents a subscriber gets", () => {
     expect(keysOf({ type: "entity", usPerson: true, spouseSigns: true })).not.toContain("sub_sig_spouse");
   });
 
-  it("a non-U.S. individual needs a W-8BEN the source package does not carry, and says so", () => {
+  it("a non-U.S. individual gets the W-8BEN as a PDF, and it is the only form that applies", () => {
     const items = packageItems({ type: "individual", usPerson: false, spouseSigns: false });
-    const m = items.find((i) => i.source === "missing");
-    expect(m).toBeTruthy();
-    expect(m && "title" in m && m.title).toBe("IRS Form W-8BEN");
+    const f = items.find((i) => i.source === "pdf" && i.formKey === "w8ben");
+    expect(f && "title" in f && f.title).toBe("IRS Form W-8BEN");
   });
 
   it("every template a profile can use is in the key list", () => {

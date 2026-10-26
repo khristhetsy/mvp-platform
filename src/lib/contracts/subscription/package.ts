@@ -33,8 +33,8 @@ export type SubscriberProfile = { type: SubscriberType; usPerson: boolean; spous
 export const DEFAULT_PROFILE: SubscriberProfile = { type: "entity", usPerson: true, spouseSigns: false };
 
 /** The IRS forms the package carries as PDFs (no fields). */
-export type FormKey = "w9" | "w8bene";
-export const FORM_TITLE: Record<FormKey | "w8ben", string> = {
+export type FormKey = "w9" | "w8bene" | "w8ben";
+export const FORM_TITLE: Record<FormKey, string> = {
   w9: "IRS Form W-9",
   w8bene: "IRS Form W-8BEN-E",
   w8ben: "IRS Form W-8BEN",
@@ -42,9 +42,7 @@ export const FORM_TITLE: Record<FormKey | "w8ben", string> = {
 
 export type PackageItem =
   | { source: "template"; part: PartKey; templateKey: string }
-  | { source: "pdf"; part: "forms"; formKey: FormKey; title: string; applies: boolean }
-  /** A form the package should carry but the source file does not include. */
-  | { source: "missing"; part: "forms"; title: string; note: string; applies: boolean };
+  | { source: "pdf"; part: "forms"; formKey: FormKey; title: string; applies: boolean };
 
 /**
  * Documents for a subscriber, in package order. The Forms part always lists the three
@@ -61,13 +59,7 @@ export function packageItems(p: SubscriberProfile): PackageItem[] {
   items.push({ source: "template", part: "signature_pages", templateKey: joint ? "sub_sig_llc_joint" : individual ? "sub_sig_llc_individual" : "sub_sig_llc_entity" });
   items.push({ source: "pdf", part: "forms", formKey: "w9", title: FORM_TITLE.w9, applies: p.usPerson });
   items.push({ source: "pdf", part: "forms", formKey: "w8bene", title: FORM_TITLE.w8bene, applies: !p.usPerson && !individual });
-  items.push({
-    source: "missing",
-    part: "forms",
-    title: FORM_TITLE.w8ben,
-    note: "The source package has no W-8BEN. Upload the official IRS PDF as a contract PDF and send it with this package.",
-    applies: !p.usPerson && individual,
-  });
+  items.push({ source: "pdf", part: "forms", formKey: "w8ben", title: FORM_TITLE.w8ben, applies: !p.usPerson && individual });
   items.push({ source: "template", part: "forms", templateKey: individual ? "sub_form_ai_individual" : "sub_form_ai_entity" });
   items.push({ source: "template", part: "ppm", templateKey: "sub_ppm" });
   items.push({ source: "template", part: "agreement", templateKey: "sub_agreement" });

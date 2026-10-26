@@ -81,11 +81,6 @@ export function SubscriptionPackagePicker({
                     </div>
                   );
                 }
-                return (
-                  <div key={i} style={{ fontSize: 12, color: "#8a6500", lineHeight: 1.7 }}>
-                    {r.title}{r.applies ? " (applies to this subscriber)" : ""}: {r.note}
-                  </div>
-                );
               })}
             </div>
           </div>

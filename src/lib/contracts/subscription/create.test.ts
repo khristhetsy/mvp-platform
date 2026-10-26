@@ -64,11 +64,11 @@ describe("creating a subscription package", () => {
 
   it("makes a draft of each master and the IRS form PDF for a U.S. entity", async () => {
     const r = await createPackageDocuments(ctx.db, { ...input, profile: { type: "entity", usPerson: true, spouseSigns: false } });
-    expect(r.documents.map((d) => d.part)).toEqual(["cover_index", "instructions", "signature_pages", "signature_pages", "forms", "forms", "forms", "ppm", "agreement"]);
-    expect(r.documents.filter((d) => d.kind === "form").map((d) => d.name)).toEqual(["IRS Form W-9", "IRS Form W-8BEN-E"]);
+    expect(r.documents.map((d) => d.part)).toEqual(["cover_index", "instructions", "signature_pages", "signature_pages", "forms", "forms", "forms", "forms", "ppm", "agreement"]);
+    expect(r.documents.filter((d) => d.kind === "form").map((d) => d.name)).toEqual(["IRS Form W-9", "IRS Form W-8BEN-E", "IRS Form W-8BEN"]);
     expect(r.notes).toEqual([]);
     const drafts = ctx.tables.contract_documents;
-    expect(drafts).toHaveLength(9);
+    expect(drafts).toHaveLength(10);
     const form = drafts.find((d) => d.source === "upload" && d.title === "IRS Form W-9")!;
     expect(form).toMatchObject({ contact_id: "c1", status: "draft", title: "IRS Form W-9", entity_id: "e-venture", page_count: 6, contract_type: null });
     expect(Object.keys(ctx.files)).toContain(`uploads/${form.id}/original.pdf`);
@@ -85,13 +85,13 @@ describe("creating a subscription package", () => {
     const first = await createPackageDocuments(ctx.db, { ...input, profile });
     const again = await createPackageDocuments(ctx.db, { ...input, profile });
     expect(again.documents.map((d) => d.id)).toEqual(first.documents.map((d) => d.id));
-    expect(ctx.tables.contract_documents).toHaveLength(9);
+    expect(ctx.tables.contract_documents).toHaveLength(10);
   });
 
-  it("a non-U.S. individual: the W-8BEN the source lacks is reported, nothing is invented", async () => {
+  it("a non-U.S. individual: the W-8BEN is included as a form PDF", async () => {
     const r = await createPackageDocuments(ctx.db, { ...input, profile: { type: "individual", usPerson: false, spouseSigns: false } });
-    expect(r.documents.filter((d) => d.kind === "form").map((d) => d.name)).not.toContain("IRS Form W-8BEN");
-    expect(r.notes[0]).toMatch(/W-8BEN/);
+    expect(r.documents.filter((d) => d.kind === "form").map((d) => d.name)).toContain("IRS Form W-8BEN");
+    expect(r.notes).toEqual([]);
   });
 
   it("adds the Agreement of Spouse where it applies", async () => {
