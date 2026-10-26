@@ -40,6 +40,8 @@ export type PersonalCoachContext = {
   coachAddendum?: string | null;
   /** Coaching style, used to keep model output inside the coach rules. */
   coachTone?: CoachTone | null;
+  /** When set, replaces the generic lesson fallback reply (used by the onboarding coach). */
+  fallbackReply?: string | null;
 };
 
 export type PersonalCoachResult = {
@@ -193,6 +195,7 @@ export function buildFallbackCoachReply(input: {
   message: string;
   ctx: PersonalCoachContext;
 }): string {
+  if (input.ctx.fallbackReply) return input.ctx.fallbackReply;
   const trimmed = input.message.trim();
   if (!trimmed) {
     return input.ctx.lessonTitle

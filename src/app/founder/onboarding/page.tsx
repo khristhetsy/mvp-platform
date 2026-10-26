@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { FounderAppShell } from "@/components/FounderAppShell";
+import { FloatingFounderAICoach } from "@/components/FloatingFounderAICoach";
 import { getTranslations } from "next-intl/server";
 import { FounderConversationalOnboarding } from "@/components/founder/FounderConversationalOnboarding";
 import { FounderOnboardingProgressCard } from "@/components/FounderOnboardingProgressCard";
@@ -54,6 +55,7 @@ export default async function FounderOnboardingPage() {
             engineWeights={(await getInvestorMatchConfig()).engineWeights}
           />
         </VocabularyProvider>
+        <FloatingFounderAICoach surface="onboarding" />
       </div>
     </FounderAppShell>
   );

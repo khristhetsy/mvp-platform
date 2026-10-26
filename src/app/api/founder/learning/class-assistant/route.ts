@@ -22,6 +22,10 @@ import { getCoachCourse, getCoachLesson } from "@/lib/learning/coach/courses";
 import { buildCoachPromptAddendum } from "@/lib/learning/coach/ir-coach";
 import { formatSnapshotForPrompt } from "@/lib/learning/coach/data-reads";
 import { loadCoachSnapshot } from "@/lib/learning/coach/snapshot-loader";
+import { buildOnboardingCoachContext } from "@/lib/learning/onboarding-coach";
+import { listCompanyDocuments } from "@/lib/data/documents";
+import { getLatestDiligenceReport } from "@/lib/data/founder-readiness";
+import { computeFounderOnboardingProgress } from "@/lib/onboarding/progress";
 
 export async function POST(request: Request) {
   const auth = await requireApiProfile(["founder"]);
@@ -52,6 +56,30 @@ export async function POST(request: Request) {
 
   const founderName = auth.profile.full_name ?? auth.profile.email ?? "Founder";
   const companyName = company?.company_name ?? null;
+
+  // Onboarding mode: the coach on /founder/onboarding. Read only, nothing is saved for the founder.
+  if (body.surface === "onboarding") {
+    if (!company) return NextResponse.json({ error: "Company not found." }, { status: 404 });
+    const { data: documents } = await listCompanyDocuments(auth.supabase, company.id);
+    const { data: diligenceReport } = await getLatestDiligenceReport(auth.supabase, company.id);
+    const progress = computeFounderOnboardingProgress({
+      company,
+      documents: documents ?? [],
+      diligenceReportExists: Boolean(diligenceReport),
+      storedStepState: company.onboarding_step_state,
+    });
+    const ctx = buildOnboardingCoachContext({ founderName, companyName, progress });
+    const aiRun = await gateAiRun(auth.profile.id, "class_assistant");
+    if (aiRun.blocked) return aiRun.blocked;
+    const result = await runPersonalCoach({ message, ctx, history });
+    await aiRun.done();
+    return NextResponse.json({
+      reply: result.reply,
+      disclaimer: result.disclaimer ?? COACH_DISCLAIMER,
+      mode: result.mode,
+      claudeAvailable: isClaudeConfigured(),
+    });
+  }
 
   if (!courseSlug) {
     const overallPercent =
