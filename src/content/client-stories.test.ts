@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   approvedStories,
   clientStories,
+  isIsoDate,
   MIN_STORIES_FOR_SUMMARY,
   rangeLabel,
   storiesSummary,
@@ -23,6 +24,20 @@ describe("client stories", () => {
 
   it("is hidden without a permission date", () => {
     expect(storyApproved({ ...cynthia, approvedOn: "" })).toBe(false);
+  });
+
+  it("is hidden when the permission date is a placeholder or not a real date", () => {
+    for (const bad of ["2026-MM-DD", "TBD", "10/27/2026", "2026-10-7", "2026-02-30", "2026-13-01", " "]) {
+      expect(storyApproved({ ...cynthia, approvedOn: bad })).toBe(false);
+    }
+    expect(storyApproved({ ...cynthia, approvedOn: "2026-10-27" })).toBe(true);
+  });
+
+  it("accepts only YYYY-MM-DD calendar dates", () => {
+    expect(isIsoDate("2026-10-27")).toBe(true);
+    expect(isIsoDate("2024-02-29")).toBe(true);
+    expect(isIsoDate("2025-02-29")).toBe(false);
+    expect(isIsoDate(undefined)).toBe(false);
   });
 
   it("carries a rising score pair wherever both scores are given", () => {
