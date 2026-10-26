@@ -36,6 +36,11 @@ function startValues(masterName: string, defaults: Record<string, string>, prefi
   const v: Record<string, string> = { ...defaults, ...mapped };
   if (!(v.cta_url ?? "").trim() && mapped.cta_url_fallback) v.cta_url = mapped.cta_url_fallback;
   delete v.cta_url_fallback;
+  // The founder record has no intro text, so Body would stay empty and block Save. Start it with a short intro the user can edit.
+  const co = (v.company_name ?? "").trim();
+  if (masterName === "Deal introduction" && co && !(v.body ?? "").trim()) {
+    v.body = `I would like to introduce ${co}, a company that may fit your investment focus. The key details are below.`;
+  }
   if (prefill) v[FOUNDER_KEY] = refKey(prefill.ref);
   return v;
 }
