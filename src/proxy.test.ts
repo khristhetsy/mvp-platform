@@ -37,6 +37,9 @@ vi.mock("@supabase/ssr", () => ({
           select: () => chain,
           eq: () => chain,
           single: async () => ({ data: state.profile, error: state.profile ? null : { message: "missing" } }),
+          // The account deletion check reads profiles.deletion_scheduled_for with maybeSingle.
+          // No scheduled deletion in these tests.
+          maybeSingle: async () => ({ data: null, error: null }),
         };
         return chain;
       }
