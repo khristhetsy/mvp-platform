@@ -145,7 +145,7 @@ export function SubscriptionPackagePicker({
         </div>
       ) : null}
       <div style={{ marginTop: 12, padding: "10px 12px", background: "#f6f8fc", borderRadius: 8, fontSize: 11.5, color: MUTED, lineHeight: 1.6 }}>
-        <b>Open editor</b> makes an editable copy of each part for this prospect; the masters never change. The Signature Pages are signed by the subscriber on a signing link; the other parts are sent to read.
+        <b>Open editor</b> makes an editable copy of each part for this prospect; the masters never change. The Signature Pages are signed by the subscriber on a signing link; the other parts are sent to read. Page counts, and the package wide &ldquo;Page X of Y&rdquo; in every footer and on the Cover&rsquo;s Index, are worked out when the package is sent.
       </div>
       <div style={{ textAlign: "right", marginTop: 14 }}>
         <button type="button" disabled={busy || missing.length > 0} onClick={onOpen} style={{ ...btn(true), opacity: busy || missing.length > 0 ? 0.5 : 1 }}>{openLabel}</button>

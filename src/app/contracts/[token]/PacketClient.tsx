@@ -162,6 +162,8 @@ function DocRow({ d, token, first, onRespond }: { d: PacketDoc; token: string; f
   );
 }
 
+const pagesOf = (docs: PacketDoc[]) => docs.reduce((n, d) => n + (d.pageCount ?? 0), 0);
+
 const FUNDING_NOTE = "No funds move on this site. Fund only after the Manager accepts your subscription, and only as the Subscription Instructions say.";
 
 function SubscriptionSteps({ steps, token, onRespond, acceptedAt }: { steps: ReturnType<typeof subscriberSteps>; token: string; onRespond: (d: PacketDoc) => (a: "decline" | "changes") => void; acceptedAt: string | null }) {
@@ -185,7 +187,7 @@ function SubscriptionSteps({ steps, token, onRespond, acceptedAt }: { steps: Ret
         {head(1, "Read the package", false)}
         {steps.read.map((g) => (
           <div key={g.partKey} style={{ padding: "10px 16px", borderTop: "1px solid #f2f5fa" }}>
-            <div style={{ fontSize: 13, fontWeight: 700 }}>{g.label}</div>
+            <div style={{ fontSize: 13, fontWeight: 700 }}>{g.label}{pagesOf(g.docs) ? <span style={{ fontWeight: 400, color: "#8a93a6" }}> · {pagesOf(g.docs)} pages</span> : null}</div>
             {g.docs.map((d) => (
               <div key={d.id} style={{ display: "flex", gap: 10, flexWrap: "wrap", fontSize: 12.5, color: "#5a6b87", lineHeight: 1.9 }}>
                 <span>{d.title}{d.pageCount ? ` · ${d.pageCount} pages` : ""}</span>
@@ -198,6 +200,7 @@ function SubscriptionSteps({ steps, token, onRespond, acceptedAt }: { steps: Ret
 
       <div style={card}>
         {head(2, "Sign the Signature Pages", steps.signed === steps.sign.length && steps.sign.length > 0)}
+        {pagesOf(steps.sign) ? <div style={{ padding: "8px 16px 0", fontSize: 12, color: "#8a93a6" }}>{pagesOf(steps.sign)} pages in {steps.sign.length} document{steps.sign.length === 1 ? "" : "s"}</div> : null}
         {steps.sign.map((d, i) => (
           <DocRow key={d.id} d={d} token={token} first={i === 0} onRespond={onRespond(d)} />
         ))}

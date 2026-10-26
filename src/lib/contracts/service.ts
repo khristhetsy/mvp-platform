@@ -27,7 +27,8 @@ import {
   type ContactLite,
 } from "./store";
 import { applyEmailTokens, emailTokenValues, withTypedValues } from "./email-tokens";
-import { leftoverPlaceholders } from "./subscription/package";
+import { leftoverPlaceholders, PARTS, PART_LABEL, type PartKey } from "./subscription/package";
+import { planNumbering, stampPackagePdf } from "./subscription/numbering";
 import { loadDocx } from "./docx-engine";
 import { resolveCoverLook } from "./cover-look";
 import type { CoverBrand, CoverStyle } from "./cover-signature";
@@ -214,6 +215,32 @@ async function prepare(db: Db, b: Bundle): Promise<Prepared> {
   return { b, docx, pdf, pageCount, prospectFields, countersign: placed.countersign, expiresAt: expiryFor(b) };
 }
 
+/**
+ * A subscription package carries package-wide page numbers: "Page X of Y" in every footer and an Index page
+ * on the Cover listing where each part starts. Applies only when the send holds the Cover and Index part.
+ * A document that is signed from a hand-placed envelope (an uploaded contract) is left as it is.
+ */
+async function numberPackage(prepared: Prepared[]): Promise<void> {
+  const partOf = (p: Prepared): PartKey | null => {
+    const key = p.b.template.part_key as PartKey | null;
+    if (key && PARTS.some((x) => x.key === key)) return key;
+    return isUpload(p.b) && !p.requestId ? "forms" : null; // the IRS forms the package adds
+  };
+  if (!prepared.some((p) => p.b.template.part_key === "cover_index")) return;
+  const items = prepared.map((p) => ({ p, part: partOf(p) })).filter((x): x is { p: Prepared; part: PartKey } => x.part !== null);
+  const plan = planNumbering(items.map((x) => ({ id: x.p.b.doc.id, part: x.part, pageCount: x.p.pageCount })));
+  for (const x of items) {
+    const d = plan.docs.find((y) => y.id === x.p.b.doc.id)!;
+    x.p.pdf = await stampPackagePdf(x.p.pdf, {
+      start: d.start,
+      total: plan.total,
+      label: `${PART_LABEL[x.part]}`,
+      indexPage: d.indexPage ? { title: "Index", entries: plan.index } : undefined,
+    });
+    x.p.pageCount = d.pages;
+  }
+}
+
 /** Review only send: the final PDF, no signature boxes placed and none required. */
 async function prepareReview(db: Db, b: Bundle): Promise<Prepared> {
   if (isUpload(b)) {
@@ -297,6 +324,8 @@ export async function sendPacket(db: Db, input: SendInput): Promise<{ packetId: 
   // Render (and, when signing, place signatures for) every document first.
   const prepared: Prepared[] = [];
   for (const b of bundles) prepared.push(signs(b) ? await prepare(db, b) : await prepareReview(db, b));
+
+  await numberPackage(prepared);
 
   const token = randomBytes(32).toString("hex");
   const { data: packet, error: pErr } = await db
