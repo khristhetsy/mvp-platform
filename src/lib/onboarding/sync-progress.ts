@@ -18,14 +18,11 @@ export function buildCompanyOnboardingSyncUpdate(input: {
     storedStepState: input.company.onboarding_step_state,
   });
 
-  const now = new Date().toISOString();
-
   return {
     onboarding_progress_percent: progress.percent,
     onboarding_step_state: buildOnboardingStepStatePayload(progress, input.currentStep),
-    onboarding_completed_at: progress.isComplete
-      ? input.company.onboarding_completed_at ?? now
-      : null,
+    // Never cleared once set: a completed company stays completed.
+    onboarding_completed_at: progress.completedAt,
     progress,
   };
 }
