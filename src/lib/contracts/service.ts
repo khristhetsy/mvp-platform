@@ -247,7 +247,7 @@ export type SendInput = {
  * Fail closed: every document is validated and rendered before anything is
  * written, so a problem with one document sends nothing.
  */
-export async function sendPacket(db: Db, input: SendInput): Promise<{ packetId: string; token: string; delivered: boolean; url: string; deliveryError?: string }> {
+export async function sendPacket(db: Db, input: SendInput): Promise<{ packetId: string; token: string; delivered: boolean; url: string; subject: string; deliveryError?: string }> {
   if (!input.documentIds.length) throw new SendBlockedError("Choose at least one document.");
   const bundles: Bundle[] = [];
   for (const id of input.documentIds) {
@@ -436,7 +436,7 @@ export async function sendPacket(db: Db, input: SendInput): Promise<{ packetId: 
   }
   await db.from("contract_packets").update({ delivered }).eq("id", packet.id);
   for (const p of prepared) await addEvent(db, p.b.doc.id, delivered ? "delivered" : "not_delivered", "system");
-  return { packetId: packet.id as string, token, delivered, url: `${appBase()}/contracts/${token}`, ...(deliveryError ? { deliveryError } : {}) };
+  return { packetId: packet.id as string, token, delivered, url: `${appBase()}/contracts/${token}`, subject: subject.text, ...(deliveryError ? { deliveryError } : {}) };
 }
 
 // ── Tracking actions ───────────────────────────────────────────────────────

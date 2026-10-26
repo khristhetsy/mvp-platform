@@ -10,6 +10,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { postScheduled, ScheduleSendMenu } from "@/components/email/ScheduleSend";
 import { formatSendAt } from "@/lib/scheduled-emails/time";
 import { TaskEditRow } from "./TaskEditRow";
@@ -19,7 +20,7 @@ import { ptDayDiff } from "@/lib/time/pt-day-diff";
 type Activity = {
   id: string; kind: string; summary: string; actor_name: string | null; created_at: string;
   group?: "note" | "message" | "system"; source?: "icapos" | "odoo"; origin?: string | null;
-  editable?: boolean; edited_at?: string | null; deleted_at?: string | null; odoo_synced?: boolean; via?: string | null;
+  editable?: boolean; edited_at?: string | null; deleted_at?: string | null; odoo_synced?: boolean; via?: string | null; href?: string | null;
 };
 type Via = "icapos" | "gmail";
 type Senders = { icapos: { from: string; personal: boolean }; gmail: { connected: boolean; canSend: boolean; email: string | null } };
@@ -76,6 +77,15 @@ const MESSAGE_KINDS = new Set(["email", "email_draft", "message", "call", "odoo_
 function groupOf(a: Activity): "note" | "message" | "system" {
   if (a.group) return a.group;
   return NOTE_KINDS.has(a.kind) ? "note" : MESSAGE_KINDS.has(a.kind) ? "message" : "system";
+}
+/** An entry's summary; a sent proposal links to its document page. */
+function Summary({ a }: { a: Activity }) {
+  if (!a.href) return <>{a.summary}</>;
+  return (
+    <Link href={a.href} style={{ color: "#185FA5", textDecoration: "underline", textUnderlineOffset: 2 }}>
+      {a.summary}<i className="ti ti-chevron-right" aria-hidden="true" style={{ fontSize: 12, marginLeft: 2, verticalAlign: -1 }} />
+    </Link>
+  );
 }
 function callTemplate(name: string | null | undefined): string {
   const first = (name ?? "").trim().split(/\s+/)[0] ?? "";
@@ -515,7 +525,7 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
                 <div key={a.id} style={{ display: "flex", gap: 9 }}>
                   <div style={{ width: 24, height: 24, borderRadius: "50%", background: ic.bg, color: ic.color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><i className={`ti ${ic.icon}`} aria-hidden="true" /></div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12.5, color: "var(--foreground)", whiteSpace: "pre-wrap" }}>{a.summary}</div>
+                    <div style={{ fontSize: 12.5, color: "var(--foreground)", whiteSpace: "pre-wrap" }}><Summary a={a} /></div>
                     <div style={{ fontSize: 11, color: "var(--muted-foreground)", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                       <span>{a.actor_name ? `${a.actor_name} · ` : ""}{ago(a.created_at)}</span>
                       {a.source === "odoo" || a.kind === "odoo_message" ? <span style={odooBadge}><i className="ti ti-refresh" aria-hidden="true" /> {a.origin ?? "Odoo"}</span> : null}
@@ -537,7 +547,7 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
             {system.map((a) => (
               <div key={a.id} style={{ fontSize: 11.5, color: "var(--muted-foreground)", display: "flex", gap: 6 }}>
                 <i className={`ti ${icon(a.kind).icon}`} aria-hidden="true" style={{ marginTop: 2 }} />
-                <span style={{ minWidth: 0 }}>{a.summary} · {a.actor_name ? `${a.actor_name} · ` : ""}{ago(a.created_at)}</span>
+                <span style={{ minWidth: 0 }}><Summary a={a} /> · {a.actor_name ? `${a.actor_name} · ` : ""}{ago(a.created_at)}</span>
               </div>
             ))}
           </div>

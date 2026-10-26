@@ -17,6 +17,8 @@ export type NativeRow = {
   odoo_author?: string | null;
   /** For a sent email: which mailbox sent it ("icapos" or "gmail"). */
   via?: string | null;
+  /** In-app link for an entry that points at a record (a sent proposal's document page). */
+  href?: string | null;
 };
 
 export type OdooMsg = {
@@ -46,6 +48,7 @@ export type TimelineItem = {
   deleted_at: string | null;
   odoo_synced: boolean;
   via: string | null;
+  href?: string | null;
 };
 
 export function isNoteKind(kind: string): boolean {
@@ -74,6 +77,7 @@ export function rowToItem(r: NativeRow): TimelineItem {
     deleted_at: r.deleted_at,
     odoo_synced: !odoo && r.odoo_message_id != null,
     via: r.via ?? null,
+    href: r.href ?? null,
   };
 }
 

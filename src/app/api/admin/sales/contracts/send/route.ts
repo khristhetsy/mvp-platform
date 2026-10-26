@@ -9,6 +9,7 @@ import { errorMessage } from "@/lib/contracts/route-helpers";
 import { getGoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
 import { hasGmailSendScope } from "@/lib/integrations/gmail-send";
 import { scheduleAtFrom, scheduleSend } from "@/lib/scheduled-emails/schedule";
+import { logProposalSent } from "@/lib/sales/activity";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -64,6 +65,8 @@ export async function POST(req: Request): Promise<Response> {
     }
     // The send went out: the saved, resumable send for this contact is done.
     await actor.db.from("contract_send_drafts").delete().eq("contact_id", parsed.data.contactId);
+    // Show the send on the contact's timeline, linked to the sent document.
+    await logProposalSent({ contactCrmId: parsed.data.contactId, actorId: actor.userId, subject: result.subject, delivered: result.delivered, via: parsed.data.via ?? "icapos", packetId: result.packetId, documentIds: parsed.data.documentIds });
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {
     if (err instanceof SendBlockedError) return bad(err.message, 409, err.details);
