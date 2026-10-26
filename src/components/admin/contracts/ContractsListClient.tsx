@@ -66,6 +66,15 @@ const ALL_COLUMNS: { key: string; label: string; width: string; always?: boolean
   { key: "created", label: "Created on", width: "100px", off: true },
 ];
 const COLS_KEY = "salesContracts.cols.v1";
+/** Columns of the Uploaded view; the Select link at the right edge always stays. */
+const UPLOAD_COLUMNS: { key: string; label: string; width: string; always?: boolean }[] = [
+  { key: "contract", label: "Contract", width: "minmax(240px,2.4fr)", always: true },
+  { key: "type", label: "Type", width: "minmax(150px,1.2fr)" },
+  { key: "uploaded", label: "Uploaded", width: "150px" },
+  { key: "pages", label: "Pages", width: "70px" },
+];
+const UP_COLS_KEY = "salesContracts.upCols.v1";
+const DEFAULT_UP_COLS = UPLOAD_COLUMNS.map((c) => c.key);
 const DEFAULT_COLS = ALL_COLUMNS.filter((c) => !c.off).map((c) => c.key);
 
 const SEARCH_FIELDS: SearchField<Row>[] = [
@@ -99,6 +108,7 @@ export function ContractsListClient() {
   const [view, setView] = useState<"all" | "uploaded">("all");
   const [type, setType] = useState<ContractType | "">("");
   const [visibleCols, setVisibleCols] = useState<string[]>(DEFAULT_COLS);
+  const [visibleUpCols, setVisibleUpCols] = useState<string[]>(DEFAULT_UP_COLS);
   const withArchived = search.quick.includes("archived");
   const showDrafts = search.quick.includes("drafts") && view === "all";
   const [sends, setSends] = useState<SavedSend[]>([]);
@@ -109,8 +119,18 @@ export function ContractsListClient() {
       const v = window.localStorage.getItem(COLS_KEY);
       const saved = v ? (JSON.parse(v) as unknown) : null;
       if (Array.isArray(saved) && saved.every((k) => typeof k === "string")) setVisibleCols(saved as string[]);
+      const u = window.localStorage.getItem(UP_COLS_KEY);
+      const savedUp = u ? (JSON.parse(u) as unknown) : null;
+      if (Array.isArray(savedUp) && savedUp.every((k) => typeof k === "string")) setVisibleUpCols(savedUp as string[]);
     } catch { /* ignore */ }
   }, []);
+  function toggleUpCol(key: string) {
+    setVisibleUpCols((cur) => {
+      const next = cur.includes(key) ? cur.filter((k) => k !== key) : [...cur, key];
+      try { window.localStorage.setItem(UP_COLS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }
   function toggleCol(key: string) {
     setVisibleCols((cur) => {
       const next = cur.includes(key) ? cur.filter((k) => k !== key) : [...cur, key];
@@ -188,7 +208,8 @@ export function ContractsListClient() {
     },
   ];
 
-  const upGrid = "minmax(240px,2.4fr) minmax(150px,1.2fr) 150px 70px 80px";
+  const shownUpCols = UPLOAD_COLUMNS.filter((c) => c.always || visibleUpCols.includes(c.key));
+  const upGrid = [...shownUpCols.map((c) => c.width), "80px"].join(" ");
   const q = search.q;
   const shownCols = ALL_COLUMNS.filter((c) => c.always || visibleCols.includes(c.key));
   const grid = shownCols.map((c) => c.width).join(" ");
@@ -211,19 +232,38 @@ export function ContractsListClient() {
           </button>
         ))}
       </div>
-      {view === "all" ? (
-        <>
-          <div style={secHead}>Show columns</div>
-          {ALL_COLUMNS.map((col) => (
-            <label key={col.key} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", fontSize: 12.5, cursor: col.always ? "default" : "pointer", opacity: col.always ? 0.55 : 1 }}>
-              <input type="checkbox" checked={col.always || visibleCols.includes(col.key)} disabled={col.always} onChange={() => toggleCol(col.key)} style={{ width: 14, height: 14 }} />
-              {col.label === "Ver." ? "Version" : col.label}
-            </label>
-          ))}
-        </>
-      ) : null}
+      <div style={secHead}>Show columns</div>
+      {(view === "all" ? ALL_COLUMNS : UPLOAD_COLUMNS).map((col) => {
+        const on = col.always || (view === "all" ? visibleCols : visibleUpCols).includes(col.key);
+        return (
+          <label key={col.key} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", fontSize: 12.5, cursor: col.always ? "default" : "pointer", opacity: col.always ? 0.55 : 1 }}>
+            <input type="checkbox" checked={on} disabled={col.always} onChange={() => (view === "all" ? toggleCol(col.key) : toggleUpCol(col.key))} style={{ width: 14, height: 14 }} />
+            {col.label === "Ver." ? "Version" : col.label}
+          </label>
+        );
+      })}
     </div>
   );
+
+  function renderUploadCell(key: string, r: Row) {
+    switch (key) {
+      case "contract":
+        return (
+          <div key={key} style={{ fontWeight: 600, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <Highlight text={r.template?.name} query={q} />
+            <span style={{ marginLeft: 6, fontSize: 9.5, fontWeight: 700, background: "#FCEBEB", color: "#A32D2D", borderRadius: 4, padding: "1px 5px" }}>PDF</span>
+          </div>
+        );
+      case "type":
+        return <div key={key}><Highlight text={r.contract_type ? CONTRACT_TYPE_LABEL[r.contract_type] : "—"} query={q} /></div>;
+      case "uploaded":
+        return <div key={key} style={{ color: MUTED }}>{fmtDateTime(r.created_at)}</div>;
+      case "pages":
+        return <div key={key} style={{ color: MUTED }}>{r.page_count ?? "—"}</div>;
+      default:
+        return null;
+    }
+  }
 
   function renderCell(key: string, r: Row) {
     switch (key) {
@@ -324,9 +364,9 @@ export function ContractsListClient() {
 
         {view === "uploaded" ? (
           <div style={{ overflowX: "auto" }}>
-            <div style={{ minWidth: 640 }}>
+            <div style={{ minWidth: Math.max(420, shownUpCols.length * 150) }}>
               <div className="ma-hide-m" style={{ display: "grid", gridTemplateColumns: upGrid, padding: "8px 14px", background: "var(--muted)", fontSize: 10.5, fontWeight: 500, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                <div>Contract</div><div>Type</div><div>Uploaded</div><div>Pages</div><div />
+                {shownUpCols.map((c) => <div key={c.key}>{c.label}</div>)}<div />
               </div>
               {loading ? <p style={{ padding: 24, textAlign: "center", fontSize: 12.5, color: MUTED }}>Loading…</p> : null}
               {!loading && result.rows.length === 0 ? (
@@ -338,13 +378,7 @@ export function ContractsListClient() {
               ) : null}
               {result.rows.map((r) => (
                 <Link key={r.id} className="ma-crow" href={`/admin/sales/contracts/${r.id}`} style={{ display: "grid", gridTemplateColumns: upGrid, padding: "11px 14px", borderTop: "0.5px solid #eef1f5", alignItems: "center", fontSize: 12.5, color: NAVY, textDecoration: "none" }}>
-                  <div style={{ fontWeight: 600, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    <Highlight text={r.template?.name} query={q} />
-                    <span style={{ marginLeft: 6, fontSize: 9.5, fontWeight: 700, background: "#FCEBEB", color: "#A32D2D", borderRadius: 4, padding: "1px 5px" }}>PDF</span>
-                  </div>
-                  <div><Highlight text={r.contract_type ? CONTRACT_TYPE_LABEL[r.contract_type] : "—"} query={q} /></div>
-                  <div style={{ color: MUTED }}>{fmtDateTime(r.created_at)}</div>
-                  <div style={{ color: MUTED }}>{r.page_count ?? "—"}</div>
+                  {shownUpCols.map((c) => renderUploadCell(c.key, r))}
                   <div style={{ color: "#1A6CE4", fontWeight: 600, textAlign: "right" }}>Select ›</div>
                 </Link>
               ))}
