@@ -279,8 +279,16 @@ export const clientStories: ClientStory[] = [
   },
 ];
 
+/** True only for a real calendar date written as YYYY-MM-DD, so a placeholder never publishes a story. */
+export function isIsoDate(value: string | undefined): boolean {
+  const v = value?.trim() ?? "";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+  const d = new Date(`${v}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v;
+}
+
 export function storyApproved(s: ClientStory): boolean {
-  return Boolean(s.approvedOn?.trim() && s.headline?.trim() && s.name?.trim());
+  return Boolean(isIsoDate(s.approvedOn) && s.headline?.trim() && s.name?.trim());
 }
 
 /** Stories ready to publish, in the order they are listed above. */
