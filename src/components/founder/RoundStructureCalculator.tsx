@@ -2,116 +2,20 @@
 
 import { useState, useMemo } from "react";
 import { useTranslations } from "next-intl";
+import {
+  computeRound,
+  DEFAULT_INPUTS,
+  fmtMoney as fmt,
+  fmtMoney2,
+  monthsFromNow,
+  type RoundInputs,
+  type RoundType,
+  type SafeType,
+} from "@/lib/founder/round-structure/model";
+import { OfferingAnalysisReport } from "@/components/founder/OfferingAnalysisReport";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-type RoundType = "safe" | "priced";
-type SafeType = "pre_money" | "post_money";
-
-type Shareholder = {
-  id: string;
-  label: string;
-  shares: number;
-  editable: boolean;
-};
-
-// ---------------------------------------------------------------------------
-// Computation
-// ---------------------------------------------------------------------------
-
-function computeDilution(opts: {
-  roundType: RoundType;
-  safeType: SafeType;
-  preMoney: number;
-  raiseAmount: number;
-  optionPoolPct: number;
-  shareholders: Shareholder[];
-}): { post: Shareholder[]; pricePerShare: number | null; postMoney: number; newInvestorPct: number } {
-  const { roundType, safeType, preMoney, raiseAmount, optionPoolPct, shareholders } = opts;
-  const postMoney = preMoney + raiseAmount;
-
-  const totalExisting = shareholders.reduce((s, sh) => s + sh.shares, 0);
-  const optionPoolShares = Math.round((optionPoolPct / 100) * totalExisting / (1 - optionPoolPct / 100));
-
-  if (roundType === "priced") {
-    // Pre-money option pool expansion
-    const totalPreMoney = totalExisting + optionPoolShares;
-    const pricePerShare = preMoney / totalPreMoney;
-    const newShares = Math.round(raiseAmount / pricePerShare);
-    const totalPost = totalPreMoney + newShares;
-
-    const post: Shareholder[] = [
-      ...shareholders.map((sh) => ({
-        ...sh,
-        pct: (sh.shares / totalPost) * 100,
-      })),
-      {
-        id: "option_pool",
-        label: "Option pool (expansion)",
-        shares: optionPoolShares,
-        editable: false,
-        pct: (optionPoolShares / totalPost) * 100,
-      },
-      {
-        id: "new_investor",
-        label: "New investors (this round)",
-        shares: newShares,
-        editable: false,
-        pct: (newShares / totalPost) * 100,
-      },
-    ].map((sh) => ({ ...sh, pct: ((sh as { pct?: number }).pct ?? 0) }));
-
-    return {
-      post,
-      pricePerShare,
-      postMoney,
-      newInvestorPct: (newShares / totalPost) * 100,
-    };
-  }
-
-  // SAFE
-  const safeValCap = preMoney; // valuation cap = pre-money
-  const totalForSafe = safeType === "pre_money" ? totalExisting : totalExisting + optionPoolShares;
-  const pricePerShare = safeValCap / totalForSafe;
-  const safeShares = Math.round(raiseAmount / pricePerShare);
-  const totalPost = totalExisting + optionPoolShares + safeShares;
-
-  const post: Shareholder[] = [
-    ...shareholders.map((sh) => ({
-      ...sh,
-      pct: (sh.shares / totalPost) * 100,
-    })),
-    {
-      id: "option_pool",
-      label: "Option pool",
-      shares: optionPoolShares,
-      editable: false,
-      pct: (optionPoolShares / totalPost) * 100,
-    },
-    {
-      id: "safe_investor",
-      label: "SAFE investors",
-      shares: safeShares,
-      editable: false,
-      pct: (safeShares / totalPost) * 100,
-    },
-  ].map((sh) => ({ ...sh, pct: ((sh as { pct?: number }).pct ?? 0) }));
-
-  return {
-    post,
-    pricePerShare,
-    postMoney,
-    newInvestorPct: (safeShares / totalPost) * 100,
-  };
-}
-
-function fmt(n: number): string {
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
-  return `$${n.toFixed(0)}`;
-}
+// The math lives in lib/founder/round-structure/model.ts so the AI analysis route
+// runs exactly the same numbers. The calculator only collects inputs and shows them.
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -170,6 +74,7 @@ function OwnershipBar({
     option_pool: "#0ea5e9",
     new_investor: "#16a34a",
     safe_investor: "#16a34a",
+    note_investor: "#16a34a",
   };
   const fallbackColors = ["#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"];
   let fallbackIdx = 0;
@@ -213,38 +118,42 @@ function OwnershipBar({
 // Main component
 // ---------------------------------------------------------------------------
 
-const DEFAULT_SHAREHOLDERS: Shareholder[] = [
-  { id: "founder_1", label: "Founder 1", shares: 4_000_000, editable: true },
-  { id: "founder_2", label: "Founder 2", shares: 3_000_000, editable: true },
-  { id: "employees", label: "Early employees / angels", shares: 1_000_000, editable: true },
-];
-
 export function RoundStructureCalculator() {
   const t = useTranslations("founderCmp");
-  const [roundType, setRoundType] = useState<RoundType>("safe");
-  const [safeType, setSafeType] = useState<SafeType>("post_money");
-  const [preMoney, setPreMoney] = useState(5_000_000);
-  const [raiseAmount, setRaiseAmount] = useState(1_000_000);
-  const [optionPoolPct, setOptionPoolPct] = useState(10);
+  const [roundType, setRoundType] = useState<RoundType>(DEFAULT_INPUTS.roundType);
+  const [safeType, setSafeType] = useState<SafeType>(DEFAULT_INPUTS.safeType);
+  const [preMoney, setPreMoney] = useState(DEFAULT_INPUTS.preMoney);
+  const [raiseAmount, setRaiseAmount] = useState(DEFAULT_INPUTS.raiseAmount);
+  const [optionPoolPct, setOptionPoolPct] = useState(DEFAULT_INPUTS.optionPoolPct);
+  // Terms added for SAFE (discount) and Convertible note (interest, maturity, discount, warrants).
+  const [discountPct, setDiscountPct] = useState(0);
+  const [interestPct, setInterestPct] = useState(DEFAULT_INPUTS.interestPct);
+  const [maturityMonths, setMaturityMonths] = useState(DEFAULT_INPUTS.maturityMonths);
+  const [warrantPct, setWarrantPct] = useState(0);
+  // The inputs the report was run on. Null until the founder taps Run AI analysis.
+  const [reportInputs, setReportInputs] = useState<RoundInputs | null>(null);
+  // Bumped on every run so the report remounts and shows its loading state again.
+  const [runId, setRunId] = useState(0);
 
-  const result = useMemo(
-    () =>
-      computeDilution({
-        roundType,
-        safeType,
-        preMoney,
-        raiseAmount,
-        optionPoolPct,
-        shareholders: DEFAULT_SHAREHOLDERS,
-      }),
-    [roundType, safeType, preMoney, raiseAmount, optionPoolPct],
+  const inputs: RoundInputs = useMemo(
+    () => ({ roundType, safeType, preMoney, raiseAmount, optionPoolPct, discountPct, interestPct, maturityMonths, warrantPct }),
+    [roundType, safeType, preMoney, raiseAmount, optionPoolPct, discountPct, interestPct, maturityMonths, warrantPct],
   );
+  const result = useMemo(() => computeRound(inputs), [inputs]);
 
-  const founderTotalPct = result.post
-    .filter((s) => s.id.startsWith("founder"))
-    .reduce((sum, s) => sum + ((s as { pct?: number }).pct ?? 0), 0);
+  const founderTotalPct = result.founderTotalPct;
+  const isSafe = roundType === "safe";
+  const isNote = roundType === "note";
+  const reportStale = reportInputs !== null && JSON.stringify(reportInputs) !== JSON.stringify(inputs);
+  const maturityDate = monthsFromNow(maturityMonths).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
+  const segment = (active: boolean) => ({
+    background: active ? "#2E78F5" : "transparent",
+    color: active ? "white" : "#64748b",
+  });
 
   return (
+    <div className="space-y-6">
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       {/* Accent bar */}
       <div style={{ height: 3, background: "linear-gradient(90deg,#2E78F5,#7c3aed,#06b6d4)" }} />
@@ -271,40 +180,38 @@ export function RoundStructureCalculator() {
             <div>
               <p className="mb-2 text-xs font-semibold text-slate-700">{t("round_type")}</p>
               <div className="flex rounded-lg border border-slate-200 p-1">
-                {(["safe", "priced"] as RoundType[]).map((t) => (
+                {([
+                  ["safe", "SAFE"],
+                  ["note", "Convertible note"],
+                  ["priced", "Priced round"],
+                ] as Array<[RoundType, string]>).map(([value, label]) => (
                   <button
-                    key={t}
+                    key={value}
                     type="button"
-                    onClick={() => setRoundType(t)}
+                    onClick={() => setRoundType(value)}
                     className="flex-1 rounded-md py-1.5 text-xs font-semibold transition"
-                    style={{
-                      background: roundType === t ? "#2E78F5" : "transparent",
-                      color: roundType === t ? "white" : "#64748b",
-                    }}
+                    style={segment(roundType === value)}
                   >
-                    {t === "safe" ? "SAFE / Note" : "Priced round"}
+                    {label}
                   </button>
                 ))}
               </div>
             </div>
 
             {/* SAFE type (only when safe selected) */}
-            {roundType === "safe" ? (
+            {isSafe ? (
               <div>
                 <p className="mb-2 text-xs font-semibold text-slate-700">{t("safe_type")}</p>
                 <div className="flex rounded-lg border border-slate-200 p-1">
-                  {(["pre_money", "post_money"] as SafeType[]).map((t) => (
+                  {(["pre_money", "post_money"] as SafeType[]).map((value) => (
                     <button
-                      key={t}
+                      key={value}
                       type="button"
-                      onClick={() => setSafeType(t)}
+                      onClick={() => setSafeType(value)}
                       className="flex-1 rounded-md py-1.5 text-[10px] font-semibold transition"
-                      style={{
-                        background: safeType === t ? "#2E78F5" : "transparent",
-                        color: safeType === t ? "white" : "#64748b",
-                      }}
+                      style={segment(safeType === value)}
                     >
-                      {t === "pre_money" ? "Pre-money cap" : "Post-money cap"}
+                      {value === "pre_money" ? "Pre-money cap" : "Post-money cap"}
                     </button>
                   ))}
                 </div>
@@ -312,7 +219,7 @@ export function RoundStructureCalculator() {
             ) : null}
 
             <SliderInput
-              label={t("pre_money_valuation")}
+              label={isNote ? "Valuation cap" : t("pre_money_valuation")}
               value={preMoney}
               onChange={setPreMoney}
               min={500_000}
@@ -339,6 +246,62 @@ export function RoundStructureCalculator() {
               format={(v) => `${v}%`}
             />
 
+            {/* SAFE: optional discount */}
+            {isSafe ? (
+              <div className="space-y-3 border-t border-slate-100 pt-4">
+                <label className="flex cursor-pointer items-center justify-between gap-3">
+                  <span>
+                    <span className="block text-xs font-semibold text-slate-700">Discount</span>
+                    <span className="block text-[10px] text-slate-400">The investor converts at the better of the cap or the discount.</span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    role="switch"
+                    checked={discountPct > 0}
+                    onChange={(e) => setDiscountPct(e.target.checked ? 20 : 0)}
+                    className="h-4 w-4 cursor-pointer"
+                    style={{ accentColor: "#2E78F5" }}
+                  />
+                </label>
+                {discountPct > 0 ? (
+                  <SliderInput label="Discount rate" value={discountPct} onChange={setDiscountPct} min={5} max={30} step={1} format={(v) => `${v}%`} />
+                ) : null}
+              </div>
+            ) : null}
+
+            {/* Convertible note terms */}
+            {isNote ? (
+              <div className="space-y-5 border-t border-slate-100 pt-4">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Note terms</p>
+                <SliderInput label="Interest rate" value={interestPct} onChange={setInterestPct} min={0} max={12} step={0.5} format={(v) => `${v}%`} />
+                <div>
+                  <div className="mb-1.5 flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-700">Maturity date</span>
+                    <span className="font-mono text-xs font-bold" style={{ color: "#2E78F5" }}>{maturityMonths} months</span>
+                  </div>
+                  <p className="mb-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-800">{maturityDate}</p>
+                  <div className="flex rounded-lg border border-slate-200 p-1">
+                    {[12, 18, 24, 36].map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setMaturityMonths(m)}
+                        className="flex-1 rounded-md py-1.5 text-[10px] font-semibold transition"
+                        style={segment(maturityMonths === m)}
+                      >
+                        {m} mo
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <SliderInput label="Discount" value={discountPct} onChange={setDiscountPct} min={0} max={30} step={1} format={(v) => `${v}%`} />
+                <SliderInput label="Warrant coverage" value={warrantPct} onChange={setWarrantPct} min={0} max={50} step={5} format={(v) => `${v}%`} />
+                <p className="text-[10px] leading-relaxed text-slate-400">
+                  Warrant coverage is a percent of the note principal, exercisable at the next round price. No institutional dataset exists for it, so the report shows reference only.
+                </p>
+              </div>
+            ) : null}
+
             {/* Key metrics */}
             <div className="grid grid-cols-2 gap-2">
               {[
@@ -360,17 +323,31 @@ export function RoundStructureCalculator() {
                 </div>
               ))}
             </div>
+
+            {/* Discount break even */}
+            {result.discountBreakEvenPreMoney ? (
+              <div className="rounded-xl px-3 py-2.5 text-[11px] leading-relaxed text-slate-600" style={{ background: "#E9F0FD" }}>
+                <p className="font-semibold text-slate-800">
+                  Break even next round pre-money: {fmt(preMoney)} ÷ {100 - discountPct}% = {fmt(result.discountBreakEvenPreMoney)}
+                </p>
+                <p>Below it the discount gives the investor more shares. Above it the cap does. The ownership split here converts at the cap.</p>
+              </div>
+            ) : null}
+
+            {/* Note: what converts */}
+            {isNote ? (
+              <div className="space-y-1 rounded-xl px-3 py-2.5 text-[11px] text-slate-600" style={{ background: "#E9F0FD" }}>
+                <p className="text-sm font-bold" style={{ color: "#2E78F5" }}>{fmtMoney2(result.convertingAmount)} converts at maturity</p>
+                <p>Principal {fmtMoney2(raiseAmount)} plus interest {fmtMoney2(result.interestAmount)}, simple interest over {maturityMonths} months.</p>
+                {warrantPct > 0 ? <p>Warrants at {warrantPct}% coverage: {fmtMoney2(result.warrantValue)} of shares at the next round price. Not included in the ownership split.</p> : null}
+              </div>
+            ) : null}
           </div>
 
           {/* Right: ownership chart */}
           <div>
             <p className="mb-3 text-xs font-semibold text-slate-700">{t("post_round_ownership")}</p>
-            <OwnershipBar
-              shareholders={result.post.map((s) => ({
-                ...s,
-                pct: (s as unknown as { pct: number }).pct,
-              }))}
-            />
+            <OwnershipBar shareholders={result.post} />
 
             {/* Dilution warning */}
             {founderTotalPct < 50 ? (
@@ -382,12 +359,34 @@ export function RoundStructureCalculator() {
               </div>
             ) : null}
 
+            {/* AI analysis entry */}
+            <div className="mt-5 rounded-xl border-2 p-4 print:hidden" style={{ borderColor: "#CFC6F7" }}>
+              <p className="text-sm font-bold text-slate-900">AI offering analysis</p>
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+                Compares this structure with published data from Carta, PitchBook NVCA, Cooley and CRV. Every figure links to its source.
+              </p>
+              <button
+                type="button"
+                onClick={() => { setReportInputs(inputs); setRunId((n) => n + 1); }}
+                className="mt-3 w-full rounded-lg py-2.5 text-xs font-bold text-white transition hover:opacity-90"
+                style={{ background: "#2563EB" }}
+              >
+                {reportInputs ? "Run AI analysis again" : "Run AI analysis"}
+              </button>
+              {reportStale ? (
+                <p className="mt-2 text-[11px] font-semibold text-amber-700">Inputs changed since the last run. Run again to update the report.</p>
+              ) : null}
+            </div>
+
             <p className="mt-4 text-[10px] leading-relaxed text-slate-400">
               Illustrative model only. Actual dilution depends on conversion mechanics, pro-rata rights, and discount rates. Consult your legal counsel before finalising round structure.
             </p>
           </div>
         </div>
       </div>
+    </div>
+
+    {reportInputs ? <OfferingAnalysisReport key={runId} inputs={reportInputs} /> : null}
     </div>
   );
 }

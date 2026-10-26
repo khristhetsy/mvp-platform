@@ -728,6 +728,60 @@ export const HOW_TO_GUIDES: HowToGuideData[] = [
     ]
   },
   {
+    "key": "round-structure",
+    "routes": [
+      "/founder/round-structure"
+    ],
+    "title": "How the round structure calculator works",
+    "steps": [
+      {
+        "title": "Pick your round type",
+        "desc": "Choose SAFE, convertible note or priced round. The fields below change with your choice.",
+        "tap": {
+          "kind": "button",
+          "label": "Convertible note"
+        },
+        "then": "Note terms appear"
+      },
+      {
+        "title": "Enter your terms",
+        "desc": "Set the cap, raise amount and option pool. A SAFE adds a discount switch. A note adds interest, maturity, discount and warrants.",
+        "tap": {
+          "kind": "field",
+          "label": "Raise amount"
+        },
+        "then": "Ownership split updates"
+      },
+      {
+        "title": "Read your ownership",
+        "desc": "See what investors, the option pool and existing holders each own after the round.",
+        "tap": {
+          "kind": "watch",
+          "label": "Post-round ownership"
+        },
+        "then": "Stacked ownership bar"
+      },
+      {
+        "title": "Run the AI analysis",
+        "desc": "Compare your terms with published data from Carta, PitchBook NVCA, Cooley and CRV. Every figure comes from a sourced library.",
+        "tap": {
+          "kind": "button",
+          "label": "Run AI analysis"
+        },
+        "then": "Report appears below"
+      },
+      {
+        "title": "Check the sources",
+        "desc": "Tap a reference number to see where a figure came from, or print the report to share with an advisor.",
+        "tap": {
+          "kind": "button",
+          "label": "Print or save as PDF"
+        },
+        "then": "Print dialog opens"
+      }
+    ]
+  },
+  {
     "key": "market-claim",
     "routes": [
       "/founder/market-claim"
@@ -1579,13 +1633,13 @@ export const HOW_TO_GUIDES: HowToGuideData[] = [
         "then": "Health grade appears"
       },
       {
-        "title": "Try the round calculator",
-        "desc": "Adjust the raise amount to see how ownership changes.",
+        "title": "Find the round calculator",
+        "desc": "The round structure calculator now lives in Preparation, under Analyzers.",
         "tap": {
-          "kind": "field",
-          "label": "Raise amount"
+          "kind": "link",
+          "label": "Open in Analyzers"
         },
-        "then": "Ownership split updates"
+        "then": "Round structure page opens"
       }
     ]
   },

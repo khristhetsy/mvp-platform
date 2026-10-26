@@ -50,6 +50,7 @@ const PAGES: PageShortcut[] = [
   { id: "f-pitch-deck", title: "Pitch deck", subtitle: "Build your deck", href: "/founder/pitch-deck", keywords: ["pitch deck", "deck", "slides", "presentation"], workspace: "founder" },
   { id: "f-pitch-analyzer", title: "Pitch deck analyzer", subtitle: "AI deck feedback", href: "/founder/pitch-deck-analyzer", keywords: ["pitch deck analyzer", "deck review", "deck feedback", "analyze deck"], workspace: "founder" },
   { id: "f-market-claim", title: "Market claim", subtitle: "Size your market", href: "/founder/market-claim", keywords: ["market claim", "tam", "market size", "market"], workspace: "founder" },
+  { id: "f-round-structure", title: "Round structure", subtitle: "SAFE, note or priced round, with AI analysis", href: "/founder/round-structure", keywords: ["round structure", "safe", "convertible note", "discount", "warrant", "dilution", "cap", "calculator"], workspace: "founder" },
   { id: "f-financial-model", title: "Financial model", subtitle: "Projections", href: "/founder/financial-model", keywords: ["financial model", "financials", "projections", "forecast", "model"], workspace: "founder" },
   { id: "f-cap-table", title: "Cap table", subtitle: "Ownership and rounds", href: "/founder/cap-table", keywords: ["cap table", "captable", "equity", "ownership", "shares"], workspace: "founder" },
   { id: "f-valuation", title: "Valuation", subtitle: "What is the company worth", href: "/founder/valuation", keywords: ["valuation", "value", "worth"], workspace: "founder" },
@@ -390,7 +391,7 @@ function catOfFounder(p: string): CatKey {
   if (p === "/founder/stages/marketing") return "marketing";
   if (p === "/founder/stages/closing") return "closing";
   if (starts("/founder/events/present")) return "marketing";
-  if (starts("/founder/readiness", "/founder/documents", "/founder/preview", "/founder/business-plan", "/founder/pitch-deck", "/founder/pitch-deck-analyzer", "/founder/market-claim", "/founder/financial-model", "/founder/cap-table", "/founder/valuation", "/founder/reg-cf", "/founder/report", "/founder/pitch-practice", "/founder/board-prep", "/founder/term-sheet", "/founder/kpi-glossary", "/founder/raise-toolkit")) return "preparation";
+  if (starts("/founder/readiness", "/founder/documents", "/founder/preview", "/founder/business-plan", "/founder/pitch-deck", "/founder/pitch-deck-analyzer", "/founder/market-claim", "/founder/round-structure", "/founder/financial-model", "/founder/cap-table", "/founder/valuation", "/founder/reg-cf", "/founder/report", "/founder/pitch-practice", "/founder/board-prep", "/founder/term-sheet", "/founder/kpi-glossary", "/founder/raise-toolkit")) return "preparation";
   if (starts("/founder/investors", "/founder/contacts", "/founder/matches", "/founder/matching", "/founder/deploy", "/founder/ir-agent", "/founder/investor-directory", "/founder/investor-pipeline", "/founder/private-market", "/founder/marketplace")) return "marketing";
   if (starts("/founder/deal-room", "/founder/offering-type", "/founder/spvs", "/founder/capital-raise", "/founder/investor-update", "/founder/milestones")) return "closing";
   if (starts("/founder/analytics")) return "analytics";

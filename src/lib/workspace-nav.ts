@@ -463,6 +463,7 @@ export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
           { href: "/founder/pitch-deck", label: "Pitch deck", menuGroup: "Materials", minStage: "qualify" },
           { href: "/founder/pitch-deck-analyzer", label: "Pitch deck analyzer", menuGroup: "Analyzers", minStage: "qualify" },
           { href: "/founder/market-claim", label: "Market claim grader", menuGroup: "Analyzers", minStage: "qualify" },
+          { href: "/founder/round-structure", label: "Round structure", menuGroup: "Analyzers", minStage: "qualify" },
           { href: "/founder/financial-model", label: "Financial model", menuGroup: "Materials", minStage: "qualify" },
           { href: "/founder/cap-table", label: "Cap table", menuGroup: "Materials", minStage: "qualify" },
           { href: "/founder/valuation", label: "Valuation Studio", menuGroup: "Materials", minStage: "qualify" },

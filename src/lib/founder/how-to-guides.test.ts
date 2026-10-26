@@ -4,7 +4,7 @@ import { guideByKey, guideForPath } from "./how-to-lookup";
 
 describe("founder how to guides", () => {
   it("has one guide per feature, with unique keys and routes", () => {
-    expect(HOW_TO_GUIDES).toHaveLength(39);
+    expect(HOW_TO_GUIDES).toHaveLength(40);
     const keys = HOW_TO_GUIDES.map((g) => g.key);
     expect(new Set(keys).size).toBe(keys.length);
     const routes = HOW_TO_GUIDES.flatMap((g) => g.routes);

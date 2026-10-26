@@ -38,6 +38,7 @@ export const AI_FEATURE_META: Record<string, { label: string; group?: string }> 
   valuation_advisor: { label: "Valuation advisor" },
   outreach_coach: { label: "Outreach coach" },
   round_health_advisor: { label: "Round health advisor" },
+  round_structure_analysis: { label: "Round structure analysis" },
   business_plan: { label: "Business plan" },
   pitch_deck_draft: { label: "Pitch deck draft" },
   regcf_documents: { label: "Reg CF documents" },

@@ -27,6 +27,7 @@ export const PAGE_NOTES: Record<string, string> = {
   "/founder/cap-table": "Cap table: lay out shareholders, model a round to see dilution, export Excel or PDF. Counts toward readiness.",
   "/founder/valuation": "Valuation Studio: an indicative valuation range to prepare with, not a price and not an appraisal. Shows where methods disagree and returns modeled levers to improve the range.",
   "/founder/pitch-deck-analyzer": "Pitch deck analyzer: AI feedback on an existing pitch deck.",
+  "/founder/round-structure": "Round structure: models a SAFE, convertible note or priced round, and compares the terms with published institutional benchmarks. The AI only writes the summary; every figure comes from a sourced library.",
   "/founder/market-claim": "Market claim grader: grades the market narrative the way the investor network reads it, then shows the objections reviewers raise and what clears them.",
   "/founder/pitch-practice": "Pitch practice: rehearse the pitch with an AI simulator.",
   "/founder/board-prep": "Board meeting prep: prepare materials and talking points for a board meeting.",

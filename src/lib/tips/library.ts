@@ -59,6 +59,7 @@ const FOUNDER_MENU_TIPS: Tip[] = [
   menuTip("cap-table", "/founder/cap-table", "Cap table", "A clean cap table is one of the first things an investor asks to see. Update it after every issuance.", "qualify"),
   menuTip("valuation", "/founder/valuation", "Valuation Studio", "Use Valuation Studio to test a valuation range before you discuss terms with investors.", "qualify"),
   menuTip("market-claim", "/founder/market-claim", "Market claim grader", "Test your market size claim with the Market claim grader before an investor challenges it.", "qualify"),
+  menuTip("round-structure", "/founder/round-structure", "Round structure", "Model your SAFE, note or priced round in Round structure and compare it with published benchmarks before you talk to investors.", "qualify"),
   // Prepare
   menuTip("pitch-practice", "/founder/pitch-practice", "Pitch practice", "Rehearse your pitch in Pitch practice before real investor meetings.", "qualify"),
   menuTip("pitch-deck-analyzer", "/founder/pitch-deck-analyzer", "Pitch deck analyzer", "Upload your deck to the Pitch deck analyzer to find weak slides before investors do.", "qualify"),

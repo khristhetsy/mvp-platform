@@ -181,6 +181,7 @@ export const workspaceNavIconByHref: Record<string, LucideIcon> = {
   "/founder/pitch-deck": Presentation,
   "/founder/pitch-deck-analyzer": ScanLine,
   "/founder/market-claim": Crosshair,
+  "/founder/round-structure": SlidersHorizontal,
   "/founder/financial-model": Calculator,
   "/founder/cap-table": PieChart,
   "/founder/valuation": Scale,

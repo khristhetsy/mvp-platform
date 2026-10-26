@@ -74,6 +74,7 @@ const STAGE_MENU: Record<JourneyStage, MenuDef[]> = {
     // not tracked rather than showing a fake status.
     { label: "Pitch deck analyzer", href: "/founder/pitch-deck-analyzer" },
     { label: "Market claim grader", href: "/founder/market-claim" },
+    { label: "Round structure", href: "/founder/round-structure" },
     { label: "Financial model", href: "/founder/financial-model" },
     { label: "AI diligence report", href: "/founder/report" },
     { label: "Diligence & review", href: "/founder/readiness/diligence" },
