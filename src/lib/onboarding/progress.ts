@@ -1,5 +1,9 @@
 import type { Company, DocumentRecord } from "@/lib/supabase/types";
 
+// Every step id ever written to companies.onboarding_step_state. Kept whole so
+// stored state parses the same way it always did; `investor_readiness_review`
+// is no longer shown anywhere, but it is still read and written so older rows
+// and the review flow (which sets it with company_profile) keep working.
 export const ONBOARDING_STEP_IDS = [
   "company_profile",
   "funding_information",
@@ -10,10 +14,26 @@ export const ONBOARDING_STEP_IDS = [
 
 export type OnboardingStepId = (typeof ONBOARDING_STEP_IDS)[number];
 
+/** The only steps that count toward onboarding completion. */
+export const REQUIRED_ONBOARDING_STEP_IDS = ["company_profile", "funding_information"] as const satisfies readonly OnboardingStepId[];
+
+/** Shown on the checklist as "Recommended next"; never block completion. */
+export const OPTIONAL_ONBOARDING_STEP_IDS = ["documents_uploaded", "readiness_generated"] as const satisfies readonly OnboardingStepId[];
+
+/** Steps the founder sees, in display order. */
+export const VISIBLE_ONBOARDING_STEP_IDS: readonly OnboardingStepId[] = [
+  ...REQUIRED_ONBOARDING_STEP_IDS,
+  ...OPTIONAL_ONBOARDING_STEP_IDS,
+];
+
 export type OnboardingStepMeta = {
   id: OnboardingStepId;
   title: string;
   description: string;
+  /** True when the step counts toward onboarding completion. */
+  required: boolean;
+  /** Where the founder goes to act on the step. */
+  href: string;
 };
 
 export const ONBOARDING_STEPS: OnboardingStepMeta[] = [
@@ -21,26 +41,29 @@ export const ONBOARDING_STEPS: OnboardingStepMeta[] = [
     id: "company_profile",
     title: "Company profile",
     description: "Tell investors who you are, what you build, and where you operate.",
+    required: true,
+    href: "/founder/onboarding",
   },
   {
     id: "funding_information",
     title: "Funding information",
-    description: "Share your stage, raise target, and how capital will be deployed.",
+    description: "Share your stage and the amount of capital you are raising.",
+    required: true,
+    href: "/founder/onboarding",
   },
   {
     id: "documents_uploaded",
-    title: "Documents",
-    description: "Upload your pitch deck and diligence materials.",
+    title: "Upload documents",
+    description: "Add your pitch deck and diligence materials to the data room.",
+    required: false,
+    href: "/founder/documents",
   },
   {
     id: "readiness_generated",
-    title: "Readiness & diligence",
-    description: "Generate AI diligence insights and track readiness improvements.",
-  },
-  {
-    id: "investor_readiness_review",
-    title: "Investor readiness review",
-    description: "Submit for admin review and stronger marketplace visibility.",
+    title: "Generate readiness",
+    description: "Run AI diligence to see your readiness rating and what to improve.",
+    required: false,
+    href: "/founder/readiness",
   },
 ];
 
@@ -60,9 +83,16 @@ export type FounderOnboardingProgress = {
   pitchDeckUploaded: boolean;
   diligenceReportExists: boolean;
   isComplete: boolean;
+  /** Required steps done, of `requiredTotal`. */
+  requiredCompleted: number;
+  requiredTotal: number;
 };
 
 const AUTO_DESCRIPTION = "Company profile created automatically during onboarding.";
+
+function isRequiredStep(stepId: OnboardingStepId) {
+  return (REQUIRED_ONBOARDING_STEP_IDS as readonly OnboardingStepId[]).includes(stepId);
+}
 
 export function parseOnboardingStepState(value: unknown): {
   currentStep: OnboardingStepId;
@@ -105,14 +135,10 @@ function isCompanyProfileComplete(company: Company) {
 }
 
 function isFundingInformationComplete(company: Company) {
-  // Counts as done on the core funding facts a founder actually enters: a raise
-  // amount and a revenue stage. "Use of funds" is encouraged but NOT required to
-  // complete onboarding — it was a hidden blocker that stranded founders at 50%.
-  return (
-    company.funding_amount != null &&
-    company.funding_amount > 0 &&
-    Boolean(company.revenue_stage?.trim())
-  );
+  // The band select is the answer. funding_amount is derived from the band by a
+  // database trigger and is never required here; requiring it stranded founders
+  // whose exact amount had not been written yet.
+  return Boolean(company.funding_amount_band?.trim());
 }
 
 function hasPitchDeck(documents: DocumentRecord[]) {
@@ -132,13 +158,19 @@ export function computeFounderOnboardingProgress(input: {
 }): FounderOnboardingProgress {
   const parsed = parseOnboardingStepState(input.storedStepState ?? input.company.onboarding_step_state);
 
+  // A company that already finished onboarding stays finished. Its required
+  // steps are held complete even if the live detection would now say otherwise
+  // (for example a legacy row with funding_amount but no band).
+  const alreadyCompletedAt = input.company.onboarding_completed_at ?? null;
+  const locked = Boolean(alreadyCompletedAt);
+
   const detected: OnboardingStepCompletion = {
     company_profile: {
-      completed: isCompanyProfileComplete(input.company),
+      completed: locked || isCompanyProfileComplete(input.company),
       completedAt: parsed.steps.company_profile?.completedAt ?? null,
     },
     funding_information: {
-      completed: isFundingInformationComplete(input.company),
+      completed: locked || isFundingInformationComplete(input.company),
       completedAt: parsed.steps.funding_information?.completedAt ?? null,
     },
     documents_uploaded: {
@@ -157,42 +189,28 @@ export function computeFounderOnboardingProgress(input: {
 
   for (const stepId of ONBOARDING_STEP_IDS) {
     if (detected[stepId].completed && !detected[stepId].completedAt) {
-      detected[stepId].completedAt = new Date().toISOString();
+      detected[stepId].completedAt = locked && isRequiredStep(stepId)
+        ? alreadyCompletedAt
+        : new Date().toISOString();
     }
   }
 
-  // Steps that count toward completing onboarding (Stage 1). Intentionally a
-  // short list so founders reach the workspace fast, then build their data room
-  // in Stage 2 where the readiness/document tools live.
-  // Excluded:
-  // "documents_uploaded"        — uploading a pitch deck is NOT required to finish
-  //                               onboarding; it's surfaced as a Stage 2 next-step
-  //                               and is still required later for Qualify→Deploy.
-  // "investor_readiness_review" — requires an admin to act; founder cannot trigger it.
-  // "readiness_generated"       — diligence reports are generated by admin/AI only;
-  //                               no founder-accessible POST route exists for this.
-  const FOUNDER_ACTIONABLE_STEP_IDS = ONBOARDING_STEP_IDS.filter(
-    (id) =>
-      id !== "investor_readiness_review" &&
-      id !== "readiness_generated" &&
-      id !== "documents_uploaded",
-  );
+  const requiredTotal = REQUIRED_ONBOARDING_STEP_IDS.length;
+  const requiredCompleted = REQUIRED_ONBOARDING_STEP_IDS.filter((stepId) => detected[stepId].completed).length;
+  const percent = Math.round((requiredCompleted / requiredTotal) * 100);
+  const isComplete = requiredCompleted === requiredTotal;
 
-  const completedCount = FOUNDER_ACTIONABLE_STEP_IDS.filter((stepId) => detected[stepId].completed).length;
-  const percent = Math.round((completedCount / FOUNDER_ACTIONABLE_STEP_IDS.length) * 100);
-  const isComplete = completedCount === FOUNDER_ACTIONABLE_STEP_IDS.length;
-
-  let currentStep = parsed.currentStep;
-  if (!detected[currentStep].completed) {
-    // keep stored step if still incomplete
-  } else {
-    const firstIncomplete = ONBOARDING_STEP_IDS.find((stepId) => !detected[stepId].completed);
-    currentStep = firstIncomplete ?? ONBOARDING_STEP_IDS[ONBOARDING_STEP_IDS.length - 1];
+  // Current step: the stored step if it is still visible and open, otherwise the
+  // first open visible step (required first), otherwise the last visible step.
+  let currentStep: OnboardingStepId = parsed.currentStep;
+  if (!VISIBLE_ONBOARDING_STEP_IDS.includes(currentStep) || detected[currentStep].completed) {
+    const firstIncomplete = VISIBLE_ONBOARDING_STEP_IDS.find((stepId) => !detected[stepId].completed);
+    currentStep = firstIncomplete ?? VISIBLE_ONBOARDING_STEP_IDS[VISIBLE_ONBOARDING_STEP_IDS.length - 1];
   }
 
   const completedAt: string | null = isComplete
-    ? input.company.onboarding_completed_at ?? new Date().toISOString()
-    : input.company.onboarding_completed_at ?? null;
+    ? alreadyCompletedAt ?? new Date().toISOString()
+    : alreadyCompletedAt;
 
   return {
     percent,
@@ -202,6 +220,8 @@ export function computeFounderOnboardingProgress(input: {
     pitchDeckUploaded: hasPitchDeck(input.documents),
     diligenceReportExists: input.diligenceReportExists,
     isComplete,
+    requiredCompleted,
+    requiredTotal,
   };
 }
 
@@ -221,10 +241,10 @@ export function buildOnboardingStepStatePayload(
 }
 
 export function getNextOnboardingStep(stepId: OnboardingStepId): OnboardingStepId | null {
-  const index = ONBOARDING_STEP_IDS.indexOf(stepId);
-  if (index < 0 || index >= ONBOARDING_STEP_IDS.length - 1) {
+  const index = VISIBLE_ONBOARDING_STEP_IDS.indexOf(stepId);
+  if (index < 0 || index >= VISIBLE_ONBOARDING_STEP_IDS.length - 1) {
     return null;
   }
 
-  return ONBOARDING_STEP_IDS[index + 1];
+  return VISIBLE_ONBOARDING_STEP_IDS[index + 1];
 }
