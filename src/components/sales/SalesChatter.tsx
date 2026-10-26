@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { postScheduled, ScheduleSendMenu } from "@/components/email/ScheduleSend";
 import { formatSendAt } from "@/lib/scheduled-emails/time";
+import { RecipientPicker } from "@/components/email/RecipientPicker";
 import { TaskEditRow } from "./TaskEditRow";
 import { TaskTitleInput } from "./TaskTitleInput";
 import { ptDayDiff } from "@/lib/time/pt-day-diff";
@@ -355,7 +356,12 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
               <span style={{ flex: 1 }}>{contactEmail ?? "no email on file"}</span>
               {!showCc && <button type="button" onClick={() => setShowCc(true)} style={{ fontSize: 11.5, color: "#185FA5", background: "none", border: "none", cursor: "pointer" }}>Cc</button>}
             </div>
-            {showCc && <input value={cc} onChange={(e) => setCc(e.target.value)} placeholder="Cc (comma separated)" style={field} />}
+            {showCc && (
+              <div style={{ fontSize: 12, display: "flex", gap: 10, alignItems: "flex-start" }}>
+                <span style={{ color: "var(--muted-foreground)", width: 58, flexShrink: 0, paddingTop: 9 }}>Cc</span>
+                <RecipientPicker value={cc} onChange={setCc} ariaLabel="Cc" />
+              </div>
+            )}
             <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Subject" style={field} />
             <textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="Write a message to the contact…" rows={4} style={field} />
             {via === "gmail" && senders && !senders.gmail.canSend && (
