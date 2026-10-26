@@ -1,5 +1,6 @@
 // Sales activity log — records tracked events and reads a contact's timeline.
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { proposalActivity, type ProposalActivityInput } from "@/lib/sales/proposal-activity";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return createServiceRoleClient(); }
@@ -57,6 +58,24 @@ export async function logOutboundEmailActivity(
       } else {
         await logActivity({ kind: "email", summary, actorId, contactCrmId: contactId, meta: via ? { via } : undefined });
       }
+    }
+  } catch { /* never block the send */ }
+}
+
+/**
+ * Logs a Contracts send ("Proposal sent: subject") onto the contact's open
+ * opportunities, or the contact when it has none. The entry links to the sent
+ * document's page. Best-effort: never blocks or fails the send.
+ */
+export async function logProposalSent(input: ProposalActivityInput & { contactCrmId: string; actorId?: string | null }): Promise<void> {
+  try {
+    const { summary, meta } = proposalActivity(input);
+    const { data: opps } = await db().from("sales_opportunities").select("id").eq("contact_crm_id", input.contactCrmId).eq("status", "open");
+    const openOpps = (opps ?? []) as Array<{ id: string }>;
+    if (openOpps.length > 0) {
+      for (const o of openOpps) await logActivity({ kind: "email", summary, actorId: input.actorId, opportunityId: o.id, contactCrmId: input.contactCrmId, meta });
+    } else {
+      await logActivity({ kind: "email", summary, actorId: input.actorId, contactCrmId: input.contactCrmId, meta });
     }
   } catch { /* never block the send */ }
 }
