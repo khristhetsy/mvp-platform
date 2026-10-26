@@ -118,14 +118,14 @@ function baseGates(journey: FounderJourneyState, companyId: string): Gate[] {
     {
       key: "onboarding",
       label: "Onboarding complete",
-      detail: "Company profile, funding info, pitch deck",
+      detail: "Company profile, funding info",
       met: c.onboardingComplete,
       why: c.onboardingComplete
         ? "All founder-actionable onboarding steps are complete."
-        : "The founder has not finished the company profile, funding info, or pitch-deck steps.",
+        : "The founder has not finished the company profile or funding info steps.",
       points: c.onboardingComplete
-        ? ["Company profile complete", "Funding info provided", "Pitch deck uploaded"]
-        : ["Ask the founder to finish their onboarding steps", "Company profile, funding info, and pitch deck are required"],
+        ? ["Company profile complete", "Funding info provided"]
+        : ["Ask the founder to finish their onboarding steps", "Company profile and funding info are required. The pitch deck is optional"],
       action: c.onboardingComplete ? undefined : { label: "Review company", href: `/admin/companies/${companyId}` },
     },
     {

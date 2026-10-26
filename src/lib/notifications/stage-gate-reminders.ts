@@ -25,6 +25,13 @@ type GateDef = {
   // Founder-facing "what to do" — drives the reminder body.
   ask: string;
   steps: string[];
+  // Optional email wording that replaces the generic "clear <label>" copy for a gate.
+  copy?: {
+    subject: string;
+    preheader: string;
+    headline: string;
+    intro: (firstName: string) => string;
+  };
 };
 
 // Mirrors the gates in FounderJourneyPanel. `path` is where the founder resolves it.
@@ -32,11 +39,18 @@ export const GATE_DEFS: GateDef[] = [
   {
     key: "onboarding",
     label: "Onboarding complete",
-    detail: "Company profile, funding info, pitch deck",
-    path: "/founder/settings",
+    detail: "Company profile, funding info",
+    path: "/founder/onboarding",
     met: (c) => c.onboardingComplete,
-    ask: "complete your company profile — add your funding info and upload your pitch deck",
-    steps: ["Fill in your company profile", "Add your funding information", "Upload your pitch deck"],
+    ask: "finish your onboarding: complete your company profile and add your funding information",
+    steps: ["Fill in your company profile", "Add your funding information"],
+    copy: {
+      subject: "Finish your onboarding",
+      preheader: "Two steps are left: your company profile and your funding information.",
+      headline: "Two steps left to finish your onboarding",
+      intro: (firstName) =>
+        `Hi ${firstName}, you haven't finished your onboarding yet. Two steps are still open, and they take a few minutes. Your rating and investor matches depend on them. Your coach can guide you through each one.`,
+    },
   },
   {
     key: "readiness",
@@ -85,11 +99,11 @@ function gateEmail(gate: GateDef, firstName: string) {
   const url = `${SITE_URL}${gate.path}`;
   return renderEmail({
     audience: "founder",
-    subject: `Reminder: ${gate.label.toLowerCase()}`,
-    preheader: `To clear ${gate.label}, please ${gate.ask}.`,
+    subject: gate.copy?.subject ?? `Reminder: ${gate.label.toLowerCase()}`,
+    preheader: gate.copy?.preheader ?? `To clear ${gate.label}, please ${gate.ask}.`,
     eyebrow: "Your raise · Next step",
-    headline: `One step to clear ${gate.label}`,
-    intro: `Hi ${firstName}, you're one step closer. To clear ${gate.label}, please ${gate.ask}.`,
+    headline: gate.copy?.headline ?? `One step to clear ${gate.label}`,
+    intro: gate.copy?.intro(firstName) ?? `Hi ${firstName}, you're one step closer. To clear ${gate.label}, please ${gate.ask}.`,
     blocks: [{ type: "checklist", title: "What to do", items: gate.steps.map((label) => ({ label, done: false })) }],
     primary: { label: "Take care of it now", url },
     footer: {

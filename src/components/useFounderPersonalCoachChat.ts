@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { COACH_DISCLAIMER } from "@/lib/learning/class-assistant-guardrails";
+import { ONBOARDING_QUICK_PROMPTS } from "@/lib/learning/onboarding-coach";
 
 export type CoachChatEntry = { role: "user" | "assistant"; text: string };
 
@@ -9,9 +10,12 @@ export function useFounderPersonalCoachChat({
   courseSlug,
   lessonSlug,
   stepIndex,
+  surface,
 }: Readonly<{
   courseSlug?: string;
   lessonSlug?: string;
+  /** "onboarding" switches the coach to guide the required onboarding steps. */
+  surface?: "onboarding";
   /** The coach step the founder is looking at, so the coach answers about that step. */
   stepIndex?: number;
 }>) {
@@ -42,6 +46,7 @@ export function useFounderPersonalCoachChat({
           courseSlug: courseSlug ?? undefined,
           lessonSlug: lessonSlug ?? undefined,
           stepIndex: typeof stepIndex === "number" ? stepIndex : undefined,
+          surface: surface ?? undefined,
           message: trimmed,
           history,
         }),
@@ -73,7 +78,7 @@ export function useFounderPersonalCoachChat({
       const disclaimer = body.disclaimer ?? COACH_DISCLAIMER;
       setMessages((prev) => [...prev, { role: "assistant", text: `${body.reply}\n\n${disclaimer}` }]);
     },
-    [courseSlug, lessonSlug, stepIndex, loading, messages],
+    [courseSlug, lessonSlug, stepIndex, surface, loading, messages],
   );
 
   const send = useCallback(() => void sendMessage(message), [message, sendMessage]);
@@ -96,7 +101,9 @@ export function useFounderPersonalCoachChat({
 export function getCoachQuickPrompts({
   courseSlug,
   lessonSlug,
-}: Readonly<{ courseSlug?: string; lessonSlug?: string }>) {
+  surface,
+}: Readonly<{ courseSlug?: string; lessonSlug?: string; surface?: "onboarding" }>) {
+  if (surface === "onboarding") return ONBOARDING_QUICK_PROMPTS;
   if (lessonSlug && courseSlug) {
     return [
       "Explain this lesson in simple terms",

@@ -38,9 +38,12 @@ function IcoClose({ className }: { className?: string }) {
 export function FloatingFounderAICoach({
   courseSlug,
   lessonSlug,
+  surface,
 }: Readonly<{
   courseSlug?: string;
   lessonSlug?: string;
+  /** "onboarding" shows the coach in onboarding mode on /founder/onboarding. */
+  surface?: "onboarding";
 }>) {
   const t = useTranslations("sharedCmp");
   const [open, setOpen] = useState(false);
@@ -60,9 +63,9 @@ export function FloatingFounderAICoach({
     claudeAvailable,
     send,
     sendPrompt,
-  } = useFounderPersonalCoachChat({ courseSlug, lessonSlug, stepIndex });
+  } = useFounderPersonalCoachChat({ courseSlug, lessonSlug, stepIndex, surface });
 
-  const quickPrompts = getCoachQuickPrompts({ courseSlug, lessonSlug });
+  const quickPrompts = getCoachQuickPrompts({ courseSlug, lessonSlug, surface });
 
   useEffect(() => {
     if (open && scrollRef.current) {
@@ -104,7 +107,7 @@ export function FloatingFounderAICoach({
               </div>
               <div>
                 <p className="text-sm font-semibold text-slate-900">{t("ai_coach")}</p>
-                <p className="text-[10px] leading-none text-slate-500">iCapOS Learning</p>
+                <p className="text-[10px] leading-none text-slate-500">{surface === "onboarding" ? "iCapOS Onboarding" : "iCapOS Learning"}</p>
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
@@ -139,7 +142,9 @@ export function FloatingFounderAICoach({
             {messages.length === 0 ? (
               <div className="rounded-xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
                 <p className="text-xs leading-5 text-slate-600">
-                  Ask about lessons, courses, pitch decks, data rooms, financials, or platform navigation. No quiz answers or legal/investment advice.
+                  {surface === "onboarding"
+                    ? "I can help you finish your company profile and funding information. I can't fill in or save fields for you."
+                    : "Ask about lessons, courses, pitch decks, data rooms, financials, or platform navigation. No quiz answers or legal/investment advice."}
                 </p>
                 <p className="mt-1.5 text-[10px] text-slate-400">{COACH_DISCLAIMER}</p>
               </div>
@@ -207,7 +212,9 @@ export function FloatingFounderAICoach({
                 if (e.key === "Enter") send();
               }}
               placeholder={
-                lessonSlug
+                surface === "onboarding"
+                  ? "Ask about this step…"
+                  : lessonSlug
                   ? "Ask about this lesson…"
                   : courseSlug
                     ? "Ask about this course…"
