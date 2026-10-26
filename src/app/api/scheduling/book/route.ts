@@ -3,6 +3,7 @@ import { z } from "zod";
 import { enforceRateLimit } from "@/lib/api/rate-limit";
 import { bookSlot } from "@/lib/scheduling/book";
 import { sendBookingEmails } from "@/lib/scheduling/notify";
+import { investorMatchesForBooking, logBookingMatchNote } from "@/lib/scheduling/booking-matches";
 import { cancelBookingByToken } from "@/lib/scheduling/cancel";
 import { handoffFitSession } from "@/lib/fit/handoff";
 import { captureEmail } from "@/lib/fit/sessions";
@@ -112,6 +113,13 @@ export async function POST(req: NextRequest): Promise<Response> {
       await cancelBookingByToken(parsed.data.rescheduleToken, "reschedule", { silent: true }).catch(() => {});
     }
 
+    // Founder bookings: top investor matches for the host email and the contact Note Log.
+    // Best-effort and time-boxed; never shown to the booker.
+    const investorMatches = await investorMatchesForBooking(parsed.data.answers);
+    if (investorMatches) {
+      await logBookingMatchNote({ email: parsed.data.email, bookingId: result.bookingId, answers: parsed.data.answers ?? [], result: investorMatches });
+    }
+
     await sendBookingEmails({
       bookingId: result.bookingId,
       hostEmail: result.hostEmail,
@@ -124,6 +132,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       timezone: parsed.data.timezone,
       meetUrl: result.meetUrl,
       answers: parsed.data.answers,
+      investorMatches,
     }).catch(() => {});
 
     // Match campaign: mark the founder booked. Best-effort.
