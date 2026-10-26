@@ -147,6 +147,10 @@ export function BrandedTemplateEditor({ templateId, projectId, founderRef, defau
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  /** Why the last save did not go through, shown as a red banner under the header. */
+  const [err, setErr] = useState<string | null>(null);
+  /** Required fields that were empty at the last save; each clears as it is filled in. */
+  const [missingKeys, setMissingKeys] = useState<string[]>([]);
   const [uploading, setUploading] = useState<string | null>(null);
   const [prefill, setPrefill] = useState<Prefill | null>(null);
   const [founderBusy, setFounderBusy] = useState(false);
@@ -366,9 +370,16 @@ export function BrandedTemplateEditor({ templateId, projectId, founderRef, defau
   /** Save (create or update). Returns the saved template, or null with a message. */
   async function save(): Promise<SavedBrandedTemplate | null> {
     if (!master || !schema) return null;
-    const missing = schema.slots.filter((s) => s.required && !(slots[s.key] ?? "").trim()).map((s) => s.label);
-    if (missing.length) { setMsg(`Fill in: ${missing.join(", ")}.`); return null; }
-    setBusy(true); setMsg(null);
+    const empty = schema.slots.filter((s) => s.required && !(slots[s.key] ?? "").trim());
+    if (empty.length) {
+      setMsg(null);
+      setMissingKeys(empty.map((s) => s.key));
+      setErr(`Can't save yet. Fill in: ${empty.map((s) => s.label.replace(/\s*\(.*\)\s*$/, "")).join(", ")}.`);
+      const el = empty.map((s) => document.getElementById(`bt-${s.key}`)).find((e): e is HTMLElement => !!e);
+      if (el) { el.scrollIntoView({ block: "center", behavior: "smooth" }); el.focus({ preventScroll: true }); }
+      return null;
+    }
+    setBusy(true); setMsg(null); setErr(null); setMissingKeys([]);
     try {
       const r = await fetch(savedId ? `/api/marketing/branded-templates/${savedId}` : "/api/marketing/branded-templates", {
         method: savedId ? "PATCH" : "POST",
@@ -376,11 +387,11 @@ export function BrandedTemplateEditor({ templateId, projectId, founderRef, defau
         body: JSON.stringify({ masterId: master.id, slotValues: slots, department: department || null }),
       });
       const j = (await r.json().catch(() => null)) as (SavedBrandedTemplate & { error?: string; blocks?: { branded?: { copy_id?: string } } }) | null;
-      if (!r.ok || !j?.id) { setMsg(j?.error ?? "Couldn't save. Try again."); return null; }
+      if (!r.ok || !j?.id) { setErr(j?.error ?? "Couldn't save. Try again."); return null; }
       setSavedId(j.id);
       if (j.blocks?.branded?.copy_id) setCopyId(j.blocks.branded.copy_id);
       return j;
-    } catch { setMsg("Couldn't save. Check your connection."); return null; } finally { setBusy(false); }
+    } catch { setErr("Couldn't save. Check your connection."); return null; } finally { setBusy(false); }
   }
 
   async function primary() {
@@ -419,6 +430,13 @@ export function BrandedTemplateEditor({ templateId, projectId, founderRef, defau
             {busy ? "Saving…" : primaryLabel}
           </button>
         </div>
+
+        {err ? (
+          <div role="alert" style={{ padding: "8px 16px", background: "#FCEBEB", color: "#A32D2D", borderBottom: "0.5px solid #F09595", fontSize: 12.5, fontWeight: 600 }}>{err}</div>
+        ) : null}
+        {missingKeys.some((k) => !(slots[k] ?? "").trim()) ? (
+          <style>{missingKeys.filter((k) => !(slots[k] ?? "").trim()).map((k) => `#bt-${k}`).join(",") + " { border-color: #A32D2D !important; box-shadow: 0 0 0 2px rgba(163,45,45,0.25); }"}</style>
+        ) : null}
 
         {/* Design (master) */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 16px", borderBottom: "0.5px solid var(--border)", fontSize: 12 }}>
