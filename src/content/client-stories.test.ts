@@ -14,12 +14,13 @@ const cynthia = clientStories.find((s) => s.slug === "cynthia-mcbreen") as Clien
 const approved = (s: ClientStory): ClientStory => ({ ...s, approvedOn: "2026-10-27" });
 
 describe("client stories", () => {
-  it("lists Cynthia as approved and keeps drafts hidden until a permission date is set", () => {
+  it("lists a story only while its permission date is set", () => {
     expect(storyApproved(cynthia)).toBe(true);
-    const drafts = clientStories.filter((s) => s.slug !== "cynthia-mcbreen");
-    expect(drafts.length).toBeGreaterThan(0);
+    const drafts = clientStories.map((s) => ({ ...s, approvedOn: "" }));
     for (const d of drafts) expect(storyApproved(d)).toBe(false);
-    expect(approvedStories().map((s) => s.slug)).toEqual(["cynthia-mcbreen"]);
+    expect(approvedStories(drafts)).toEqual([]);
+    const mixed = [cynthia, ...drafts.slice(1)];
+    expect(approvedStories(mixed).map((s) => s.slug)).toEqual([cynthia.slug]);
   });
 
   it("is hidden without a permission date", () => {
@@ -70,7 +71,7 @@ describe("client stories", () => {
 
 describe("stories summary", () => {
   it("stays hidden below the minimum number of approved stories", () => {
-    expect(storiesSummary()).toBeNull();
+    expect(storiesSummary(clientStories.map((s) => ({ ...s, approvedOn: "" })))).toBeNull();
     expect(storiesSummary(clientStories.map(approved).slice(0, MIN_STORIES_FOR_SUMMARY - 1))).toBeNull();
   });
 

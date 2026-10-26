@@ -147,7 +147,7 @@ export const clientStories: ClientStory[] = [
     title: "Founder",
     company: "One Vertical Tier",
     photoUrl: "/marketing/clients/dorrin-prophet.jpg",
-    approvedOn: "",
+    approvedOn: "2026-10-26",
     headline:
       "If you are an entrepreneur founder and need to build capital resources, they are a one-stop shop.",
     summary:
@@ -217,7 +217,7 @@ export const clientStories: ClientStory[] = [
     title: "Founder & CEO",
     company: "NutriFlex AI LLC",
     photoUrl: "/marketing/clients/vincent-njoku.jpg",
-    approvedOn: "",
+    approvedOn: "2026-10-26",
     headline: "A fundraising preparation and investor matching platform.",
     summary:
       "Vincent's AI healthcare and wellness company needed investors who understood long development cycles. iCapOS showed where the fundraising materials fell short and which investors to approach first.",
