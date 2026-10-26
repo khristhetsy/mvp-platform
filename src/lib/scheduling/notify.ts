@@ -17,6 +17,8 @@ export interface BookingEmailInput {
   timezone: string;
   meetUrl: string | null;
   answers?: BookingAnswerLite[];
+  /** Host only: top investor matches for a founder booking. Never sent to the booker. */
+  investorMatches?: { matches: Array<{ company: string; fit: number; detail: string }>; total: number } | null;
 }
 
 function appUrl(): string {
@@ -74,6 +76,7 @@ type BookingEmailOpts = {
   durationMin: number | null;
   meetUrl: string | null;
   answers: BookingAnswerLite[];
+  investorMatches?: BookingEmailInput["investorMatches"];
   addToCalUrl: string;
   cancelUrl: string | null;
   rescheduleUrl: string | null;
@@ -111,6 +114,13 @@ export function bookingEmail(opts: BookingEmailOpts): RenderedEmail {
         ],
       },
       ...(answers.length ? [{ type: "rows" as const, title: "Responses", items: answers.map((a) => ({ title: a.label, subtitle: a.value })) }] : []),
+      ...(opts.investorMatches && opts.investorMatches.matches.length
+        ? [{
+            type: "rows" as const,
+            title: `Investor matches (top ${opts.investorMatches.matches.length} of ${opts.investorMatches.total})`,
+            items: opts.investorMatches.matches.map((m) => ({ title: m.company, subtitle: m.detail, right: `${m.fit}% fit` })),
+          }]
+        : []),
       ...(opts.meetUrl ? [{ type: "html" as const, html: `<a href="${esc(opts.meetUrl)}" style="display:inline-block;background:#1A6CE4;color:#FFFFFF;border-radius:8px;padding:13px 22px;font-size:15px;font-weight:bold;text-decoration:none;">Join Google Meet</a>` }] : []),
       { type: "html", html: `<div>${actions.join('<span style="color:#C9D6EE;margin:0 8px;">·</span>')}</div>` },
     ],
@@ -155,7 +165,7 @@ export async function sendBookingEmails(input: BookingEmailInput): Promise<void>
     sends.push(sendEmail({
       to: input.hostEmail,
       subject: `New booking: ${input.title}`,
-      html: bookingEmailHtml({ ...base, subject: `New booking: ${input.title}`, greetingName: input.hostName, heroTitle: "New event scheduled", heroSub: `${input.bookerName ?? "Someone"} booked time with you.` }),
+      html: bookingEmailHtml({ ...base, subject: `New booking: ${input.title}`, greetingName: input.hostName, heroTitle: "New event scheduled", heroSub: `${input.bookerName ?? "Someone"} booked time with you.`, investorMatches: input.investorMatches }),
       fromName: "iCapOS",
     }));
   }
