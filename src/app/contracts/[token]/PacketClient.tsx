@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Packet, PacketDoc } from "@/lib/contracts/packet";
+import { isSubscriptionPacket, subscriberSteps } from "@/lib/contracts/subscription/steps";
 
 const NAVY = "#0A1A40";
 const BLUE = "#2E78F5";
@@ -54,6 +55,9 @@ export function PacketClient({ token, packet }: { token: string; packet: Packet 
   const count = docs.length;
   // Sent for review only: nothing here asks for a signature.
   const reviewOnly = docs.every((d) => d.status === "shared");
+  const subscription = isSubscriptionPacket(docs);
+  const steps = subscription ? subscriberSteps(docs, packet.acceptedAt) : null;
+  const onRespond = (d: PacketDoc) => (action: "decline" | "changes") => { setResponding({ id: d.id, action }); setNote(""); setError(null); };
   return (
     <div style={{ minHeight: "100vh", background: "#eef1f5", fontFamily: "Inter, system-ui, sans-serif", color: NAVY }}>
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", padding: "15px 24px", background: NAVY }}>
@@ -65,18 +69,24 @@ export function PacketClient({ token, packet }: { token: string; packet: Packet 
 
       <main style={{ maxWidth: 760, margin: "0 auto", padding: "28px 16px 48px" }}>
         <div style={{ background: "#fff", border: "1px solid #d5deea", borderRadius: 12, padding: "22px 24px" }}>
-          <h1 style={{ fontSize: 19, fontWeight: 700, margin: 0 }}>Documents for your review</h1>
+          <h1 style={{ fontSize: 19, fontWeight: 700, margin: 0 }}>{steps ? "Your subscription package" : "Documents for your review"}</h1>
           <p style={{ fontSize: 13, color: "#5a6b87", margin: "6px 0 0", lineHeight: 1.6 }}>
-            {reviewOnly
+            {steps
+              ? steps.headline
+              : reviewOnly
               ? `${count === 1 ? "One document" : `${count} documents`} shared for your review. No signature is requested.`
               : <>{count === 1 ? "One agreement." : `${count} independent agreements. You may sign one, some, or none.`} Nothing is binding until signed.</>}
           </p>
 
-          <div style={{ border: "1px solid #d5deea", borderRadius: 10, marginTop: 16, overflow: "hidden" }}>
-            {docs.map((d, i) => (
-              <DocRow key={d.id} d={d} token={token} first={i === 0} onRespond={(action) => { setResponding({ id: d.id, action }); setNote(""); setError(null); }} />
-            ))}
-          </div>
+          {steps ? (
+            <SubscriptionSteps steps={steps} token={token} onRespond={onRespond} acceptedAt={packet.acceptedAt} />
+          ) : (
+            <div style={{ border: "1px solid #d5deea", borderRadius: 10, marginTop: 16, overflow: "hidden" }}>
+              {docs.map((d, i) => (
+                <DocRow key={d.id} d={d} token={token} first={i === 0} onRespond={onRespond(d)} />
+              ))}
+            </div>
+          )}
 
           {responding ? (
             <div style={{ marginTop: 14, padding: 14, background: "#f6f8fc", borderRadius: 10 }}>
@@ -147,6 +157,69 @@ function DocRow({ d, token, first, onRespond }: { d: PacketDoc; token: string; f
             <button type="button" onClick={() => onRespond("decline")} style={{ background: "none", border: "none", padding: 0, color: "#3a4a63", cursor: "pointer", fontSize: 12.5, textDecoration: "underline" }}>Decline</button>
           </>
         ) : null}
+      </div>
+    </div>
+  );
+}
+
+const FUNDING_NOTE = "No funds move on this site. Fund only after the Manager accepts your subscription, and only as the Subscription Instructions say.";
+
+function SubscriptionSteps({ steps, token, onRespond, acceptedAt }: { steps: ReturnType<typeof subscriberSteps>; token: string; onRespond: (d: PacketDoc) => (a: "decline" | "changes") => void; acceptedAt: string | null }) {
+  const pct = steps.sign.length ? Math.round((steps.signed / steps.sign.length) * 100) : 0;
+  const card: React.CSSProperties = { border: "1px solid #d5deea", borderRadius: 10, marginTop: 14, overflow: "hidden" };
+  const head = (n: number, text: string, done: boolean) => (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 16px", background: "#f6f8fc", borderBottom: "1px solid #e3e9f2" }}>
+      <span aria-hidden="true" style={{ width: 22, height: 22, borderRadius: 11, background: done ? "#1a7f43" : NAVY, color: "#fff", fontSize: 12, fontWeight: 700, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>{done ? "✓" : n}</span>
+      <span style={{ fontSize: 14, fontWeight: 700 }}>{text}</span>
+    </div>
+  );
+  return (
+    <div>
+      <div style={{ marginTop: 14 }} aria-label="Signing progress">
+        <div style={{ height: 8, background: "#e3e9f2", borderRadius: 4, overflow: "hidden" }}>
+          <div style={{ width: `${acceptedAt ? 100 : pct}%`, height: "100%", background: acceptedAt || pct === 100 ? "#1a7f43" : BLUE }} />
+        </div>
+      </div>
+
+      <div style={card}>
+        {head(1, "Read the package", false)}
+        {steps.read.map((g) => (
+          <div key={g.partKey} style={{ padding: "10px 16px", borderTop: "1px solid #f2f5fa" }}>
+            <div style={{ fontSize: 13, fontWeight: 700 }}>{g.label}</div>
+            {g.docs.map((d) => (
+              <div key={d.id} style={{ display: "flex", gap: 10, flexWrap: "wrap", fontSize: 12.5, color: "#5a6b87", lineHeight: 1.9 }}>
+                <span>{d.title}{d.pageCount ? ` · ${d.pageCount} pages` : ""}</span>
+                <a href={`/api/contracts/${token}/file/${d.id}?kind=sent`} style={{ color: BLUE }}>Download PDF</a>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+
+      <div style={card}>
+        {head(2, "Sign the Signature Pages", steps.signed === steps.sign.length && steps.sign.length > 0)}
+        {steps.sign.map((d, i) => (
+          <DocRow key={d.id} d={d} token={token} first={i === 0} onRespond={onRespond(d)} />
+        ))}
+      </div>
+
+      <div style={card}>
+        {head(3, "The Manager accepts your subscription", Boolean(acceptedAt))}
+        <div style={{ padding: "12px 16px", fontSize: 13, color: "#5a6b87", lineHeight: 1.6 }}>
+          {acceptedAt
+            ? `Accepted ${fmtDate(acceptedAt)}. Your executed copies are linked above.`
+            : steps.stage === "countersign"
+              ? "You have signed every page. iCFO countersigns, then the Manager accepts. You will receive an email."
+              : "After you sign, iCFO countersigns and the Manager accepts. You will receive an email."}
+        </div>
+      </div>
+
+      <div style={{ ...card, opacity: acceptedAt ? 1 : 0.6 }}>
+        {head(4, "Fund your subscription", false)}
+        <div style={{ padding: "12px 16px", fontSize: 13, color: "#5a6b87", lineHeight: 1.6 }}>
+          {acceptedAt ? "Follow the Subscription Instructions in the package. " : "Opens after acceptance. "}
+          {FUNDING_NOTE}
+        </div>
       </div>
     </div>
   );

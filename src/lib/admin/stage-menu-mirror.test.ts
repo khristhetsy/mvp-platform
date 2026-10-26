@@ -121,6 +121,7 @@ describe("Preparation menu — the diligence toolkit", () => {
     const toolkit = [
       "Pitch deck analyzer",
       "Market claim grader",
+      "Round structure",
       "Financial model",
       "AI diligence report",
       "Diligence & review",

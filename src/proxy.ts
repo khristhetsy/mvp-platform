@@ -328,6 +328,24 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Self service deletion: while the 30 day window is open the account can
+  // only reach the restore page. Separate query so a missing column (migration
+  // not applied yet) never locks anyone out.
+  if (pathname !== "/founder/account-restore") {
+    const { data: deletion } = await supabase
+      .from("profiles")
+      .select("deletion_scheduled_for")
+      .eq("id", user.id)
+      .maybeSingle();
+    if ((deletion as { deletion_scheduled_for?: string | null } | null)?.deletion_scheduled_for) {
+      if (apiRequest) return jsonError(403, "This account is scheduled for deletion.");
+      const url = request.nextUrl.clone();
+      url.pathname = "/founder/account-restore";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+  }
+
   const allowedRoles = allowedRolesByZone[zone];
   if (!allowedRoles.includes(role)) {
     if (apiRequest) {

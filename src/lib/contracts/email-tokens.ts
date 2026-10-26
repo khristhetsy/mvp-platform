@@ -1,7 +1,7 @@
 // Cover email tokens. Values come from the contact and from the documents'
 // own field values, so the email and the documents cannot disagree. Pure.
 
-import { formatValue } from "./fields";
+import { deriveValues, formatValue } from "./fields";
 import type { TemplateField } from "./types";
 
 export type EmailTokenContext = {
@@ -37,6 +37,7 @@ export function emailTokenValues(ctx: EmailTokenContext): Record<string, string>
     const merged: Record<string, string> = {};
     for (const f of d.fields) if (f.default_value) merged[f.token] = f.default_value;
     for (const [token, value] of Object.entries(d.values)) if (value?.trim()) merged[token] = value;
+    Object.assign(merged, deriveValues(merged));
     for (const [token, value] of Object.entries(merged)) {
       if (out[token] || !value.trim()) continue;
       out[token] = display(d.fields.find((f) => f.token === token), value);

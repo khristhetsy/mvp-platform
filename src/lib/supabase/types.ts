@@ -9,6 +9,9 @@ export type Profile = {
   is_active: boolean;
   last_seen_at: string | null;
   locale?: string | null;
+  // Self service account deletion: set while the 30 day restore window is open.
+  deletion_requested_at?: string | null;
+  deletion_scheduled_for?: string | null;
   created_at: string;
 };
 
@@ -116,6 +119,15 @@ export type Subscription = {
   created_at: string;
   updated_at: string;
   is_grandfathered?: boolean | null;
+  ls_customer_id?: string | null;
+  ls_subscription_id?: string | null;
+  grace_period_ends_at?: string | null;
+  // Stop payment, scheduled downgrades, and the wire billing address.
+  cancel_at_period_end?: boolean | null;
+  cancel_reason?: string | null;
+  pending_plan_type?: string | null;
+  pending_plan_effective_at?: string | null;
+  billing_address?: unknown;
 };
 
 export type Campaign = {

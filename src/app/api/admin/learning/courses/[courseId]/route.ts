@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireLearningStaff, jsonBadRequest } from "@/app/api/admin/learning/_shared";
+import { requireLearningStaff, ensureCanPublish, jsonBadRequest } from "@/app/api/admin/learning/_shared";
 
 const courseUpdateSchema = z.object({
   slug: z.string().min(3).max(120).optional(),
@@ -57,3 +57,28 @@ export async function PATCH(request: Request, { params }: Readonly<{ params: Pro
   return NextResponse.json({ program: data });
 }
 
+export async function DELETE(_: Request, { params }: Readonly<{ params: Promise<{ courseId: string }> }>) {
+  const auth = await requireLearningStaff();
+  if ("error" in auth) return auth.error as NextResponse;
+
+  try {
+    ensureCanPublish(auth.profile);
+  } catch (e) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : "Insufficient permissions." }, { status: 403 });
+  }
+
+  const { courseId } = await params;
+
+  // Child rows (module links, progress, certificates) are removed or detached by FK rules.
+  const { data, error } = await auth.supabase
+    .from("learning_programs")
+    .delete()
+    .eq("id", courseId)
+    .select("id");
+  if (error) return jsonBadRequest(error);
+  if (!data || data.length === 0) {
+    return NextResponse.json({ error: "Course not found." }, { status: 404 });
+  }
+
+  return NextResponse.json({ ok: true, id: courseId });
+}

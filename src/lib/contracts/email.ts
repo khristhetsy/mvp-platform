@@ -263,3 +263,24 @@ export async function sendExecutedCopy(input: { to: string; firstName: string | 
   });
   return send({ to: input.to, fromName: `${input.senderName}, iCFO Capital Global`, replyTo: input.senderEmail, mail, attachments: input.attachments });
 }
+
+/**
+ * The Manager accepted the subscription. Tells the subscriber to follow the Subscription Instructions
+ * (Part 2 of the package). The platform does not hold or move funds, and the email says so.
+ */
+export async function sendAcceptanceEmail(input: { to: string; firstName: string | null; fund: string; senderName: string; senderEmail: string | null; token: string }) {
+  const mail = renderEmail({
+    audience: "shared",
+    subject: `Subscription accepted: ${input.fund}`,
+    preheader: "Next step: follow the Subscription Instructions.",
+    context: COMPANY,
+    intro: `${input.firstName ? `Hi ${input.firstName}, ` : ""}the Manager of ${input.fund} has accepted your subscription. The executed copies of your signature pages are available at your link.`,
+    blocks: [
+      { type: "paragraph", text: "The next step is to fund your subscription by following the Subscription Instructions, Part 2 of your package. Fund only after this acceptance, and only as those instructions say." },
+      { type: "note", text: "iCapOS does not hold, receive or move funds. Funding happens directly between you and the Fund's bank, as the instructions describe." },
+    ],
+    primary: { label: "View your documents", url: packetUrl(input.token) },
+    footer: { reason: `${input.senderName} sent you these documents from ${COMPANY}.` },
+  });
+  return send({ to: input.to, fromName: `${input.senderName}, iCFO Capital Global`, replyTo: input.senderEmail, mail });
+}

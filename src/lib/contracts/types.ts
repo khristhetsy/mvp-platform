@@ -1,9 +1,9 @@
 // SPV contract send: shared types. Tables are not in the generated Supabase
 // types yet, so these mirror supabase/migrations/20261002210000_spv_contracts.sql.
 
-export type TemplateKind = "term_sheet" | "services_agreement" | "advisory_agreement" | "nda";
+export type TemplateKind = "term_sheet" | "services_agreement" | "advisory_agreement" | "nda" | "subscription";
 export type TemplateSubtype = "convertible_note" | "safe" | "series_a" | null;
-export type FieldType = "text" | "date" | "currency" | "percent" | "multiline";
+export type FieldType = "text" | "date" | "currency" | "percent" | "multiline" | "derived";
 
 /** Contract types an uploaded contract is filed under (selection row on Contracts › Uploaded). */
 export const CONTRACT_TYPES = [
@@ -51,6 +51,11 @@ export type ContractTemplate = {
   /** Signature anchors used to place fields on the rendered PDF. */
   signature_anchors: SignatureAnchors;
   has_expiry: boolean;
+  /** Subscription package parts only: which package and part this master belongs to. */
+  package_key: string | null;
+  part_key: string | null;
+  /** "sign": the subscriber signs it on a signing link. "review": sent to read, no signature requested. */
+  delivery: "sign" | "review";
   created_by: string | null;
   created_at: string;
 };
@@ -64,6 +69,8 @@ export type ContractTemplate = {
 export type SignatureAnchors = {
   prospect: { party: string };
   countersign: { party: string }[];
+  /** Joint individuals: a second signer signs under the first, on the same link (the "By: / Name 2:" lines). */
+  second?: boolean;
 };
 
 export type IssuingEntity = {
@@ -90,6 +97,20 @@ export type ContractStatus =
   | "shared";
 
 export type Segment = { text: string; b?: boolean; i?: boolean };
+/** How Word lays a paragraph out; the editor mirrors it. Lengths in points. */
+export type ParaHint = {
+  align: "left" | "center" | "right" | "both";
+  left: number;
+  right: number;
+  /** Negative = hanging. */
+  firstLine: number;
+  tabs: { pos: number; type: "left" | "right" | "center" | "decimal"; leader: "dot" | "hyphen" | "underscore" | null }[];
+  /** List label (a bullet or a check box), if the paragraph is a list item. */
+  label: string | null;
+  size: number;
+  bold: boolean;
+  underline: boolean;
+};
 /** Paragraph id → new segments, or null to delete the paragraph. */
 export type ParagraphEdits = Record<string, Segment[] | null>;
 export type InsertedParagraph = { id: string; after: string; segments: Segment[] };

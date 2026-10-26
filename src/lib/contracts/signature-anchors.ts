@@ -127,9 +127,17 @@ function resolveParty(party: string, values: Record<string, string>): string {
   return party.replace(/\{\{([a-z0-9_]+)\}\}/g, (_m, t: string) => values[t] ?? "");
 }
 
-export type ProspectFields = { signature: PlacedBox; name: PlacedBox | null; title: PlacedBox | null; date: PlacedBox | null };
+export type ProspectFields = {
+  signature: PlacedBox;
+  name: PlacedBox | null;
+  title: PlacedBox | null;
+  date: PlacedBox | null;
+  /** Joint individuals: the second signer's signature and printed name. */
+  signature2: PlacedBox | null;
+  name2: PlacedBox | null;
+};
 
-function blockFor(lines: PdfLine[], party: string, what: string): { sig: PlacedBox; name: PlacedBox | null; title: PlacedBox | null; date: PlacedBox | null } {
+function blockFor(lines: PdfLine[], party: string, what: string, second = false): { sig: PlacedBox; name: PlacedBox | null; title: PlacedBox | null; date: PlacedBox | null; sig2: PlacedBox | null; name2: PlacedBox | null } {
   const head = findLast(lines, party);
   if (!head) throw new AnchorNotFoundError(what);
   const by = findBelow(lines, head, "By:");
@@ -137,7 +145,20 @@ function blockFor(lines: PdfLine[], party: string, what: string): { sig: PlacedB
   const name = findBelow(lines, by, "Name:", 60);
   const title = findBelow(lines, by, "Title:", 90);
   const date = findBelow(lines, by, "Date:", 130);
+  let sig2: PlacedBox | null = null;
+  let name2: PlacedBox | null = null;
+  if (second) {
+    const by2 = findBelow(lines, by, "By:", 150);
+    if (!by2) throw new AnchorNotFoundError(`${what} (second signer)`);
+    // "Name 2:" comes out of the PDF as separate pieces ("Name", "2:"): the box starts after the "2:".
+    const n2 = findBelow(lines, by2, "Name", 60);
+    const num = n2?.line.items.find((i) => /^2:/.test(i.str));
+    sig2 = boxAfter(by2, "By:", 190, 26);
+    name2 = n2 && num ? boxAfter({ ...n2, item: num }, "2:", 190, 14) : null;
+  }
   return {
+    sig2,
+    name2,
     sig: boxAfter(by, "By:", 190, 26),
     name: name ? boxAfter(name, "Name:", 190, 14) : null,
     title: title ? boxAfter(title, "Title:", 190, 14) : null,
@@ -151,7 +172,7 @@ export function placeSignatureFields(
   anchors: SignatureAnchors,
   values: Record<string, string>,
 ): { prospect: ProspectFields; countersign: CountersignField[] } {
-  const p = blockFor(lines, resolveParty(anchors.prospect.party, values), "company");
+  const p = blockFor(lines, resolveParty(anchors.prospect.party, values), "company", Boolean(anchors.second));
   const countersign: CountersignField[] = [];
   for (const c of anchors.countersign) {
     const party = resolveParty(c.party, values);
@@ -162,5 +183,5 @@ export function placeSignatureFields(
     if (b.title) countersign.push({ ...b.title, kind: "title" });
     if (b.date) countersign.push({ ...b.date, kind: "date" });
   }
-  return { prospect: { signature: p.sig, name: p.name, title: p.title, date: p.date }, countersign };
+  return { prospect: { signature: p.sig, name: p.name, title: p.title, date: p.date, signature2: p.sig2, name2: p.name2 }, countersign };
 }

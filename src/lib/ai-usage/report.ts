@@ -99,7 +99,7 @@ const SPEND_FEATURE_ALIAS: Record<string, string> = { market_claim_grader: "pitc
 const USER_TOOL_FEATURES = new Set([
   "diligence_report", "business_plan", "intro_note_drafts", "support_assistant", "ai_coach", "round_health_advisor",
   "outreach_drafts", "outreach_coach", "founder_ir_agent", "ir_report", "pitch_deck_draft", "pitch_deck_analyzer",
-  "market_claim_grader", "regcf_documents", "valuation_advisor", "watchlist_summary", "class_assistant",
+  "market_claim_grader", "regcf_documents", "valuation_advisor", "watchlist_summary", "class_assistant", "round_structure_analysis",
 ]);
 
 type EventRow = { profile_id: string | null; feature: string; created_at: string };

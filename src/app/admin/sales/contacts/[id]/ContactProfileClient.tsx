@@ -122,7 +122,7 @@ function Chip({ label, value, onClick }: { label: string; value: string | number
         <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{label}</div>
         {clickable && <i className="ti ti-arrow-right" aria-hidden="true" style={{ fontSize: 13, color: hover ? "#2E78F5" : "#9aa4b2" }} />}
       </div>
-      <div style={{ fontSize: 18, fontWeight: 600, color: "#0A1A40", marginTop: 2, fontVariantNumeric: "tabular-nums" }}>{value}</div>
+      <div className="cpChipVal" style={{ fontSize: 18, fontWeight: 600, color: "#0A1A40", marginTop: 2, fontVariantNumeric: "tabular-nums" }}>{value}</div>
     </div>
   );
 }
@@ -809,7 +809,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
               <Link href={`/admin/sales/contracts/send?contact=${contact.id}`} style={{ fontSize: 11.5, fontWeight: 600, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 7, padding: "7px 13px", textDecoration: "none" }}><i className="ti ti-signature" aria-hidden="true" /> Contracts</Link>
             </div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 8, marginTop: 14 }}>
+          <div className="cpKpi" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 8, marginTop: 14 }}>
             <Chip label="Opportunities" value={opportunities.length} onClick={goToOpps} />
             <Chip label="Pipeline value" value={money(pipelineCents)} onClick={goToOpps} />
             <Chip label="Open opps" value={openOpps} onClick={goToOpps} />
@@ -829,9 +829,22 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
 
         {section === "details" && (<>
         {/* Field grid — every field is click-to-edit in place (hover shows the pencil). */}
-          <div style={{ padding: "6px 16px 14px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 32px" }}>
+          <div className="cpDetails" style={{ padding: "6px 16px 14px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 32px" }}>
+            <style>{`
+              @media (max-width: 639px) {
+                .cpKpi { grid-template-columns: 1fr 1fr !important; }
+                .cpChipVal { font-size: 15px !important; overflow-wrap: anywhere; }
+                .cpDetails { grid-template-columns: minmax(0, 1fr) !important; gap: 0 !important; padding-bottom: 90px !important; }
+                .cpCol { min-width: 0; }
+                .cpCol > div:not(.field-editing) { display: grid !important; grid-template-columns: 28px minmax(0, 1fr) auto; column-gap: 10px; row-gap: 2px; align-items: start !important; padding: 9px 0 !important; border-bottom: 1px solid #eef1f5; }
+                .cpCol > div:not(.field-editing) > :nth-child(1) { grid-column: 1; grid-row: 1 / span 2; margin-top: 2px !important; }
+                .cpCol > div:not(.field-editing) > :nth-child(2) { grid-column: 2; grid-row: 1; width: auto !important; margin-top: 0 !important; font-size: 11.5px; }
+                .cpCol > div:not(.field-editing) > :nth-child(3) { grid-column: 2; grid-row: 2; min-width: 0; flex: none !important; overflow-wrap: anywhere; font-size: 14px; }
+                .cpCol > div:not(.field-editing) > :nth-child(n+4) { grid-column: 3; grid-row: 1 / span 2; align-self: center; }
+              }
+            `}</style>
             {/* LEFT column — Odoo field order */}
-            <div>
+            <div className="cpCol">
               <Row icon="ti-id-badge" label="Membership Type" value={contact.membership} options={MEMBERSHIP_OPTS} onSave={saveText("membership")} />
               {/* Member Portal Plan — live subscription plan (read-only). */}
               <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", fontSize: 12.5 }}>
@@ -900,7 +913,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
               <Row icon="ti-id" label="CURP" value={null} readOnly />
             </div>
             {/* RIGHT column — Odoo field order */}
-            <div>
+            <div className="cpCol">
               <Row icon="ti-briefcase" label="Job Position" value={contact.job_position} options={JOB_POSITION_OPTS} onSave={saveText("job_position")} />
               <Row icon="ti-phone" label="Phone" value={contact.phone} action="tel" placeholder="(425) 502-2832" onSave={saveText("phone")} />
               <Row icon="ti-phone" label="Phone 2" value={contact.phone2} action="tel" onSave={saveText("phone2")} />

@@ -1,3 +1,4 @@
+import { addressLines, readStoredAddress } from "@/lib/billing/address";
 import { NextResponse } from "next/server";
 import { getCurrentUserProfile } from "@/lib/supabase/auth";
 import { normalizeUserRole, STAFF_ROLES } from "@/lib/api/admin";
@@ -27,17 +28,24 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
   /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
   const admin = createServiceRoleClient() as any;
-  const [{ data: person }, companyRes] = await Promise.all([
+  const [{ data: person }, companyRes, { data: subAddr }] = await Promise.all([
     admin.from("profiles").select("full_name, email").eq("id", invoice.profile_id).maybeSingle(),
     invoice.company_id ? admin.from("companies").select("company_name").eq("id", invoice.company_id).maybeSingle() : Promise.resolve({ data: null }),
+    admin.from("subscriptions").select("billing_address").eq("profile_id", invoice.profile_id).maybeSingle(),
   ]);
+  const stored = readStoredAddress((subAddr as { billing_address?: unknown } | null)?.billing_address);
   const p = person as { full_name: string | null; email: string | null } | null;
   const c = (companyRes as { data: { company_name: string | null } | null }).data;
 
   const pdf = await renderWireInvoicePdf({
     invoice,
     instructions: await getWireInstructions(),
-    billTo: { name: p?.full_name ?? null, email: p?.email ?? null, company: c?.company_name ?? null },
+    billTo: {
+      name: p?.full_name ?? null,
+      email: p?.email ?? null,
+      company: stored?.company || c?.company_name || null,
+      addressLines: addressLines(stored),
+    },
   });
   const download = new URL(request.url).searchParams.get("download") === "1";
   const fileName = `icapos-${invoice.invoice_number.replace(/[^a-zA-Z0-9]+/g, "-").toLowerCase()}.pdf`;

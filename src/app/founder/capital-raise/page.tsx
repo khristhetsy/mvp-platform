@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { getTranslations } from "next-intl/server";
@@ -15,7 +16,6 @@ import { requireRole } from "@/lib/supabase/auth";
 import type { Company } from "@/lib/supabase/types";
 import { CapitalRaiseCardsClient } from "@/components/founder/CapitalRaiseCardsClient";
 import { CapitalRaiseOverviewClient } from "@/components/founder/CapitalRaiseOverviewClient";
-import { RoundStructureCalculator } from "@/components/founder/RoundStructureCalculator";
 import { RoundHealthAdvisor } from "@/components/founder/RoundHealthAdvisor";
 import { FounderEmptyState } from "@/components/founder/FounderEmptyState";
 import { FounderProfileViewsCard } from "@/components/founder/FounderProfileViewsCard";
@@ -116,9 +116,17 @@ export default async function FounderCapitalRaisePage() {
             <FounderProfileViewsCard companyId={company.id} />
           </section>
 
-          {/* Round structure calculator */}
+          {/* The round structure calculator moved to Stage 2 Preparation, Analyzers. */}
           <section className="mt-8">
-            <RoundStructureCalculator />
+            <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">Round structure calculator</p>
+                <p className="mt-0.5 text-xs text-slate-500">Now in Stage 2 Preparation, Analyzers. Model a SAFE, convertible note or priced round and get an AI analysis against published benchmarks.</p>
+              </div>
+              <Link href="/founder/round-structure" className="rounded-lg border border-blue-600 px-4 py-2 text-xs font-bold text-blue-700 hover:bg-blue-50">
+                Open in Analyzers
+              </Link>
+            </div>
           </section>
 
           <section className="mt-8 grid gap-6 xl:grid-cols-2">

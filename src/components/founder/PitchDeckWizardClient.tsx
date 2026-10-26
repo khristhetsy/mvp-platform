@@ -125,8 +125,8 @@ export function PitchDeckWizardClient() {
         </div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
           <button type="button" onClick={() => save()} disabled={busy || locked} style={{ ...btn, opacity: locked ? 0.45 : 1 }}><i className="ti ti-device-floppy" aria-hidden="true" /> Save</button>
-          <a href="/api/founder/pitch-deck/pdf" style={btn}><i className="ti ti-file-type-pdf" aria-hidden="true" /> PDF</a>
-          <a href="/api/founder/pitch-deck/pptx" style={btn}><i className="ti ti-presentation" aria-hidden="true" /> PPTX</a>
+          <a download href="/api/founder/pitch-deck/pdf" style={btn}><i className="ti ti-file-type-pdf" aria-hidden="true" /> PDF</a>
+          <a download href="/api/founder/pitch-deck/pptx" style={btn}><i className="ti ti-presentation" aria-hidden="true" /> PPTX</a>
           <button type="button" onClick={share} disabled={busy} style={btn}><i className="ti ti-link" aria-hidden="true" /> Share link</button>
           {locked ? (
             <>
@@ -158,8 +158,8 @@ export function PitchDeckWizardClient() {
         <div style={{ display: "flex", alignItems: "center", gap: 12, background: "#E1F5EE", border: "0.5px solid #A7E0CE", borderRadius: 12, padding: "12px 16px", marginBottom: 14, flexWrap: "wrap" }}>
           <span style={{ fontSize: 13, fontWeight: 600, color: "#0F6E56" }}><i className="ti ti-circle-check" aria-hidden="true" /> Your deck is finalized and ready to send.</span>
           <div style={{ flex: 1 }} />
-          <a href="/api/founder/pitch-deck/pdf" style={{ ...btn, background: "#fff" }}><i className="ti ti-file-type-pdf" aria-hidden="true" /> Download PDF</a>
-          <a href="/api/founder/pitch-deck/pptx" style={{ ...btn, background: "#fff" }}><i className="ti ti-presentation" aria-hidden="true" /> Download PPTX</a>
+          <a download href="/api/founder/pitch-deck/pdf" style={{ ...btn, background: "#fff" }}><i className="ti ti-file-type-pdf" aria-hidden="true" /> Download PDF</a>
+          <a download href="/api/founder/pitch-deck/pptx" style={{ ...btn, background: "#fff" }}><i className="ti ti-presentation" aria-hidden="true" /> Download PPTX</a>
           <button type="button" onClick={share} disabled={busy} style={{ ...btn, background: "#fff" }}><i className="ti ti-link" aria-hidden="true" /> Copy share link</button>
           <button type="button" onClick={unlock} disabled={busy} style={btn}><i className="ti ti-lock-open" aria-hidden="true" /> Unlock to edit</button>
         </div>

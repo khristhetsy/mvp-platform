@@ -21,6 +21,8 @@ export type StatusMapping = {
   gracePeriodEndsAt: string | null;
   /** True when LemonSqueezy sent a status we don't recognise. */
   unknown: boolean;
+  /** True when the subscription is cancelled but still inside its paid period. */
+  cancelAtPeriodEnd: boolean;
 };
 
 /**
@@ -30,25 +32,39 @@ export type StatusMapping = {
  * The old `default: return "canceled"` meant LemonSqueezy adding an enum value
  * could deactivate paying customers with no signal.
  */
-export function mapStatus(ls: LsSubscriptionStatus | string, now: Date = new Date()): StatusMapping {
+export function mapStatus(
+  ls: LsSubscriptionStatus | string,
+  now: Date = new Date(),
+  endsAt?: string | null,
+): StatusMapping {
   switch (ls) {
     case "active":
-      return { status: "active", gracePeriodEndsAt: null, unknown: false };
+      return { status: "active", gracePeriodEndsAt: null, unknown: false, cancelAtPeriodEnd: false };
     case "on_trial":
-      return { status: "trialing", gracePeriodEndsAt: null, unknown: false };
+      return { status: "trialing", gracePeriodEndsAt: null, unknown: false, cancelAtPeriodEnd: false };
     case "past_due": {
       const ends = new Date(now.getTime() + PAST_DUE_GRACE_DAYS * 24 * 60 * 60 * 1000);
-      return { status: "active", gracePeriodEndsAt: ends.toISOString(), unknown: false };
+      return { status: "active", gracePeriodEndsAt: ends.toISOString(), unknown: false, cancelAtPeriodEnd: false };
     }
-    case "cancelled":
+    case "cancelled": {
+      // Cancelled but paid through `ends_at`: the customer keeps access until
+      // then. The grace period field is what the access check already honours,
+      // so access closes exactly at the end date. Lemon Squeezy sends an
+      // `expired` status afterwards.
+      const at = endsAt ? Date.parse(endsAt) : NaN;
+      if (Number.isFinite(at) && at > now.getTime()) {
+        return { status: "active", gracePeriodEndsAt: new Date(at).toISOString(), unknown: false, cancelAtPeriodEnd: true };
+      }
+      return { status: "canceled", gracePeriodEndsAt: null, unknown: false, cancelAtPeriodEnd: false };
+    }
     case "paused":
     case "unpaid":
     case "expired":
-      return { status: "canceled", gracePeriodEndsAt: null, unknown: false };
+      return { status: "canceled", gracePeriodEndsAt: null, unknown: false, cancelAtPeriodEnd: false };
     default:
       // Unknown: keep the subscription as-is rather than cancelling. The caller
       // logs this and returns non-200 so the event is retried and noticed.
-      return { status: "active", gracePeriodEndsAt: null, unknown: true };
+      return { status: "active", gracePeriodEndsAt: null, unknown: true, cancelAtPeriodEnd: false };
   }
 }
 

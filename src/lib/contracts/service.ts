@@ -11,6 +11,8 @@ import { openFields, resolveValues } from "./fields";
 import { saveToDrive } from "./drive";
 import { docxToPdf } from "./render-pdf";
 import { placeSignatureFields, readPdfLines } from "./signature-anchors";
+import { refreshToc } from "./toc";
+import { applyLogo, logoPath } from "./logo";
 import {
   addEvent,
   getContactLite,
@@ -25,6 +27,8 @@ import {
   type ContactLite,
 } from "./store";
 import { applyEmailTokens, emailTokenValues, withTypedValues } from "./email-tokens";
+import { leftoverPlaceholders } from "./subscription/package";
+import { loadDocx } from "./docx-engine";
 import { resolveCoverLook } from "./cover-look";
 import type { CoverBrand, CoverStyle } from "./cover-signature";
 import { appBase, notifySender, sendCoverEmail, sendCoverEmailViaGmail, sendExecutedCopy, sendReminderEmail, type Attachment } from "./email";
@@ -65,12 +69,34 @@ function uploadTemplate(doc: ContractDocument): ContractTemplate {
     entity_match: null,
     signature_anchors: { prospect: { party: "" }, countersign: [] },
     has_expiry: false,
+    package_key: null,
+    part_key: null,
+    delivery: "sign",
     created_by: doc.created_by,
     created_at: doc.created_at,
   };
 }
 
 export const isUpload = (b: Bundle) => b.doc.source === "upload";
+
+/**
+ * Documents sent to be read, not signed: masters that say so (the Memorandum, the
+ * Agreement, the forms) and uploaded PDFs with no signature boxes (the IRS forms).
+ * Within one packet these sit next to documents that are signed.
+ */
+export function isReviewDoc(b: Bundle): boolean {
+  if (isUpload(b)) return !b.doc.signature_request_id;
+  return b.template.delivery === "review";
+}
+
+/** A subscription part still holding a blank from the BLANK package cannot go out. */
+async function assertNoPlaceholders(b: Bundle, docx: Buffer): Promise<void> {
+  if (b.template.kind !== "subscription") return;
+  const { doc } = await loadDocx(docx);
+  const text = (doc.documentElement?.textContent ?? "") as string;
+  const left = leftoverPlaceholders(text);
+  if (left.length) throw new SendBlockedError(`${b.template.name} still has blanks to fill: ${left.slice(0, 6).join(", ")}${left.length > 6 ? `, and ${left.length - 6} more` : ""}. Edit them in the document.`, { placeholders: left });
+}
 
 /** Stand-in contact for an uploaded draft whose recipient is chosen later. */
 export const NO_RECIPIENT: ContactLite = { id: "", name: "Recipient not chosen", email: null, company: null, tags: [], address: null };
@@ -107,6 +133,7 @@ export function bundleOpenFields(b: Bundle) {
 export function fileBase(b: Bundle): string {
   const company = (b.contact.company ?? b.contact.name).replace(/[,.]?\s*(inc|llc|corp|ltd)\.?$/i, "").replace(/[^A-Za-z0-9]+/g, "") || "Contract";
   if (isUpload(b)) return `${company}_${(b.doc.title ?? "Contract").replace(/\.pdf$/i, "").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 60) || "Contract"}_v${b.doc.version}`;
+  if (b.template.kind === "subscription") return `${company}_Subscription_${b.template.key.replace(/^sub_/, "")}_v${b.doc.version}`;
   const doc = b.template.kind === "term_sheet" ? "TermSheet" : b.template.kind === "services_agreement" ? "DDSA" : b.template.kind === "advisory_agreement" ? "Advisory" : "NDA";
   return `${company}_${doc}_v${b.doc.version}`;
 }
@@ -114,13 +141,19 @@ export function fileBase(b: Bundle): string {
 export async function renderBundleDocx(db: Db, b: Bundle, mode: "preview" | "final"): Promise<Buffer> {
   if (isUpload(b)) throw new SendBlockedError("An uploaded contract has no Word version.");
   const master = await getMaster(db, b.template.id);
-  return renderDocx({ master, fields: b.fields, entityMatch: b.template.entity_match, values: bundleValues(b), edits: b.doc.body_edits, mode });
+  const docx = await renderDocx({ master, fields: b.fields, entityMatch: b.template.entity_match, values: bundleValues(b), edits: b.doc.body_edits, mode });
+  if (b.template.key !== "sub_ppm") return docx;
+  // The Memorandum: the issuer's logo goes on the Information Statement cover (or the marker is cleared),
+  // then the contents page numbers, which come from the finished deal, are brought up to date.
+  const logo = await getFile(db, logoPath(b.doc)).catch(() => null);
+  return refreshToc(await applyLogo(docx, logo));
 }
 
 /** True preview: the same Word → PDF render that is sent for signature. */
 export async function renderBundlePdf(db: Db, b: Bundle, mode: "preview" | "final"): Promise<Buffer> {
   if (isUpload(b)) return getFile(db, b.doc.upload_path!);
   const docx = await renderBundleDocx(db, b, mode);
+  if (mode === "final") await assertNoPlaceholders(b, docx); // same rule as the send, so a test send tells the truth
   return docxToPdf(docx, `${fileBase(b)}.docx`);
 }
 
@@ -167,6 +200,7 @@ async function prepare(db: Db, b: Bundle): Promise<Prepared> {
     return { b, docx: null, pdf, pageCount: (req?.page_count as number) ?? b.doc.page_count ?? 1, prospectFields: [], countersign: counter, expiresAt: expiryFor(b), requestId };
   }
   const docx = await renderBundleDocx(db, b, "final");
+  await assertNoPlaceholders(b, docx);
   const pdf = await docxToPdf(docx, `${fileBase(b)}.docx`);
   const { lines, pageCount } = await readPdfLines(new Uint8Array(pdf));
   const placed = placeSignatureFields(lines, b.template.signature_anchors, bundleValues(b));
@@ -174,6 +208,9 @@ async function prepare(db: Db, b: Bundle): Promise<Prepared> {
   if (placed.prospect.name) prospectFields.push({ field_type: "text", ...placed.prospect.name, required: true, placeholder: "Full name" });
   if (placed.prospect.title) prospectFields.push({ field_type: "text", ...placed.prospect.title, required: true, placeholder: "Title" });
   if (placed.prospect.date) prospectFields.push({ field_type: "date", ...placed.prospect.date, required: true });
+  // Joint individuals sign on one link: a second signature and the second printed name.
+  if (placed.prospect.signature2) prospectFields.push({ field_type: "signature", ...placed.prospect.signature2, required: true });
+  if (placed.prospect.name2) prospectFields.push({ field_type: "text", ...placed.prospect.name2, required: true, placeholder: "Second signer's full name" });
   return { b, docx, pdf, pageCount, prospectFields, countersign: placed.countersign, expiresAt: expiryFor(b) };
 }
 
@@ -184,6 +221,7 @@ async function prepareReview(db: Db, b: Bundle): Promise<Prepared> {
     return { b, docx: null, pdf, pageCount: b.doc.page_count ?? 1, prospectFields: [], countersign: [], expiresAt: null };
   }
   const docx = await renderBundleDocx(db, b, "final");
+  await assertNoPlaceholders(b, docx);
   const pdf = await docxToPdf(docx, `${fileBase(b)}.docx`);
   const { pageCount } = await readPdfLines(new Uint8Array(pdf));
   return { b, docx, pdf, pageCount, prospectFields: [], countersign: [], expiresAt: null };
@@ -250,12 +288,15 @@ export async function sendPacket(db: Db, input: SendInput): Promise<{ packetId: 
   if (!subject.text.trim() || !body.text.trim()) throw new SendBlockedError("The cover email needs a subject and a body.");
 
   const signature = input.signature !== false;
-  // Review only: the PDFs are the delivery, so they are always attached.
-  const attachPdfs = signature ? input.attachPdfs : true;
+  // A document is signed only when the send asks for signatures and the document is one that is signed.
+  const signs = (b: Bundle) => signature && !isReviewDoc(b);
+  const anySign = bundles.some(signs);
+  // Documents sent for review only: the PDFs are the delivery, so they are always attached.
+  const attachPdfs = anySign ? input.attachPdfs : true;
 
   // Render (and, when signing, place signatures for) every document first.
   const prepared: Prepared[] = [];
-  for (const b of bundles) prepared.push(signature ? await prepare(db, b) : await prepareReview(db, b));
+  for (const b of bundles) prepared.push(signs(b) ? await prepare(db, b) : await prepareReview(db, b));
 
   const token = randomBytes(32).toString("hex");
   const { data: packet, error: pErr } = await db
@@ -283,7 +324,7 @@ export async function sendPacket(db: Db, input: SendInput): Promise<{ packetId: 
     if (p.docx) await putFile(db, `${base}.docx`, p.docx, DOCX_MIME);
     await putFile(db, `${base}.pdf`, p.pdf, "application/pdf");
 
-    if (!signature) {
+    if (!signs(b)) {
       await db
         .from("contract_documents")
         .update({
@@ -385,7 +426,7 @@ export async function sendPacket(db: Db, input: SendInput): Promise<{ packetId: 
           token,
           senderName: input.sender.name,
           attachments,
-          reviewOnly: !signature,
+          reviewOnly: !anySign,
           look,
         })
       : await sendCoverEmail({
@@ -396,7 +437,7 @@ export async function sendPacket(db: Db, input: SendInput): Promise<{ packetId: 
           senderName: input.sender.name,
           senderEmail: input.sender.email,
           attachments,
-          reviewOnly: !signature,
+          reviewOnly: !anySign,
           look,
         })).delivered;
   } catch (err) {
@@ -518,6 +559,11 @@ export async function onEnvelopeSigned(db: Db, requestId: string) {
   if (!data) return;
   const b = await loadBundle(db, data.id as string);
   if (!b) return;
+  // Nothing for iCFO to countersign (e.g. the LLC Agreement signature page): the sealed copy is the executed copy.
+  if (!isUpload(b) && b.template.signature_anchors.countersign.length === 0) {
+    await finishWithoutCountersign(db, b, requestId);
+    return;
+  }
   await setStatus(db, b.doc.id, "awaiting_countersign");
   await addEvent(db, b.doc.id, "signed", b.contact.email ?? "prospect");
   const sender = await senderOf(db, b.doc.created_by);
@@ -532,6 +578,42 @@ export async function onEnvelopeSigned(db: Db, requestId: string) {
 }
 
 // ── Countersign ────────────────────────────────────────────────────────────
+
+/** A document only the subscriber signs: file the sealed copy and its certificate, mark it signed, tell the sender. */
+async function finishWithoutCountersign(db: Db, b: Bundle, requestId: string) {
+  const { data: req } = await db.from("signature_requests").select("id, signed_file_path, signer_name, signer_email").eq("id", requestId).maybeSingle();
+  if (!req?.signed_file_path) {
+    await setStatus(db, b.doc.id, "signed");
+    await addEvent(db, b.doc.id, "signed", b.contact.email ?? "prospect");
+    return;
+  }
+  const dl = await db.storage.from(SIGNATURE_BUCKET).download(req.signed_file_path);
+  if (dl.error || !dl.data) throw new Error("Could not load the signed copy.");
+  const executed = Buffer.from(await dl.data.arrayBuffer());
+  const hash = createHash("sha256").update(executed).digest("hex");
+  const { data: audit } = await db.from("signature_audit_events").select("event_type, actor, ip_address, created_at").eq("request_id", requestId).order("created_at");
+  const certificate = await buildCertificate({
+    documentTitle: b.template.name,
+    company: b.contact.company ?? b.contact.name,
+    documentHash: hash,
+    signer: { name: req.signer_name as string | null, email: req.signer_email as string | null },
+    events: ((audit ?? []) as { event_type: string; actor: string | null; ip_address: string | null; created_at: string }[]).map((e) => ({ at: e.created_at, what: e.event_type, who: e.actor, ip: e.ip_address })),
+  });
+  const base = `docs/${b.doc.id}/${fileBase(b)}`;
+  await putFile(db, `${base}_EXECUTED.pdf`, executed, "application/pdf");
+  await putFile(db, `${base}_certificate.pdf`, certificate, "application/pdf");
+  await setStatus(db, b.doc.id, "signed", { executed_path: `${base}_EXECUTED.pdf`, certificate_path: `${base}_certificate.pdf` });
+  await addEvent(db, b.doc.id, "signed", b.contact.email ?? "prospect", { sha256: hash, countersign: false });
+  const sender = await senderOf(db, b.doc.created_by);
+  if (sender.email) {
+    await notifySender({
+      to: sender.email,
+      subject: `${b.contact.company ?? b.contact.name} signed the ${b.template.name}`,
+      lines: [`${b.contact.name} signed the ${b.template.name}.`, "No countersignature is needed. The executed copy and the signature certificate are saved with the document."],
+      url: `${appBase()}/admin/sales/contracts/${b.doc.id}`,
+    }).catch(() => null);
+  }
+}
 
 function dataUrlToBytes(dataUrl: string): Uint8Array {
   return Uint8Array.from(Buffer.from(dataUrl.slice(dataUrl.indexOf(",") + 1), "base64"));

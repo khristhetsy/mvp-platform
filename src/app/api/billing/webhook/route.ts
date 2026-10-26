@@ -46,7 +46,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const admin = createServiceRoleClient() as any;
 
-  let query = admin.from("subscriptions").select("id, profile_id");
+  let query = admin.from("subscriptions").select("id, profile_id, pending_plan_type, plan_type");
   if (lsSubId) {
     query = query.eq("ls_subscription_id", lsSubId);
   } else if (profileId) {
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   const { data: existing, error: lookupError } = (await query.maybeSingle()) as {
-    data: { id: string; profile_id: string } | null;
+    data: { id: string; profile_id: string; pending_plan_type: string | null; plan_type: string } | null;
     error: { message: string } | null;
   };
   if (lookupError) {
@@ -69,8 +69,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Lookup failed" }, { status: 500 });
   }
 
+  // Premium is paid by wire. The card subscription it replaced is cancelled and
+  // keeps sending events (cancelled, expired). They must not rewrite the Premium row.
+  if (existing?.plan_type === "founder_premium") {
+    return NextResponse.json({ received: true, ignored: "premium paid by wire" });
+  }
+
   const { plan, source } = variantToPlan(attributes.variant_id, attributes.variant_name, attributes.product_name);
-  const mapped = mapStatus(attributes.status);
+  const mapped = mapStatus(attributes.status, new Date(), attributes.ends_at);
 
   // An unrecognised LemonSqueezy status must not silently cancel a customer.
   // Fail the delivery so it retries and shows up as a failing webhook.
@@ -90,7 +96,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   const now = new Date().toISOString();
-  const patch = {
+  const patch: Record<string, unknown> = {
     ls_subscription_id: lsSubId,
     ls_customer_id: String(attributes.customer_id),
     ls_variant_id: String(attributes.variant_id),
@@ -102,8 +108,27 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     current_period_end: attributes.renews_at ?? attributes.ends_at ?? null,
     // A past_due subscriber keeps access only until the grace period ends.
     grace_period_ends_at: mapped.gracePeriodEndsAt,
+    cancel_at_period_end: mapped.cancelAtPeriodEnd,
     updated_at: now,
   };
+  // The cancel reason only means something while a cancellation is pending.
+  if (!mapped.cancelAtPeriodEnd) patch.cancel_reason = null;
+
+  const pendingPlan = existing?.pending_plan_type ?? null;
+  if (mapped.status === "canceled" && pendingPlan === "founder_free") {
+    // A scheduled downgrade to Free: the paid period is over, so land on the
+    // free plan instead of an inactive subscription.
+    patch.plan_type = "founder_free";
+    patch.subscription_status = "free";
+    patch.monthly_price_cents = 0;
+    patch.pending_plan_type = null;
+    patch.pending_plan_effective_at = null;
+  } else if (plan && pendingPlan && plan === pendingPlan) {
+    // The scheduled plan change has been applied by Lemon Squeezy.
+    patch.pending_plan_type = null;
+    patch.pending_plan_effective_at = null;
+    patch.monthly_price_cents = PLAN_PRICES[plan];
+  }
 
   if (existing) {
     const { error } = await admin.from("subscriptions").update(patch).eq("id", existing.id);

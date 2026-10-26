@@ -24,6 +24,7 @@ export const AI_COST_FEATURES = [
   "class_assistant",
   "support_assistant",
   "watchlist_summary",
+  "round_structure_analysis",
 ] as const;
 
 export function isAiCostFeature(feature: string): boolean {
@@ -89,6 +90,7 @@ const DEFAULTS: Record<string, Record<LimitPlan, PlanLimit>> = {
   valuation_advisor: caps(ONE_A_WEEK, 10, 30),
   outreach_coach: caps(ONE_A_WEEK, 10, 30),
   intro_note_drafts: caps(ONE_A_WEEK, 10, 30),
+  round_structure_analysis: caps(ONE_A_WEEK, 10, 30),
   regcf_documents: caps(ONE_A_WEEK, 10, 30),
   // One run drafts one section or slide, so a full plan or deck takes several.
   business_plan: caps(ONE_A_WEEK, 30, 90),
