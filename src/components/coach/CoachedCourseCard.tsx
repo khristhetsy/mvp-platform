@@ -35,18 +35,3 @@ export function CoachedCourseCard({ summary }: Readonly<{ summary: CoachedCourse
     </section>
   );
 }
-
-export function CoachedCourseStrip({ summary }: Readonly<{ summary: CoachedCourseSummary }>) {
-  return (
-    <Link
-      href={summary.href}
-      className="flex items-center justify-between gap-4 rounded-xl bg-[#0A1A40] px-4 py-3 text-white hover:bg-[#14275A]"
-      aria-label="Playbook next step"
-    >
-      <span className="min-w-0 text-sm leading-6">
-        <span className="font-semibold">{summary.title}:</span> {summary.line} <span className="text-[#C9D6F2]">About {summary.nextMinutes} min.</span>
-      </span>
-      <span className="shrink-0 rounded-lg bg-[#1A6CE4] px-3 py-1.5 text-xs font-semibold">Continue</span>
-    </Link>
-  );
-}
