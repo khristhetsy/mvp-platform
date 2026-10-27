@@ -40,7 +40,7 @@ export function PlanActions({ planType, mode, cancelAtPeriodEnd, cancelReason, p
   const targets = wire ? [] : (["basic", "free"] as DowngradeTarget[]).filter((x) => canDowngrade(planType, x));
   const hasPending = Boolean(pendingPlan) || cancelAtPeriodEnd;
   const basicPrice = `$${Math.round(PLAN_PRICES.founder_basic / 100)}`;
-  const canStop = wire || targets.length > 0;
+  const canStop = wire || planType === "founder_premium" || targets.length > 0;
 
   async function act(action: string, plan?: DowngradeTarget | CardTarget) {
     setBusy(true);

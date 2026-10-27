@@ -3,7 +3,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { writeAuditLog } from "@/lib/data/audit";
 import { cancelSubscription, resumeSubscription } from "@/lib/lemonsqueezy";
-import { canDowngrade, canSwitchFromPremium, cardPlanFor, isCardPlan, pendingPlanFor, type CardTarget, type DowngradeTarget } from "@/lib/billing/plan-change";
+import { canDowngrade, canSwitchFromPremium, cardPlanFor, isCardSubscription, isWirePremium, pendingPlanFor, type CardTarget, type DowngradeTarget } from "@/lib/billing/plan-change";
 import { openWireInvoiceForProfile, voidWireInvoice } from "@/lib/billing/wire";
 
 export const dynamic = "force-dynamic";
@@ -46,8 +46,10 @@ export async function POST(req: Request) {
     .eq("profile_id", user.id)
     .maybeSingle();
   const sub = data as Sub | null;
-  const wire = sub?.plan_type === "founder_premium";
-  if (!sub || (!wire && (!sub.ls_subscription_id || !isCardPlan(sub.plan_type)))) {
+  // Premium paid by wire has no Lemon Squeezy subscription. Premium bought by card does,
+  // and follows the card rules below so Stop payment really cancels it at Lemon Squeezy.
+  const wire = isWirePremium(sub);
+  if (!sub || (!wire && !isCardSubscription(sub))) {
     return NextResponse.json({ error: "No subscription found for this account." }, { status: 400 });
   }
   const lsId = sub.ls_subscription_id ?? "";

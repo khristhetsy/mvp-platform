@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { awaitingCardCheckout, canDowngrade, canSwitchFromPremium, cardPlanFor, isCardPlan, isDowngradeDue, pendingPlanFor } from "./plan-change";
+import { awaitingCardCheckout, canDowngrade, canSwitchFromPremium, cardPlanFor, isCardPlan, isCardSubscription, isDowngradeDue, isWirePremium, pendingPlanFor } from "./plan-change";
 
 describe("plan change rules", () => {
   it("allows only real downgrades", () => {
@@ -16,6 +16,16 @@ describe("plan change rules", () => {
     expect(isCardPlan("founder_professional")).toBe(true);
     expect(isCardPlan("founder_premium")).toBe(false);
     expect(isCardPlan(null)).toBe(false);
+  });
+
+  it("treats Premium as a card subscription only when Lemon Squeezy bills it", () => {
+    expect(isCardSubscription({ plan_type: "founder_premium", ls_subscription_id: "123" })).toBe(true);
+    expect(isCardSubscription({ plan_type: "founder_premium", ls_subscription_id: null })).toBe(false);
+    expect(isCardSubscription({ plan_type: "founder_professional", ls_subscription_id: "9" })).toBe(true);
+    expect(isCardSubscription({ plan_type: "founder_professional", ls_subscription_id: null })).toBe(false);
+    expect(isCardSubscription({ plan_type: "founder_free", ls_subscription_id: "9" })).toBe(false);
+    expect(isWirePremium({ plan_type: "founder_premium", ls_subscription_id: null })).toBe(true);
+    expect(isWirePremium({ plan_type: "founder_premium", ls_subscription_id: "123" })).toBe(false);
   });
 
   it("maps a target to the pending plan type", () => {

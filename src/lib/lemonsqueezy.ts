@@ -101,6 +101,24 @@ export async function getCustomerPortalUrl(lsSubscriptionId: string): Promise<st
   return json.data.attributes.urls.customer_portal;
 }
 
+/**
+ * Link to Lemon Squeezy's hosted page where the customer enters a new card for one
+ * subscription. The link is signed and short lived, so it is fetched on click, never
+ * stored. Falls back to the customer portal if the update link is not returned.
+ */
+export async function getUpdatePaymentMethodUrl(lsSubscriptionId: string): Promise<string> {
+  const res = await fetch(`${LS_API}/subscriptions/${encodeURIComponent(lsSubscriptionId)}`, { headers: headers() });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`LemonSqueezy subscription fetch error ${res.status}: ${body}`);
+  }
+  const json = (await res.json()) as { data: { attributes: { urls?: { update_payment_method?: string; customer_portal?: string } } } };
+  const urls = json.data.attributes.urls ?? {};
+  const url = urls.update_payment_method ?? urls.customer_portal;
+  if (!url) throw new Error("LemonSqueezy returned no update link");
+  return url;
+}
+
 // ─── Subscription management (stop payment, resume, plan change) ──────────────
 
 export type LsSubscriptionDetails = {
@@ -111,6 +129,8 @@ export type LsSubscriptionDetails = {
   cardBrand: string | null;
   cardLastFour: string | null;
   portalUrl: string | null;
+  /** The last charge failed (Lemon Squeezy status past_due or unpaid): the card needs updating. */
+  paymentFailed: boolean;
 };
 
 /** Card on file and cancellation state for one subscription. Null on any error. */
@@ -129,6 +149,7 @@ export async function getSubscriptionDetails(lsSubscriptionId: string): Promise<
       cardBrand: a.card_brand ?? null,
       cardLastFour: a.card_last_four ?? null,
       portalUrl: a.urls?.customer_portal ?? null,
+      paymentFailed: a.status === "past_due" || a.status === "unpaid",
     };
   } catch {
     return null;

@@ -11,7 +11,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { writeAuditLog } from "@/lib/data/audit";
 import { prepareUserDeletion } from "@/lib/users/ownership-transfer";
 import { cancelSubscription } from "@/lib/lemonsqueezy";
-import { isCardPlan } from "@/lib/billing/plan-change";
+import { isCardSubscription } from "@/lib/billing/plan-change";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -67,7 +67,7 @@ async function handle(request: Request) {
       } | null;
       if (
         sub?.ls_subscription_id &&
-        isCardPlan(sub.plan_type) &&
+        isCardSubscription(sub) &&
         !sub.cancel_at_period_end &&
         sub.subscription_status === "active"
       ) {

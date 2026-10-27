@@ -4,7 +4,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { writeAuditLog } from "@/lib/data/audit";
 import { isConfirmPhrase, scheduledPurgeDate } from "@/lib/account/deletion";
 import { cancelSubscription, resumeSubscription } from "@/lib/lemonsqueezy";
-import { isCardPlan } from "@/lib/billing/plan-change";
+import { isCardSubscription } from "@/lib/billing/plan-change";
 
 export const dynamic = "force-dynamic";
 
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
     cancel_at_period_end: boolean | null;
   } | null;
   let cancelledByDeletion = false;
-  if (sub?.ls_subscription_id && isCardPlan(sub.plan_type) && !sub.cancel_at_period_end) {
+  if (sub?.ls_subscription_id && isCardSubscription(sub) && !sub.cancel_at_period_end) {
     try {
       await cancelSubscription(sub.ls_subscription_id);
       await admin
