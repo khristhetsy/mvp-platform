@@ -19,6 +19,8 @@ function progress(profile: boolean, funding: boolean): FounderOnboardingProgress
     pitchDeckUploaded: false,
     diligenceReportExists: false,
     isComplete: profile && funding,
+    requiredCompleted: [profile, funding].filter(Boolean).length,
+    requiredTotal: 2,
   };
 }
 
