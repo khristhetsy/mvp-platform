@@ -77,17 +77,23 @@ export function ProspectIntrosClient({ initial }: { initial: ProspectIntroReques
 
   return (
     <div>
-      <div className="mb-4 flex gap-2">
+      <div className="mb-4 flex gap-2 max-sm:grid max-sm:grid-cols-4 max-sm:gap-1 max-sm:rounded-xl max-sm:bg-slate-100 max-sm:p-1">
         {(["new", "contacted", "dismissed", "all"] as const).map((f) => (
           <button type="button"
             key={f}
             onClick={() => setFilter(f)}
-            className={`rounded-full px-3 py-1.5 text-sm ${
-              filter === f ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            className={`rounded-full px-3 py-1.5 text-sm max-sm:min-w-0 max-sm:whitespace-nowrap max-sm:px-1 max-sm:py-2 max-sm:text-[11px] ${
+              filter === f ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200 max-sm:bg-transparent"
             }`}
           >
-            {f === "all" ? "All" : f[0].toUpperCase() + f.slice(1)}
-            {f !== "all" ? ` (${counts[f]})` : ""}
+            <span className="max-sm:hidden">
+              {f === "all" ? "All" : f[0].toUpperCase() + f.slice(1)}
+              {f !== "all" ? ` (${counts[f]})` : ""}
+            </span>
+            <span className="hidden max-sm:inline">
+              {f === "all" ? "All" : f[0].toUpperCase() + f.slice(1)}
+              {f !== "all" ? ` ${counts[f]}` : ""}
+            </span>
           </button>
         ))}
       </div>
@@ -99,9 +105,9 @@ export function ProspectIntrosClient({ initial }: { initial: ProspectIntroReques
       ) : (
         <div className="space-y-3">
           {shown.map((r) => (
-            <div key={r.id} className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4">
-              <div className="min-w-0">
-                <p className="text-sm text-slate-900">
+            <div key={r.id} className="relative flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 max-sm:flex-col max-sm:items-stretch max-sm:gap-3">
+              <div className="min-w-0 max-sm:pr-16">
+                <p className="text-sm text-slate-900 [overflow-wrap:anywhere]">
                   <span className="font-semibold">{r.companyName ?? "A founder"}</span>
                   <span className="text-slate-400"> wants an intro to </span>
                   <span className="font-semibold">{r.prospectName ?? "a prospect investor"}</span>
@@ -117,15 +123,16 @@ export function ProspectIntrosClient({ initial }: { initial: ProspectIntroReques
                   </div>
                 )}
               </div>
-              <div className="flex flex-none items-center gap-2">
-                <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${STATUS_STYLE[r.status]}`}>
+              <div className="flex flex-none items-center gap-2 max-sm:contents">
+                <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium max-sm:absolute max-sm:right-4 max-sm:top-4 ${STATUS_STYLE[r.status]}`}>
                   {r.status}
                 </span>
+                <div className="flex items-center gap-2 max-sm:grid max-sm:grid-cols-2">
                 {r.status !== "dismissed" && (
                   <button type="button"
                     onClick={() => openSend(r)}
                     disabled={busy === r.id || sentIds.has(r.id)}
-                    className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+                    className={`rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-60 max-sm:py-2.5 ${r.status === "new" ? "max-sm:col-span-2" : ""}`}
                   >
                     {sentIds.has(r.id) ? "Sent" : "Send intro"}
                   </button>
@@ -134,7 +141,7 @@ export function ProspectIntrosClient({ initial }: { initial: ProspectIntroReques
                   <button type="button"
                     onClick={() => update(r.id, "contacted")}
                     disabled={busy === r.id}
-                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
+                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-60 max-sm:py-2.5"
                   >
                     Mark contacted
                   </button>
@@ -143,7 +150,7 @@ export function ProspectIntrosClient({ initial }: { initial: ProspectIntroReques
                   <button type="button"
                     onClick={() => update(r.id, "dismissed")}
                     disabled={busy === r.id}
-                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-60"
+                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-60 max-sm:py-2.5"
                   >
                     Dismiss
                   </button>
@@ -151,11 +158,12 @@ export function ProspectIntrosClient({ initial }: { initial: ProspectIntroReques
                   <button type="button"
                     onClick={() => update(r.id, "new")}
                     disabled={busy === r.id}
-                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-60"
+                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-60 max-sm:py-2.5"
                   >
                     Reopen
                   </button>
                 )}
+                </div>
               </div>
             </div>
           ))}

@@ -95,7 +95,7 @@ export function ForecastClient(props: {
   ];
 
   return (
-    <div>
+    <div className="ma-pad">
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10, marginBottom: 14 }}>
         <h1 style={{ fontSize: 20, fontWeight: 600, color: NAVY, margin: 0 }}>Sales Forecast &amp; Projection</h1>
         <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>

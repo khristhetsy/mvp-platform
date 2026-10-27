@@ -53,7 +53,7 @@ export function SalesAnalyticsClient({ metrics: initialMetrics }: { metrics: Sal
   const lab: React.CSSProperties = { fontSize: 10.5, color: MUTED, textTransform: "uppercase", letterSpacing: ".04em" };
 
   return (
-    <div>
+    <div className="ma-pad">
       <div style={{ display: "flex", alignItems: "flex-start", gap: 12, flexWrap: "wrap", paddingBottom: 12, borderBottom: "0.5px solid #e2e6ed", marginBottom: 14 }}>
         <div>
           <h1 style={{ fontSize: 20, fontWeight: 600, color: NAVY, margin: 0 }}>Sales analytics</h1>

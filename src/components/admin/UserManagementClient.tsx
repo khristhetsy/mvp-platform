@@ -305,7 +305,7 @@ export function UserManagementClient() {
         <select
           value={filterRole}
           onChange={(e) => setFilterRole(e.target.value)}
-          className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+          className="rounded-lg border border-slate-200 px-3 py-2 text-sm max-sm:w-full"
         >
           <option value="all">{t("allRoles")}</option>
           {ROLES.map((r) => <option key={r} value={r}>{t(`role.${r}`)}</option>)}
@@ -313,7 +313,7 @@ export function UserManagementClient() {
         <select
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
-          className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+          className="rounded-lg border border-slate-200 px-3 py-2 text-sm max-sm:w-full"
         >
           <option value="all">{t("allStatuses")}</option>
           <option value="active">{t("status.active")}</option>
@@ -325,16 +325,17 @@ export function UserManagementClient() {
       {/* User table */}
       <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)]">
         {/* Tabs */}
-        <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
-          <div className="flex gap-1">
+        <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2 max-sm:flex-col max-sm:items-stretch max-sm:gap-2">
+          <div className="flex gap-1 max-sm:grid max-sm:grid-cols-4">
             {(["all", "active", "invited", "inactive"] as const).map((tab) => (
               <button
                 key={tab}
                 type="button"
                 onClick={() => setActiveTab(tab)}
-                className={`rounded-full px-3 py-1 text-xs font-medium transition ${activeTab === tab ? "bg-slate-100 text-slate-950" : "text-slate-500 hover:text-slate-700"}`}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition max-sm:min-w-0 max-sm:whitespace-nowrap max-sm:px-1 max-sm:py-2 ${activeTab === tab ? "bg-slate-100 text-slate-950" : "text-slate-500 hover:text-slate-700"}`}
               >
-                {tab === "all" ? t("all") : t(`status.${tab}`)} ({counts[tab]})
+                <span className="max-sm:hidden">{tab === "all" ? t("all") : t(`status.${tab}`)} ({counts[tab]})</span>
+                <span className="hidden max-sm:inline">{tab === "all" ? t("all") : t(`status.${tab}`)} {counts[tab]}</span>
               </button>
             ))}
           </div>
@@ -346,12 +347,13 @@ export function UserManagementClient() {
         {/* Column headers */}
         <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-2">
           <input type="checkbox" className="h-4 w-4 rounded" checked={selectedIds.size === filtered.length && filtered.length > 0} onChange={toggleAll} />
-          <span className="flex-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{t("colUser")}</span>
-          <span className="w-20 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{t("colRole")}</span>
-          <span className="w-20 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{t("colStatus")}</span>
+          <span className="hidden text-xs text-slate-500 max-sm:inline">{t("selectAll")}</span>
+          <span className="flex-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400 max-sm:hidden">{t("colUser")}</span>
+          <span className="w-20 text-[11px] font-semibold uppercase tracking-wide text-slate-400 max-sm:hidden">{t("colRole")}</span>
+          <span className="w-20 text-[11px] font-semibold uppercase tracking-wide text-slate-400 max-sm:hidden">{t("colStatus")}</span>
           {departments.length > 0 && <span className="hidden w-44 text-[11px] font-semibold uppercase tracking-wide text-slate-400 xl:block">Departments</span>}
-          <span className="w-24 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{t("colLastSeen")}</span>
-          <span className="w-52"></span>
+          <span className="w-24 text-[11px] font-semibold uppercase tracking-wide text-slate-400 max-sm:hidden">{t("colLastSeen")}</span>
+          <span className="w-52 max-sm:hidden"></span>
         </div>
 
         {/* Rows */}
@@ -366,16 +368,16 @@ export function UserManagementClient() {
             return (
               <div
                 key={user.id}
-                className={`flex items-center gap-3 border-b border-slate-100 px-4 py-2.5 last:border-0 hover:bg-slate-50/60 ${isInactive ? "opacity-60" : ""}`}
+                className={`flex items-center gap-3 border-b border-slate-100 px-4 py-2.5 last:border-0 hover:bg-slate-50/60 max-sm:grid max-sm:grid-cols-[auto_minmax(0,1fr)_auto] max-sm:gap-x-3 max-sm:gap-y-2 max-sm:py-3 ${isInactive ? "opacity-60" : ""}`}
               >
                 <input
                   type="checkbox"
-                  className="h-4 w-4 rounded"
+                  className="h-4 w-4 rounded max-sm:col-start-1 max-sm:row-start-1"
                   checked={selectedIds.has(user.id)}
                   onChange={() => toggleSelect(user.id)}
                 />
                 {/* User info */}
-                <div className="flex flex-1 items-center gap-2.5 min-w-0">
+                <div className="flex flex-1 items-center gap-2.5 min-w-0 max-sm:col-start-2 max-sm:row-start-1">
                   <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold ${isInactive ? "bg-slate-100 text-slate-400" : avatarColor(user.role)}`}>
                     {initials(user)}
                   </div>
@@ -386,14 +388,14 @@ export function UserManagementClient() {
                 </div>
 
                 {/* Role badge */}
-                <div className="w-20">
+                <div className="w-20 max-sm:col-start-2 max-sm:row-start-2 max-sm:w-auto">
                   <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${ROLE_COLORS[user.role] ?? "bg-slate-100 text-slate-700"}`}>
                     {t(`role.${user.role}`)}
                   </span>
                 </div>
 
                 {/* Status badge */}
-                <div className="w-20">
+                <div className="w-20 max-sm:col-start-3 max-sm:row-start-1 max-sm:w-auto max-sm:justify-self-end">
                   <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_COLORS[user.status]}`}>
                     {t(`status.${user.status}`)}
                   </span>
@@ -411,13 +413,13 @@ export function UserManagementClient() {
                 )}
 
                 {/* Last seen */}
-                <div className="w-24 text-xs text-slate-500">{user.last_seen_label}</div>
+                <div className="w-24 text-xs text-slate-500 max-sm:col-start-3 max-sm:row-start-2 max-sm:w-auto max-sm:justify-self-end max-sm:whitespace-nowrap">{user.last_seen_label}</div>
 
                 {/* Actions */}
-                <div className="flex w-64 shrink-0 items-center justify-end gap-1.5">
+                <div className="flex w-64 shrink-0 items-center justify-end gap-1.5 max-sm:col-span-3 max-sm:row-start-3 max-sm:w-full max-sm:flex-wrap max-sm:justify-start">
                   {isInactive ? (
                     <>
-                      <select disabled className="w-24 rounded-lg border border-slate-200 px-2 py-1.5 text-xs opacity-40">
+                      <select disabled className="w-24 rounded-lg border border-slate-200 px-2 py-1.5 text-xs opacity-40 max-sm:w-auto max-sm:min-w-0 max-sm:flex-1 max-sm:py-2">
                         <option>{t(`role.${user.role}`)}</option>
                       </select>
                       <button
@@ -434,7 +436,7 @@ export function UserManagementClient() {
                       <select
                         value={pendingRole}
                         onChange={(e) => setPendingRoles((p) => ({ ...p, [user.id]: e.target.value as UserRole }))}
-                        className="w-24 rounded-lg border border-slate-200 px-2 py-1.5 text-xs"
+                        className="w-24 rounded-lg border border-slate-200 px-2 py-1.5 text-xs max-sm:w-auto max-sm:min-w-0 max-sm:flex-1 max-sm:py-2"
                       >
                         {ROLES.map((r) => <option key={r} value={r}>{t(`role.${r}`)}</option>)}
                       </select>
@@ -453,7 +455,7 @@ export function UserManagementClient() {
                         value={pendingRole}
                         disabled={user.is_super_admin}
                         onChange={(e) => setPendingRoles((p) => ({ ...p, [user.id]: e.target.value as UserRole }))}
-                        className="w-24 rounded-lg border border-slate-200 px-2 py-1.5 text-xs disabled:opacity-40"
+                        className="w-24 rounded-lg border border-slate-200 px-2 py-1.5 text-xs disabled:opacity-40 max-sm:w-auto max-sm:min-w-0 max-sm:flex-1 max-sm:py-2"
                       >
                         {ROLES.map((r) => <option key={r} value={r}>{t(`role.${r}`)}</option>)}
                       </select>
@@ -465,6 +467,7 @@ export function UserManagementClient() {
                       >
                         {isSaving ? "…" : t("save")}
                       </button>
+                      <span aria-hidden className="hidden h-0 basis-full max-sm:block" />
                       {/* Primary safe action: reversible deactivation */}
                       {!user.is_super_admin && (
                         <button
@@ -472,7 +475,7 @@ export function UserManagementClient() {
                           disabled={isSaving}
                           onClick={() => void patchUser(user.id, { is_active: false })}
                           title={t("deactivateTitle")}
-                          className="inline-flex items-center gap-1 rounded-lg border border-[#E4C77A] bg-[#FBF4E2] px-2.5 py-1.5 text-xs font-semibold text-[#7A5409] hover:bg-[#F6E9C7] disabled:opacity-50"
+                          className="inline-flex items-center gap-1 max-sm:min-w-0 max-sm:flex-1 max-sm:justify-center max-sm:py-2 rounded-lg border border-[#E4C77A] bg-[#FBF4E2] px-2.5 py-1.5 text-xs font-semibold text-[#7A5409] hover:bg-[#F6E9C7] disabled:opacity-50"
                         >
                           <UserMinus className="h-3.5 w-3.5" />
                           {isSaving ? "…" : t("deactivate")}

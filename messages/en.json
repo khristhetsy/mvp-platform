@@ -561,6 +561,7 @@
       },
       "all": "All",
       "selected": "{n} selected",
+      "selectAll": "Select all",
       "colUser": "User",
       "colRole": "Role",
       "colStatus": "Status",

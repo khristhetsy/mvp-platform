@@ -108,6 +108,7 @@ function ToolbarButton({ onClick, disabled, icon, label }: { onClick: () => void
   return (
     <button
       type="button"
+      className="pda-tb"
       onClick={onClick}
       disabled={disabled}
       style={{
@@ -247,7 +248,7 @@ export function PitchDeckAnalyzerClient({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <style>{"@media print { .pda-toolbar, .pda-analyze-card { display: none !important; } nav, aside, header { display: none !important; } }"}</style>
+      <style>{"@media print { .pda-toolbar, .pda-analyze-card { display: none !important; } nav, aside, header { display: none !important; } } @media (max-width: 639px) { .pda-file-row { width: 100%; min-width: 0; } .pda-file-text { min-width: 0; flex: 1; } .pda-file-name { overflow-wrap: anywhere; } .pda-analyze-btn { width: 100%; justify-content: center; padding: 12px 18px !important; } .pda-toolbar { display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px !important; } .pda-saved { grid-column: 1 / -1; margin-right: 0 !important; } .pda-tb { flex-direction: column; justify-content: center; padding: 8px 4px !important; gap: 3px !important; font-size: 12px !important; } }"}</style>
 
       {/* Status card */}
       <div className="pda-analyze-card" style={{
@@ -256,9 +257,9 @@ export function PitchDeckAnalyzerClient({
       }}>
         {hasPitchDeck ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div className="pda-file-row" style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{
-                width: 40, height: 40, borderRadius: 10,
+                width: 40, height: 40, borderRadius: 10, flex: "none",
                 background: "#EEEDFE",
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}>
@@ -267,8 +268,8 @@ export function PitchDeckAnalyzerClient({
                   <polyline points="14 2 14 8 20 8" stroke={ACCENT} strokeWidth="2" />
                 </svg>
               </div>
-              <div>
-                <p style={{ fontSize: 13, fontWeight: 700, color: "#111827", margin: 0 }}>
+              <div className="pda-file-text">
+                <p className="pda-file-name" style={{ fontSize: 13, fontWeight: 700, color: "#111827", margin: 0 }}>
                   {pitchDeckFileName ?? "Pitch deck"}
                 </p>
                 <p style={{ fontSize: 11, color: "#6b7280", margin: "2px 0 0" }}>
@@ -278,6 +279,7 @@ export function PitchDeckAnalyzerClient({
             </div>
             <button
               type="button"
+              className="pda-analyze-btn"
               onClick={() => void run()}
               disabled={loading}
               style={{
@@ -359,7 +361,7 @@ export function PitchDeckAnalyzerClient({
         <>
           {/* Action toolbar — Save / Print / PDF / Export */}
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }} className="pda-toolbar">
-            {savedAt && <span style={{ fontSize: 12, color: "#059669", marginRight: "auto" }}>Saved {fmtTime(savedAt)}</span>}
+            {savedAt && <span className="pda-saved" style={{ fontSize: 12, color: "#059669", marginRight: "auto" }}>Saved {fmtTime(savedAt)}</span>}
             <ToolbarButton onClick={() => void save()} disabled={saving} label={saving ? "Saving…" : "Save"} icon={
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
             } />

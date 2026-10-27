@@ -27,7 +27,7 @@ export function CompaniesPlanDonut({
   let offset = 0;
   return (
     <div className="mb-4 flex flex-wrap items-center gap-7 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
-      <svg width="150" height="150" viewBox="0 0 100 100" role="img" aria-label={`Founder accounts by plan: ${shown.map((s) => `${s.label} ${s.count}`).join(", ")}. MRR ${mrr}.`}>
+      <svg className="max-sm:mx-auto" width="150" height="150" viewBox="0 0 100 100" role="img" aria-label={`Founder accounts by plan: ${shown.map((s) => `${s.label} ${s.count}`).join(", ")}. MRR ${mrr}.`}>
         <circle cx="50" cy="50" r={R} fill="none" stroke="#E2E8F0" strokeWidth="12" />
         {total > 0 &&
           slices.map((s) => {
@@ -58,7 +58,7 @@ export function CompaniesPlanDonut({
         <text x="50" y="61" textAnchor="middle" style={{ fontSize: 7, fill: "#64748b" }}>MRR</text>
       </svg>
 
-      <div className="flex min-w-[220px] flex-col gap-1 text-sm">
+      <div className="flex min-w-[220px] flex-col gap-1 text-sm max-sm:w-full max-sm:min-w-0">
         {shown.map((s) => {
           const pct = total ? Math.round((s.count / total) * 100) : 0;
           const on = active === s.key;
@@ -71,8 +71,8 @@ export function CompaniesPlanDonut({
               className={`grid grid-cols-[10px_1fr_auto] items-center gap-x-3 rounded-md px-2 py-1 text-left hover:bg-slate-50 ${on ? "bg-slate-50 font-semibold" : ""}`}
             >
               <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: s.color }} />
-              <span className="text-slate-700">{s.label}</span>
-              <span className="text-right font-semibold tabular-nums text-slate-900">
+              <span className="min-w-0 text-slate-700 [overflow-wrap:anywhere]">{s.label}</span>
+              <span className="text-right font-semibold tabular-nums text-slate-900 max-sm:min-w-[4.5rem]">
                 {s.count} <span className="font-normal text-slate-400">{pct}%</span>
               </span>
             </button>
@@ -85,14 +85,17 @@ export function CompaniesPlanDonut({
         </div>
       </div>
 
-      <p className="ml-auto max-w-[220px] text-xs text-slate-500">
+      <p className="ml-auto max-w-[220px] text-xs text-slate-500 max-sm:ml-0 max-sm:max-w-none">
         {active ? (
           <>
             Showing {slices.find((s) => s.key === active)?.label.toLowerCase()} only.{" "}
             <button type="button" onClick={() => onSelect(null)} className="font-medium text-indigo-600 hover:text-indigo-700">Show all</button>
           </>
         ) : (
-          "Hover a slice to see its count. Click a slice to filter the table to those companies."
+          <>
+            <span className="max-sm:hidden">Hover a slice to see its count. Click a slice to filter the table to those companies.</span>
+            <span className="hidden max-sm:inline">Tap a slice to filter the table to those companies.</span>
+          </>
         )}
       </p>
     </div>
