@@ -23,6 +23,7 @@ export default async function StartPage() {
     founder_free: priceLabel(pricing, "founder_free"),
     founder_basic: priceLabel(pricing, "founder_basic"),
     founder_professional: priceLabel(pricing, "founder_professional"),
+    founder_premium: priceLabel(pricing, "founder_premium"),
   };
   return (
     <>
