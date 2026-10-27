@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import type { Company } from "@/lib/supabase/types";
@@ -142,59 +142,154 @@ function ContextCard({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Chip({
-  selected, onClick, children,
+/* ── Dropdown fields: one look for every list in the wizard ── */
+
+type DDOpt = { value: string; label: string; sub?: string };
+
+const DD_BTN =
+  "flex w-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-base font-medium text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100";
+const DD_LIST =
+  "absolute z-20 mt-1 max-h-72 w-full overflow-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg";
+
+/** Closes an open dropdown on a click outside it or on Escape. */
+function useCloseOutside(open: boolean, setOpen: (v: boolean) => void) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const down = (e: MouseEvent | TouchEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const key = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", down);
+    document.addEventListener("touchstart", down);
+    document.addEventListener("keydown", key);
+    return () => {
+      document.removeEventListener("mousedown", down);
+      document.removeEventListener("touchstart", down);
+      document.removeEventListener("keydown", key);
+    };
+  }, [open, setOpen]);
+  return ref;
+}
+
+function Caret({ open }: { open: boolean }) {
+  return <i aria-hidden="true" className={`ti ${open ? "ti-chevron-up" : "ti-chevron-down"} text-slate-400`} />;
+}
+
+/** Pick one. Closed, it shows the chosen label or the placeholder; open, the chosen row carries a check.
+ *  `allowClear` lets a tap on the chosen row unselect it, for optional fields. */
+function SelectField({
+  value, options, onChange, placeholder, ariaLabel, allowClear = false, className = "mt-2",
 }: {
-  selected: boolean; onClick: () => void; children: React.ReactNode;
+  value: string | null;
+  options: DDOpt[];
+  onChange: (v: string) => void;
+  placeholder: string;
+  ariaLabel: string;
+  allowClear?: boolean;
+  className?: string;
 }) {
+  const [open, setOpen] = useState(false);
+  const ref = useCloseOutside(open, setOpen);
+  const current = options.find((o) => o.value === value);
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="rounded-full border px-4 py-2 text-sm font-medium transition-all"
-      style={{
-        background: selected ? "#2E78F5" : "transparent",
-        borderColor: selected ? "#2E78F5" : "#e2e8f0",
-        color: selected ? "white" : "#475569",
-      }}
-    >
-      {children}
-    </button>
+    <div ref={ref} className={`relative ${className}`}>
+      <button type="button" aria-label={ariaLabel} aria-haspopup="listbox" aria-expanded={open} className={DD_BTN} onClick={() => setOpen((o) => !o)}>
+        <span className={current ? "" : "font-normal text-slate-400"}>{current ? current.label : placeholder}</span>
+        <Caret open={open} />
+      </button>
+      {open ? (
+        <ul role="listbox" aria-label={ariaLabel} className={DD_LIST}>
+          {options.map((o) => {
+            const on = o.value === value;
+            return (
+              <li key={o.value} role="option" aria-selected={on}>
+                <button
+                  type="button"
+                  className={"flex w-full items-start justify-between gap-3 px-4 py-2.5 text-left text-sm hover:bg-slate-50 " + (on ? "bg-indigo-50 text-indigo-700" : "text-slate-800")}
+                  onClick={() => { onChange(allowClear && on ? "" : o.value); setOpen(false); }}
+                >
+                  <span>
+                    <span className="font-medium">{o.label}</span>
+                    {o.sub ? <span className="mt-0.5 block text-xs text-slate-400">{o.sub}</span> : null}
+                  </span>
+                  {on ? <i aria-hidden="true" className="ti ti-check mt-0.5 flex-none" /> : null}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+    </div>
   );
 }
 
-function OptionCard({
-  selected, onClick, label, sub,
+/** Pick several. Rows carry checkboxes and stay open while ticking; the button reads "N selected"
+ *  and the chosen values also appear below as removable tags. */
+function MultiSelectField({
+  values, options, onToggle, ariaLabel, placeholder, className = "mt-2",
 }: {
-  selected: boolean; onClick: () => void; label: string; sub: string;
+  values: string[];
+  options: DDOpt[];
+  onToggle: (v: string) => void;
+  ariaLabel: string;
+  placeholder?: string;
+  className?: string;
 }) {
+  const t = useTranslations("founderCmp");
+  const [open, setOpen] = useState(false);
+  const ref = useCloseOutside(open, setOpen);
+  const labelOf = (v: string) => options.find((o) => o.value === v)?.label ?? v;
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex w-full items-start gap-3 rounded-xl border px-4 py-3.5 text-left transition-all"
-      style={{
-        background: selected ? "#EEEDFE" : "white",
-        borderColor: selected ? "#2E78F5" : "#e2e8f0",
-      }}
-    >
-      <div
-        style={{
-          width: 18, height: 18, borderRadius: "50%", flexShrink: 0, marginTop: 2,
-          background: selected ? "#2E78F5" : "transparent",
-          border: selected ? "none" : "2px solid #cbd5e1",
-          display: "flex", alignItems: "center", justifyContent: "center",
-        }}
-      >
-        {selected ? <div style={{ width: 6, height: 6, borderRadius: "50%", background: "white" }} /> : null}
-      </div>
-      <div>
-        <p className="text-sm font-medium" style={{ color: selected ? "#1A6CE4" : "#0f172a", margin: 0 }}>{label}</p>
-        <p className="text-xs mt-0.5" style={{ color: selected ? "#7F77DD" : "#94a3b8", margin: 0 }}>{sub}</p>
-      </div>
-    </button>
+    <div ref={ref} className={`relative ${className}`}>
+      <button type="button" aria-label={ariaLabel} aria-haspopup="listbox" aria-expanded={open} className={DD_BTN} onClick={() => setOpen((o) => !o)}>
+        <span className={values.length ? "" : "font-normal text-slate-400"}>
+          {values.length ? t("dd_n_selected", { count: values.length }) : (placeholder ?? t("dd_select_all_that_apply"))}
+        </span>
+        <Caret open={open} />
+      </button>
+      {open ? (
+        <ul role="listbox" aria-multiselectable="true" aria-label={ariaLabel} className={DD_LIST}>
+          {options.map((o) => {
+            const on = values.includes(o.value);
+            return (
+              <li key={o.value} role="option" aria-selected={on}>
+                <button
+                  type="button"
+                  className={"flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-slate-50 " + (on ? "bg-indigo-50 text-indigo-700" : "text-slate-800")}
+                  onClick={() => onToggle(o.value)}
+                >
+                  <span aria-hidden="true" className={"flex h-4 w-4 flex-none items-center justify-center rounded border text-[10px] " + (on ? "border-indigo-600 bg-indigo-600 text-white" : "border-slate-300")}>
+                    {on ? <i className="ti ti-check" /> : null}
+                  </span>
+                  <span className="font-medium">{o.label}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+      {values.length ? (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {values.map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => onToggle(v)}
+              aria-label={t("dd_remove", { label: labelOf(v) })}
+              className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-100"
+            >
+              {labelOf(v)} <i aria-hidden="true" className="ti ti-x" />
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }
+
+const plainOpts = (list: readonly string[]): DDOpt[] => list.map((v) => ({ value: v, label: v }));
+const vocabOpts = (list: VocabularyOption[]): DDOpt[] => list.map((o) => ({ value: o.slug, label: o.label, sub: o.description ?? undefined }));
 
 function ScoreRing({ score }: { score: number }) {
   const r = 40;
@@ -681,16 +776,18 @@ export function FounderConversationalOnboarding({
                 What industry are you in?
               </p>
               <p className="mt-1 text-sm text-slate-500">{t("select_the_closest_match_we_use_this_to_targ")}</p>
-              <div className="mt-5 flex flex-wrap gap-2">
-                {industryOptions.map((opt) => (
-                  <Chip key={opt.slug} selected={industry === opt.label} onClick={() => setIndustry(opt.label)}>
-                    {opt.label}
-                  </Chip>
-                ))}
-                {industry && !industryOptions.some((o) => o.label === industry) ? (
-                  <Chip selected onClick={() => setIndustry(industry)}>{industry}</Chip>
-                ) : null}
-              </div>
+              <SelectField
+                className="mt-5"
+                ariaLabel={t("industry")}
+                placeholder={t("dd_select_industry")}
+                value={industry}
+                options={[
+                  ...industryOptions.map((o) => ({ value: o.label, label: o.label })),
+                  // A value this company already holds that is no longer on the list stays selectable.
+                  ...(industry && !industryOptions.some((o) => o.label === industry) ? [{ value: industry, label: industry }] : []),
+                ]}
+                onChange={setIndustry}
+              />
               <ContextCard>
                 Industry matching is one of the strongest signals our algorithm uses. Investors who back companies in your sector already understand your market — they move faster and ask better questions.
               </ContextCard>
@@ -701,17 +798,14 @@ export function FounderConversationalOnboarding({
                 What stage is your company at right now?
               </p>
               <p className="mt-1 text-sm text-slate-500">{t("this_calibrates_the_benchmarks_and_investor")}</p>
-              <div className="mt-5 space-y-2">
-                {menu(vocab.revenue_stage, stage).map((s) => (
-                  <OptionCard
-                    key={s.slug}
-                    selected={stage === s.slug}
-                    onClick={() => setStage(s.slug)}
-                    label={s.label}
-                    sub={s.description ?? ""}
-                  />
-                ))}
-              </div>
+              <SelectField
+                className="mt-5"
+                ariaLabel={t("dd_aria_revenue_stage")}
+                placeholder={t("dd_select_stage")}
+                value={stage}
+                options={vocabOpts(menu(vocab.revenue_stage, stage))}
+                onChange={setStage}
+              />
               <ContextCard>
                 Most founders on iCapOS are raising at Pre-revenue or Early revenue stage. Knowing your stage helps us surface stage-appropriate investors — ones who already back companies like yours.
               </ContextCard>
@@ -722,11 +816,14 @@ export function FounderConversationalOnboarding({
                 How much are you looking to raise?
               </p>
               <p className="mt-1 text-sm text-slate-500">Pick the range for the total target of this round, in USD.</p>
-              <div className="mt-5 flex flex-wrap gap-2" role="group" aria-label="Amount to raise">
-                {menu(vocab.money_band, amount).map((o) => (
-                  <Chip key={o.slug} selected={amount === o.slug} onClick={() => setAmount(o.slug)}>{o.label}</Chip>
-                ))}
-              </div>
+              <SelectField
+                className="mt-5"
+                ariaLabel={t("dd_aria_amount_to_raise")}
+                placeholder={t("dd_select_range")}
+                value={amount || null}
+                options={vocabOpts(menu(vocab.money_band, amount))}
+                onChange={setAmount}
+              />
               {showCapitalStructure ? (
                 <div className="mt-6">
                   <label htmlFor="capital-structure" className="block text-sm font-semibold text-slate-700">
@@ -807,26 +904,23 @@ export function FounderConversationalOnboarding({
               <div className="mt-2"><ReadByPersonBadge /></div>
               <p className="mt-1 text-sm text-slate-500">{t("select_all_that_apply_then_tell_us_your_time")}</p>
               {shows("use_of_funds") ? (
-                <div className="mt-5 flex flex-wrap gap-2">
-                  {FUND_USES.map((u) => (
-                    <Chip key={u} selected={useOfFunds.includes(u)} onClick={() => toggleFund(u)}>
-                      {u}
-                    </Chip>
-                  ))}
-                </div>
+                <MultiSelectField
+                  className="mt-5"
+                  ariaLabel={t("dd_aria_use_of_funds")}
+                  values={useOfFunds}
+                  options={plainOpts(FUND_USES)}
+                  onToggle={toggleFund}
+                />
               ) : null}
               <p className="mt-6 mb-3 text-sm font-semibold text-slate-700">{t("when_are_you_looking_to_close")}</p>
-              <div className="space-y-2">
-                {TIMELINES.map((t) => (
-                  <OptionCard
-                    key={t.id}
-                    selected={timeline === t.id}
-                    onClick={() => setTimeline(t.id)}
-                    label={t.label}
-                    sub={t.sub}
-                  />
-                ))}
-              </div>
+              <SelectField
+                className=""
+                ariaLabel={t("dd_aria_close_timeline")}
+                placeholder={t("dd_select_timeline")}
+                value={timeline}
+                options={TIMELINES.map((x) => ({ value: x.id, label: x.label, sub: x.sub }))}
+                onChange={setTimeline}
+              />
               <ContextCard>
                 Founders who start 6+ months before their target close date are 2× more likely to successfully close a round. The earlier you build pipeline, the more leverage you have in negotiations.
               </ContextCard>
@@ -842,29 +936,21 @@ export function FounderConversationalOnboarding({
               {shows("seeking_investor_types") ? (
                 <>
               <label className="block text-sm font-medium text-slate-700">Type of investor(s) {star("seeking_investor_types", true)}</label>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {INVESTOR_TYPE_OPTS.map((o) => (<Chip key={o} selected={invTypes.includes(o)} onClick={() => toggleIn(setInvTypes, o)}>{o}</Chip>))}
-              </div>
+              <MultiSelectField ariaLabel={t("dd_aria_investor_types")} values={invTypes} options={plainOpts(INVESTOR_TYPE_OPTS)} onToggle={(v) => toggleIn(setInvTypes, v)} />
                 </>
               ) : null}
               {shows("seeking_capital_types") ? (
                 <>
               <label className="mt-4 block text-sm font-medium text-slate-700">Type(s) of capital {star("seeking_capital_types", true)}</label>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {CAPITAL_TYPE_OPTS.map((o) => (<Chip key={o} selected={capTypes.includes(o)} onClick={() => toggleIn(setCapTypes, o)}>{o}</Chip>))}
-              </div>
+              <MultiSelectField ariaLabel={t("dd_aria_capital_types")} values={capTypes} options={plainOpts(CAPITAL_TYPE_OPTS)} onToggle={(v) => toggleIn(setCapTypes, v)} />
                 </>
               ) : null}
               <label className="mt-4 block text-sm font-medium text-slate-700">Active investor preference <span className="text-rose-600">*</span></label>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {INVESTOR_PREF_OPTS.map((o) => (<Chip key={o} selected={invPref.includes(o)} onClick={() => toggleIn(setInvPref, o)}>{o}</Chip>))}
-              </div>
+              <MultiSelectField ariaLabel={t("dd_aria_investor_preference")} values={invPref} options={plainOpts(INVESTOR_PREF_OPTS)} onToggle={(v) => toggleIn(setInvPref, v)} />
               {shows("business_entity") ? (
                 <>
               <label className="mt-4 block text-sm font-medium text-slate-700">Business entity {star("business_entity", true)} <span className="font-normal text-slate-400">(pick one)</span></label>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {BUSINESS_ENTITY_OPTS.map((o) => (<Chip key={o} selected={bizEntity === o} onClick={() => setBizEntity(o)}>{o}</Chip>))}
-              </div>
+              <SelectField ariaLabel={t("dd_aria_business_entity")} placeholder={t("dd_select_entity")} value={bizEntity} options={plainOpts(BUSINESS_ENTITY_OPTS)} onChange={setBizEntity} />
                 </>
               ) : null}
 
@@ -872,25 +958,19 @@ export function FounderConversationalOnboarding({
               {shows("funding_stage") ? (
                 <>
               <label className="block text-sm font-medium text-slate-700">Funding stage {star("funding_stage", true)}</label>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {FUNDING_STAGE_OPTS.map((o) => (<Chip key={o} selected={fundingStage.includes(o)} onClick={() => toggleIn(setFundingStage, o)}>{o}</Chip>))}
-              </div>
+              <MultiSelectField ariaLabel={t("dd_aria_funding_stage")} values={fundingStage} options={plainOpts(FUNDING_STAGE_OPTS)} onToggle={(v) => toggleIn(setFundingStage, v)} />
                 </>
               ) : null}
               {shows("operating_stage") ? (
                 <>
               <label className="mt-4 block text-sm font-medium text-slate-700">Operating stage {star("operating_stage", true)}</label>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {OPERATING_STAGE_OPTS.map((o) => (<Chip key={o} selected={opStage.includes(o)} onClick={() => toggleIn(setOpStage, o)}>{o}</Chip>))}
-              </div>
+              <MultiSelectField ariaLabel={t("dd_aria_operating_stage")} values={opStage} options={plainOpts(OPERATING_STAGE_OPTS)} onToggle={(v) => toggleIn(setOpStage, v)} />
                 </>
               ) : null}
               {shows("annual_ebitda") ? (
                 <>
               <label className="mt-4 block text-sm font-medium text-slate-700">Annual EBITDA {star("annual_ebitda", true)} <span className="font-normal text-slate-400">(pick one)</span></label>
-              <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Annual EBITDA">
-                {menu(vocab.money_band, ebitda).map((o) => (<Chip key={o.slug} selected={ebitda === o.slug} onClick={() => setEbitda(o.slug)}>{o.label}</Chip>))}
-              </div>
+              <SelectField ariaLabel={t("dd_aria_annual_ebitda")} placeholder={t("dd_select_range")} value={ebitda || null} options={vocabOpts(menu(vocab.money_band, ebitda))} onChange={setEbitda} />
               <p className="mt-1.5 text-xs text-slate-400">Current EBITDA only, not projected.</p>
                 </>
               ) : null}
@@ -929,11 +1009,7 @@ export function FounderConversationalOnboarding({
                   <label className="mt-6 block text-sm font-medium text-slate-700">
                     Annual revenue size <span className="font-normal text-slate-400">· last 12 months</span> {needs("annual_revenue_size", false) ? <span className="text-rose-600">*</span> : null}
                   </label>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {menu(vocab.revenue_size, revSize).map((o) => (
-                      <Chip key={o.slug} selected={revSize === o.slug} onClick={() => setRevSize(revSize === o.slug ? null : o.slug)}>{o.label}</Chip>
-                    ))}
-                  </div>
+                  <SelectField ariaLabel={t("dd_aria_annual_revenue_size")} placeholder={t("dd_select_range")} allowClear value={revSize} options={vocabOpts(menu(vocab.revenue_size, revSize))} onChange={(v) => setRevSize(v || null)} />
                 </>
               ) : null}
 
@@ -941,22 +1017,14 @@ export function FounderConversationalOnboarding({
               {shows("arr") ? (
                 <>
                   <label className="mt-5 block text-sm font-medium text-slate-700">ARR {star("arr", false)}</label>
-                  <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="ARR">
-                    {menu(vocab.arr_band, arr).map((o) => (
-                      <Chip key={o.slug} selected={arr === o.slug} onClick={() => setArr(arr === o.slug ? "" : o.slug)}>{o.label}</Chip>
-                    ))}
-                  </div>
+                  <SelectField ariaLabel={t("dd_aria_arr")} placeholder={t("dd_select_range")} allowClear value={arr || null} options={vocabOpts(menu(vocab.arr_band, arr))} onChange={setArr} />
                   <p className="mt-1 text-xs text-slate-400">Subscription or contracted revenue only.</p>
                 </>
               ) : null}
               {shows("mrr") ? (
                 <>
                   <label className="mt-5 block text-sm font-medium text-slate-700">MRR {star("mrr", false)}</label>
-                  <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="MRR">
-                    {menu(vocab.mrr_band, mrr).map((o) => (
-                      <Chip key={o.slug} selected={mrr === o.slug} onClick={() => setMrr(mrr === o.slug ? "" : o.slug)}>{o.label}</Chip>
-                    ))}
-                  </div>
+                  <SelectField ariaLabel={t("dd_aria_mrr")} placeholder={t("dd_select_range")} allowClear value={mrr || null} options={vocabOpts(menu(vocab.mrr_band, mrr))} onChange={setMrr} />
                   <p className="mt-1 text-xs text-slate-400">Leave blank if you have no recurring revenue.</p>
                 </>
               ) : null}
