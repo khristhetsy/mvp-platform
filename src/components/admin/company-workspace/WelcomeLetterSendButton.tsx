@@ -3,13 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { HideableHeaderItem } from "@/components/admin/company-workspace/HideableHeaderItem";
 
 /**
  * Company header, for a paying founder who has no welcome letter yet (clients
  * who paid before the letter existed): an amber "not sent" chip and a Send
  * button. Uses the same send and tracking as the automatic letter.
  */
-export function WelcomeLetterSendButton({ founderId }: Readonly<{ founderId: string }>) {
+export function WelcomeLetterSendButton({ founderId, companyId }: Readonly<{ founderId: string; companyId: string }>) {
   const router = useRouter();
   const [state, setState] = useState<"idle" | "sending" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +34,10 @@ export function WelcomeLetterSendButton({ founderId }: Readonly<{ founderId: str
 
   return (
     <span className="inline-flex items-center gap-2">
-      <StatusBadge label="✉ Welcome letter: not sent" status="warning" />
+      <HideableHeaderItem companyId={companyId} item="welcome-chip" showLabel="Show welcome letter status">
+        <StatusBadge label="✉ Welcome letter: not sent" status="warning" />
+      </HideableHeaderItem>
+      <HideableHeaderItem companyId={companyId} item="welcome-send" showLabel="Show Send welcome letter">
       <button
         type="button"
         onClick={() => void send()}
@@ -42,6 +46,7 @@ export function WelcomeLetterSendButton({ founderId }: Readonly<{ founderId: str
       >
         {state === "sending" ? "Sending…" : "Send welcome letter"}
       </button>
+      </HideableHeaderItem>
       {error ? <span className="text-xs text-rose-700">{error}</span> : null}
     </span>
   );
