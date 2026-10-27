@@ -220,7 +220,9 @@ export async function computeStageProgress(
     const achieved = allMilestones.filter((m) => m.status === "achieved").length;
     const milestonePercent = allMilestones.length ? (achieved / allMilestones.length) * 100 : null;
 
-    const offeringSet = Boolean((company as { offering_type?: string | null }).offering_type);
+    // offering_type has a default value, so its presence does not mean the founder answered.
+    // The step is done once they have confirmed it (the attestation time is set).
+    const offeringSet = Boolean((company as { offering_type_attested_at?: string | null }).offering_type_attested_at);
 
     return rollup({
       "/founder/deal-room": step(hasDealRoom ? 100 : 0),
