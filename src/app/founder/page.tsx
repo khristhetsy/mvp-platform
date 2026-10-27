@@ -50,7 +50,7 @@ import { FounderInvestorEngagementTimeline } from "@/components/founder/FounderI
 import { DealCompanyEmptyState } from "@/components/founder/DealCompanyEmptyState";
 import { ListingChecklistCard } from "@/components/founder/listing/ListingChecklistCard";
 import { loadListingChecklist } from "@/lib/listing/listing-server";
-import { CoachedCourseStrip } from "@/components/coach/CoachedCourseCard";
+import { CoachedCourseStrip } from "@/components/coach/CoachedCourseStrip";
 import { loadCoachedCourseSummaries } from "@/lib/learning/coach/program-summary";
 
 export const dynamic = "force-dynamic";
