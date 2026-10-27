@@ -12,6 +12,7 @@ import { loadSurfaceDisplay } from "@/lib/profile-fields/display-store";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { advanceFounderJourney } from "@/lib/founder-journey/stage-gate";
 import { getInvestorMatchConfig } from "@/lib/settings/platform-settings";
+import type { OfferingType } from "@/lib/onboarding/offering-type-schema";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +54,12 @@ export default async function FounderOnboardingPage() {
             founderName={profile.full_name ?? profile.email ?? "Founder"}
             display={await loadSurfaceDisplay("founder_onboarding")}
             engineWeights={(await getInvestorMatchConfig()).engineWeights}
+            showCapitalStructure={process.env.ONBOARDING_CAPITAL_STRUCTURE === "on"}
+            initialOfferingType={
+              (data.company as { offering_type_attested_at?: string | null }).offering_type_attested_at
+                ? (((data.company as { offering_type?: string | null }).offering_type as OfferingType | null) ?? null)
+                : null
+            }
           />
         </VocabularyProvider>
         <FloatingFounderAICoach surface="onboarding" />
