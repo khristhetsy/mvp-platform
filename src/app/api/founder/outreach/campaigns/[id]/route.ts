@@ -8,10 +8,13 @@ import {
 import { outreachCampaignQueueSchema } from "@/lib/validation";
 import { getUserPlan } from "@/lib/subscriptions/get-subscription";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
+import { actingBlock } from "@/lib/admin/acting-central";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, context: RouteContext) {
+  const actingBlocked = await actingBlock();
+  if (actingBlocked) return actingBlocked;
   const auth = await requireFounderInvestorCrmApi();
   if ("error" in auth) {
     return auth.error;

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireFounderSocial, ownsCampaign, socialDb } from "@/lib/social/founder-auth";
 import { listAlertRules, createAlertRule, updateAlertRule, deleteAlertRule } from "@/lib/social/goals-io";
+import { actingBlock } from "@/lib/admin/acting-central";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,8 @@ export async function GET(): Promise<Response> {
 }
 
 export async function POST(req: NextRequest): Promise<Response> {
+  const actingBlocked = await actingBlock();
+  if (actingBlocked) return actingBlocked;
   const auth = await requireFounderSocial();
   if ("error" in auth) return auth.error;
   const parsed = z.object(base).safeParse(await req.json().catch(() => ({})));
@@ -41,6 +44,8 @@ export async function POST(req: NextRequest): Promise<Response> {
 }
 
 export async function PATCH(req: NextRequest): Promise<Response> {
+  const actingBlocked = await actingBlock();
+  if (actingBlocked) return actingBlocked;
   const auth = await requireFounderSocial();
   if ("error" in auth) return auth.error;
   const parsed = z.object({ id: z.string().uuid() }).and(z.object(base).partial()).safeParse(await req.json().catch(() => ({})));
@@ -53,6 +58,8 @@ export async function PATCH(req: NextRequest): Promise<Response> {
 }
 
 export async function DELETE(req: NextRequest): Promise<Response> {
+  const actingBlocked = await actingBlock();
+  if (actingBlocked) return actingBlocked;
   const auth = await requireFounderSocial();
   if ("error" in auth) return auth.error;
   const parsed = z.object({ id: z.string().uuid() }).safeParse(await req.json().catch(() => ({})));

@@ -16,6 +16,7 @@ import {
   type ManualOutreach,
   type ManualSequenceStep,
 } from "@/lib/outreach/manual-outreach";
+import { actingBlock } from "@/lib/admin/acting-central";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +57,11 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   if (!body || (body.action !== "save" && body.action !== "start")) {
     return NextResponse.json({ error: "Expected action 'save' or 'start'." }, { status: 400 });
+  }
+
+  if (body.action === "start") {
+    const actingBlocked = await actingBlock();
+    if (actingBlocked) return actingBlocked;
   }
 
   const recipientIds = Array.isArray(body.recipientIds)
