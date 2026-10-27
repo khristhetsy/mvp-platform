@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { COACH_DISCLAIMER } from "@/lib/learning/class-assistant-guardrails";
 import { CoachStepCard } from "@/components/CoachStepCard";
+import { dispatchCoachPick } from "@/lib/onboarding/coach-bridge";
 import {
   getCoachQuickPrompts,
   useFounderPersonalCoachChat,
@@ -39,14 +40,18 @@ export function FloatingFounderAICoach({
   courseSlug,
   lessonSlug,
   surface,
+  fundingBandOptions,
 }: Readonly<{
   courseSlug?: string;
   lessonSlug?: string;
   /** "onboarding" shows the coach in onboarding mode on /founder/onboarding. */
   surface?: "onboarding";
+  /** Funding bands the coach offers as one tap picks on the onboarding page. */
+  fundingBandOptions?: ReadonlyArray<{ slug: string; label: string }>;
 }>) {
   const t = useTranslations("sharedCmp");
   const [open, setOpen] = useState(false);
+  const [pickedBand, setPickedBand] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   // The step the founder is on, reported by the step card. Tied to the lesson, so a stale index from
   // another lesson is never sent.
@@ -183,6 +188,30 @@ export function FloatingFounderAICoach({
               </div>
             ) : null}
           </div>
+
+          {surface === "onboarding" && fundingBandOptions && fundingBandOptions.length > 0 ? (
+            <div className="shrink-0 border-t border-slate-100 px-3 py-2">
+              <p className="mb-1.5 text-[10px] font-semibold text-slate-500">Pick your funding band</p>
+              <div className="flex flex-wrap gap-1.5">
+                {fundingBandOptions.map((o) => (
+                  <button
+                    key={o.slug}
+                    type="button"
+                    onClick={() => {
+                      dispatchCoachPick({ field: "amount", value: o.slug });
+                      setPickedBand(o.label);
+                    }}
+                    className={`rounded-full border px-2.5 py-1 text-[10px] font-medium transition ${pickedBand === o.label ? "border-indigo-600 bg-indigo-600 text-white" : "border-indigo-100 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"}`}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+              {pickedBand ? (
+                <p className="mt-1.5 text-[10px] text-slate-500">Selected {pickedBand}. Check it on the funding step, then continue.</p>
+              ) : null}
+            </div>
+          ) : null}
 
           {quickPrompts.length > 0 ? (
             <div className="shrink-0 border-t border-slate-100 px-3 py-2">

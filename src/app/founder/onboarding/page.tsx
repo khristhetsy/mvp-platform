@@ -8,6 +8,7 @@ import { loadFounderOnboardingPageData } from "@/lib/onboarding/load-founder-onb
 import { requireRole } from "@/lib/supabase/auth";
 import { VocabularyProvider } from "@/lib/vocabulary/provider";
 import { loadVocabularies } from "@/lib/vocabulary/store";
+import { offered } from "@/lib/vocabulary/lists";
 import { loadSurfaceDisplay } from "@/lib/profile-fields/display-store";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { advanceFounderJourney } from "@/lib/founder-journey/stage-gate";
@@ -30,6 +31,8 @@ export default async function FounderOnboardingPage() {
   const supabase = await createServerSupabaseClient();
   await advanceFounderJourney(supabase, profile.id).catch(() => { /* non-blocking */ });
 
+  const vocab = await loadVocabularies();
+
   return (
     <FounderAppShell
       profileName={profile.full_name ?? profile.email ?? "Founder"}
@@ -48,7 +51,7 @@ export default async function FounderOnboardingPage() {
 
         <FounderOnboardingProgressCard progress={data.progress} inPage />
 
-        <VocabularyProvider value={await loadVocabularies()}>
+        <VocabularyProvider value={vocab}>
           <FounderConversationalOnboarding
             company={data.company}
             founderName={profile.full_name ?? profile.email ?? "Founder"}
@@ -62,7 +65,10 @@ export default async function FounderOnboardingPage() {
             }
           />
         </VocabularyProvider>
-        <FloatingFounderAICoach surface="onboarding" />
+        <FloatingFounderAICoach
+          surface="onboarding"
+          fundingBandOptions={offered(vocab.money_band).map((o) => ({ slug: o.slug, label: o.label }))}
+        />
       </div>
     </FounderAppShell>
   );

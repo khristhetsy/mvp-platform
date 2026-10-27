@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { COACH_PICK_EVENT, parseCoachPick } from "@/lib/onboarding/coach-bridge";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import type { Company } from "@/lib/supabase/types";
@@ -337,6 +338,16 @@ export function FounderConversationalOnboarding({
     const rows = raw.split("\n").map((r) => r.trim());
     return [0, 1, 2, 3, 4].map((i) => rows[i] ?? "");
   });
+
+  // The onboarding coach can pre-select the funding band. The founder still checks it and continues.
+  useEffect(() => {
+    const onPick = (e: Event) => {
+      const band = parseCoachPick((e as CustomEvent).detail);
+      if (band) setAmount(band);
+    };
+    window.addEventListener(COACH_PICK_EVENT, onPick);
+    return () => window.removeEventListener(COACH_PICK_EVENT, onPick);
+  }, []);
 
   function toggleFund(label: string) {
     setUseOfFunds((prev) =>
