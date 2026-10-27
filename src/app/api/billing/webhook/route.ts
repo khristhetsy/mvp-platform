@@ -69,13 +69,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Lookup failed" }, { status: 500 });
   }
 
-  // Premium is paid by wire. The card subscription it replaced is cancelled and
-  // keeps sending events (cancelled, expired). They must not rewrite the Premium row.
-  if (existing?.plan_type === "founder_premium") {
+  const { plan, source } = variantToPlan(attributes.variant_id, attributes.variant_name, attributes.product_name);
+
+  // A wire Premium replaced a card subscription that is cancelled and keeps sending
+  // events (cancelled, expired). Those events are for the old Basic or Professional
+  // product, and must not rewrite the Premium row. Events for the Premium product
+  // itself are a card Premium and are processed like any other card plan.
+  if (existing?.plan_type === "founder_premium" && plan !== "founder_premium") {
     return NextResponse.json({ received: true, ignored: "premium paid by wire" });
   }
-
-  const { plan, source } = variantToPlan(attributes.variant_id, attributes.variant_name, attributes.product_name);
   const mapped = mapStatus(attributes.status, new Date(), attributes.ends_at);
 
   // An unrecognised LemonSqueezy status must not silently cancel a customer.

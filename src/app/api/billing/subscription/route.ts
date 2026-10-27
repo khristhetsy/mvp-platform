@@ -13,6 +13,7 @@ type Sub = {
   id: string;
   plan_type: string;
   ls_subscription_id: string | null;
+  ls_variant_id: string | null;
   current_period_end: string | null;
   cancel_at_period_end: boolean | null;
   cancel_reason: string | null;
@@ -42,7 +43,7 @@ export async function POST(req: Request) {
 
   const { data } = await admin
     .from("subscriptions")
-    .select("id, plan_type, ls_subscription_id, current_period_end, cancel_at_period_end, cancel_reason, pending_plan_type")
+    .select("id, plan_type, ls_subscription_id, ls_variant_id, current_period_end, cancel_at_period_end, cancel_reason, pending_plan_type")
     .eq("profile_id", user.id)
     .maybeSingle();
   const sub = data as Sub | null;

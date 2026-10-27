@@ -37,13 +37,14 @@ export async function POST(req: Request) {
   // stop here rather than schedule a deletion that leaves a live subscription.
   const { data: subRaw } = await admin
     .from("subscriptions")
-    .select("id, plan_type, ls_subscription_id, current_period_end, cancel_at_period_end")
+    .select("id, plan_type, ls_subscription_id, ls_variant_id, current_period_end, cancel_at_period_end")
     .eq("profile_id", user.id)
     .maybeSingle();
   const sub = subRaw as {
     id: string;
     plan_type: string;
     ls_subscription_id: string | null;
+    ls_variant_id: string | null;
     current_period_end: string | null;
     cancel_at_period_end: boolean | null;
   } | null;

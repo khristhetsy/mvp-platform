@@ -18,14 +18,23 @@ describe("plan change rules", () => {
     expect(isCardPlan(null)).toBe(false);
   });
 
-  it("treats Premium as a card subscription only when Lemon Squeezy bills it", () => {
-    expect(isCardSubscription({ plan_type: "founder_premium", ls_subscription_id: "123" })).toBe(true);
-    expect(isCardSubscription({ plan_type: "founder_premium", ls_subscription_id: null })).toBe(false);
-    expect(isCardSubscription({ plan_type: "founder_professional", ls_subscription_id: "9" })).toBe(true);
-    expect(isCardSubscription({ plan_type: "founder_professional", ls_subscription_id: null })).toBe(false);
-    expect(isCardSubscription({ plan_type: "founder_free", ls_subscription_id: "9" })).toBe(false);
-    expect(isWirePremium({ plan_type: "founder_premium", ls_subscription_id: null })).toBe(true);
-    expect(isWirePremium({ plan_type: "founder_premium", ls_subscription_id: "123" })).toBe(false);
+  it("treats Premium as a card subscription only when Lemon Squeezy bills the Premium product", () => {
+    const prev = process.env.LEMONSQUEEZY_VARIANT_ID_PREMIUM;
+    process.env.LEMONSQUEEZY_VARIANT_ID_PREMIUM = "555";
+    try {
+      expect(isCardSubscription({ plan_type: "founder_premium", ls_subscription_id: "123", ls_variant_id: "555" })).toBe(true);
+      // A wire Premium that kept the id of the Professional subscription it replaced.
+      expect(isCardSubscription({ plan_type: "founder_premium", ls_subscription_id: "123", ls_variant_id: "111" })).toBe(false);
+      expect(isCardSubscription({ plan_type: "founder_premium", ls_subscription_id: null, ls_variant_id: null })).toBe(false);
+      expect(isCardSubscription({ plan_type: "founder_professional", ls_subscription_id: "9" })).toBe(true);
+      expect(isCardSubscription({ plan_type: "founder_professional", ls_subscription_id: null })).toBe(false);
+      expect(isCardSubscription({ plan_type: "founder_free", ls_subscription_id: "9" })).toBe(false);
+      expect(isWirePremium({ plan_type: "founder_premium", ls_subscription_id: "123", ls_variant_id: "111" })).toBe(true);
+      expect(isWirePremium({ plan_type: "founder_premium", ls_subscription_id: "123", ls_variant_id: "555" })).toBe(false);
+    } finally {
+      if (prev === undefined) delete process.env.LEMONSQUEEZY_VARIANT_ID_PREMIUM;
+      else process.env.LEMONSQUEEZY_VARIANT_ID_PREMIUM = prev;
+    }
   });
 
   it("maps a target to the pending plan type", () => {
