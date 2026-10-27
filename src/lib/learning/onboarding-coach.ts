@@ -5,7 +5,7 @@ import type { FounderOnboardingProgress } from "@/lib/onboarding/progress";
 // are optional here, matching computeFounderOnboardingProgress.
 const REQUIRED_STEPS = [
   { id: "company_profile", title: "Company profile", hint: "Company name, industry, country, and a short description of what you build (at least 20 characters)." },
-  { id: "funding_information", title: "Funding information", hint: "How much you are raising and your revenue stage." },
+  { id: "funding_information", title: "Funding information", hint: "Pick the funding band that fits how much you are raising." },
 ] as const;
 
 export const ONBOARDING_QUICK_PROMPTS = [
