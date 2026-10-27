@@ -11,6 +11,9 @@ import {
   INTERNAL_ROLE_SLUGS,
   LEGACY_STAFF_PERMISSIONS,
   SUPER_ADMIN_ONLY_PERMISSIONS,
+  CLIENT_MANAGER_PERMISSIONS,
+  INTERNAL_ROLE_LABELS,
+  INTERNAL_ROLE_RANK,
   isInternalPermission,
   isInternalRoleSlug,
   type InternalPermission,
@@ -34,6 +37,7 @@ import type { UserRole } from "@/lib/supabase/types";
 const ROLE_GRANTS: Record<Exclude<InternalRoleSlug, "super_admin">, InternalPermission[]> = {
   regular_user: ["view_admin_dashboard", "view_actions", "view_events"],
   manager: ["view_admin_dashboard", "view_actions", "view_events", "manage_actions", "manage_companies", "manage_crm"],
+  client_manager: [...CLIENT_MANAGER_PERMISSIONS],
   admin: [...LEGACY_STAFF_PERMISSIONS],
 };
 
@@ -212,7 +216,7 @@ describe("getEffectivePermissions — every internal role slug × every permissi
 
   it("super-admin-only permissions are held by super_admin and no other seeded role", () => {
     for (const p of SUPER_ADMIN_ONLY_PERMISSIONS) {
-      for (const slug of ["regular_user", "manager", "admin"] as const) {
+      for (const slug of ["regular_user", "manager", "client_manager", "admin"] as const) {
         expect(ROLE_GRANTS[slug]).not.toContain(p);
       }
     }
@@ -314,7 +318,7 @@ describe("super admin by profile", () => {
 // ── Delegation rules ─────────────────────────────────────────────────────────
 
 describe("actorCanManageTargetRole — every actor × every target", () => {
-  const RANK: Record<InternalRoleSlug, number> = { regular_user: 1, manager: 2, admin: 3, super_admin: 4 };
+  const RANK: Record<InternalRoleSlug, number> = { regular_user: 1, manager: 2, client_manager: 2.5, admin: 3, super_admin: 4 };
   const actors: Array<InternalRoleSlug | null> = [null, ...INTERNAL_ROLE_SLUGS];
 
   for (const actor of actors) {
@@ -406,5 +410,30 @@ describe("guards", () => {
       expect(isInternalPermission(bad)).toBe(false);
       expect(isInternalRoleSlug(bad)).toBe(false);
     }
+  });
+});
+
+describe("Client Manager role", () => {
+  it("can act on behalf of a founder and run the account", () => {
+    for (const p of ["act_on_behalf", "manage_companies", "manage_crm", "manage_matching", "manage_diligence", "review_documents"] as const) {
+      expect(CLIENT_MANAGER_PERMISSIONS).toContain(p);
+    }
+  });
+
+  it("has no billing, user, role, settings, accounts or integration rights", () => {
+    for (const p of ["manage_billing", "manage_users", "assign_roles", "manage_settings", "manage_accounts", "manage_integrations"] as const) {
+      expect(CLIENT_MANAGER_PERMISSIONS).not.toContain(p);
+    }
+  });
+
+  it("ranks above Manager and below Admin", () => {
+    const rank = (s: InternalRoleSlug) => INTERNAL_ROLE_RANK[s];
+    expect(rank("client_manager")).toBeGreaterThan(rank("manager"));
+    expect(rank("client_manager")).toBeLessThan(rank("admin"));
+  });
+
+  it("is a valid role slug with a label", () => {
+    expect(isInternalRoleSlug("client_manager")).toBe(true);
+    expect(INTERNAL_ROLE_LABELS.client_manager).toBe("Client Manager");
   });
 });
