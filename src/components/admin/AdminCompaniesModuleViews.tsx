@@ -360,7 +360,7 @@ function AdminCompaniesModuleViewsInner({
       )}
       <CompaniesPlanDonut slices={planTotals.slices} mrr={planTotals.mrr} active={slice} onSelect={setSlice} />
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
+      <div className="mb-4 flex flex-wrap items-center gap-2 max-sm:grid max-sm:grid-cols-[auto_minmax(0,1fr)]">
         <CompaniesGear
           actions={[
             {
@@ -419,7 +419,7 @@ function AdminCompaniesModuleViewsInner({
             },
           ]}
         />
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 max-sm:order-last max-sm:col-span-2">
           <OdooSearchBar
             scope="admin_companies"
             state={searchState}
@@ -433,7 +433,7 @@ function AdminCompaniesModuleViewsInner({
           />
         </div>
         {view === "list" ? (
-          <div className="relative shrink-0">
+          <div className="relative shrink-0 max-sm:[&>button]:w-full max-sm:[&>button]:justify-center">
             <button type="button" onClick={() => setColsOpen((v) => !v)} aria-expanded={colsOpen} style={{ fontSize: 12, color: "var(--foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, padding: "8px 12px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
               <i className="ti ti-columns-3" style={{ fontSize: 15 }} aria-hidden="true" /> Columns
             </button>
@@ -531,7 +531,47 @@ function AdminCompaniesModuleViewsInner({
             ))}
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+          <>
+          <div className="space-y-2 sm:hidden">
+            <label className="flex items-center gap-2 px-1 text-xs text-slate-500">
+              <input
+                type="checkbox"
+                aria-label="Select all companies"
+                checked={allSelected}
+                onChange={() => (allSelected ? clearSelection() : selectAllRows())}
+              />
+              Select all
+            </label>
+            {groupRows(listRows, searchState.groupBy).map(({ header, count, company }) => header ? (
+              <p key={`pg:${header}`} className="px-1 pt-2 text-xs font-semibold text-slate-700">
+                {header} <span className="font-normal text-slate-400">({count})</span>
+              </p>
+            ) : company && (() => {
+              const plan = planView(company);
+              return (
+                <div
+                  key={`pc:${company.id}`}
+                  className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-white p-3"
+                  onClick={() => { window.location.href = `/admin/companies/${company.id}`; }}
+                >
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    aria-label={`Select ${company.company_name}`}
+                    checked={selected.has(company.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={() => toggleOne(company.id)}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-slate-900 [overflow-wrap:anywhere]"><Highlight text={company.company_name} query={query} /></p>
+                    {show("founder") && <p className="mt-0.5 text-xs text-slate-500 [overflow-wrap:anywhere]"><Highlight text={company.founder_name} query={query} /></p>}
+                  </div>
+                  <span className={`shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold ${plan.cls}`}>{plan.label}</span>
+                </div>
+              );
+            })())}
+          </div>
+          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm max-sm:hidden">
             <SelectionBar
               count={chosenIds.length}
               total={listRows.length}
@@ -672,6 +712,7 @@ function AdminCompaniesModuleViewsInner({
               </tbody>
             </table>
           </div>
+          </>
         )}
       </PageSection>
     </>

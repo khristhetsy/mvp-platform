@@ -561,6 +561,7 @@
       },
       "all": "Todos",
       "selected": "{n} seleccionados",
+      "selectAll": "Seleccionar todo",
       "colUser": "Usuario",
       "colRole": "Rol",
       "colStatus": "Estado",
