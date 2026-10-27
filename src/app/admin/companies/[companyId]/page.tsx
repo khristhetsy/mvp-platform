@@ -7,6 +7,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminActionHealthProvider } from "@/components/AdminActionHealthProvider";
 import { AdminCompanyWorkspace } from "@/components/admin/company-workspace/AdminCompanyWorkspace";
+import { OpenAsFounderControl } from "@/components/admin/OpenAsFounderControl";
 import { AppShell } from "@/components/AppShell";
 import { WorkspaceLoadingSkeleton } from "@/components/admin/company-workspace/WorkspaceLoadingSkeleton";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
@@ -134,6 +135,7 @@ async function WorkspaceBody({ companyId, profile }: Readonly<BodyProps>) {
   return (
     <VocabularyProvider value={vocabularies as Awaited<ReturnType<typeof loadVocabularies>>}>
       <FieldDisplayProvider value={surfaceDisplay as Awaited<ReturnType<typeof loadSurfaceDisplay>>}>
+        <OpenAsFounderControl founderId={workspace.founder?.id ?? null} founderName={workspace.founder?.full_name ?? null} />
         <AdminCompanyWorkspace
           data={workspace}
           nextBestActions={companyActions?.actions ?? []}

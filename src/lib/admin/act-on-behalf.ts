@@ -15,13 +15,17 @@
 import "server-only";
 import { cookies } from "next/headers";
 import crypto from "node:crypto";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createCookieSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { canUser } from "@/lib/rbac/effective-permissions";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { ownerHasManagedIcfoPlan } from "@/lib/team/managed-icfo";
+import { staffMayActFor } from "@/lib/team/managed-icfo-core";
+import { isCentralActingEnabled } from "@/lib/admin/acting-central-core";
 import type { Company, Database, Profile } from "@/lib/supabase/types";
 
-const COOKIE = "icapos_act_as";
+export const ACT_COOKIE = "icapos_act_as";
+const COOKIE = ACT_COOKIE;
 const TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
 
 export type ActingContext = { founderId: string; staffId: string };
@@ -68,7 +72,8 @@ function decodeToken(token: string, secret: string): ActingContext | null {
 /** The current logged-in auth user id, or null. */
 async function currentUserId(): Promise<string | null> {
   try {
-    const supabase = await createServerSupabaseClient();
+    // The REAL signed in person. Never the founder client the central switch hands out.
+    const supabase = await createCookieSupabaseClient();
     const { data } = await supabase.auth.getUser();
     return data.user?.id ?? null;
   } catch {
@@ -78,11 +83,52 @@ async function currentUserId(): Promise<string | null> {
 
 async function staffHasPermission(userId: string): Promise<boolean> {
   try {
-    const supabase = await createServerSupabaseClient();
+    const supabase = await createCookieSupabaseClient();
     return await canUser(supabase, userId, "act_on_behalf");
   } catch {
     return false;
   }
+}
+
+/** A Managed by iCFO staff member on this founder's company, while the founder is on Premium. */
+async function staffHasManagedAccess(staffId: string, founderId: string): Promise<boolean> {
+  try {
+    const admin = createServiceRoleClient() as unknown as SupabaseClient<Database>;
+    const { data: staff } = await admin.from("profiles").select("role").eq("id", staffId).maybeSingle();
+    const staffRole = String((staff as { role?: string } | null)?.role ?? "").toLowerCase();
+    if (staffRole !== "admin" && staffRole !== "analyst") return false;
+
+    const { data: company } = await admin
+      .from("companies")
+      .select("id")
+      .eq("founder_id", founderId)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    const companyId = (company as { id?: string } | null)?.id;
+    if (!companyId) return false;
+
+    const { data: member } = await admin
+      .from("company_members")
+      .select("role")
+      .eq("company_id", companyId)
+      .eq("user_id", staffId)
+      .maybeSingle();
+    const planOk = await ownerHasManagedIcfoPlan(admin, companyId);
+    return staffMayActFor({
+      hasActOnBehalfPermission: false,
+      memberRole: (member as { role?: string } | null)?.role ?? null,
+      ownerPlanActive: planOk,
+    });
+  } catch {
+    return false;
+  }
+}
+
+/** The act_on_behalf permission, OR Managed by iCFO on this founder's account. */
+async function staffMayActOn(staffId: string, founderId: string): Promise<boolean> {
+  if (await staffHasPermission(staffId)) return true;
+  return staffHasManagedAccess(staffId, founderId);
 }
 
 /**
@@ -103,7 +149,7 @@ export async function getActingContext(): Promise<ActingContext | null> {
 
   const realUser = await currentUserId();
   if (!realUser || realUser !== ctx.staffId) return null;
-  if (!(await staffHasPermission(realUser))) return null;
+  if (!(await staffMayActOn(realUser, ctx.founderId))) return null;
 
   return ctx;
 }
@@ -119,6 +165,15 @@ export async function getActingFounderProfile(): Promise<Profile | null> {
   return profile;
 }
 
+/** Show "Open as founder" only when it can work: central switch on, signing secret set, and this staff member may act on the founder. */
+export async function canOfferActOnBehalf(founderId: string): Promise<boolean> {
+  if (!isCentralActingEnabled(process.env.ACT_AS_FOUNDER_CENTRAL)) return false;
+  if (!signingSecret()) return false;
+  const staffId = await currentUserId();
+  if (!staffId) return false;
+  return staffMayActOn(staffId, founderId);
+}
+
 export type StartResult = { ok: true } | { ok: false; error: string };
 
 /** Begin acting as a founder. Guarded: caller must be staff with the permission
@@ -129,7 +184,7 @@ export async function startActOnBehalf(founderId: string): Promise<StartResult> 
 
   const staffId = await currentUserId();
   if (!staffId) return { ok: false, error: "Not signed in." };
-  if (!(await staffHasPermission(staffId))) return { ok: false, error: "You don't have permission to act on behalf." };
+  if (!(await staffMayActOn(staffId, founderId))) return { ok: false, error: "You don't have permission to act on behalf." };
 
   const admin = createServiceRoleClient() as unknown as SupabaseClient<Database>;
   const { data: target } = await admin.from("profiles").select("id, role").eq("id", founderId).maybeSingle();

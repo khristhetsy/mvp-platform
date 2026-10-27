@@ -10,6 +10,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { emailTeamInvite } from "@/lib/email/deal-room-emails";
 import { writeAuditLog } from "@/lib/data/audit";
+import { isActingAsFounder } from "@/lib/admin/acting-central";
 import {
   MANAGED_ICFO_ROLE,
   canGrantManagedIcfo,
@@ -66,6 +67,10 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const auth = await requireApiProfile(["founder"]);
   if ("error" in auth) return auth.error;
+
+  if (await isActingAsFounder()) {
+    return NextResponse.json({ error: "Team changes are made by the account Owner." }, { status: 403 });
+  }
 
   const body = await request.json().catch(() => ({}));
   const parsed = inviteSchema.safeParse(body);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canGrantManagedIcfo, isIcfoManagerOrAdmin, isManagedIcfoPlan } from "@/lib/team/managed-icfo-core";
+import { canGrantManagedIcfo, isIcfoManagerOrAdmin, isManagedIcfoPlan, staffMayActFor } from "@/lib/team/managed-icfo-core";
 
 describe("managed by iCFO rules", () => {
   it("lets only the owner or a managed user grant the role", () => {
@@ -30,5 +30,14 @@ describe("managed by iCFO rules", () => {
     expect(isIcfoManagerOrAdmin({ profileRole: "analyst", roleSlug: null, isSuperAdmin: false })).toBe(false);
     expect(isIcfoManagerOrAdmin({ profileRole: "analyst", roleSlug: "regular_user", isSuperAdmin: false })).toBe(false);
     expect(isIcfoManagerOrAdmin({ profileRole: null, roleSlug: null, isSuperAdmin: false })).toBe(false);
+  });
+
+  it("lets staff act with the permission, or as Managed by iCFO on a Premium account", () => {
+    expect(staffMayActFor({ hasActOnBehalfPermission: true, memberRole: null, ownerPlanActive: false })).toBe(true);
+    expect(staffMayActFor({ hasActOnBehalfPermission: false, memberRole: "managed_icfo", ownerPlanActive: true })).toBe(true);
+    expect(staffMayActFor({ hasActOnBehalfPermission: false, memberRole: "managed_icfo", ownerPlanActive: false })).toBe(false);
+    for (const r of ["admin", "member", "owner", null, undefined]) {
+      expect(staffMayActFor({ hasActOnBehalfPermission: false, memberRole: r, ownerPlanActive: true })).toBe(false);
+    }
   });
 });
