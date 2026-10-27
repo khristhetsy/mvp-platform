@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { writeAuditLog } from "@/lib/data/audit";
+import { isActingAsFounder } from "@/lib/admin/acting-central";
 import { isConfirmPhrase, scheduledPurgeDate } from "@/lib/account/deletion";
 import { cancelSubscription, resumeSubscription } from "@/lib/lemonsqueezy";
 import { isCardSubscription } from "@/lib/billing/plan-change";
@@ -15,6 +16,9 @@ export async function POST(req: Request) {
     data: { user },
   } = await userSupabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+  if (await isActingAsFounder()) {
+    return NextResponse.json({ error: "An account can only be deleted by its Owner." }, { status: 403 });
+  }
 
   const body = (await req.json().catch(() => ({}))) as { confirm?: unknown };
   if (!isConfirmPhrase(body.confirm)) {

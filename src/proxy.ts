@@ -239,6 +239,10 @@ function captureSourceTag(request: NextRequest, response: NextResponse): void {
 }
 
 export async function proxy(request: NextRequest) {
+  // Tag the request with its zone (admin, investor or founder) so server code can leave
+  // staff screens alone while a staff member is acting as a founder. Always overwritten,
+  // so a value sent by a browser is never trusted. See lib/admin/acting-central.
+  request.headers.set("x-icapos-zone", resolveWorkspaceZone(request.nextUrl.pathname) ?? "");
   let response = NextResponse.next({ request });
   const pathname = request.nextUrl.pathname;
 

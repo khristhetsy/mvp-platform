@@ -4,12 +4,8 @@ import { getSupabaseBrowserEnv } from "./env";
 import type { Database } from "./types";
 import { actingUserClient } from "@/lib/scheduled-emails/acting-user";
 
-export async function createServerSupabaseClient() {
-  // A scheduled email being sent runs as the person who scheduled it (see
-  // scheduled-emails/acting-user). Everywhere else this reads the cookie session.
-  const acting = actingUserClient();
-  if (acting) return acting as ReturnType<typeof createServerClient<Database>>;
-
+/** The real signed in session, read from the cookie. Staff identity checks use this one. */
+export async function createCookieSupabaseClient() {
   const cookieStore = await cookies();
   const { url, anonKey } = getSupabaseBrowserEnv();
 
@@ -29,4 +25,21 @@ export async function createServerSupabaseClient() {
       },
     },
   });
+}
+
+export async function createServerSupabaseClient() {
+  // A scheduled email being sent runs as the person who scheduled it (see
+  // scheduled-emails/acting-user). Everywhere else this reads the cookie session.
+  const acting = actingUserClient();
+  if (acting) return acting as ReturnType<typeof createServerClient<Database>>;
+
+  // Staff acting as a founder (central switch, see admin/acting-central). Off unless
+  // ACT_AS_FOUNDER_CENTRAL=1; the check is inline so nothing extra loads when it is off.
+  if (process.env.ACT_AS_FOUNDER_CENTRAL === "1") {
+    const { resolveCentralActingClient } = await import("@/lib/admin/acting-central");
+    const founderClient = await resolveCentralActingClient();
+    if (founderClient) return founderClient as ReturnType<typeof createServerClient<Database>>;
+  }
+
+  return createCookieSupabaseClient();
 }

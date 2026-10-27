@@ -34,3 +34,17 @@ export function isIcfoManagerOrAdmin(input: {
   const slug = input.roleSlug ?? "";
   return isInternalRoleSlug(slug) && INTERNAL_ROLE_RANK[slug] >= INTERNAL_ROLE_RANK.manager;
 }
+
+/**
+ * May this staff member act on a founder's account? Either they hold the act_on_behalf
+ * permission, or they are a Managed by iCFO member of that founder's company while the
+ * Owner is on an active Premium plan.
+ */
+export function staffMayActFor(input: {
+  hasActOnBehalfPermission: boolean;
+  memberRole: string | null | undefined;
+  ownerPlanActive: boolean;
+}): boolean {
+  if (input.hasActOnBehalfPermission) return true;
+  return input.memberRole === MANAGED_ICFO_ROLE && input.ownerPlanActive;
+}
