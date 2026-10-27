@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { writeAuditLog } from "@/lib/data/audit";
+import { billingOwnerOnlyResponse } from "@/lib/billing/billing-access";
 import { parseBillingAddress } from "@/lib/billing/address";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +23,8 @@ export async function PUT(req: Request) {
   if (profile?.role?.toLowerCase() !== "founder") {
     return NextResponse.json({ error: "Only founder accounts have a billing address." }, { status: 403 });
   }
+  const blocked = await billingOwnerOnlyResponse(user.id);
+  if (blocked) return blocked;
 
   const { data, error } = await admin
     .from("subscriptions")

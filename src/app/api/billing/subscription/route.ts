@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { writeAuditLog } from "@/lib/data/audit";
+import { billingOwnerOnlyResponse } from "@/lib/billing/billing-access";
 import { cancelSubscription, resumeSubscription } from "@/lib/lemonsqueezy";
 import { canDowngrade, canSwitchFromPremium, cardPlanFor, isCardSubscription, isWirePremium, pendingPlanFor, type CardTarget, type DowngradeTarget } from "@/lib/billing/plan-change";
 import { openWireInvoiceForProfile, voidWireInvoice } from "@/lib/billing/wire";
@@ -40,6 +41,8 @@ export async function POST(req: Request) {
   if (profile?.role?.toLowerCase() !== "founder") {
     return NextResponse.json({ error: "Only founder accounts can change a plan." }, { status: 403 });
   }
+  const blocked = await billingOwnerOnlyResponse(user.id);
+  if (blocked) return blocked;
 
   const { data } = await admin
     .from("subscriptions")
