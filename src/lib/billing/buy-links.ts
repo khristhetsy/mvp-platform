@@ -19,8 +19,9 @@ const DEFAULTS: Partial<Record<PlanType, string>> = {
 export const BUY_LINKS: Partial<Record<PlanType, string>> = {
   founder_basic: process.env.LEMONSQUEEZY_CHECKOUT_URL_BASIC || DEFAULTS.founder_basic,
   founder_professional: process.env.LEMONSQUEEZY_CHECKOUT_URL_PROFESSIONAL || DEFAULTS.founder_professional,
-  // Premium is never sold through Lemon Squeezy: it is paid by bank wire only
-  // (Oct 9, 2026). The checkout route refuses founder_premium.
+  // Premium is sold by card through Lemon Squeezy like Basic and Professional
+  // (Oct 27, 2026). Set LEMONSQUEEZY_CHECKOUT_URL_PREMIUM to the product's Share link.
+  founder_premium: process.env.LEMONSQUEEZY_CHECKOUT_URL_PREMIUM || DEFAULTS.founder_premium,
 };
 
 /** A specific plan has a usable buy link. */

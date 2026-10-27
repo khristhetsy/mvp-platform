@@ -44,6 +44,11 @@ export const start = {
           label: "Professional",
           features: ["Everything in Basic", "Monthly presentation slot", "Up to 20 intro requests a month"],
         },
+        {
+          value: "founder_premium",
+          label: "Premium",
+          features: ["Everything in Professional", "A dedicated team member runs your investor outreach", "We make the introductions and follow up"],
+        },
       ],
     },
   },

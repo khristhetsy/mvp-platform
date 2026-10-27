@@ -84,7 +84,7 @@ function planCta(
   }
   if (plan.planType === "founder_premium") {
     return currentPlan
-      ? { href: "/billing?plan=founder_premium", label: "Request wire invoice" }
+      ? { href: `/upgrade?plan=${plan.planType}`, label: "View upgrade options" }
       : { href: "/auth/sign-up?role=founder&plan=founder_premium", label: "Start on Premium" };
   }
   return currentPlan ? { href: `/upgrade?plan=${plan.planType}`, label: "View upgrade options" } : { href: founderCtaHref, label: founderCtaLabel };
@@ -187,7 +187,7 @@ export function PlanComparisonSection({
           </div>
           <p className="border-t border-slate-100 px-6 py-3 text-xs text-slate-500">
             Basic and Professional include every tool. Professional adds presentation slots and more intro requests.
-            Premium is done for you and paid by bank wire. {PLAN_LABELS.founder_managed_ir} is done for you through an SPV.
+            Premium is done for you. {PLAN_LABELS.founder_managed_ir} is done for you through an SPV.
           </p>
         </section>
       ) : null}
