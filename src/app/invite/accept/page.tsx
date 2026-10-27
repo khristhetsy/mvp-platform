@@ -3,6 +3,10 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { writeAuditLog } from "@/lib/data/audit";
+import { MANAGED_ICFO_ROLE, isIcfoManagerOrAdmin } from "@/lib/team/managed-icfo-core";
+import { getEffectivePermissions } from "@/lib/rbac/effective-permissions";
+import { ownerHasManagedIcfoPlan } from "@/lib/team/managed-icfo";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +62,28 @@ export default async function InviteAcceptPage({
     redirect(`/auth/sign-in?returnTo=${returnTo}`);
   }
 
+  const isManaged = invite.role === MANAGED_ICFO_ROLE;
+  if (isManaged) {
+    // Managed by iCFO is for the iCFO team. Who accepts is decided by the signed in
+    // account (staff Manager or Admin), not by the email the invite was sent to,
+    // so the team can accept from their staff login.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: me } = await (admin as any).from("profiles").select("role, is_super_admin").eq("id", user.id).maybeSingle();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const eff = await getEffectivePermissions(admin as any, user.id, me ?? null);
+    const staffOk = isIcfoManagerOrAdmin({
+      profileRole: me?.role ?? null,
+      roleSlug: eff.roleSlug,
+      isSuperAdmin: eff.isSuperAdmin,
+    });
+    if (!staffOk) {
+      return <ErrorPage title={t("invalid_link")} message="Managed by iCFO is for iCFO Manager and Admin accounts. Please sign in with your iCFO staff account and open the link again." />;
+    }
+    if (!(await ownerHasManagedIcfoPlan(admin, invite.company_id))) {
+      return <ErrorPage title={t("invite_no_longer_valid")} message="Managed by iCFO is available on Premium, Done for you. Please contact iCFO." />;
+    }
+  }
+
   // Check if already a member
   const { data: existingMember } = await admin
     .from("company_members")
@@ -77,11 +103,24 @@ export default async function InviteAcceptPage({
   }
 
   // Accept the invite: create member + mark invite accepted
-  await admin.from("company_members").insert({
+  const { error: memberError } = await admin.from("company_members").insert({
     company_id: invite.company_id,
     user_id: user.id,
     role: invite.role,
   });
+  if (memberError) {
+    return <ErrorPage title={t("invalid_link")} message="We could not add you to this company. Please try again or contact iCFO." />;
+  }
+
+  if (isManaged) {
+    await writeAuditLog(admin, {
+      userId: user.id,
+      action: "team.managed_icfo_accepted",
+      entityType: "company_invite",
+      entityId: invite.id,
+      metadata: { company_id: invite.company_id },
+    });
+  }
 
   await admin.from("company_invites").update({
     status: "accepted",
@@ -89,6 +128,15 @@ export default async function InviteAcceptPage({
     accepted_by_user_id: user.id,
   }).eq("id", invite.id);
 
+  if (isManaged) {
+    return (
+      <SuccessPage
+        companyName={companyName}
+        href="/admin"
+        message={`You are now listed as Managed by iCFO on ${companyName}. Open the company from the admin workspace.`}
+      />
+    );
+  }
   return <SuccessPage companyName={companyName} />;
 }
 
@@ -148,7 +196,7 @@ function ErrorPage({ title, message }: { title: string; message: string }) {
   );
 }
 
-function SuccessPage({ companyName, message, alreadyMember }: { companyName: string; message?: string; alreadyMember?: boolean }) {
+function SuccessPage({ companyName, message, alreadyMember, href = "/founder" }: { companyName: string; message?: string; alreadyMember?: boolean; href?: string }) {
   return (
     <Shell>
       <div style={{
@@ -168,7 +216,7 @@ function SuccessPage({ companyName, message, alreadyMember }: { companyName: str
         {message ?? `You've joined the ${companyName} workspace. You can now collaborate on investor outreach, documents, and fundraising.`}
       </p>
       <Link
-        href="/founder"
+        href={href}
         style={{
           display: "inline-block", background: ACCENT, color: "white",
           fontSize: 14, fontWeight: 600, padding: "10px 24px", borderRadius: 10,

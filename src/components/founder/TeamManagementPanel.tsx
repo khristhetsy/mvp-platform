@@ -28,15 +28,17 @@ function RoleBadge({ role }: { role: string }) {
     owner:  { bg: "#EEEDFE", color: ACCENT },
     admin:  { bg: "#ecfdf5", color: "#065f46" },
     member: { bg: "#f3f4f6", color: "#374151" },
+    managed_icfo: { bg: "#0f172a", color: "#ffffff" },
   };
+  const labels: Record<string, string> = { managed_icfo: "Managed by iCFO" };
   const c = colors[role] ?? colors.member;
   return (
     <span style={{
       fontSize: 11, fontWeight: 700, padding: "2px 9px",
       borderRadius: 20, background: c.bg, color: c.color,
-      textTransform: "capitalize",
+      textTransform: labels[role] ? "none" : "capitalize",
     }}>
-      {role}
+      {labels[role] ?? role}
     </span>
   );
 }
@@ -65,7 +67,8 @@ export function TeamManagementPanel({ currentUserId }: { currentUserId: string }
   const [invites, setInvites] = useState<Invite[]>([]);
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<"admin" | "member">("member");
+  const [role, setRole] = useState<"admin" | "member" | "managed_icfo">("member");
+  const [managedIcfoAvailable, setManagedIcfoAvailable] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -75,9 +78,10 @@ export function TeamManagementPanel({ currentUserId }: { currentUserId: string }
     try {
       const res = await fetch("/api/founder/team");
       if (res.ok) {
-        const data = await res.json() as { members: Member[]; invites: Invite[] };
+        const data = await res.json() as { members: Member[]; invites: Invite[]; managedIcfoAvailable?: boolean };
         setMembers(data.members ?? []);
         setInvites(data.invites ?? []);
+        setManagedIcfoAvailable(Boolean(data.managedIcfoAvailable));
       }
     } finally {
       setLoading(false);
@@ -152,7 +156,7 @@ export function TeamManagementPanel({ currentUserId }: { currentUserId: string }
           />
           <select
             value={role}
-            onChange={(e) => setRole(e.target.value as "admin" | "member")}
+            onChange={(e) => setRole(e.target.value as "admin" | "member" | "managed_icfo")}
             style={{
               fontSize: 13, fontWeight: 600, padding: "9px 12px",
               border: "1px solid #d1d5db", borderRadius: 10,
@@ -161,6 +165,7 @@ export function TeamManagementPanel({ currentUserId }: { currentUserId: string }
           >
             <option value="member">Member</option>
             <option value="admin">Admin</option>
+            {managedIcfoAvailable && <option value="managed_icfo">Managed by iCFO</option>}
           </select>
           <button
             type="submit"
