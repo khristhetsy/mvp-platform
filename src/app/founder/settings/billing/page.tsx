@@ -16,7 +16,7 @@ import { PlanActions } from "@/components/billing/PlanActions";
 import { PortalCards } from "@/components/billing/PortalCards";
 import { BillingAddressCard } from "@/components/billing/BillingAddressCard";
 import { readStoredAddress } from "@/lib/billing/address";
-import { awaitingCardCheckout, isCardPlan } from "@/lib/billing/plan-change";
+import { awaitingCardCheckout, isCardSubscription, isWirePremium } from "@/lib/billing/plan-change";
 import { PLAN_LABELS } from "@/lib/subscriptions/plans";
 import { getCustomerDetails, getSubscriptionDetails } from "@/lib/lemonsqueezy";
 
@@ -32,12 +32,12 @@ export default async function FounderSettingsBillingPage() {
     (await ensureSubscriptionForProfile({ profileId: profile.id, role: profile.role }));
   const requestedPlan = await getRequestedPlanForProfile(profile.id);
   const wire = await loadFounderWireState(profile.id);
-  const cardPlan = isCardPlan(subscription.plan_type) && Boolean(subscription.ls_subscription_id);
+  const cardPlan = isCardSubscription(subscription);
   const lsDetails = cardPlan && subscription.ls_subscription_id ? await getSubscriptionDetails(subscription.ls_subscription_id) : null;
   const lsCustomer = cardPlan && subscription.ls_customer_id ? await getCustomerDetails(subscription.ls_customer_id) : null;
   const place = lsCustomer ? [lsCustomer.city, lsCustomer.region, lsCustomer.country].filter(Boolean).join(", ") : "";
-  const wirePlan = subscription.plan_type === "founder_premium" && subscription.subscription_status === "active";
-  const premiumActive = subscription.plan_type === "founder_premium" && subscription.subscription_status === "active";
+  const wirePlan = isWirePremium(subscription) && subscription.subscription_status === "active";
+  const premiumActive = isWirePremium(subscription) && subscription.subscription_status === "active";
 
   return (
     <FounderAppShell
@@ -85,14 +85,21 @@ export default async function FounderSettingsBillingPage() {
             </div>
           ) : null}
           {cardPlan ? (
-            <PortalCards cardBrand={lsDetails?.cardBrand ?? null} cardLast4={lsDetails?.cardLastFour ?? null} place={place || null} />
+            <PortalCards
+              cardBrand={lsDetails?.cardBrand ?? null}
+              cardLast4={lsDetails?.cardLastFour ?? null}
+              paymentFailed={Boolean(lsDetails?.paymentFailed)}
+              place={place || null}
+            />
           ) : null}
-          {subscription.plan_type === "founder_premium" ? (
+          {isWirePremium(subscription) ? (
             <BillingAddressCard initial={readStoredAddress(subscription.billing_address)} defaultCompany={company?.company_name ?? null} />
           ) : null}
         </div>
       </section>
 
+      {/* Premium bought by card is billed by Lemon Squeezy: no wire panel, or a second payment path. */}
+      {cardPlan && subscription.plan_type === "founder_premium" ? null : (
       <section className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white">
         <div className="border-b border-slate-100 bg-slate-50 px-6 py-4">
           <h2 className="text-sm font-semibold text-slate-900">Premium by bank wire</h2>
@@ -114,6 +121,7 @@ export default async function FounderSettingsBillingPage() {
           {wire.invoices.length ? <WireInvoiceList invoices={wire.invoices} /> : null}
         </div>
       </section>
+      )}
     </FounderAppShell>
   );
 }

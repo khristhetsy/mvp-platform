@@ -1,12 +1,31 @@
 import type { PlanType } from "@/lib/subscriptions/plans";
 
-/** Plans billed by card through Lemon Squeezy. Premium is paid by bank wire. */
+/** Plans billed by card through Lemon Squeezy. Premium is a card plan too, but it also
+ * exists as a bank wire plan: see isCardSubscription and isWirePremium. */
 export const CARD_PLANS: readonly PlanType[] = ["founder_basic", "founder_professional"] as const;
 
 export type DowngradeTarget = "basic" | "free";
 
 export function isCardPlan(plan: PlanType | string | null | undefined): boolean {
   return plan === "founder_basic" || plan === "founder_professional";
+}
+
+type BillingSub = { plan_type?: string | null; ls_subscription_id?: string | null } | null | undefined;
+
+/**
+ * A subscription that Lemon Squeezy bills: Basic, Professional or Premium with a
+ * Lemon Squeezy subscription id. Premium without one is a bank wire subscription.
+ * Cancelling, stopping payment and account deletion must go through Lemon Squeezy
+ * for every card subscription, or it keeps charging.
+ */
+export function isCardSubscription(sub: BillingSub): boolean {
+  if (!sub?.ls_subscription_id) return false;
+  return isCardPlan(sub.plan_type) || sub.plan_type === "founder_premium";
+}
+
+/** Premium paid by bank wire (no Lemon Squeezy subscription). */
+export function isWirePremium(sub: BillingSub): boolean {
+  return sub?.plan_type === "founder_premium" && !sub.ls_subscription_id;
 }
 
 /** Professional can move to Basic or Free. Basic can move to Free. */
