@@ -23,6 +23,8 @@ import { nextQuestion, previousQuestion, questionPosition, type QuestionNum } fr
 import { founderMeter, type Meter } from "@/lib/matching/matchable-points";
 import type { EngineWeights } from "@/lib/matching/investor-company-matching";
 import { MatchablePointsMeter, ReadByPersonBadge } from "@/components/matching/MatchablePointsMeter";
+import { saveCapitalStructureInline } from "@/app/founder/onboarding/capital-structure-action";
+import type { OfferingType } from "@/lib/onboarding/offering-type-schema";
 
 /* ─────────────────────────── data ─────────────────────────── */
 
@@ -248,6 +250,8 @@ export function FounderConversationalOnboarding({
   founderName,
   display,
   engineWeights,
+  showCapitalStructure = false,
+  initialOfferingType = null,
 }: Readonly<{
   company: Company;
   founderName: string;
@@ -255,6 +259,10 @@ export function FounderConversationalOnboarding({
   display?: ResolvedSurface;
   /** The matching engine's weights, for the matchable points meter. Absent hides the meter. */
   engineWeights?: EngineWeights;
+  /** Adds the optional Capital structure select to the amount step. Off unless the page turns it on. */
+  showCapitalStructure?: boolean;
+  /** The attested capital structure already on the company, if any. */
+  initialOfferingType?: OfferingType | null;
 }>) {
   /** Whether a managed field is asked. */
   const shows = (key: string) => display?.[key]?.shown !== false;
@@ -268,6 +276,9 @@ export function FounderConversationalOnboarding({
   const menu = (all: VocabularyOption[], held: string | null): VocabularyOption[] =>
     [...offered(all), ...all.filter((o) => o.archived && o.slug === held)];
   const t = useTranslations("founderCmp");
+  // Capital structure (optional, amount step). Saved only with the attestation ticked.
+  const [offeringType, setOfferingType] = useState<OfferingType | "">(initialOfferingType ?? "");
+  const [offeringAttested, setOfferingAttested] = useState<boolean>(Boolean(initialOfferingType));
   const router = useRouter();
   const [step, setStep]             = useState<StepNum>(1);
   const [saving, setSaving]         = useState(false);
@@ -340,7 +351,11 @@ export function FounderConversationalOnboarding({
       case 1: return companyName.trim().length >= 2 && isValidPhone(phone) && country.trim().length >= 2;
       case 2: return Boolean(industry);
       case 3: return !needs("revenue_stage", true) || Boolean(stage);
-      case 4: return !needs("funding_amount_band", true) || isMoneyBand(amount);
+      case 4:
+        return (
+          (!needs("funding_amount_band", true) || isMoneyBand(amount)) &&
+          (!showCapitalStructure || !offeringType || offeringAttested)
+        );
       case 5: return description.trim().length >= 20;
       case 6: return !needs("use_of_funds", false) || useOfFunds.length > 0;
       case 7:
@@ -422,6 +437,12 @@ export function FounderConversationalOnboarding({
         }),
       });
       if (!r2.ok) throw new Error("Could not save funding information.");
+
+      // Capital structure is optional and never blocks onboarding. If this save
+      // fails the founder is asked again by the existing Capital structure prompt.
+      if (showCapitalStructure && offeringType && offeringAttested && offeringType !== initialOfferingType) {
+        await saveCapitalStructureInline({ offeringType, attested: true }).catch(() => undefined);
+      }
 
       setStep(9);
     } catch (e) {
@@ -706,6 +727,52 @@ export function FounderConversationalOnboarding({
                   <Chip key={o.slug} selected={amount === o.slug} onClick={() => setAmount(o.slug)}>{o.label}</Chip>
                 ))}
               </div>
+              {showCapitalStructure ? (
+                <div className="mt-6">
+                  <label htmlFor="capital-structure" className="block text-sm font-semibold text-slate-700">
+                    {t("cs_label")} <span className="font-normal text-slate-400">· {t("cs_optional")}</span>
+                  </label>
+                  <select
+                    id="capital-structure"
+                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                    value={offeringType}
+                    onChange={(e) => {
+                      const v = e.target.value as OfferingType | "";
+                      setOfferingType(v);
+                      if (!v) setOfferingAttested(false);
+                    }}
+                  >
+                    <option value="">{t("cs_placeholder")}</option>
+                    <option value="reg_d_506b">{t("cs_506b_title")}</option>
+                    <option value="reg_d_506c">{t("cs_506c_title")}</option>
+                    <option value="not_raising">{t("cs_none_title")}</option>
+                  </select>
+                  {offeringType ? (
+                    <>
+                      <p className="mt-2 text-xs text-slate-500">
+                        {offeringType === "reg_d_506b" ? t("cs_506b_desc") : offeringType === "reg_d_506c" ? t("cs_506c_desc") : t("cs_none_desc")}
+                      </p>
+                      {offeringType !== "not_raising" ? (
+                        <p className="mt-3 rounded-lg border-l-4 border-blue-600 bg-blue-50 px-3 py-2 text-xs text-slate-700">{t("cs_private_note")}</p>
+                      ) : null}
+                      <label className="mt-3 flex items-start gap-2 text-xs text-slate-700">
+                        <input
+                          type="checkbox"
+                          className="mt-0.5"
+                          checked={offeringAttested}
+                          onChange={(e) => setOfferingAttested(e.target.checked)}
+                        />
+                        <span>{t("cs_attest")}</span>
+                      </label>
+                      {!offeringAttested ? <p className="mt-1 text-xs text-amber-700">{t("cs_attest_needed")}</p> : null}
+                    </>
+                  ) : null}
+                  <details className="mt-3 text-xs text-slate-600">
+                    <summary className="cursor-pointer text-blue-600">{t("cs_not_sure")}</summary>
+                    <p className="mt-1">{t("cs_counsel")}</p>
+                  </details>
+                </div>
+              ) : null}
               <ContextCard>
                 {raiseHint(stage)}
                 {" "}Raising too little or too much for your stage can slow down conversations — we&apos;ll flag if your target is outside the typical range.
