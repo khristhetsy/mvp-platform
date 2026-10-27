@@ -79,7 +79,7 @@ export function CompanyWorkspaceHeader({
             <StatusBadge label={`✉ ${welcome.label}`} status={welcome.tone} />
           </a>
         ) : null}
-        {data.welcomeLetterSendable && founder ? <WelcomeLetterSendButton founderId={founder.id} /> : null}
+        {data.welcomeLetterSendable && founder ? <WelcomeLetterSendButton founderId={founder.id} companyId={companyId} /> : null}
       </div>
 
       {founder ? (
