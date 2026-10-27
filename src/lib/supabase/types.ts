@@ -88,7 +88,7 @@ export type CompanyMember = {
   id: string;
   company_id: string;
   user_id: string;
-  role: "owner" | "admin" | "member";
+  role: "owner" | "admin" | "member" | "managed_icfo";
   created_at: string;
 };
 
@@ -98,7 +98,7 @@ export type CompanyInvite = {
   inviter_id: string;
   invitee_email: string;
   token: string;
-  role: "admin" | "member";
+  role: "admin" | "member" | "managed_icfo";
   status: "pending" | "accepted" | "revoked";
   created_at: string;
   expires_at: string;

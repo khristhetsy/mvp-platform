@@ -9,10 +9,16 @@ import { requireApiProfile } from "@/lib/api/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { emailTeamInvite } from "@/lib/email/deal-room-emails";
+import { writeAuditLog } from "@/lib/data/audit";
+import {
+  MANAGED_ICFO_ROLE,
+  canGrantManagedIcfo,
+} from "@/lib/team/managed-icfo-core";
+import { ownerHasManagedIcfoPlan } from "@/lib/team/managed-icfo";
 
 const inviteSchema = z.object({
   email: z.string().email(),
-  role: z.enum(["admin", "member"]).default("member"),
+  role: z.enum(["admin", "member", "managed_icfo"]).default("member"),
 });
 
 export async function GET(request: Request) {
@@ -44,7 +50,17 @@ export async function GET(request: Request) {
 
   if (invitesError) return NextResponse.json({ error: "Query failed" }, { status: 500 });
 
-  return NextResponse.json({ members: members ?? [], invites: invites ?? [] });
+  // Tell the screen whether it may offer the Managed by iCFO role to this person.
+  const { data: mine } = await admin
+    .from("company_members")
+    .select("role")
+    .eq("company_id", company.id)
+    .eq("user_id", auth.profile.id)
+    .maybeSingle();
+  const managedIcfoAvailable =
+    canGrantManagedIcfo(mine?.role) && (await ownerHasManagedIcfoPlan(admin, company.id));
+
+  return NextResponse.json({ members: members ?? [], invites: invites ?? [], managedIcfoAvailable });
 }
 
 export async function POST(request: Request) {
@@ -70,8 +86,17 @@ export async function POST(request: Request) {
 
   if (myMemberError) return NextResponse.json({ error: "Query failed" }, { status: 500 });
 
-  if (!myMember || !["owner", "admin"].includes(myMember.role)) {
+  if (!myMember || !["owner", "admin", MANAGED_ICFO_ROLE].includes(myMember.role)) {
     return NextResponse.json({ error: "Only owners and admins can invite members." }, { status: 403 });
+  }
+
+  if (parsed.data.role === MANAGED_ICFO_ROLE) {
+    if (!canGrantManagedIcfo(myMember.role)) {
+      return NextResponse.json({ error: "Only the account Owner can add a Managed by iCFO user." }, { status: 403 });
+    }
+    if (!(await ownerHasManagedIcfoPlan(admin, company.id))) {
+      return NextResponse.json({ error: "Managed by iCFO is available on Premium, Done for you." }, { status: 403 });
+    }
   }
 
   // Check if user is already a member
@@ -121,6 +146,16 @@ export async function POST(request: Request) {
 
   if (error || !invite) {
     return NextResponse.json({ error: "Failed to create invite." }, { status: 500 });
+  }
+
+  if (parsed.data.role === MANAGED_ICFO_ROLE) {
+    await writeAuditLog(admin, {
+      userId: auth.profile.id,
+      action: "team.managed_icfo_invited",
+      entityType: "company_invite",
+      entityId: invite.id,
+      metadata: { company_id: company.id, invitee_email: parsed.data.email },
+    });
   }
 
   // Send invite email fire-and-forget

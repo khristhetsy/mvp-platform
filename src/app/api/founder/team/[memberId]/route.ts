@@ -6,6 +6,8 @@ import { NextResponse } from "next/server";
 import { requireApiProfile } from "@/lib/api/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
+import { writeAuditLog } from "@/lib/data/audit";
+import { MANAGED_ICFO_ROLE } from "@/lib/team/managed-icfo-core";
 
 export async function DELETE(
   request: Request,
@@ -31,7 +33,7 @@ export async function DELETE(
 
   if (myMemberError) return NextResponse.json({ error: "Query failed" }, { status: 500 });
 
-  if (!myMember || !["owner", "admin"].includes(myMember.role)) {
+  if (!myMember || !["owner", "admin", MANAGED_ICFO_ROLE].includes(myMember.role)) {
     return NextResponse.json({ error: "Only owners and admins can remove members." }, { status: 403 });
   }
 
@@ -53,6 +55,13 @@ export async function DELETE(
       return NextResponse.json({ error: "Cannot remove yourself." }, { status: 400 });
     }
 
+    if (member.role === MANAGED_ICFO_ROLE) {
+      // Only the Owner can end iCFO's management of the account.
+      if (myMember.role !== "owner") {
+        return NextResponse.json({ error: "Only the account Owner can remove a Managed by iCFO user." }, { status: 403 });
+      }
+    }
+
     const { error } = await admin
       .from("company_members")
       .delete()
@@ -60,6 +69,16 @@ export async function DELETE(
       .eq("company_id", company.id);
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+    if (member.role === MANAGED_ICFO_ROLE) {
+      await writeAuditLog(admin, {
+        userId: auth.profile.id,
+        action: "team.managed_icfo_removed",
+        entityType: "company_member",
+        entityId: memberId,
+        metadata: { company_id: company.id, removed_user_id: member.user_id },
+      });
+    }
     return NextResponse.json({ success: true, removed: "member" });
   }
 
