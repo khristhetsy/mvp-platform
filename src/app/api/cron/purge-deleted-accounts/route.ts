@@ -56,12 +56,13 @@ async function handle(request: Request) {
       // would keep charging with nobody able to cancel it.
       const { data: subRaw } = await admin
         .from("subscriptions")
-        .select("plan_type, ls_subscription_id, cancel_at_period_end, subscription_status")
+        .select("plan_type, ls_subscription_id, ls_variant_id, cancel_at_period_end, subscription_status")
         .eq("profile_id", row.id)
         .maybeSingle();
       const sub = subRaw as {
         plan_type: string;
         ls_subscription_id: string | null;
+        ls_variant_id: string | null;
         cancel_at_period_end: boolean | null;
         subscription_status: string;
       } | null;

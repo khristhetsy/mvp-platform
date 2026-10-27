@@ -10,22 +10,28 @@ export function isCardPlan(plan: PlanType | string | null | undefined): boolean 
   return plan === "founder_basic" || plan === "founder_professional";
 }
 
-type BillingSub = { plan_type?: string | null; ls_subscription_id?: string | null } | null | undefined;
+type BillingSub = { plan_type?: string | null; ls_subscription_id?: string | null; ls_variant_id?: string | null } | null | undefined;
 
 /**
- * A subscription that Lemon Squeezy bills: Basic, Professional or Premium with a
- * Lemon Squeezy subscription id. Premium without one is a bank wire subscription.
- * Cancelling, stopping payment and account deletion must go through Lemon Squeezy
- * for every card subscription, or it keeps charging.
+ * A subscription that Lemon Squeezy bills: Basic or Professional with a Lemon Squeezy
+ * subscription id, or Premium whose Lemon Squeezy variant is the Premium product.
+ *
+ * A wire Premium can still carry the id of the card subscription it replaced (the wire
+ * receipt cancels that subscription but keeps the id), so for Premium the id alone is
+ * not enough: the variant must be Premium's. Cancelling, stopping payment and account
+ * deletion must go through Lemon Squeezy for every card subscription, or it keeps charging.
  */
 export function isCardSubscription(sub: BillingSub): boolean {
   if (!sub?.ls_subscription_id) return false;
-  return isCardPlan(sub.plan_type) || sub.plan_type === "founder_premium";
+  if (isCardPlan(sub.plan_type)) return true;
+  if (sub.plan_type !== "founder_premium") return false;
+  const premiumVariant = process.env.LEMONSQUEEZY_VARIANT_ID_PREMIUM?.trim() ?? "";
+  return premiumVariant !== "" && String(sub.ls_variant_id ?? "") === premiumVariant;
 }
 
-/** Premium paid by bank wire (no Lemon Squeezy subscription). */
+/** Premium paid by bank wire: no Lemon Squeezy Premium subscription behind it. */
 export function isWirePremium(sub: BillingSub): boolean {
-  return sub?.plan_type === "founder_premium" && !sub.ls_subscription_id;
+  return sub?.plan_type === "founder_premium" && !isCardSubscription(sub);
 }
 
 /** Professional can move to Basic or Free. Basic can move to Free. */
