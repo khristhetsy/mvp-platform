@@ -15,6 +15,8 @@ import { isPaymentsEnabled } from "@/lib/billing/pricing-guard";
 import { PLAN_LABELS } from "@/lib/subscriptions/plans";
 import { subscriptionStatusLabel } from "@/lib/subscriptions/access";
 import { requireRole } from "@/lib/supabase/auth";
+import { canManageBilling } from "@/lib/billing/billing-access";
+import { BillingOwnerOnlyCard } from "@/components/billing/BillingOwnerOnlyCard";
 import { ensureSubscriptionForProfile, getSubscriptionForProfile } from "@/lib/subscriptions/get-subscription";
 import { priceShort } from "@/lib/subscriptions/pricing-catalog";
 import { loadPricing } from "@/lib/subscriptions/pricing-server";
@@ -48,6 +50,14 @@ export default async function BillingPage({
 
   if (profile.role !== "founder") {
     redirect("/upgrade");
+  }
+
+  if (!(await canManageBilling(profile.id))) {
+    return (
+      <FounderAppShell profileName={profile.full_name ?? profile.email ?? "Founder"} profileSubtitle="">
+        <BillingOwnerOnlyCard />
+      </FounderAppShell>
+    );
   }
 
   const subscription =

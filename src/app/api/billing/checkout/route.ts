@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUserProfile } from "@/lib/supabase/auth";
+import { billingOwnerOnlyResponse } from "@/lib/billing/billing-access";
 import { createCheckoutUrl } from "@/lib/lemonsqueezy";
 import { LS_VARIANT_IDS } from "@/lib/billing/pricing";
 import { isPaymentsEnabled } from "@/lib/billing/pricing-guard";
@@ -24,6 +25,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   try {
     const profile = await requireUserProfile();
+    const blocked = await billingOwnerOnlyResponse(profile.id);
+    if (blocked) return blocked;
     const { planType, refundPolicyAcceptedAt, refundPolicyVersion } = (await req.json()) as {
       planType: PlanType;
       refundPolicyAcceptedAt?: string;

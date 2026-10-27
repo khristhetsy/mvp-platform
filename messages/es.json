@@ -1251,6 +1251,8 @@
     "ask_structured_due_diligence_questions_and_req": "Formula preguntas estructuradas de diligencia debida y solicita documentos. No implica compromiso de financiación.",
     "billing": "Facturación",
     "billing_subscription": "Facturación y suscripción",
+    "billing_owner_only_title": "La facturación la administra el propietario de la cuenta",
+    "billing_owner_only_body": "Tu rol te da acceso a la plataforma. El plan, el método de pago y las facturas solo los ve el propietario.",
     "billing_overview": "Resumen de facturación",
     "board_meeting_prep": "Preparación de reunión de consejo",
     "board_meeting_prep_kit": "Kit de preparación de reunión de consejo",

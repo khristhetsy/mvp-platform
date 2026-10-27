@@ -5,6 +5,7 @@ import { normalizeUserRole } from "@/lib/api/admin";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createWireInvoice, getWireInstructions, listWireInvoicesForProfile } from "@/lib/billing/wire";
 import { recordFunnelEvent } from "@/lib/analytics/funnel";
+import { billingOwnerOnlyResponse } from "@/lib/billing/billing-access";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -14,6 +15,8 @@ export async function GET(): Promise<Response> {
   const profile = await getCurrentUserProfile();
   if (!profile) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   if (normalizeUserRole(profile.role) !== "founder") return NextResponse.json({ error: "Founders only." }, { status: 403 });
+  const blockedGet = await billingOwnerOnlyResponse(profile.id);
+  if (blockedGet) return blockedGet;
   const [invoices, instructions] = await Promise.all([listWireInvoicesForProfile(profile.id), getWireInstructions()]);
   return NextResponse.json({ invoices, instructions });
 }
@@ -25,6 +28,8 @@ export async function POST(req: Request): Promise<Response> {
   const profile = await getCurrentUserProfile();
   if (!profile) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   if (normalizeUserRole(profile.role) !== "founder") return NextResponse.json({ error: "Only founders can request a Premium invoice." }, { status: 403 });
+  const blockedPost = await billingOwnerOnlyResponse(profile.id);
+  if (blockedPost) return blockedPost;
 
   const parsed = bodySchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Choose monthly or quarterly billing." }, { status: 400 });

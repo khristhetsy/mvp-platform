@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createUpgradeRequest } from "@/lib/billing/upgrade-requests";
 import { parseUpgradeFeature, parseUpgradePlan, parseUpgradeRequestType } from "@/lib/billing/upgrade";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { billingOwnerOnlyResponse } from "@/lib/billing/billing-access";
 
 export async function POST(request: Request) {
   const supabase = await createServerSupabaseClient();
@@ -13,6 +14,8 @@ export async function POST(request: Request) {
   if (userError || !user) {
     return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   }
+  const blocked = await billingOwnerOnlyResponse(user.id);
+  if (blocked) return blocked;
 
   const body = await request.json().catch(() => ({}));
   const requestType = parseUpgradeRequestType(body.requestType);

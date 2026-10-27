@@ -9,6 +9,8 @@ import { requireRole } from "@/lib/supabase/auth";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { ensureSubscriptionForProfile, getSubscriptionForProfile } from "@/lib/subscriptions/get-subscription";
 import { SettingsSidebarNav } from "../SettingsSidebarNav";
+import { canManageBilling } from "@/lib/billing/billing-access";
+import { BillingOwnerOnlyCard } from "@/components/billing/BillingOwnerOnlyCard";
 import { loadFounderWireState } from "@/lib/billing/wire";
 import { wireDatePT } from "@/lib/billing/wire-core";
 import { WireCheckoutPanel, WireInvoiceList } from "@/components/billing/WireCheckoutPanel";
@@ -27,6 +29,24 @@ export default async function FounderSettingsBillingPage() {
   const t = await getTranslations("appPages");
   const tb = await getTranslations("billingManage");
   const { company } = await getActiveCompanyForUser(profile);
+
+  if (!(await canManageBilling(profile.id))) {
+    return (
+      <FounderAppShell
+        profileName={profile.full_name ?? profile.email ?? "Founder"}
+        profileSubtitle={company?.company_name ?? "Your company"}
+      >
+        <PageHeader
+          eyebrow={t("settings")}
+          title={t("billing_subscription")}
+          description={t("manage_your_plan_payment_method_and_usage")}
+        />
+        <SettingsSidebarNav active="billing" />
+        <BillingOwnerOnlyCard />
+      </FounderAppShell>
+    );
+  }
+
   const subscription =
     (await getSubscriptionForProfile(profile.id)) ??
     (await ensureSubscriptionForProfile({ profileId: profile.id, role: profile.role }));

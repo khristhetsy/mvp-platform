@@ -1251,6 +1251,8 @@
     "ask_structured_due_diligence_questions_and_req": "Ask structured due diligence questions and request documents. No funding commitment implied.",
     "billing": "Billing",
     "billing_subscription": "Billing & subscription",
+    "billing_owner_only_title": "Billing is managed by the account Owner",
+    "billing_owner_only_body": "Your role gives you access to the platform. Plan, payment method and invoices are visible to the Owner only.",
     "billing_overview": "Billing overview",
     "board_meeting_prep": "Board meeting prep",
     "board_meeting_prep_kit": "Board meeting prep kit",
