@@ -145,3 +145,21 @@ describe("stage advancement is never gated by CRR", () => {
     expect(m.reached).toBe(true);
   });
 });
+
+describe("Preparation menu: rows with real data behind them", () => {
+  const done = { hasBusinessPlan: true, hasPitchDeck: true, hasCapTable: true, hasFinancialModel: true };
+
+  it("shows a row Done when its file is on record, and counts it as measured", () => {
+    const m = getStageMirror(journey("qualify", done), "qualify");
+    for (const label of ["Business plan", "Pitch deck", "Cap table", "Financial model"]) {
+      expect(item(m, label)?.status).toBe("done");
+    }
+    expect(m.measuredCount).toBe(6);
+  });
+
+  it("keeps an unmet row as an open step, never as a blocker of the stage", () => {
+    const m = getStageMirror(journey("qualify", { ...done, hasPitchDeck: false, crrQualified: true }), "qualify");
+    expect(item(m, "Pitch deck")?.status).toBe("todo");
+    expect(m.items.some((i) => i.status === "attention")).toBe(false);
+  });
+});

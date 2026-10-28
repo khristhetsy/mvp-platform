@@ -33,7 +33,11 @@ type ConditionKey =
   | "requiredDocsUploaded"
   | "hasDealRoom"
   | "hasInvestorInterest"
-  | "outreachComplete";
+  | "outreachComplete"
+  | "hasBusinessPlan"
+  | "hasPitchDeck"
+  | "hasCapTable"
+  | "hasFinancialModel";
 
 type MenuDef = {
   label: string;
@@ -46,6 +50,11 @@ type MenuDef = {
    * the "Request introduction" action inside them that the gate holds.
    */
   partialCondition?: ConditionKey;
+  /**
+   * Has a real signal but never blocks the stage: met ⇒ "done", unmet ⇒ "todo" (still an
+   * open step for the founder, not an "attention" row that holds advancement).
+   */
+  doneWhen?: ConditionKey;
 };
 
 // Pulled from the founder V2 nav (founderWorkspaceNavSectionsV2). Keep in sync if
@@ -65,9 +74,9 @@ const STAGE_MENU: Record<JourneyStage, MenuDef[]> = {
     { label: "Readiness checklist", href: "/founder/readiness" },
     { label: "Data room", href: "/founder/readiness/data-room" },
     { label: "Documents", href: "/founder/documents", condition: "requiredDocsUploaded" },
-    { label: "Business plan", href: "/founder/business-plan" },
-    { label: "Pitch deck", href: "/founder/pitch-deck" },
-    { label: "Cap table", href: "/founder/cap-table" },
+    { label: "Business plan", href: "/founder/business-plan", doneWhen: "hasBusinessPlan" },
+    { label: "Pitch deck", href: "/founder/pitch-deck", doneWhen: "hasPitchDeck" },
+    { label: "Cap table", href: "/founder/cap-table", doneWhen: "hasCapTable" },
     { label: "Valuation Studio", href: "/founder/valuation" },
     // The founder's diligence toolkit, in the order the founder menu lists it.
     // No signal is wired for these yet, so they render as "Open" and count as
@@ -75,7 +84,7 @@ const STAGE_MENU: Record<JourneyStage, MenuDef[]> = {
     { label: "Pitch deck analyzer", href: "/founder/pitch-deck-analyzer" },
     { label: "Market claim grader", href: "/founder/market-claim" },
     { label: "Round structure", href: "/founder/round-structure" },
-    { label: "Financial model", href: "/founder/financial-model" },
+    { label: "Financial model", href: "/founder/financial-model", doneWhen: "hasFinancialModel" },
     { label: "AI diligence report", href: "/founder/report" },
     { label: "Diligence & review", href: "/founder/readiness/diligence" },
     { label: "Prep & practice", href: "/founder/pitch-practice" },
@@ -153,6 +162,9 @@ export function getStageMirror(journey: FounderJourneyState, stage: JourneyStage
     // "Browse only" and deliberately NOT counted as blocking — the row the gate
     // belongs to carries that, and counting it here would say the same thing three
     // times in one header.
+    if (d.doneWhen) {
+      return { label: d.label, href: d.href, status: conditionMet(journey, d.doneWhen) ? "done" : "todo" };
+    }
     if (d.partialCondition) {
       return { label: d.label, href: d.href, status: conditionMet(journey, d.partialCondition) ? "done" : "partial" };
     }
@@ -166,7 +178,7 @@ export function getStageMirror(journey: FounderJourneyState, stage: JourneyStage
   // A partially gated item IS measured — it has a wired signal — so it belongs in
   // the denominator even though it never blocks.
   const doneCount = items.filter((i) => i.status === "done").length;
-  const measuredCount = defs.filter((d) => d.condition || d.partialCondition).length;
+  const measuredCount = defs.filter((d) => d.condition || d.partialCondition || d.doneWhen).length;
   const unmet = items.filter((i) => i.status === "attention" || i.status === "missing").map((i) => i.label);
 
   let recommendation: string;

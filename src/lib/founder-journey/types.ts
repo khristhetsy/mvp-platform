@@ -26,6 +26,16 @@ export type StageConditions = {
    * founder journey evaluator leaves it unset. Never gates stage advancement.
    */
   outreachComplete?: boolean;
+  /**
+   * Whether the founder's current (non-archived) uploads, or a finalized in-platform
+   * plan, cover these Preparation rows. Filled in by the admin company workspace only
+   * (see stage-menu-signals.ts); the founder journey evaluator leaves them unset and
+   * none of them gates stage advancement.
+   */
+  hasBusinessPlan?: boolean;
+  hasPitchDeck?: boolean;
+  hasCapTable?: boolean;
+  hasFinancialModel?: boolean;
 };
 
 export type FounderJourneyState = {

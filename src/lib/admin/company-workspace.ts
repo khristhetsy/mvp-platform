@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
   AdminCompanyWorkspaceData,
   AdminCompanyWorkspaceSpvSummary,
@@ -34,6 +35,7 @@ import type { DocumentRecord } from "@/lib/supabase/types";
 import { crrFor } from "@/lib/crr/crr-for";
 import { diagnoseAllStages } from "@/lib/admin/stage-diagnosis";
 import { loadOutreachStatus } from "@/lib/founder/outreach-status";
+import { stageMenuDocSignals } from "@/lib/admin/stage-menu-signals";
 import { MANUAL_OUTREACH_GATE_KEY } from "@/lib/notifications/manual-outreach-reminders";
 import { latestWelcomeLetter } from "@/lib/notifications/founder-welcome-letter";
 
@@ -412,7 +414,20 @@ export async function getAdminCompanyWorkspace(companyId: string): Promise<Admin
         }
       : null,
   };
-  const journey = { ...journeyState, conditions: { ...journeyState.conditions, outreachComplete: outreachStatus.complete } };
+  // business_plans is not in the generated types, so the plan row is read through a raw client.
+  const { data: planRow } = await (admin as unknown as SupabaseClient)
+    .from("business_plans")
+    .select("status")
+    .eq("company_id", companyId)
+    .maybeSingle();
+  const docSignals = stageMenuDocSignals(
+    companyRow.documents,
+    (planRow as { status?: string | null } | null)?.status === "finalized",
+  );
+  const journey = {
+    ...journeyState,
+    conditions: { ...journeyState.conditions, outreachComplete: outreachStatus.complete, ...docSignals },
+  };
 
   const pitchDeckPresent = companyRow.documents.some(
     (doc) => doc.document_type?.toUpperCase() === "PITCH_DECK",
