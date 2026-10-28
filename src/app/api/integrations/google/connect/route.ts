@@ -8,6 +8,7 @@ import {
   googleOAuthCookieOptions,
 } from "@/lib/integrations/google-oauth-state";
 import { requireRole } from "@/lib/supabase/auth";
+import { actingBlock } from "@/lib/admin/acting-central";
 
 const ALLOWED_RETURN_PATHS = new Set([
   "/founder/settings",
@@ -25,6 +26,8 @@ const ALLOWED_RETURN_PATHS = new Set([
 ]);
 
 export async function GET(request: Request) {
+  const actingBlocked = await actingBlock();
+  if (actingBlocked) return actingBlocked;
   if (!isGoogleOAuthConfigured()) {
     return NextResponse.json({ error: "Google OAuth is not configured." }, { status: 503 });
   }

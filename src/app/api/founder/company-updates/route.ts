@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { isFounderInvestorCrmApiError, requireFounderInvestorCrmApi } from "@/lib/api/founder-crm";
 import { createFounderCompanyUpdate, listFounderCompanyUpdates } from "@/lib/company-updates/company-updates";
 import { companyUpdateCreateSchema } from "@/lib/validation";
+import { actingBlock } from "@/lib/admin/acting-central";
 
 export async function GET() {
   const auth = await requireFounderInvestorCrmApi();
@@ -18,6 +19,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const actingBlocked = await actingBlock();
+  if (actingBlocked) return actingBlocked;
   const auth = await requireFounderInvestorCrmApi();
   if (isFounderInvestorCrmApiError(auth)) {
     return auth.error;

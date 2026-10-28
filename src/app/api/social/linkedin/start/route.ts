@@ -7,6 +7,7 @@ import {
 } from "@/lib/social/linkedin-oauth";
 import { originFromRequest } from "@/lib/social/request-origin";
 import { CONNECT_META_COOKIE, encodeConnectMeta, findOpenInvite, type ConnectMeta } from "@/lib/social/account-admin";
+import { actingBlock } from "@/lib/admin/acting-central";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,8 @@ export const dynamic = "force-dynamic";
  *   fresh=1                                 — ask LinkedIn for a fresh sign-in (second account)
  */
 export async function GET(request: Request) {
+  const actingBlocked = await actingBlock();
+  if (actingBlocked) return actingBlocked;
   const profile = await requireRole(["admin", "analyst"]);
   const origin = originFromRequest(request);
   const env = getLinkedInOAuthEnv(origin);

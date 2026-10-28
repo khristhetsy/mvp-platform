@@ -23,6 +23,7 @@ import { CONNECT_META_COOKIE, applyConnectMeta, decodeConnectMeta } from "@/lib/
 import { FOUNDER_CONNECT_COOKIE, FOUNDER_SOCIAL_PATH } from "@/lib/social/founder-connect";
 import { getFounderSocialUsage } from "@/lib/social/founder-limits";
 import { logFounderSocialEvent } from "@/lib/social/activity";
+import { actingBlock } from "@/lib/admin/acting-central";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +36,8 @@ function backTo(origin: string, status: string, message?: string, founderFlow = 
 }
 
 export async function GET(request: Request) {
+  const actingBlocked = await actingBlock();
+  if (actingBlocked) return actingBlocked;
   const requestUrl = new URL(request.url);
   const origin = originFromRequest(request);
   const code = requestUrl.searchParams.get("code");

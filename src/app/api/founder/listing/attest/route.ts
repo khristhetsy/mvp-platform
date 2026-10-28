@@ -3,6 +3,7 @@ import { writeAuditLog } from "@/lib/data/audit";
 import { loadListingChecklist, markListingCompleteIfReady } from "@/lib/listing/listing-server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { resolveFounderOwnCompany } from "@/lib/founder-api/own-company";
+import { actingBlock } from "@/lib/admin/acting-central";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,8 @@ export const dynamic = "force-dynamic";
  * Body: { confirm: true }.
  */
 export async function POST(request: Request) {
+  const actingBlocked = await actingBlock();
+  if (actingBlocked) return actingBlocked;
   const resolved = await resolveFounderOwnCompany();
   if ("error" in resolved) return resolved.error;
   const { profile, companyId } = resolved;

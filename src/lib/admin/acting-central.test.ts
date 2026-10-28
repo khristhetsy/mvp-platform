@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const state = vi.hoisted(() => ({
   cookie: "act-cookie-1" as string | undefined,
   zone: "founder" as string | null,
+  referer: null as string | null,
   noRequest: false,
   ctx: { founderId: "founder-1", staffId: "staff-1" } as { founderId: string; staffId: string } | null,
   getActingContext: vi.fn(),
@@ -19,7 +20,7 @@ vi.mock("next/headers", () => ({
       getAll: () => [{ name: "sb-abc-auth-token", value: "session-value" }],
     };
   },
-  headers: async () => ({ get: (n: string) => (n === "x-icapos-zone" ? state.zone : null) }),
+  headers: async () => ({ get: (n: string) => (n === "x-icapos-zone" ? state.zone : n === "referer" ? state.referer : null) }),
 }));
 vi.mock("@/lib/admin/act-on-behalf", () => ({
   ACT_COOKIE: "icapos_act_as",
@@ -57,6 +58,7 @@ beforeEach(() => {
   process.env.ACT_AS_FOUNDER_CENTRAL = "1";
   state.cookie = `act-cookie-${Math.random()}`;
   state.zone = "founder";
+  state.referer = null;
   state.noRequest = false;
   state.ctx = { founderId: "founder-1", staffId: "staff-1" };
   state.sessions = 0;
@@ -93,6 +95,27 @@ describe("resolveCentralActingClient", () => {
 
   it("applies on routes outside the proxy matcher (no zone)", async () => {
     state.zone = null;
+    const { resolveCentralActingClient } = await load();
+    expect(await resolveCentralActingClient()).toEqual({ asFounder: "founder-jwt" });
+  });
+
+  it("keeps calls made from admin pages on the staff identity (shared routes carry no zone)", async () => {
+    state.zone = null;
+    state.referer = "https://icapos.com/admin/sales/contacts";
+    const { resolveCentralActingClient } = await load();
+    expect(await resolveCentralActingClient()).toBeNull();
+  });
+
+  it("runs calls made from founder pages as the founder (shared routes carry no zone)", async () => {
+    state.zone = null;
+    state.referer = "https://icapos.com/founder/dashboard";
+    const { resolveCentralActingClient } = await load();
+    expect(await resolveCentralActingClient()).toEqual({ asFounder: "founder-jwt" });
+  });
+
+  it("trusts the zone header over the Referer", async () => {
+    state.zone = "founder";
+    state.referer = "https://icapos.com/admin/x";
     const { resolveCentralActingClient } = await load();
     expect(await resolveCentralActingClient()).toEqual({ asFounder: "founder-jwt" });
   });

@@ -8,6 +8,7 @@ import {
   archiveNotifications,
   deleteNotifications,
 } from "@/lib/notifications/notifications";
+import { actingBlock } from "@/lib/admin/acting-central";
 
 const UNREAD_CAP = 100;
 
@@ -44,6 +45,8 @@ export async function GET(request: Request) {
 // POST — bulk actions: { action: "read" | "archive" | "delete", ids: string[] }.
 // With no body it marks all read (back-compat).
 export async function POST(request: Request) {
+  const actingBlocked = await actingBlock();
+  if (actingBlocked) return actingBlocked;
   const supabase = await createServerSupabaseClient();
   const {
     data: { user },

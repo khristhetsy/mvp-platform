@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { markNotificationRead } from "@/lib/notifications/notifications";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { actingBlock } from "@/lib/admin/acting-central";
 
 export async function PATCH(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const actingBlocked = await actingBlock();
+  if (actingBlocked) return actingBlocked;
   const supabase = await createServerSupabaseClient();
   const {
     data: { user },

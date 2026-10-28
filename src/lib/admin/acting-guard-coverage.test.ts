@@ -89,6 +89,29 @@ describe("billing routes are owner only", () => {
   }
 });
 
+describe("connections, legal confirmations and statements to investors", () => {
+  for (const rel of [
+    "src/app/api/social/facebook/start/route.ts",
+    "src/app/api/social/facebook/callback/route.ts",
+    "src/app/api/social/linkedin/start/route.ts",
+    "src/app/api/social/linkedin/callback/route.ts",
+    "src/app/api/social/reddit/start/route.ts",
+    "src/app/api/social/reddit/callback/route.ts",
+    "src/app/api/integrations/google/connect/route.ts",
+    "src/app/api/integrations/google/callback/route.ts",
+    "src/app/api/founder/listing/attest/route.ts",
+    "src/app/api/founder/listing/opt-in/route.ts",
+    "src/app/api/founder/company-updates/route.ts",
+    "src/app/api/founder/data-room/questions/[id]/answer/route.ts",
+    "src/app/api/notifications/route.ts",
+    "src/app/api/notifications/[id]/route.ts",
+  ]) {
+    it(`${rel} refuses while acting`, () => {
+      expect(fs.readFileSync(path.join(ROOT, rel), "utf8")).toContain("await actingBlock()");
+    });
+  }
+});
+
 describe("other actions that stay with the Owner while acting", () => {
   for (const rel of [
     "src/app/api/founder/team/route.ts",

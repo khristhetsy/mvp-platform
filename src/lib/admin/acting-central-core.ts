@@ -28,3 +28,28 @@ export function sessionExpiryMs(expiresInSeconds: number | null | undefined, now
   const seconds = typeof expiresInSeconds === "number" && expiresInSeconds > 0 ? expiresInSeconds : 3600;
   return now + Math.max(60_000, seconds * 1000 - 5 * 60_000);
 }
+
+/**
+ * Many calls the staff screens make go to shared routes outside the proxy matcher
+ * (notifications, tasks, sales), so they carry no zone. The page that made the call is in
+ * the Referer, so a call made from an admin or investor page stays on the staff identity.
+ * The Referer can only turn acting off here, never on.
+ */
+export function zoneFromReferer(referer: string | null | undefined): string | null {
+  if (!referer) return null;
+  let path: string;
+  try {
+    path = new URL(referer).pathname;
+  } catch {
+    return null;
+  }
+  for (const zone of ["admin", "investor", "founder"]) {
+    if (path === `/${zone}` || path.startsWith(`/${zone}/`)) return zone;
+  }
+  return null;
+}
+
+/** The zone header wins; the Referer fills in when the route is outside the proxy matcher. */
+export function effectiveZone(zoneHeader: string | null | undefined, referer: string | null | undefined): string | null {
+  return zoneHeader ? zoneHeader : zoneFromReferer(referer);
+}
