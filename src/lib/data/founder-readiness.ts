@@ -122,10 +122,14 @@ export function computeReadinessScore(
   notApplicableCodes: readonly string[] = [],
 ) {
   const na = new Set(notApplicableCodes.map((c) => c.toUpperCase()));
+  const uploaded = new Set(uploadedTypeCodes.map((c) => c.toUpperCase()));
   const missingCount = requiredLabels.filter((label) => {
     const code = documentTypeCode(label);
     if (na.has(code)) return false; // N/A — neither missing nor required.
-    return !uploadedTypeCodes.includes(code);
+    // Same aliases the checklist uses, so a file typed FINANCIAL_STATEMENTS satisfies
+    // the "Financial model" slot here too and the two screens agree.
+    const accepted = [code, ...(DOC_TYPE_ALIASES[code] ?? [])];
+    return !accepted.some((c) => uploaded.has(c));
   }).length;
 
   return Math.max(55, 90 - missingCount * 6);

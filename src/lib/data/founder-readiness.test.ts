@@ -50,6 +50,14 @@ describe("computeReadinessScore", () => {
       computeReadinessScore(["PITCH_DECK", "CAP_TABLE", "FINANCIAL_STATEMENTS"], required),
     ).toBe(84);
   });
+
+  it("counts FINANCIAL_STATEMENTS as the Financial model slot, like the checklist does", () => {
+    expect(
+      computeReadinessScore(["FINANCIAL_STATEMENTS"], ["Financial model"]),
+    ).toBe(90);
+    expect(computeReadinessScore(["FINANCIALS"], ["Financial model"])).toBe(90);
+    expect(computeReadinessScore([], ["Financial model"])).toBe(84);
+  });
 });
 
 describe("buildDocumentChecklist", () => {
