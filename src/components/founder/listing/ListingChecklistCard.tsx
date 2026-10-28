@@ -71,9 +71,10 @@ export function ListingChecklistCard({
     return (
       <WorkspacePanel
         title="You're listed in the Private Market"
+        stackActionOnMobile
         subtitle={`Listed since ${formatPlatformDateTime(state.listingCompletedAt as string, { dateStyle: "medium" })}. Matched investors in our network can see your listing summary. Your documents stay private until you share them.`}
         action={
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="grid grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap">
             <button
               type="button"
               disabled={busy}
@@ -82,7 +83,7 @@ export function ListingChecklistCard({
             >
               {busy ? "Unlisting…" : "Unlist"}
             </button>
-            <Link href="/founder/investor-interest" className="cap-btn-primary rounded-lg px-3.5 py-1.5 text-sm font-medium">
+            <Link href="/founder/investor-interest" className="cap-btn-primary rounded-lg px-3.5 py-1.5 text-center text-sm font-medium">
               See investor interest
             </Link>
           </div>
