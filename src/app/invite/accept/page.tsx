@@ -4,7 +4,8 @@ import { getTranslations } from "next-intl/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { writeAuditLog } from "@/lib/data/audit";
-import { MANAGED_ICFO_ROLE, isIcfoManagerOrAdmin } from "@/lib/team/managed-icfo-core";
+import { MANAGED_ICFO_ROLE, isIcfoManagerOrAdmin, managedAcceptDestination } from "@/lib/team/managed-icfo-core";
+import { AutoRedirect } from "@/components/invite/AutoRedirect";
 import { getEffectivePermissions } from "@/lib/rbac/effective-permissions";
 import { ownerHasManagedIcfoPlan } from "@/lib/team/managed-icfo";
 
@@ -63,6 +64,18 @@ export default async function InviteAcceptPage({
   }
 
   const isManaged = invite.role === MANAGED_ICFO_ROLE;
+  const destination = managedAcceptDestination(invite.company_id);
+  // The founder's name for the button, falling back to the company name.
+  let accountLabel = companyName;
+  if (isManaged) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: owner } = await (admin as any).from("companies").select("founder_id").eq("id", invite.company_id).maybeSingle();
+    if (owner?.founder_id) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: founder } = await (admin as any).from("profiles").select("full_name").eq("id", owner.founder_id).maybeSingle();
+      if (founder?.full_name) accountLabel = `${founder.full_name}'s account`;
+    }
+  }
   if (isManaged) {
     // Managed by iCFO is for the iCFO team. Who accepts is decided by the signed in
     // account (staff Manager or Admin), not by the email the invite was sent to,
@@ -98,6 +111,7 @@ export default async function InviteAcceptPage({
         companyName={companyName}
         message="You're already a member of this company."
         alreadyMember
+        {...(isManaged ? { href: destination, cta: `Go to ${accountLabel} →` } : {})}
       />
     );
   }
@@ -132,8 +146,11 @@ export default async function InviteAcceptPage({
     return (
       <SuccessPage
         companyName={companyName}
-        href="/admin"
-        message={`You are now listed as Managed by iCFO on ${companyName}. Open the company from the admin workspace.`}
+        title={`You now manage ${companyName}`}
+        message={`Taking you to ${accountLabel} in 3 seconds. Billing and the Owner's settings stay with the Owner.`}
+        href={destination}
+        cta={`Go to ${accountLabel} →`}
+        autoRedirect
       />
     );
   }
@@ -196,7 +213,7 @@ function ErrorPage({ title, message }: { title: string; message: string }) {
   );
 }
 
-function SuccessPage({ companyName, message, alreadyMember, href = "/founder" }: { companyName: string; message?: string; alreadyMember?: boolean; href?: string }) {
+function SuccessPage({ companyName, message, alreadyMember, href = "/founder", title, cta, autoRedirect }: { companyName: string; message?: string; alreadyMember?: boolean; href?: string; title?: string; cta?: string; autoRedirect?: boolean }) {
   return (
     <Shell>
       <div style={{
@@ -210,7 +227,7 @@ function SuccessPage({ companyName, message, alreadyMember, href = "/founder" }:
         </svg>
       </div>
       <h1 style={{ fontSize: 20, fontWeight: 800, color: "#111827", margin: "0 0 10px" }}>
-        {alreadyMember ? "Already a member" : `Welcome to ${companyName}!`}
+        {title ?? (alreadyMember ? "Already a member" : `Welcome to ${companyName}!`)}
       </h1>
       <p style={{ fontSize: 14, color: "#6b7280", lineHeight: 1.6, margin: "0 0 28px" }}>
         {message ?? `You've joined the ${companyName} workspace. You can now collaborate on investor outreach, documents, and fundraising.`}
@@ -223,8 +240,9 @@ function SuccessPage({ companyName, message, alreadyMember, href = "/founder" }:
           textDecoration: "none",
         }}
       >
-        Go to dashboard →
+        {cta ?? "Go to dashboard →"}
       </Link>
+      {autoRedirect ? <AutoRedirect href={href} /> : null}
     </Shell>
   );
 }
