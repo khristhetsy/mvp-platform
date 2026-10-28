@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 /** Starts an acting session for this founder, then opens the founder's workspace as them. */
-export function OpenAsFounderButton({ founderId, founderName }: { founderId: string; founderName: string }) {
+export function OpenAsFounderButton({ founderId, founderName, label }: { founderId: string; founderName: string; label?: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   return (
@@ -33,7 +33,7 @@ export function OpenAsFounderButton({ founderId, founderName }: { founderId: str
         }}
         className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
       >
-        {busy ? "Opening…" : `Open as ${founderName}`}
+        {busy ? "Opening…" : (label ?? `Open as ${founderName}`)}
       </button>
       {error ? <span className="text-xs text-red-700">{error}</span> : null}
     </div>

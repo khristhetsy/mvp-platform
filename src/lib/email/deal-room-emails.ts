@@ -241,12 +241,37 @@ export async function emailTeamInvite(input: {
   inviterName: string;
   companyName: string;
   inviteToken: string;
+  /** "managed_icfo" sends the iCFO team wording instead of the co-founder wording. */
+  role?: string;
 }) {
   // Invitees may not have an account yet — fall back to their saved locale if
   // one exists, otherwise English.
   const locale = await getUserLocaleByEmail(input.inviteeEmail);
   const t = emailTranslator(locale);
   const acceptUrl = `${APP_URL}/invite/accept?token=${input.inviteToken}`;
+
+  if (input.role === "managed_icfo") {
+    const { html } = buildDealRoomEmail(t, {
+      subject: t("dealRoom.managedInvite.subject", { company: input.companyName }),
+      eyebrow: t("dealRoom.managedInvite.eyebrow"),
+      heading: t("dealRoom.managedInvite.heading", { company: input.companyName }),
+      bodyKey: "dealRoom.managedInvite.body",
+      vars: { inviter: input.inviterName, company: input.companyName },
+      tip: t("dealRoom.managedInvite.body2"),
+      cta: t("dealRoom.managedInvite.cta"),
+      url: acceptUrl,
+      context: input.companyName,
+      footerReason: t("dealRoom.managedInvite.expiry"),
+    });
+    await sendEmail({
+      to: input.inviteeEmail,
+      subject: t("dealRoom.managedInvite.subject", { company: input.companyName }),
+      html,
+      text: t("dealRoom.managedInvite.text", { inviter: input.inviterName, company: input.companyName, link: acceptUrl }),
+    });
+    return;
+  }
+
   const { html } = buildDealRoomEmail(t, {
     subject: t("dealRoom.teamInvite.subject", { company: input.companyName }),
     eyebrow: t("dealRoom.teamInvite.eyebrow"),

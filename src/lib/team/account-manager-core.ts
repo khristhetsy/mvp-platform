@@ -35,3 +35,14 @@ export function planReassignment(input: { existingManagerIds: string[]; newManag
     add: Boolean(keep) && !input.existingManagerIds.includes(keep as string),
   };
 }
+
+/** May this staff member open the account as the founder from a list row? */
+export function canOpenAsFounder(input: {
+  available: boolean;
+  hasPermission: boolean;
+  staffId: string | null;
+  managerId: string | null;
+}): boolean {
+  if (!input.available || !input.staffId) return false;
+  return input.hasPermission || input.managerId === input.staffId;
+}
