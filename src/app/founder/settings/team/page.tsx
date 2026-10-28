@@ -5,6 +5,7 @@ import { requireRole } from "@/lib/supabase/auth";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { SettingsSidebarNav } from "../SettingsSidebarNav";
 import { TeamManagementPanel } from "@/components/founder/TeamManagementPanel";
+import { IcfoTeamActivityPanel } from "@/components/founder/IcfoTeamActivityPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +42,8 @@ export default async function FounderSettingsTeamPage() {
           )}
         </div>
       </section>
+
+      {company ? <IcfoTeamActivityPanel founderId={profile.id} companyId={company.id} /> : null}
     </FounderAppShell>
   );
 }

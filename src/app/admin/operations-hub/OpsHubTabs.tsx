@@ -15,6 +15,7 @@ const TABS: { label: string; href: string }[] = [
   { label: "Diligence", href: "/admin/diligence" },
   { label: "Deals", href: "/admin/matching" },
   { label: "Compliance", href: "/admin/compliance" },
+  { label: "Managed accounts", href: "/admin/operations-hub/managed" },
   { label: "Settings & Tools", href: "/admin/operations-hub/settings" },
 ];
 

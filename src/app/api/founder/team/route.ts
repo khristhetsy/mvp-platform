@@ -169,6 +169,7 @@ export async function POST(request: Request) {
     inviterName: auth.profile.full_name ?? auth.profile.email ?? "Your co-founder",
     companyName: company.company_name,
     inviteToken: invite.token,
+    role: parsed.data.role,
   });
 
   return NextResponse.json({ success: true, inviteId: invite.id });

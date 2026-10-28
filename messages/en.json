@@ -250,6 +250,16 @@
         "expiry": "This invitation expires in 7 days. If you didn’t expect this email, you can safely ignore it.",
         "subject": "You're invited to join {company} on iCapOS",
         "text": "{inviter} invited you to join {company} on iCapOS. Accept here: {link}"
+      },
+      "managedInvite": {
+        "eyebrow": "iCFO team access",
+        "heading": "You’ve been added to manage {company}",
+        "body": "<strong>{inviter}</strong> has added you to the iCFO team that manages the <strong>{company}</strong> account on iCapOS.",
+        "body2": "As a Managed by iCFO member you can work the account for them. Billing and the account Owner’s settings stay with the Owner.",
+        "cta": "Accept access",
+        "expiry": "This invitation expires in 7 days. If you didn’t expect this email, you can safely ignore it.",
+        "subject": "You've been added to manage {company} on iCapOS",
+        "text": "{inviter} added you to the iCFO team managing {company} on iCapOS. Accept here: {link}"
       }
     },
     "dataRoom": {

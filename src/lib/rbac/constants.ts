@@ -1,4 +1,4 @@
-export const INTERNAL_ROLE_SLUGS = ["regular_user", "manager", "admin", "super_admin"] as const;
+export const INTERNAL_ROLE_SLUGS = ["regular_user", "manager", "client_manager", "admin", "super_admin"] as const;
 
 export type InternalRoleSlug = (typeof INTERNAL_ROLE_SLUGS)[number];
 
@@ -83,6 +83,7 @@ export const INTERNAL_PERMISSION_LABELS: Record<InternalPermission, string> = {
 export const INTERNAL_ROLE_LABELS: Record<InternalRoleSlug, string> = {
   regular_user: "Regular User",
   manager: "Manager",
+  client_manager: "Client Manager",
   admin: "Admin",
   super_admin: "Super Admin",
 };
@@ -90,6 +91,7 @@ export const INTERNAL_ROLE_LABELS: Record<InternalRoleSlug, string> = {
 export const INTERNAL_ROLE_RANK: Record<InternalRoleSlug, number> = {
   regular_user: 10,
   manager: 20,
+  client_manager: 25,
   admin: 30,
   super_admin: 40,
 };
@@ -100,6 +102,28 @@ export const INTERNAL_ROLE_RANK: Record<InternalRoleSlug, number> = {
 export const LEGACY_STAFF_PERMISSIONS: InternalPermission[] = INTERNAL_PERMISSIONS.filter(
   (p) => p !== "manage_users" && p !== "assign_roles" && p !== "act_on_behalf",
 );
+
+/**
+ * Client Manager: iCFO staff who fully manage founder accounts (Done for you
+ * clients). Everything needed to run a founder's account, including acting as the
+ * founder, and nothing about billing, users, roles, settings, accounts or
+ * integrations. Seeded by migration 20261027002_client_manager_role.sql.
+ */
+export const CLIENT_MANAGER_PERMISSIONS: InternalPermission[] = [
+  "view_admin_dashboard",
+  "view_actions",
+  "manage_actions",
+  "manage_companies",
+  "manage_investors",
+  "manage_deal_rooms",
+  "manage_crm",
+  "manage_matching",
+  "manage_learning",
+  "manage_diligence",
+  "review_documents",
+  "view_events",
+  "act_on_behalf",
+];
 
 export const SUPER_ADMIN_ONLY_PERMISSIONS: InternalPermission[] = [
   "manage_users",

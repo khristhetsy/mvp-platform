@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isStaffProfileRole, planPremiumAssignment, planReassignment } from "@/lib/team/account-manager-core";
+import { canOpenAsFounder, isStaffProfileRole, planPremiumAssignment, planReassignment } from "@/lib/team/account-manager-core";
 
 describe("premium account manager rules", () => {
   it("assigns the default manager to a new Premium account", () => {
@@ -27,5 +27,15 @@ describe("premium account manager rules", () => {
     expect(isStaffProfileRole("admin")).toBe(true);
     expect(isStaffProfileRole("Analyst")).toBe(true);
     for (const r of ["founder", "investor", "", null, undefined]) expect(isStaffProfileRole(r)).toBe(false);
+  });
+
+  it("lets staff open an account they manage, or any account with the permission", () => {
+    const base = { available: true, hasPermission: false, staffId: "s1", managerId: "s1" };
+    expect(canOpenAsFounder(base)).toBe(true);
+    expect(canOpenAsFounder({ ...base, managerId: "s2" })).toBe(false);
+    expect(canOpenAsFounder({ ...base, managerId: "s2", hasPermission: true })).toBe(true);
+    expect(canOpenAsFounder({ ...base, available: false })).toBe(false);
+    expect(canOpenAsFounder({ ...base, staffId: null })).toBe(false);
+    expect(canOpenAsFounder({ ...base, managerId: null })).toBe(false);
   });
 });

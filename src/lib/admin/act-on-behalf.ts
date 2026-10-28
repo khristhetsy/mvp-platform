@@ -174,6 +174,16 @@ export async function canOfferActOnBehalf(founderId: string): Promise<boolean> {
   return staffMayActOn(staffId, founderId);
 }
 
+/** What this staff member may do with "Open as founder", loaded once for a list. */
+export async function getActingCapability(): Promise<{ available: boolean; staffId: string | null; hasPermission: boolean }> {
+  if (!isCentralActingEnabled(process.env.ACT_AS_FOUNDER_CENTRAL) || !signingSecret()) {
+    return { available: false, staffId: null, hasPermission: false };
+  }
+  const staffId = await currentUserId();
+  if (!staffId) return { available: false, staffId: null, hasPermission: false };
+  return { available: true, staffId, hasPermission: await staffHasPermission(staffId) };
+}
+
 export type StartResult = { ok: true } | { ok: false; error: string };
 
 /** Begin acting as a founder. Guarded: caller must be staff with the permission
@@ -203,12 +213,21 @@ export async function startActOnBehalf(founderId: string): Promise<StartResult> 
   // Best-effort audit — attributed to the acting staff member.
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (admin as unknown as SupabaseClient<any>).from("operational_activity_events").insert({
+    // event_category, entity_type, title and source_module are required columns. Without
+    // them this insert was rejected and the session start was never recorded.
+    const { error: eventError } = await (admin as unknown as SupabaseClient<any>).from("operational_activity_events").insert({
       event_type: "act_on_behalf_started",
-      actor_user_id: staffId,
+      event_category: "founder",
+      entity_type: "founder",
       entity_id: founderId,
+      actor_user_id: staffId,
+      related_user_id: founderId,
+      title: "iCFO staff opened this account as the founder",
+      source_module: "act_on_behalf",
+      visibility: "founder",
       metadata: { founder_id: founderId },
     });
+    if (eventError) console.warn("[act-on-behalf] could not record the session start", eventError.message);
   } catch {
     /* audit is best-effort; never block entering the session */
   }

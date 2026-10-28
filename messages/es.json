@@ -250,6 +250,16 @@
         "expiry": "Esta invitación caduca en 7 días. Si no esperabas este correo, puedes ignorarlo sin problema.",
         "subject": "Te invitaron a unirte a {company} en iCapOS",
         "text": "{inviter} te invitó a unirte a {company} en iCapOS. Acéptala aquí: {link}"
+      },
+      "managedInvite": {
+        "eyebrow": "Acceso del equipo iCFO",
+        "heading": "Te han añadido para gestionar {company}",
+        "body": "<strong>{inviter}</strong> te ha añadido al equipo de iCFO que gestiona la cuenta de <strong>{company}</strong> en iCapOS.",
+        "body2": "Como miembro Managed by iCFO puedes trabajar la cuenta en su nombre. La facturación y los ajustes del propietario siguen siendo del propietario.",
+        "cta": "Aceptar acceso",
+        "expiry": "Esta invitación vence en 7 días. Si no esperabas este correo, puedes ignorarlo.",
+        "subject": "Te han añadido para gestionar {company} en iCapOS",
+        "text": "{inviter} te añadió al equipo de iCFO que gestiona {company} en iCapOS. Acepta aquí: {link}"
       }
     },
     "dataRoom": {
