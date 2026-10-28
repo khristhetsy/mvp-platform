@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canGrantManagedIcfo, isIcfoManagerOrAdmin, isManagedIcfoPlan, staffMayActFor } from "@/lib/team/managed-icfo-core";
+import { canGrantManagedIcfo, isIcfoManagerOrAdmin, isManagedIcfoPlan, managedAcceptDestination, staffMayActFor } from "@/lib/team/managed-icfo-core";
 
 describe("managed by iCFO rules", () => {
   it("lets only the owner or a managed user grant the role", () => {
@@ -39,5 +39,12 @@ describe("managed by iCFO rules", () => {
     for (const r of ["admin", "member", "owner", null, undefined]) {
       expect(staffMayActFor({ hasActOnBehalfPermission: false, memberRole: r, ownerPlanActive: true })).toBe(false);
     }
+  });
+
+  it("sends Accept access to the company page, and falls back to the admin home", () => {
+    expect(managedAcceptDestination("12a73bee-941b-4c68-9068-3cc33f8e326d")).toBe("/admin/companies/12a73bee-941b-4c68-9068-3cc33f8e326d");
+    expect(managedAcceptDestination("../../founder")).toBe("/admin");
+    expect(managedAcceptDestination("")).toBe("/admin");
+    expect(managedAcceptDestination(null)).toBe("/admin");
   });
 });

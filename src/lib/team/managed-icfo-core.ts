@@ -48,3 +48,10 @@ export function staffMayActFor(input: {
   if (input.hasActOnBehalfPermission) return true;
   return input.memberRole === MANAGED_ICFO_ROLE && input.ownerPlanActive;
 }
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Where Accept access ends: the company's page in the admin workspace, where Open as founder is. */
+export function managedAcceptDestination(companyId: string | null | undefined): string {
+  return companyId && UUID.test(companyId) ? `/admin/companies/${companyId}` : "/admin";
+}
