@@ -5,6 +5,7 @@ import { normalizeUserRole, STAFF_ROLES } from "@/lib/api/admin";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getWireInstructions, getWireInvoice } from "@/lib/billing/wire";
 import { renderWireInvoicePdf } from "@/lib/billing/wire-invoice-pdf";
+import { billingOwnerOnlyResponse } from "@/lib/billing/billing-access";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -24,6 +25,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   // Same answer for "missing" and "not yours", so ids can't be probed.
   if (!invoice || (!isStaff && invoice.profile_id !== profile.id)) {
     return NextResponse.json({ error: "Invoice not found." }, { status: 404 });
+  }
+  // A founder's own invoice is billing: Owner only, and never for staff acting as the founder.
+  if (!isStaff) {
+    const blocked = await billingOwnerOnlyResponse(profile.id);
+    if (blocked) return blocked;
   }
 
   /* eslint-disable-next-line @typescript-eslint/no-explicit-any */

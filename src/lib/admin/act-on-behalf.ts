@@ -94,9 +94,12 @@ async function staffHasPermission(userId: string): Promise<boolean> {
 async function staffHasManagedAccess(staffId: string, founderId: string): Promise<boolean> {
   try {
     const admin = createServiceRoleClient() as unknown as SupabaseClient<Database>;
-    const { data: staff } = await admin.from("profiles").select("role").eq("id", staffId).maybeSingle();
-    const staffRole = String((staff as { role?: string } | null)?.role ?? "").toLowerCase();
+    const { data: staff } = await admin.from("profiles").select("role, is_active").eq("id", staffId).maybeSingle();
+    const staffRow = staff as { role?: string; is_active?: boolean | null } | null;
+    const staffRole = String(staffRow?.role ?? "").toLowerCase();
     if (staffRole !== "admin" && staffRole !== "analyst") return false;
+    // A deactivated staff member keeps their membership row but loses access at once.
+    if (staffRow?.is_active === false) return false;
 
     const { data: company } = await admin
       .from("companies")

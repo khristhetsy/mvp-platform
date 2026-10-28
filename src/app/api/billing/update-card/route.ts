@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireUserProfile } from "@/lib/supabase/auth";
 import { getUpdatePaymentMethodUrl } from "@/lib/lemonsqueezy";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { billingOwnerOnlyResponse } from "@/lib/billing/billing-access";
 
 /**
  * Returns Lemon Squeezy's hosted "update card" link for the signed in founder's own
@@ -10,6 +11,8 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 export async function POST(): Promise<NextResponse> {
   try {
     const profile = await requireUserProfile();
+    const blocked = await billingOwnerOnlyResponse(profile.id);
+    if (blocked) return blocked;
     const supabase = await createServerSupabaseClient();
 
     const { data } = await supabase
