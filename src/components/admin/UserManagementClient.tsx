@@ -349,11 +349,11 @@ export function UserManagementClient() {
           <input type="checkbox" className="h-4 w-4 rounded" checked={selectedIds.size === filtered.length && filtered.length > 0} onChange={toggleAll} />
           <span className="hidden text-xs text-slate-500 max-sm:inline">{t("selectAll")}</span>
           <span className="flex-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400 max-sm:hidden">{t("colUser")}</span>
-          <span className="w-20 text-[11px] font-semibold uppercase tracking-wide text-slate-400 max-sm:hidden">{t("colRole")}</span>
-          <span className="w-20 text-[11px] font-semibold uppercase tracking-wide text-slate-400 max-sm:hidden">{t("colStatus")}</span>
-          {departments.length > 0 && <span className="hidden w-44 text-[11px] font-semibold uppercase tracking-wide text-slate-400 xl:block">Departments</span>}
-          <span className="w-24 text-[11px] font-semibold uppercase tracking-wide text-slate-400 max-sm:hidden">{t("colLastSeen")}</span>
-          <span className="w-52 max-sm:hidden"></span>
+          <span className="w-20 shrink-0 text-[11px] font-semibold uppercase tracking-wide text-slate-400 max-sm:hidden">{t("colRole")}</span>
+          <span className="w-20 shrink-0 text-[11px] font-semibold uppercase tracking-wide text-slate-400 max-sm:hidden">{t("colStatus")}</span>
+          {departments.length > 0 && <span className="hidden w-44 shrink-0 text-[11px] font-semibold uppercase tracking-wide text-slate-400 xl:block">Departments</span>}
+          <span className="w-24 shrink-0 text-[11px] font-semibold uppercase tracking-wide text-slate-400 max-sm:hidden">{t("colLastSeen")}</span>
+          <span className="w-64 shrink-0 max-sm:hidden"></span>
         </div>
 
         {/* Rows */}
@@ -388,14 +388,14 @@ export function UserManagementClient() {
                 </div>
 
                 {/* Role badge */}
-                <div className="w-20 max-sm:col-start-2 max-sm:row-start-2 max-sm:w-auto">
+                <div className="w-20 shrink-0 max-sm:col-start-2 max-sm:row-start-2 max-sm:w-auto">
                   <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${ROLE_COLORS[user.role] ?? "bg-slate-100 text-slate-700"}`}>
                     {t(`role.${user.role}`)}
                   </span>
                 </div>
 
                 {/* Status badge */}
-                <div className="w-20 max-sm:col-start-3 max-sm:row-start-1 max-sm:w-auto max-sm:justify-self-end">
+                <div className="w-20 shrink-0 max-sm:col-start-3 max-sm:row-start-1 max-sm:w-auto max-sm:justify-self-end">
                   <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_COLORS[user.status]}`}>
                     {t(`status.${user.status}`)}
                   </span>
@@ -403,7 +403,7 @@ export function UserManagementClient() {
 
                 {/* Departments (internal users only) */}
                 {departments.length > 0 && (
-                  <div className="hidden w-44 xl:block">
+                  <div className="hidden w-44 shrink-0 xl:block">
                     {INTERNAL_ROLES.has(user.role) ? (
                       <DeptChips departments={departments} memberIds={memberMap[user.id] ?? []} onToggle={(deptId, member) => void toggleDept(user.id, deptId, member)} disabled={isInactive} />
                     ) : (
@@ -413,7 +413,7 @@ export function UserManagementClient() {
                 )}
 
                 {/* Last seen */}
-                <div className="w-24 text-xs text-slate-500 max-sm:col-start-3 max-sm:row-start-2 max-sm:w-auto max-sm:justify-self-end max-sm:whitespace-nowrap">{user.last_seen_label}</div>
+                <div className="w-24 shrink-0 text-xs text-slate-500 max-sm:col-start-3 max-sm:row-start-2 max-sm:w-auto max-sm:justify-self-end max-sm:whitespace-nowrap">{user.last_seen_label}</div>
 
                 {/* Actions */}
                 <div className="flex w-64 shrink-0 items-center justify-end gap-1.5 max-sm:col-span-3 max-sm:row-start-3 max-sm:w-full max-sm:flex-wrap max-sm:justify-start">
