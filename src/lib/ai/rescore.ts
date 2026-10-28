@@ -8,6 +8,7 @@ import { loadActiveSet } from "@/lib/crr/weight-sets-db";
 import { scoreColumnsFor } from "@/lib/crr/weight-sets";
 import { stageToProfile } from "@/lib/crr/profiles";
 import { normalizeFundingStage } from "@/lib/crr/select-score";
+import { loadBusinessPlanInputs } from "@/lib/ai/business-plan-inputs";
 
 export type RescoreResult = { ok: boolean; totalScore?: number; reason?: string };
 
@@ -33,11 +34,19 @@ export async function rescoreCompanyReadiness(
     .map((d) => ({ type: d.document_type as string, summary: d.ai_summary as string }));
   const uploadedDocumentTypes = (documents ?? []).flatMap((d) => (d.document_type ? [d.document_type] : []));
 
+  // The in-platform business plan is a source too: its text is read like a
+  // business-plan document, and its raise amount stands in when the profile has none.
+  const plan = await loadBusinessPlanInputs(supabase, companyId);
+  if (plan.summary) {
+    documentSummaries.push({ type: "BUSINESS_PLAN", summary: plan.summary });
+    uploadedDocumentTypes.push("BUSINESS_PLAN");
+  }
+
   const result = await scoreCompanyReadiness({
     companyName: company.company_name,
     industry: company.industry,
     revenueStage: company.revenue_stage,
-    fundingAmount: company.funding_amount ? Number(company.funding_amount) : null,
+    fundingAmount: company.funding_amount ? Number(company.funding_amount) : plan.raiseAmount,
     documentSummaries,
     uploadedDocumentTypes,
   });

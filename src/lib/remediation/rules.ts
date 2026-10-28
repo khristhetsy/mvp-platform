@@ -204,8 +204,9 @@ export function buildRemediationTaskDrafts(input: {
       related_feature: "/founder/readiness",
     });
   } else {
-    const score = input.diligenceReport.readiness_score ?? 0;
-    if (score < READINESS_SCORE_THRESHOLD) {
+    // A report with no score yet is unmeasured, not 0%: no "Preparation is 0%" task.
+    const score = input.diligenceReport.readiness_score;
+    if (score != null && score < READINESS_SCORE_THRESHOLD) {
       tasks.push({
         source_type: "diligence_gap",
         source_key: "readiness:score_below_threshold",

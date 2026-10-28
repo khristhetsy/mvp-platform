@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { loadInvestableScore } from "@/lib/founder/investable-score";
+import { loadBusinessPlanInputs } from "@/lib/ai/business-plan-inputs";
 import { InvestableScoreBadge } from "@/components/founder/InvestableScoreBadge";
 import { parseUseOfFunds } from "@/lib/founder/use-of-funds";
 import { UseOfCapitalBar } from "@/components/founder/UseOfCapitalBar";
@@ -125,6 +126,11 @@ export default async function InvestorOnePagerPage({
   const stageLabel = company.revenue_stage
     ? (STAGE_LABELS[company.revenue_stage] ?? company.revenue_stage)
     : null;
+
+  // "Raising" falls back to the business plan's raise amount when the profile has none.
+  const raiseAmount = company.funding_amount
+    ? Number(company.funding_amount)
+    : (await loadBusinessPlanInputs(createServiceRoleClient(), company.id)).raiseAmount;
 
   const investableScore = company.founder_id
     ? await loadInvestableScore(createServiceRoleClient(), company.founder_id)
@@ -277,7 +283,7 @@ export default async function InvestorOnePagerPage({
         }}>
           <MetricCard
             label="Raising"
-            value={company.funding_amount ? formatFunding(company.funding_amount) : "TBD"}
+            value={raiseAmount ? formatFunding(raiseAmount) : "TBD"}
             accent
           />
           <MetricCard

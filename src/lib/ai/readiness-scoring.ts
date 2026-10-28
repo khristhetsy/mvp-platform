@@ -644,6 +644,8 @@ function scoreCustomerTraction(
       "power purchase agreement", "ppa", "off-take agreement", "offtake",
       "energy supply agreement", "capacity agreement", "feed-in tariff",
       "virtual ppa", "vppa", "long-term contract", "energy contract",
+      // Demand signals for manufacturing and recycling companies.
+      "letter of intent", "expression of interest", "purchase order", "supply agreement",
     ];
     const CT_PROJECT_KEYWORDS = [
       "project deployed", "project online", "commercial operation", "cod",
@@ -1292,6 +1294,8 @@ function scoreUnitEconomics(
       "capex per mw", "capex per kw", "capital cost per mw", "$/mw", "$/kw",
       "project irr", "irr", "net present value", "npv", "project economics",
       "opex", "operations and maintenance", "o&m",
+      // Cleantech manufacturing and recycling companies show unit economics this way.
+      "gross margin", "unit economics", "cost per unit", "per pallet", "payback", "break-even", "ebitda",
     ];
     const CT_SCALE_KEYWORDS = [
       "cost reduction", "learning curve", "price decline", "grid parity",

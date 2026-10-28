@@ -8,6 +8,7 @@
 
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { loadBusinessPlanInputs } from "@/lib/ai/business-plan-inputs";
 import { requireApiProfile } from "@/lib/api/auth";
 import { scoreCompanyReadiness } from "@/lib/ai/readiness-scoring";
 import { loadActiveSet } from "@/lib/crr/weight-sets-db";
@@ -61,12 +62,19 @@ export async function POST(request: Request) {
   const uploadedDocumentTypes = (documents ?? [])
     .flatMap((d) => (d.document_type ? [d.document_type] : []));
 
+  // The in-platform business plan is a source too (see business-plan-inputs.ts).
+  const plan = await loadBusinessPlanInputs(auth.supabase, companyId);
+  if (plan.summary) {
+    documentSummaries.push({ type: "BUSINESS_PLAN", summary: plan.summary });
+    uploadedDocumentTypes.push("BUSINESS_PLAN");
+  }
+
   // Run Claude scoring
   const result = await scoreCompanyReadiness({
     companyName: company.company_name,
     industry: company.industry,
     revenueStage: company.revenue_stage,
-    fundingAmount: company.funding_amount ? Number(company.funding_amount) : null,
+    fundingAmount: company.funding_amount ? Number(company.funding_amount) : plan.raiseAmount,
     documentSummaries,
     uploadedDocumentTypes,
   });
