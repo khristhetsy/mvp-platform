@@ -9,6 +9,8 @@ import { OfferingTypePrompt } from "@/components/founder/OfferingTypePrompt";
 import { FounderTour } from "@/components/founder/FounderTour";
 import { AccountSwitcherServer } from "@/components/account/AccountSwitcherServer";
 import { ActingAsBanner } from "@/components/admin/ActingAsBanner";
+import { PastDueBanner } from "@/components/billing/PastDueBanner";
+import { pastDueState } from "@/lib/billing/past-due";
 
 type FounderAppShellProps = Readonly<{
   children: React.ReactNode;
@@ -19,6 +21,8 @@ type FounderAppShellProps = Readonly<{
 export async function FounderAppShell({ children, profileName, profileSubtitle }: FounderAppShellProps) {
   const profile = await getCurrentUserProfile();
   let planBadge = null;
+  let pastDue: ReturnType<typeof pastDueState> = null;
+  let pastDueEndsAt: string | null = null;
   let needsClassification = false;
 
   if (profile?.role === "founder") {
@@ -26,6 +30,8 @@ export async function FounderAppShell({ children, profileName, profileSubtitle }
       (await getSubscriptionForProfile(profile.id)) ??
       (await ensureSubscriptionForProfile({ profileId: profile.id, role: profile.role }));
     planBadge = <SubscriptionPlanBadge subscription={subscription} />;
+    pastDue = pastDueState(subscription);
+    pastDueEndsAt = subscription.grace_period_ends_at;
     void maybeNotifyTrialStatus(profile.id, subscription);
 
     // Prompt existing founders to attest their capital structure (dual-lane §8).
@@ -61,6 +67,7 @@ export async function FounderAppShell({ children, profileName, profileSubtitle }
           through, so a staff member can never be acting on a founder's behalf
           without the warning on screen. Renders null when nobody is acting. */}
       <ActingAsBanner />
+      <PastDueBanner state={pastDue} endsAt={pastDueEndsAt} />
       {needsClassification ? <OfferingTypePrompt needsClassification /> : null}
       {profile?.role === "founder" ? <FounderTour /> : null}
       {children}

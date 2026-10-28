@@ -13,7 +13,7 @@ import type { SubscriptionStatus, PlanType } from "@/lib/subscriptions/plans";
  * card kept full access indefinitely — every subsequent `past_due` event
  * rewrote `active` again. This makes the grace period explicit and finite.
  */
-export const PAST_DUE_GRACE_DAYS = 14;
+export const PAST_DUE_GRACE_DAYS = 5;
 
 export type StatusMapping = {
   status: SubscriptionStatus;

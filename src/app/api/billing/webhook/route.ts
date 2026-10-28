@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyWebhookSignature, type LsWebhookPayload } from "@/lib/lemonsqueezy";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { mapStatus, variantToPlan } from "@/lib/billing/webhook-mapping";
+import { isNewPastDue, keepGraceWindow } from "@/lib/billing/past-due";
+import { notifyPastDue } from "@/lib/billing/past-due-alerts";
 import { PLAN_PRICES } from "@/lib/subscriptions/plans";
 import { reportServerFailure } from "@/lib/monitoring/operational-events";
 import { recordFunnelEvent } from "@/lib/analytics/funnel";
@@ -47,7 +49,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const admin = createServiceRoleClient() as any;
 
-  let query = admin.from("subscriptions").select("id, profile_id, pending_plan_type, plan_type");
+  let query = admin.from("subscriptions").select("id, profile_id, pending_plan_type, plan_type, grace_period_ends_at, cancel_at_period_end");
   if (lsSubId) {
     query = query.eq("ls_subscription_id", lsSubId);
   } else if (profileId) {
@@ -58,7 +60,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   const { data: existing, error: lookupError } = (await query.maybeSingle()) as {
-    data: { id: string; profile_id: string; pending_plan_type: string | null; plan_type: string } | null;
+    data: {
+      id: string;
+      profile_id: string;
+      pending_plan_type: string | null;
+      plan_type: string;
+      grace_period_ends_at: string | null;
+      cancel_at_period_end: boolean | null;
+    } | null;
     error: { message: string } | null;
   };
   if (lookupError) {
@@ -98,6 +107,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
+  // Repeated past_due events for one failed payment must not restart the
+  // countdown, so keep the date from the first failure.
+  const graceInput = {
+    existingEndsAt: existing?.grace_period_ends_at ?? null,
+    existingCancelAtPeriodEnd: Boolean(existing?.cancel_at_period_end),
+    mappedEndsAt: mapped.gracePeriodEndsAt,
+    mappedCancelAtPeriodEnd: mapped.cancelAtPeriodEnd,
+  };
+  const graceEndsAt = keepGraceWindow(graceInput);
+
   const now = new Date().toISOString();
   const patch: Record<string, unknown> = {
     ls_subscription_id: lsSubId,
@@ -110,7 +129,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     current_period_start: now,
     current_period_end: attributes.renews_at ?? attributes.ends_at ?? null,
     // A past_due subscriber keeps access only until the grace period ends.
-    grace_period_ends_at: mapped.gracePeriodEndsAt,
+    grace_period_ends_at: graceEndsAt,
     cancel_at_period_end: mapped.cancelAtPeriodEnd,
     updated_at: now,
   };
@@ -143,6 +162,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         plan,
       });
       return NextResponse.json({ error: "Update failed" }, { status: 500 });
+    }
+    // First failed renewal payment: tell the founder (and staff, for Premium).
+    if (graceEndsAt && isNewPastDue(graceInput)) {
+      await notifyPastDue({
+        profileId: existing.profile_id,
+        subscriptionId: existing.id,
+        plan: plan ?? existing.plan_type,
+        endsAt: graceEndsAt,
+      });
     }
     const step = funnelStepFor(event_name);
     if (step && mapped.status === "active") {

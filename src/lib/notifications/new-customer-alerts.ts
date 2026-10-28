@@ -68,7 +68,7 @@ export function newCustomerLink(companyId?: string | null): string {
   return companyId ? `/admin/companies/${companyId}` : "/admin/companies";
 }
 
-async function staffRecipients(): Promise<Array<{ id: string; email: string | null }>> {
+export async function staffRecipients(): Promise<Array<{ id: string; email: string | null }>> {
   const admin = createServiceRoleClient();
   const { data } = await admin.from("profiles").select("id, email").in("role", ["admin", "analyst"]);
   return (data ?? []) as Array<{ id: string; email: string | null }>;
