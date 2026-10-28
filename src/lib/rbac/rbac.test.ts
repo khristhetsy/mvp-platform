@@ -12,6 +12,7 @@ import {
   LEGACY_STAFF_PERMISSIONS,
   SUPER_ADMIN_ONLY_PERMISSIONS,
   CLIENT_MANAGER_PERMISSIONS,
+  MANAGER_PERMISSIONS,
   INTERNAL_ROLE_LABELS,
   INTERNAL_ROLE_RANK,
   isInternalPermission,
@@ -424,6 +425,20 @@ describe("Client Manager role", () => {
     for (const p of ["manage_billing", "manage_users", "assign_roles", "manage_settings", "manage_accounts", "manage_integrations"] as const) {
       expect(CLIENT_MANAGER_PERMISSIONS).not.toContain(p);
     }
+  });
+
+  it("holds everything a Manager holds, so Manager and Client Manager never need to be combined", () => {
+    for (const p of MANAGER_PERMISSIONS) expect(CLIENT_MANAGER_PERMISSIONS).toContain(p);
+    for (const p of ["approve_marketplace", "manage_compliance", "manage_events", "manage_reports", "manage_spvs", "view_analytics", "view_insights"] as const) {
+      expect(CLIENT_MANAGER_PERMISSIONS).toContain(p);
+    }
+    expect(CLIENT_MANAGER_PERMISSIONS.length).toBeGreaterThan(MANAGER_PERMISSIONS.length);
+  });
+
+  it("lists every permission once", () => {
+    expect(new Set(CLIENT_MANAGER_PERMISSIONS).size).toBe(CLIENT_MANAGER_PERMISSIONS.length);
+    expect(new Set(MANAGER_PERMISSIONS).size).toBe(MANAGER_PERMISSIONS.length);
+    for (const p of CLIENT_MANAGER_PERMISSIONS) expect(isInternalPermission(p)).toBe(true);
   });
 
   it("ranks above Manager and below Admin", () => {

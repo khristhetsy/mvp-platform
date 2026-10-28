@@ -104,12 +104,11 @@ export const LEGACY_STAFF_PERMISSIONS: InternalPermission[] = INTERNAL_PERMISSIO
 );
 
 /**
- * Client Manager: iCFO staff who fully manage founder accounts (Done for you
- * clients). Everything needed to run a founder's account, including acting as the
- * founder, and nothing about billing, users, roles, settings, accounts or
- * integrations. Seeded by migration 20261027002_client_manager_role.sql.
+ * What a Manager holds, as seeded in the database. Client Manager ranks above Manager, so
+ * it holds all of these plus its own additions (each level holds everything the level
+ * below holds). Keep in step with the Manager grants in the migrations.
  */
-export const CLIENT_MANAGER_PERMISSIONS: InternalPermission[] = [
+export const MANAGER_PERMISSIONS: InternalPermission[] = [
   "view_admin_dashboard",
   "view_actions",
   "manage_actions",
@@ -118,10 +117,28 @@ export const CLIENT_MANAGER_PERMISSIONS: InternalPermission[] = [
   "manage_deal_rooms",
   "manage_crm",
   "manage_matching",
-  "manage_learning",
   "manage_diligence",
+  "manage_compliance",
+  "manage_spvs",
+  "manage_events",
+  "manage_reports",
   "review_documents",
+  "approve_marketplace",
   "view_events",
+  "view_analytics",
+  "view_insights",
+];
+
+/**
+ * Client Manager: iCFO staff who fully manage founder accounts (Done for you
+ * clients). Everything a Manager holds, plus acting as the founder and managing
+ * learning, and nothing about billing, users, roles, settings, accounts or
+ * integrations. Seeded by migrations 20261027002_client_manager_role.sql and
+ * 20261028002_client_manager_includes_manager.sql.
+ */
+export const CLIENT_MANAGER_PERMISSIONS: InternalPermission[] = [
+  ...MANAGER_PERMISSIONS,
+  "manage_learning",
   "act_on_behalf",
 ];
 
