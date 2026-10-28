@@ -4,6 +4,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { writeAuditLog } from "@/lib/data/audit";
 import { isPurgeDue } from "@/lib/account/deletion";
 import { resumeSubscription } from "@/lib/lemonsqueezy";
+import { isActingAsFounder } from "@/lib/admin/acting-central";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,9 @@ export async function POST() {
     data: { user },
   } = await userSupabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+  if (await isActingAsFounder()) {
+    return NextResponse.json({ error: "An account can only be restored by its Owner." }, { status: 403 });
+  }
 
   const admin = createServiceRoleClient();
   const { data: profile } = await admin
