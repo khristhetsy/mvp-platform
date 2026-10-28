@@ -1,5 +1,7 @@
 import { marketingDb } from "./db";
-import { makeUnsubscribeToken, sendMarketingEmail, emailConfigured } from "./send";
+import { makeUnsubscribeToken, sendMarketingEmail, emailConfigured, interpolate, htmlToText } from "./send";
+import { logActivity } from "@/lib/sales/activity";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { isUnsubscribed } from "./contacts";
 import type { MarketingSequence, MarketingSequenceStep } from "./types";
 import { needsEmailReview } from "./recipient";
@@ -437,6 +439,37 @@ export async function getPendingBatches(): Promise<PendingBatch[]> {
   }));
 }
 
+/**
+ * Logs a sequence email as a Notes entry on the recipient's open Sales opportunities (or on the
+ * contact when there is none), so it shows beside emails sent from the composer. Best-effort:
+ * never blocks or fails the send.
+ */
+async function logSequenceEmailNote(input: {
+  email: string; firstName?: string | null; company?: string | null;
+  sequenceName: string; stepOrder: number; subject: string; htmlBody: string; textBody?: string | null;
+}): Promise<void> {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sdb: any = createServiceRoleClient();
+    const email = input.email.trim().toLowerCase();
+    const { data: contact } = await sdb.from("crm_contacts").select("id").ilike("email", email).maybeSingle();
+    const contactId = (contact?.id as string | undefined) ?? null;
+    if (!contactId) return;
+    const vars = { first_name: input.firstName ?? "", company: input.company ?? "", email: input.email };
+    const subject = interpolate(input.subject, vars);
+    const body = (input.textBody ? interpolate(input.textBody, vars) : htmlToText(interpolate(input.htmlBody, vars))).slice(0, 20000);
+    const meta = { via: "icapos", sequence: { name: input.sequenceName, step: input.stepOrder }, email: { to: input.email, toName: input.firstName ?? null, subject, body } };
+    const summary = `Sequence email sent: ${subject.slice(0, 160)}`;
+    const { data: opps } = await sdb.from("sales_opportunities").select("id").eq("contact_crm_id", contactId).eq("status", "open");
+    const open = (opps ?? []) as Array<{ id: string }>;
+    if (open.length > 0) {
+      for (const o of open) await logActivity({ kind: "email", summary, opportunityId: o.id, meta });
+    } else {
+      await logActivity({ kind: "email", summary, contactCrmId: contactId, meta });
+    }
+  } catch { /* logging must never break the send */ }
+}
+
 /** Human release: actually send the batch's queued emails, then advance enrollments. */
 // Release (send) a pending batch. Processes at most `limit` recipients per call so a
 // large batch (e.g. 500) never exceeds the serverless time budget — the caller loops
@@ -454,6 +487,9 @@ export async function releaseSequenceBatch(batchId: string, releasedBy: string |
     .eq("batch_id", batchId)
     .eq("status", "awaiting_approval")
     .limit(limit);
+
+  const { data: seqRow } = await db.from("marketing_sequences").select("name").eq("id", batch.sequence_id).maybeSingle();
+  const seqName = (seqRow?.name as string | undefined) ?? "Sequence";
 
   let sent = 0, failed = 0;
   for (const e of (enrollments ?? [])) {
@@ -479,7 +515,14 @@ export async function releaseSequenceBatch(batchId: string, releasedBy: string |
       resend_id: result.resend_id, event_type: result.ok ? "sent" : "failed",
       metadata: result.error ? { error: result.error } : {},
     });
-    if (result.ok) sent++; else failed++;
+    if (result.ok) {
+      sent++;
+      await logSequenceEmailNote({
+        email: contact.email, firstName: contact.first_name, company: contact.company,
+        sequenceName: seqName, stepOrder: step.step_order,
+        subject: step.template.subject, htmlBody: step.template.html_body, textBody: step.template.text_body,
+      });
+    } else failed++;
     await advanceEnrollment(db, e, step);
     await new Promise((r) => setTimeout(r, 120));
   }
