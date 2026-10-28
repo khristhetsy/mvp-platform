@@ -4,6 +4,7 @@ import { requireFounderSocial, ownsCampaign } from "@/lib/social/founder-auth";
 import { createCampaign, listCampaigns, setCampaignArchived, updateCampaign } from "@/lib/social/campaigns";
 import { campaignFunnels, periodStart, nextPeriodStart } from "@/lib/social/funnel";
 import { founderIntroBreakdown } from "@/lib/social/founder-intros";
+import { actingBlock } from "@/lib/admin/acting-central";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,8 @@ export async function GET(): Promise<Response> {
 }
 
 export async function POST(req: NextRequest): Promise<Response> {
+  const actingBlocked = await actingBlock();
+  if (actingBlocked) return actingBlocked;
   const auth = await requireFounderSocial();
   if ("error" in auth) return auth.error;
   const parsed = z.object({ name: z.string().min(1).max(80) }).safeParse(await req.json().catch(() => ({})));
@@ -34,6 +37,8 @@ export async function POST(req: NextRequest): Promise<Response> {
 }
 
 export async function PATCH(req: NextRequest): Promise<Response> {
+  const actingBlocked = await actingBlock();
+  if (actingBlocked) return actingBlocked;
   const auth = await requireFounderSocial();
   if ("error" in auth) return auth.error;
   const parsed = z.object({ id: z.string().uuid(), name: z.string().min(1).max(80).optional(), archived: z.boolean().optional() }).safeParse(await req.json().catch(() => ({})));

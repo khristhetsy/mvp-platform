@@ -17,6 +17,7 @@ const schema = z.object({
   onboardingSlaDays: z.number().int().min(1).max(90).optional(),
   diligenceSlaDays: z.number().int().min(1).max(90).optional(),
   defaultManagerId: z.string().uuid().nullable().optional(),
+  premiumAccountManagerId: z.string().uuid().nullable().optional(),
   emailEscalations: z.boolean().optional(),
 });
 

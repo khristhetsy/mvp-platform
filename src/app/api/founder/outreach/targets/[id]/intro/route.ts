@@ -9,10 +9,13 @@ import { getUserPlan } from "@/lib/subscriptions/get-subscription";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import { capReached, loadIntroQuota } from "@/lib/matching/intro-quota";
 import { PLATFORM_TZ } from "@/lib/time/platform-tz";
+import { actingBlock } from "@/lib/admin/acting-central";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function POST(request: Request, context: RouteContext) {
+  const actingBlocked = await actingBlock();
+  if (actingBlocked) return actingBlocked;
   const auth = await requireFounderInvestorCrmApi();
   if ("error" in auth) {
     return auth.error;

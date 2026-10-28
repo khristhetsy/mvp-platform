@@ -18,6 +18,7 @@ import { absoluteUrl } from "@/lib/activity/email-templates";
 import { createNotification } from "@/lib/notifications/notifications";
 import { alertStaffNewCustomer } from "@/lib/notifications/new-customer-alerts";
 import { sendFounderWelcomeLetter } from "@/lib/notifications/founder-welcome-letter";
+import { assignAccountManagerForPremium } from "@/lib/team/account-manager";
 import { emailDispatchAllowedForUser } from "@/lib/organizations/organizations";
 import { loadPricing } from "@/lib/subscriptions/pricing-server";
 import { centsFor } from "@/lib/subscriptions/pricing-catalog";
@@ -330,6 +331,7 @@ export async function markWireReceived(invoiceId: string, staffId: string, clien
   if (!paid.is_renewal) {
     await sendFounderWelcomeLetter({ founderId: paid.profile_id, plan: "founder_premium", triggeredBy: staffId });
     await alertStaffNewCustomer({ event: "payment", founderId: paid.profile_id, companyId: paid.company_id, plan: "founder_premium" });
+    await assignAccountManagerForPremium({ founderId: paid.profile_id, assignedBy: staffId });
   }
 
   return { invoice: paid, emailed, warning };

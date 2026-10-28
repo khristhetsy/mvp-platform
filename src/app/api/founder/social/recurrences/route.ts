@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireFounderSocial, ownsAccounts, ownsCampaign, socialDb } from "@/lib/social/founder-auth";
 import { createRecurrence, setRecurrenceStatus, upcoming, totalCount, type RecurrenceRule } from "@/lib/social/recurrence";
 import { logFounderSocialEvent } from "@/lib/social/activity";
+import { actingBlock } from "@/lib/admin/acting-central";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,8 @@ export async function GET(): Promise<Response> {
 // A series counts against the monthly limit one post at a time as occurrences are created.
 // Occurrences past the limit are kept as drafts for the reset date and never post on their own.
 export async function POST(req: NextRequest): Promise<Response> {
+  const actingBlocked = await actingBlock();
+  if (actingBlocked) return actingBlocked;
   const auth = await requireFounderSocial();
   if ("error" in auth) return auth.error;
   const parsed = schema.safeParse(await req.json().catch(() => ({})));
@@ -70,6 +73,8 @@ export async function POST(req: NextRequest): Promise<Response> {
 }
 
 export async function PATCH(req: NextRequest): Promise<Response> {
+  const actingBlocked = await actingBlock();
+  if (actingBlocked) return actingBlocked;
   const auth = await requireFounderSocial();
   if ("error" in auth) return auth.error;
   const parsed = z.object({ id: z.string().uuid(), status: z.enum(["active", "paused", "ended"]) }).safeParse(await req.json().catch(() => ({})));

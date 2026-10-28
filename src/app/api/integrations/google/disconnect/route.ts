@@ -3,8 +3,11 @@ import { deleteGoogleConnectedAccount } from "@/lib/integrations/connected-accou
 import { isGoogleOAuthConfigured } from "@/lib/integrations/google-oauth";
 import { notifyGoogleAccountDisconnected } from "@/lib/notifications/google-events";
 import { requireRole } from "@/lib/supabase/auth";
+import { actingBlock } from "@/lib/admin/acting-central";
 
 export async function POST() {
+  const actingBlocked = await actingBlock();
+  if (actingBlocked) return actingBlocked;
   if (!isGoogleOAuthConfigured()) {
     return NextResponse.json({ error: "Google OAuth is not configured." }, { status: 503 });
   }

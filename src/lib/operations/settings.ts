@@ -5,22 +5,25 @@ export type OpsSettings = {
   onboardingSlaDays: number;
   diligenceSlaDays: number;
   defaultManagerId: string | null;
+  /** The staff member who becomes the account manager of every new Premium account. */
+  premiumAccountManagerId: string | null;
   emailEscalations: boolean;
 };
 
-export const OPS_DEFAULTS: OpsSettings = { onboardingSlaDays: 7, diligenceSlaDays: 3, defaultManagerId: null, emailEscalations: false };
+export const OPS_DEFAULTS: OpsSettings = { onboardingSlaDays: 7, diligenceSlaDays: 3, defaultManagerId: null, premiumAccountManagerId: null, emailEscalations: false };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return createServiceRoleClient(); }
 
 export async function getOpsSettings(): Promise<OpsSettings> {
   try {
-    const { data } = await db().from("ops_settings").select("onboarding_sla_days, diligence_sla_days, default_manager_id, email_escalations").eq("id", "default").maybeSingle();
+    const { data } = await db().from("ops_settings").select("onboarding_sla_days, diligence_sla_days, default_manager_id, premium_account_manager_id, email_escalations").eq("id", "default").maybeSingle();
     if (!data) return OPS_DEFAULTS;
     return {
       onboardingSlaDays: data.onboarding_sla_days ?? OPS_DEFAULTS.onboardingSlaDays,
       diligenceSlaDays: data.diligence_sla_days ?? OPS_DEFAULTS.diligenceSlaDays,
       defaultManagerId: data.default_manager_id ?? null,
+      premiumAccountManagerId: data.premium_account_manager_id ?? null,
       emailEscalations: Boolean(data.email_escalations),
     };
   } catch {
@@ -33,6 +36,7 @@ export async function updateOpsSettings(patch: Partial<OpsSettings>): Promise<vo
   if (patch.onboardingSlaDays !== undefined) update.onboarding_sla_days = Math.max(1, Math.min(90, Math.round(patch.onboardingSlaDays)));
   if (patch.diligenceSlaDays !== undefined) update.diligence_sla_days = Math.max(1, Math.min(90, Math.round(patch.diligenceSlaDays)));
   if (patch.defaultManagerId !== undefined) update.default_manager_id = patch.defaultManagerId || null;
+  if (patch.premiumAccountManagerId !== undefined) update.premium_account_manager_id = patch.premiumAccountManagerId || null;
   if (patch.emailEscalations !== undefined) update.email_escalations = patch.emailEscalations;
   const { error } = await db().from("ops_settings").upsert(update, { onConflict: "id" });
   if (error) throw new Error(error.message);

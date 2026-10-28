@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireFounderSocial, ownsPost, socialDb } from "@/lib/social/founder-auth";
+import { actingBlock } from "@/lib/admin/acting-central";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,8 @@ export async function GET(): Promise<Response> {
 
 // Archive or delete a post. Published posts stay on the network; this only removes them from the library.
 export async function POST(req: NextRequest): Promise<Response> {
+  const actingBlocked = await actingBlock();
+  if (actingBlocked) return actingBlocked;
   const auth = await requireFounderSocial();
   if ("error" in auth) return auth.error;
   const parsed = z.object({ postId: z.string().uuid(), action: z.enum(["archive", "unarchive", "delete"]) }).safeParse(await req.json().catch(() => ({})));

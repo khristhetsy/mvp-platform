@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 
-type Settings = { onboardingSlaDays: number; diligenceSlaDays: number; defaultManagerId: string | null; emailEscalations: boolean };
+type Settings = { onboardingSlaDays: number; diligenceSlaDays: number; defaultManagerId: string | null; premiumAccountManagerId: string | null; emailEscalations: boolean };
 type Assignee = { id: string; name: string };
 
 const TOOLS = [
@@ -58,6 +58,11 @@ export function OpsSettingsClient() {
             <div style={row}><span style={{ flex: 1, fontSize: 12, color: "var(--muted-foreground)" }}>Default escalation manager</span>
               <select value={s.defaultManagerId ?? ""} onChange={(e) => setS({ ...s, defaultManagerId: e.target.value || null })} style={{ ...inp, maxWidth: 180 }}>
                 <option value="">Whole staff pool</option>
+                {assignees.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select></div>
+            <div style={row}><span style={{ flex: 1, fontSize: 12, color: "var(--muted-foreground)" }}>Premium account manager (new Premium accounts)</span>
+              <select value={s.premiumAccountManagerId ?? ""} onChange={(e) => setS({ ...s, premiumAccountManagerId: e.target.value || null })} style={{ ...inp, maxWidth: 180 }}>
+                <option value="">None, assign by hand</option>
                 {assignees.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select></div>
             <div style={row}><span style={{ flex: 1, fontSize: 12, color: "var(--muted-foreground)" }}>Also email escalations</span>

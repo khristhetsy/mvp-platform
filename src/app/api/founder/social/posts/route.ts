@@ -4,6 +4,7 @@ import { requireFounderSocial, ownsAccounts, ownsCampaign, ownsPost, socialDb } 
 import { getFounderSocialUsage } from "@/lib/social/founder-limits";
 import { postsThatFit } from "@/lib/social/usage";
 import { logFounderSocialEvent } from "@/lib/social/activity";
+import { actingBlock } from "@/lib/admin/acting-central";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,8 @@ const schema = z.object({
 // Create a founder post. One post sent to several networks is one row here, so it counts once.
 // The founder choosing Schedule or Post now is the approval: no staff review step.
 export async function POST(req: NextRequest): Promise<Response> {
+  const actingBlocked = await actingBlock();
+  if (actingBlocked) return actingBlocked;
   const auth = await requireFounderSocial();
   if ("error" in auth) return auth.error;
   const parsed = schema.safeParse(await req.json().catch(() => ({})));
@@ -101,6 +104,8 @@ export async function POST(req: NextRequest): Promise<Response> {
 // Move a scheduled post to a new time (drag and drop on the Schedule tab). Only posts that
 // have not gone out yet. Moving a post does not change how many posts count this cycle.
 export async function PATCH(req: NextRequest): Promise<Response> {
+  const actingBlocked = await actingBlock();
+  if (actingBlocked) return actingBlocked;
   const auth = await requireFounderSocial();
   if ("error" in auth) return auth.error;
   const parsed = z.object({ postId: z.string().uuid(), scheduledAt: z.string().datetime() }).safeParse(await req.json().catch(() => ({})));

@@ -7,6 +7,7 @@ import { buildMetaAuthorizeUrl, createMetaState, getMetaOAuthEnv, META_STATE_COO
 import { REDDIT_STATE_COOKIE, buildRedditAuthorizeUrl, getRedditOAuthEnv } from "@/lib/social/reddit-oauth";
 import { CONNECT_META_COOKIE, encodeConnectMeta } from "@/lib/social/account-admin";
 import { originFromRequest } from "@/lib/social/request-origin";
+import { actingBlock } from "@/lib/admin/acting-central";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,8 @@ export const dynamic = "force-dynamic";
  * founder cookie, stores the account against this founder, and returns to their page.
  */
 export async function GET(request: Request) {
+  const actingBlocked = await actingBlock();
+  if (actingBlocked) return actingBlocked;
   const auth = await requireFounderSocial();
   if ("error" in auth) return auth.error;
   const origin = originFromRequest(request);

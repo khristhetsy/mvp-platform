@@ -1,5 +1,6 @@
 import "server-only";
 import crypto from "node:crypto";
+import { NextResponse } from "next/server";
 import { cookies, headers } from "next/headers";
 import { createClient } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -125,4 +126,16 @@ export async function actingStaffId(): Promise<string | null> {
 /** True when this request runs as a founder on behalf of staff. Used to block billing, team changes, account deletion and sending as the founder. */
 export async function isActingAsFounder(): Promise<boolean> {
   return (await actingStaffId()) !== null;
+}
+
+/**
+ * A 403 for actions that stay with the founder while staff act on their behalf: outreach
+ * and social campaigns, posting, intro requests and account connections. Null otherwise.
+ */
+export async function actingBlock(): Promise<NextResponse | null> {
+  if (!(await isActingAsFounder())) return null;
+  return NextResponse.json(
+    { error: "Not available while you act on the founder's behalf. Outreach, social posting and connections stay with the founder." },
+    { status: 403 },
+  );
 }

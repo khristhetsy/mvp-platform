@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireFounderSocial, ownsCampaign } from "@/lib/social/founder-auth";
 import { campaignFunnels, aggregateFunnels, type Grain } from "@/lib/social/funnel";
 import { setCampaignGoals } from "@/lib/social/goals-io";
+import { actingBlock } from "@/lib/admin/acting-central";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,8 @@ const postSchema = z.object({
 });
 
 export async function POST(req: NextRequest): Promise<Response> {
+  const actingBlocked = await actingBlock();
+  if (actingBlocked) return actingBlocked;
   const auth = await requireFounderSocial();
   if ("error" in auth) return auth.error;
   const parsed = postSchema.safeParse(await req.json().catch(() => ({})));

@@ -20,6 +20,7 @@ import { outreachCampaignSchema } from "@/lib/validation";
 import { recordFunnelEventOnce } from "@/lib/analytics/funnel";
 import { emitActivity } from "@/lib/activity/emit";
 import { crrFor } from "@/lib/crr/crr-for";
+import { actingBlock } from "@/lib/admin/acting-central";
 
 export async function GET() {
   const auth = await requireFounderInvestorCrmApi();
@@ -36,6 +37,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const actingBlocked = await actingBlock();
+  if (actingBlocked) return actingBlocked;
   const auth = await requireFounderInvestorCrmApi();
   if ("error" in auth) {
     return auth.error;
