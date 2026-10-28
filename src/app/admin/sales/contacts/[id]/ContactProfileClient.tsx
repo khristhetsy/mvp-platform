@@ -644,8 +644,11 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
     setBusy(true); setNoteMsg(null);
     try {
       const res = await fetch(`/api/sales/contacts/${contact.id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ note }) });
-      if (!res.ok) throw new Error((await res.json()).error ?? "Save failed.");
-      setSavedNotes((prev) => (prev ? `${prev}\n[${new Date().toISOString().slice(0, 10)}] ${note}` : `[${new Date().toISOString().slice(0, 10)}] ${note}`));
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error ?? "Save failed.");
+      // Use the text the server stored (it trims the note), so the Note Log's edit and delete
+      // compare against exactly what is in the database instead of a client-built copy.
+      if (typeof body.notes === "string") setSavedNotes(body.notes);
       setNote(""); setNoteMsg("Saved.");
     } catch (e) { setNoteMsg(e instanceof Error ? e.message : "Save failed."); } finally { setBusy(false); }
   }

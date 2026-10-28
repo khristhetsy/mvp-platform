@@ -300,7 +300,7 @@ export async function updateContact(id: string, patch: ContactPatch, actorId?: s
   await logActivity({ kind: "contact_edit", summary: `Edited contact fields: ${fields}`, actorId, contactCrmId: id });
 }
 
-export async function appendContactNote(id: string, text: string, userId: string | null): Promise<void> {
+export async function appendContactNote(id: string, text: string, userId: string | null): Promise<string> {
   const { data: c } = await db().from("crm_contacts").select("source, external_id").eq("id", id).maybeSingle();
   if (!c) throw new Error("Contact not found.");
   const stamp = `[${new Date().toISOString().slice(0, 10)}] ${text.trim()}`;
@@ -312,6 +312,7 @@ export async function appendContactNote(id: string, text: string, userId: string
   );
   if (error) throw new Error(error.message);
   await logActivity({ kind: "note", summary: text.trim().slice(0, 200), actorId: userId, contactCrmId: id });
+  return merged;
 }
 
 export class NoteLogConflictError extends Error {}
