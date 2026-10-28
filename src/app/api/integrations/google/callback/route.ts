@@ -16,8 +16,11 @@ import {
 import { recordOperationalError } from "@/lib/monitoring/operational-events";
 import { notifyGoogleAccountConnected } from "@/lib/notifications/google-events";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { actingBlock } from "@/lib/admin/acting-central";
 
 export async function GET(request: Request) {
+  const actingBlocked = await actingBlock();
+  if (actingBlocked) return actingBlocked;
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
   const state = requestUrl.searchParams.get("state");

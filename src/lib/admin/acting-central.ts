@@ -7,7 +7,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getSupabaseBrowserEnv } from "@/lib/supabase/env";
 import { createTokenClient } from "@/lib/supabase/token-client";
 import { ACT_COOKIE, getActingContext } from "@/lib/admin/act-on-behalf";
-import { VERDICT_TTL_MS, ZONE_HEADER, centralActingApplies, isCentralActingEnabled, sessionExpiryMs } from "@/lib/admin/acting-central-core";
+import { VERDICT_TTL_MS, ZONE_HEADER, centralActingApplies, effectiveZone, isCentralActingEnabled, sessionExpiryMs } from "@/lib/admin/acting-central-core";
 
 /**
  * Central act on behalf. When a staff member has a valid acting session, this returns a
@@ -74,8 +74,8 @@ export async function resolveCentralActingClient(): Promise<unknown | null> {
   if (!token) return null;
 
   try {
-    const zone = (await headers()).get(ZONE_HEADER);
-    if (!centralActingApplies(zone)) return null;
+    const h = await headers();
+    if (!centralActingApplies(effectiveZone(h.get(ZONE_HEADER), h.get("referer")))) return null;
   } catch {
     return null;
   }
@@ -116,7 +116,8 @@ export async function actingStaffId(): Promise<string | null> {
   try {
     const store = await cookies();
     if (!store.get(ACT_COOKIE)?.value) return null;
-    if (!centralActingApplies((await headers()).get(ZONE_HEADER))) return null;
+    const h = await headers();
+    if (!centralActingApplies(effectiveZone(h.get(ZONE_HEADER), h.get("referer")))) return null;
     return (await getActingContext())?.staffId ?? null;
   } catch {
     return null;

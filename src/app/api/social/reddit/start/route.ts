@@ -5,11 +5,14 @@ import { createLinkedInState, linkedInStateCookieOptions } from "@/lib/social/li
 import { REDDIT_STATE_COOKIE, buildRedditAuthorizeUrl, getRedditOAuthEnv } from "@/lib/social/reddit-oauth";
 import { originFromRequest } from "@/lib/social/request-origin";
 import { CONNECT_META_COOKIE, encodeConnectMeta, type ConnectMeta } from "@/lib/social/account-admin";
+import { actingBlock } from "@/lib/admin/acting-central";
 
 export const dynamic = "force-dynamic";
 
 /** Start the Reddit OAuth round-trip. Optional query: label, assign, default=1. */
 export async function GET(request: Request) {
+  const actingBlocked = await actingBlock();
+  if (actingBlocked) return actingBlocked;
   const profile = await requireRole(["admin", "analyst"]);
   const origin = originFromRequest(request);
   const env = getRedditOAuthEnv(origin);

@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import { requireApiProfile } from "@/lib/api/auth";
 import { answerQuestion, getQuestionCompanyId } from "@/lib/data-room/qa";
+import { actingBlock } from "@/lib/admin/acting-central";
 
 export const dynamic = "force-dynamic";
 
 // POST /api/founder/data-room/questions/[id]/answer — the founder answers a
 // question on their own company's data room.
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const actingBlocked = await actingBlock();
+  if (actingBlocked) return actingBlocked;
   const auth = await requireApiProfile(["founder"]);
   if ("error" in auth) return auth.error;
   const { supabase, profile } = auth;

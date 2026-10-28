@@ -17,10 +17,13 @@ import {
 } from "@/lib/social/meta-oauth";
 import { originFromRequest } from "@/lib/social/request-origin";
 import { CONNECT_META_COOKIE, encodeConnectMeta, findOpenInvite, type ConnectMeta } from "@/lib/social/account-admin";
+import { actingBlock } from "@/lib/admin/acting-central";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
+  const actingBlocked = await actingBlock();
+  if (actingBlocked) return actingBlocked;
   const profile = await requireRole(["admin", "analyst"]);
   const origin = originFromRequest(request);
 
