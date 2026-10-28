@@ -9,7 +9,7 @@ How the iCFO team runs a Premium founder account, who can do what, and how to tu
 | Owner | The founder, `company_members.role = owner` | Everything on their account, including billing |
 | Admin, Member | Founder's own team | Work the account. No billing (owner only) |
 | Managed by iCFO | iCFO staff, `company_members.role = managed_icfo` | Run the whole account through Open as founder. No billing, no team changes |
-| Client Manager | Internal staff role, rank 25 (between Manager and Admin) | Has `act_on_behalf`, so can open any founder account. No billing, users, roles, settings, accounts or integrations |
+| Client Manager | Internal staff role, rank 25 (between Manager and Admin) | Everything a Manager has, plus `act_on_behalf` (can open any founder account) and `manage_learning`. No billing, users, roles, settings, accounts or integrations. A person has one level, so give Client Manager instead of combining it with Manager |
 
 Billing is owner only on the billing pages and on the portal, checkout, subscription, address, wire invoice and upgrade request routes (`lib/billing/billing-access`). It fails closed.
 
@@ -32,6 +32,7 @@ Billing is owner only on the billing pages and on the portal, checkout, subscrip
 
 - `20261027001_managed_icfo_role.sql`: allows the `managed_icfo` role on `company_members` and `company_invites`.
 - `20261027002_client_manager_role.sql`: seeds the Client Manager role and its permissions.
+- `20261028002_client_manager_includes_manager.sql`: adds the Manager permissions Client Manager was missing, so it holds everything a Manager holds.
 - `20261028001_premium_account_manager.sql`: adds `ops_settings.premium_account_manager_id`.
 
 ## Test checklist
