@@ -80,7 +80,7 @@ function PlanCard({
         {agent ? (
           <li className="flex items-start gap-2 text-xs font-semibold leading-5 text-indigo-700">
             <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-indigo-500" />
-            Investor Relations Agent, raising capital 24/7
+            Investor Relations Agent, prospecting investors 24/7
             <span className="ml-1 rounded-full bg-indigo-600 px-1.5 text-[9px] font-semibold uppercase tracking-wider text-white">New</span>
           </li>
         ) : null}

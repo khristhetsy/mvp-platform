@@ -11,7 +11,7 @@ import { agentPath } from "./slug";
 import { IR_AGENT_FEATURE_KEY } from "./store";
 
 /** The feature line as shown on plan cards. One wording everywhere. */
-export const AGENT_FEATURE_LINE = "Investor Relations Agent, raising capital 24/7";
+export const AGENT_FEATURE_LINE = "Investor Relations Agent, prospecting investors 24/7";
 
 export const DEMO_SETTING_KEY = "ir_agent_demo";
 

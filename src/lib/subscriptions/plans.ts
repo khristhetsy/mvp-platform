@@ -153,7 +153,7 @@ export const PREMIUM_FEATURES: string[] = [
   "A dedicated team member manages your investor outreach",
   "We find your best fits in our 7,000+ investor network",
   "We make the introductions and follow up",
-  "You take the meetings and close",
+  "We prospect investors and schedule meetings so you can close the deal",
   "Up to 10,000 investors from the public investor directory, not the iCFO Capital investor network",
   "Up to 40,000 Manual outreach emails a month",
 ];

@@ -42,7 +42,7 @@ Cannot: the `icapos.com/[company]/` prefix, the disclaimer line, the hard stop o
 
 ## Website and signup
 
-The pricing page and the signup plan picker read `ir_agent_plan_access` (`getAgentPlanSet`): a plan that includes the agent shows "Investor Relations Agent, raising capital 24/7" with a NEW badge, others show it crossed out, and nothing shows while the master switch is off. Admin picks a live agent as the website demo in Feature Controls (`platform_settings` key `ir_agent_demo`); the pricing page then shows "Talk to a demo agent" linking to it with `src=pricing`.
+The pricing page and the signup plan picker read `ir_agent_plan_access` (`getAgentPlanSet`): a plan that includes the agent shows "Investor Relations Agent, prospecting investors 24/7" with a NEW badge, others show it crossed out, and nothing shows while the master switch is off. Admin picks a live agent as the website demo in Feature Controls (`platform_settings` key `ir_agent_demo`); the pricing page then shows "Talk to a demo agent" linking to it with `src=pricing`.
 
 ## Compliance notice
 
