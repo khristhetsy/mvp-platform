@@ -1095,7 +1095,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                             <>
                               {/* Contact / lead / address rows live in the top block above — not repeated here. */}
                               <RoRow label="Full name">{contact.name || null}</RoRow>
-                              <RoRow label="Company">{contact.company || null}</RoRow>
+                              <Row icon="ti-building" label="Company" value={contact.company} placeholder="Company name" onSave={saveText("company")} />
                               <RoRow label="Created on">{contact.created_on ? contact.created_on.slice(0, 10) : null}</RoRow>
                               {profile.type === "investor" && (
                                 <div style={{ gridColumn: "1 / -1" }}>
