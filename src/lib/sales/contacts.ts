@@ -30,6 +30,7 @@ export type ContactProfile = {
   tags: string[]; owner: string | null; owner_id: string | null; assignee_ids: string[]; membership: string | null; job_position: string | null;
   street: string | null; street2: string | null; city: string | null; state: string | null; zip: string | null; country: string | null;
   language: string | null; created_on: string | null; note: string | null;
+  ein: string | null; operator_licence: string | null; curp: string | null; member_portal_plan: string | null;
   // Full source (Odoo) questionnaire/company fields, label → values, for display.
   extra: Array<{ label: string; values: string[] }>;
   /** Provenance for values this platform DERIVED rather than received or was told:
@@ -195,6 +196,7 @@ export async function getContactProfile(id: string): Promise<{ contact: ContactP
     country: pref("country", pickRaw(raw, ["country_id", "country"])),
     language: pref("language", pickRaw(raw, ["lang", "language"])), created_on: pickRaw(raw, ["create_date", "created_on"]) ?? (c.synced_at as string) ?? null,
     note,
+    ein: pref("ein", null), operator_licence: pref("operator_licence", null), curp: pref("curp", null), member_portal_plan: pref("member_portal_plan", null),
     extra: flattenExtra(raw, ov),
     // String overrides ending in _source are derivation tags, not user-visible fields —
     // flattenExtra skips them (it only merges arrays), so surface them here instead.
@@ -211,13 +213,14 @@ export type ContactPatch = {
   phone2?: string | null; lead_source?: string | null; membership?: string | null; job_position?: string | null;
   language?: string | null; street?: string | null; street2?: string | null; city?: string | null;
   state?: string | null; zip?: string | null; country?: string | null;
+  ein?: string | null; operator_licence?: string | null; curp?: string | null; member_portal_plan?: string | null;
   /** Structured "Additional details" edits, keyed by label → values. Stored as
    *  array-valued overrides so they win over the Odoo-synced questionnaire. */
   preferences?: Record<string, string[]>;
 };
 
 // Fields stored in the `overrides` jsonb (Odoo-sourced; no dedicated column).
-const OVERRIDE_KEYS = ["phone2", "lead_source", "membership", "job_position", "language", "street", "street2", "city", "state", "zip", "country"] as const;
+const OVERRIDE_KEYS = ["phone2", "lead_source", "membership", "job_position", "language", "street", "street2", "city", "state", "zip", "country", "ein", "operator_licence", "curp", "member_portal_plan"] as const;
 
 // Edit user-owned contact fields on the mirror. Odoo-sourced fields go to `overrides` so a
 // re-sync of `raw` won't clobber them; top-level columns are written directly.
