@@ -46,7 +46,7 @@ const SINGLE_SELECT_FIELD_LABELS = new Set(["ARR", "MRR"]);
 const INVESTMENT_SIZE_BANDS = ["Less than $50k", "$50k - $100k", "$100k - $250k", "$250k - $500k", "$500k - $1m", "$1m - $10m", "$10m - $50m", "$50m - $100m", "$100m+"];
 // Curated option lists for the structured contact fields (rendered as dropdowns).
 // Any existing/legacy value that isn't in a list is preserved and pinned on top.
-const MEMBERSHIP_OPTS = ["Entrepreneur", "Investor", "Both", "Prospect", "None"];
+const MEMBERSHIP_OPTS = ["Entrepreneur", "Investor", "Advisor", "Both", "Prospect", "None"];
 const JOB_POSITION_OPTS = ["CEO", "CFO", "COO", "CTO", "Founder", "Co-founder", "President", "Managing partner", "Managing director", "Partner", "VP", "Director", "Investor", "Advisor", "Other"];
 const LEAD_SOURCE_OPTS = ["LinkedIn", "Referral", "Website", "Event", "Conference", "Cold outreach", "Email campaign", "Partner", "Inbound", "Webinar", "Other"];
 const ACT_ICON: Record<string, { icon: string; color: string; bg: string }> = {
