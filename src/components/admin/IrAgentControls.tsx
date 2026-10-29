@@ -113,7 +113,7 @@ export function IrAgentControls() {
 
         <div className="border-b border-slate-100 px-4 py-4">
           <p className="text-xs uppercase tracking-wide text-slate-400">Plans that include it</p>
-          <p className="mt-0.5 text-[11px] text-slate-500">Reflected on the pricing page and the signup plan picker: a ticked plan shows &quot;Investor Relations Agent, raising capital 24/7&quot;, an unticked one shows it crossed out.</p>
+          <p className="mt-0.5 text-[11px] text-slate-500">Reflected on the pricing page and the signup plan picker: a ticked plan shows &quot;Investor Relations Agent, prospecting investors 24/7&quot;, an unticked one shows it crossed out.</p>
           <div className="mt-2 flex flex-wrap gap-4">
             {data.plans.map((p) => (
               <label key={p.plan_type} className="flex items-center gap-2 text-sm text-slate-800">
