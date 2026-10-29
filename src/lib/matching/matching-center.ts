@@ -15,6 +15,7 @@ import {
 import { loadProspectInvestorMatchProfiles } from "@/lib/matching/prospect-investors";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import type { Company } from "@/lib/supabase/types";
+import { splitIndustries } from "@/lib/industry/list";
 
 export type MatchingCenterPairRow = {
   investorId: string;
@@ -285,7 +286,7 @@ export async function loadAdminMatchingCenterSnapshot(): Promise<AdminMatchingCe
     // investor type / geography across the whole pool — not just the capped detail
     // sample, so the dropdowns mirror the contacts you actually have.
     filterOptions: {
-      industries: uniqueSorted(marketplaceCompanies.map((company) => company.industry)),
+      industries: uniqueSorted(marketplaceCompanies.flatMap((company) => splitIndustries(company.industry))),
       investorTypes: uniqueSorted(investors.map((investor) => investor.investor_type)),
       geographies: uniqueSorted([
         ...marketplaceCompanies.map((company) => company.geography),
@@ -367,8 +368,11 @@ export function filterMatchingCenterPairs(
   filters: MatchingCenterFilters,
 ): MatchingCenterPairRow[] {
   return pairs.filter((row) => {
-    if (filters.industry && row.industry?.toLowerCase() !== filters.industry.toLowerCase()) {
-      return false;
+    if (filters.industry) {
+      const needle = filters.industry.toLowerCase();
+      if (!splitIndustries(row.industry).some((value) => value.toLowerCase() === needle)) {
+        return false;
+      }
     }
     if (filters.investorType && row.investorType?.toLowerCase() !== filters.investorType.toLowerCase()) {
       return false;

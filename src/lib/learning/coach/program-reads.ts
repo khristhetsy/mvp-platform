@@ -17,6 +17,17 @@ import { weekStartUtc } from "@/lib/matching/intro-quota";
 import { INDUSTRY_MEDIAN_MIN_FOUNDERS, OUTREACH_PROGRAM, type ProgramDefinition, type ProgramMetric } from "@/lib/learning/coach/program";
 import { getCompanyPledgeSummary, getFounderPledgeCompanyId } from "@/lib/data/investor-pledges";
 import type { Database } from "@/lib/supabase/types";
+import { splitIndustries } from "@/lib/industry/list";
+
+/** `%value%` for ILIKE, with the LIKE wildcards and the escape char in the value escaped. */
+function likeContains(value: string): string {
+  return `%${value.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+}
+
+/** A PostgREST filter value in double quotes, so commas, dots and parentheses in it do not split the `or()` list. */
+function postgrestQuoted(value: string): string {
+  return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
 
 export type ContactsRead = { total: number; withEmail: number; withNote: number; ready: number };
 export type IntrosRead = { week: number; total: number; dismissed: number; lastAt: string | null };
@@ -158,11 +169,22 @@ export async function loadProgramRaw(input: { profile: Profile; company: Company
     }),
     settle(() => listLessonProgressForCompany(founderId, companyId)),
     settle(async (): Promise<number> => {
-      const industry = input.company.industry ?? null;
-      if (!industry) return 0;
-      const { data, error } = await admin.from("companies").select("id").eq("industry", industry).neq("id", companyId).limit(1000);
+      // The column holds a comma separated list, so a peer is any company that
+      // shares at least one industry, wherever it sits in the peer's own list.
+      // The database narrows with a case insensitive contains per industry; the
+      // exact check below then drops partial matches ("Tech" inside "Fintech").
+      const industries = splitIndustries(input.company.industry);
+      if (industries.length === 0) return 0;
+      const { data, error } = await admin
+        .from("companies")
+        .select("id, industry")
+        .neq("id", companyId)
+        .or(industries.map((item) => `industry.ilike.${postgrestQuoted(likeContains(item))}`).join(","))
+        .limit(1000);
       if (error) throw new Error(error.message);
-      const ids = ((data ?? []) as Array<{ id: string }>).map((r) => r.id);
+      const ids = ((data ?? []) as Array<{ id: string; industry: string | null }>)
+        .filter((r) => splitIndustries(r.industry).some((item) => industries.includes(item)))
+        .map((r) => r.id);
       if (ids.length === 0) return 0;
       const { count } = await admin.from("coach_enrollments").select("id", { count: "exact", head: true }).in("company_id", ids).eq("status", "active");
       return count ?? 0;

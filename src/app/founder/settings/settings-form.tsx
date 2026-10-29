@@ -23,6 +23,9 @@ import {
 import { useVocabularies, useVocabulary } from "@/lib/vocabulary/provider";
 import { labelOf, offered, type VocabularyList, type VocabularyOption } from "@/lib/vocabulary/lists";
 import type { ResolvedSurface } from "@/lib/profile-fields/display";
+import { MultiSelectField } from "@/components/founder/FounderConversationalOnboarding";
+import { INDUSTRY_MAX, joinIndustries, splitIndustries } from "@/lib/industry/list";
+import { useTranslations } from "next-intl";
 
 /* ── Draft generators ───────────────────────────────────────── */
 
@@ -222,7 +225,8 @@ export function CompanySettingsForm({ company, display }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [company]);
 
-  const { options: industryOptions } = useVocabulary("industry", company?.industry ?? null);
+  const { options: industryOptions } = useVocabulary("industry", splitIndustries(company?.industry));
+  const tf = useTranslations("founderCmp");
   const [values, setValues] = useState<Record<string, string>>(seed);
   const [orig, setOrig] = useState<Record<string, string>>(seed);
   const [editingKey, setEditingKey] = useState<string | null>(null);
@@ -376,14 +380,23 @@ export function CompanySettingsForm({ company, display }: Props) {
       );
     }
     if (f.type === "select-industry") {
+      // Stored as one comma separated list; the same multi select the onboarding wizard uses.
+      const selected = splitIndustries(v);
       return (
-        <select className={editInputCls} style={editRing} value={v} onChange={(e) => setVal(f.key, e.target.value)} autoFocus>
-          {!v ? <option value="">— Select an industry —</option> : null}
-          {industryOptions.map((opt) => <option key={opt.slug} value={opt.label}>{opt.label}</option>)}
-          {/* A value set before this list existed stays selectable rather than
-              being silently replaced by whatever sorts first. */}
-          {v && !industryOptions.some((o) => o.label === v) ? <option value={v}>{v}</option> : null}
-        </select>
+        <MultiSelectField
+          className=""
+          ariaLabel={f.label}
+          values={selected}
+          options={[
+            ...industryOptions.map((opt) => ({ value: opt.label, label: opt.label })),
+            // A value set before this list existed stays visible and removable rather
+            // than being silently dropped on the next save.
+            ...selected.filter((s) => !industryOptions.some((o) => o.label === s)).map((s) => ({ value: s, label: s })),
+          ]}
+          onToggle={(opt) => setVal(f.key, joinIndustries(selected.includes(opt) ? selected.filter((x) => x !== opt) : [...selected, opt]))}
+          max={INDUSTRY_MAX}
+          maxHint={tf("dd_up_to_n_industries", { count: INDUSTRY_MAX })}
+        />
       );
     }
     if (f.type === "select-stage") {

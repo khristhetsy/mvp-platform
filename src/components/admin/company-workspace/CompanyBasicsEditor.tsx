@@ -6,6 +6,9 @@ import { isMoneyBand, moneyBandFor } from "@/lib/profile/options";
 import { useVocabularies, useVocabulary } from "@/lib/vocabulary/provider";
 import { useFieldShown } from "@/lib/profile-fields/display-provider";
 import { offered } from "@/lib/vocabulary/lists";
+import { MultiSelectField } from "@/components/founder/FounderConversationalOnboarding";
+import { INDUSTRY_MAX, joinIndustries, splitIndustries } from "@/lib/industry/list";
+import { useTranslations } from "next-intl";
 
 const STAGES: { id: string; label: string }[] = [
   { id: "pre_revenue", label: "Pre-revenue" },
@@ -39,7 +42,8 @@ export function CompanyBasicsEditor({ companyId }: Readonly<{ companyId: string 
   // Fields hidden for staff on Admin, Profile and fields.
   const shown = useFieldShown();
   const [b, setB] = useState<Basics | null>(null);
-  const { options: industryOptions } = useVocabulary("industry", b?.industry ?? null);
+  const { options: industryOptions } = useVocabulary("industry", splitIndustries(b?.industry));
+  const tf = useTranslations("founderCmp");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -110,18 +114,24 @@ export function CompanyBasicsEditor({ companyId }: Readonly<{ companyId: string 
       </div>
       {shown("industry") ? (
       <div>
-        <label className={LABEL} htmlFor="cb-industry">Industry</label>
-        <select id="cb-industry" value={b.industry} onChange={(e) => patch({ industry: e.target.value })} className={INPUT}>
-          {!b.industry ? <option value="">— Select an industry —</option> : null}
-          {industryOptions.map((opt) => (
-            <option key={opt.slug} value={opt.label}>
-              {opt.label}{opt.archived ? " (retired)" : ""}
-            </option>
-          ))}
-          {b.industry && !industryOptions.some((o) => o.label === b.industry) ? (
-            <option value={b.industry}>{b.industry} (current, not in list)</option>
-          ) : null}
-        </select>
+        <p className={LABEL}>Industry</p>
+        <MultiSelectField
+          className=""
+          ariaLabel="Industry"
+          values={splitIndustries(b.industry)}
+          options={[
+            ...industryOptions.map((opt) => ({ value: opt.label, label: opt.archived ? `${opt.label} (retired)` : opt.label })),
+            ...splitIndustries(b.industry)
+              .filter((s) => !industryOptions.some((o) => o.label === s))
+              .map((s) => ({ value: s, label: `${s} (current, not in list)` })),
+          ]}
+          onToggle={(opt) => {
+            const selected = splitIndustries(b.industry);
+            patch({ industry: joinIndustries(selected.includes(opt) ? selected.filter((x) => x !== opt) : [...selected, opt]) });
+          }}
+          max={INDUSTRY_MAX}
+          maxHint={tf("dd_up_to_n_industries", { count: INDUSTRY_MAX })}
+        />
         <p className="mt-1 text-[11px] text-slate-400">
           Shared list — the founder picks from the same options, so matching and the marketplace stay in sync.
         </p>
