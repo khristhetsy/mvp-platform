@@ -2,6 +2,7 @@ import { marketingDb } from "./db";
 import { makeUnsubscribeToken, sendMarketingEmail, emailConfigured, interpolate, htmlToText } from "./send";
 import { logActivity } from "@/lib/sales/activity";
 import { buildPreview } from "@/lib/notes-log-preview";
+import { emailLogIdsByProvider } from "@/lib/notes-log";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { isUnsubscribed } from "./contacts";
 import type { MarketingSequence, MarketingSequenceStep } from "./types";
@@ -461,12 +462,15 @@ async function logSequenceEmailNote(input: {
     const vars = { first_name: input.firstName ?? "", company: input.company ?? "", email: input.email };
     const subject = interpolate(input.subject, vars);
     const body = (input.textBody ? interpolate(input.textBody, vars) : htmlToText(interpolate(input.htmlBody, vars))).slice(0, 20000);
+    // The email_log row the Notes log reads opens and clicks from. Never throws; without it the row is still written.
+    const emailLogId = input.resendId ? (await emailLogIdsByProvider([input.resendId])).get(input.resendId) : undefined;
     const meta = {
       via: "icapos", sequence: { name: input.sequenceName, step: input.stepOrder }, email: { to: input.email, toName: input.firstName ?? null, subject, body },
       // Notes log keys (src/lib/notes-log.ts). The Resend id makes a retried log write a no-op.
       direction: "outbound", to: input.email, subject: subject.slice(0, 300), preview: buildPreview(body), step: input.stepOrder,
       ...(input.sequenceId ? { sequence_id: input.sequenceId } : {}),
       ...(input.resendId ? { external_id: input.resendId } : {}),
+      ...(emailLogId ? { email_log_id: emailLogId } : {}),
     };
     const summary = `Sequence email sent: ${subject.slice(0, 160)}`;
     const { data: opps } = await sdb.from("sales_opportunities").select("id").eq("contact_crm_id", contactId).eq("status", "open");
