@@ -9,7 +9,7 @@
  * the opportunity and contact detail without touching their state.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { postScheduled, ScheduleSendMenu } from "@/components/email/ScheduleSend";
 import { formatSendAt } from "@/lib/scheduled-emails/time";
@@ -34,9 +34,9 @@ type Undo =
   | { type: "delete"; id: string; label: string; left: number }
   | { type: "edit"; id: string; prevText: string; prevEditedAt: string | null; left: number };
 const UNDO_SECONDS = 10;
-type Task = { id: string; title: string; task_type: string; due_date: string | null; status: string; assignee_name: string | null; assignee_id?: string | null };
+type Task = { id: string; title: string; task_type: string; due_date: string | null; status: string; assignee_name: string | null; assignee_id?: string | null; source?: "deal" | "contact" };
 type Staff = { id: string; name: string };
-type Tab = "message" | "note" | "activity";
+type Tab = "message" | "note" | "activity" | "internal";
 
 const KIND_ICON: Record<string, { icon: string; color: string; bg: string }> = {
   note: { icon: "ti-note", color: "#185FA5", bg: "#E6F1FB" },
@@ -95,10 +95,18 @@ function callTemplate(name: string | null | undefined): string {
 }
 function firstLine(t: string): string { const l = t.trim().split("\n")[0] ?? ""; return l.length > 60 ? `${l.slice(0, 57)}...` : l; }
 
-export function SalesChatter({ opportunityId, contactCrmId, contactName, contactEmail, staff, taskTypes = ["Call", "Email", "Demo", "Follow-up", "Proposal"], notesLog = false }: {
+/**
+ * Opt-in props (all off by default; the opportunity page turns them on):
+ * - `internalPanel`: adds an Internal tab (lock icon) that renders this content.
+ * - `underlineTabs`: underline-style tab row instead of filled pills.
+ * - `fullTasks`: the task list also shows the contact's tasks and completed ones
+ *   (crossed out), labels each deal/contact, and offers Delete with confirm.
+ */
+export function SalesChatter({ opportunityId, contactCrmId, contactName, contactEmail, staff, taskTypes = ["Call", "Email", "Demo", "Follow-up", "Proposal"], notesLog = false, internalPanel, underlineTabs = false, fullTasks = false }: {
   opportunityId?: string; contactCrmId?: string | null; contactName?: string | null; contactEmail?: string | null; staff: Staff[]; taskTypes?: string[];
   /** Admin contact page: show the Notes log timeline (src/components/sales/NotesLog.tsx) instead of the Notes / Messages / System sections. */
   notesLog?: boolean;
+  internalPanel?: ReactNode; underlineTabs?: boolean; fullTasks?: boolean;
 }) {
   const showNotesLog = Boolean(notesLog && contactCrmId && !opportunityId);
   const [logReload, setLogReload] = useState(0);
@@ -107,6 +115,7 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
   const [activity, setActivity] = useState<Activity[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [editTaskId, setEditTaskId] = useState<string | null>(null);
+  const [confirmTaskId, setConfirmTaskId] = useState<string | null>(null);
   const [odooTarget, setOdooTarget] = useState<OdooTarget>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -156,17 +165,28 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
       return;
     }
     try {
-      const [aRes, tRes] = await Promise.all([
+      // fullTasks: the deal's tasks plus the contact's, deduped, each labelled.
+      const withContact = fullTasks && opportunityId && contactCrmId;
+      const [aRes, tRes, cRes] = await Promise.all([
         fetch(`/api/sales/chatter?${scopeQ}`),
         fetch(`/api/sales/tasks?scope=all&${idQ}`),
+        withContact ? fetch(`/api/sales/tasks?scope=all&contactCrmId=${encodeURIComponent(contactCrmId)}`) : Promise.resolve(null),
       ]);
       const a = aRes.ok ? await aRes.json() : { activity: [] };
       const t = tRes.ok ? await tRes.json() : { tasks: [] };
       setActivity(a.activity ?? []);
       setOdooTarget((a.odooTarget ?? null) as OdooTarget);
-      setTasks((t.tasks ?? []) as Task[]);
+      if (fullTasks) {
+        const c = cRes && cRes.ok ? await cRes.json() : { tasks: [] };
+        const map = new Map<string, Task>();
+        for (const x of (t.tasks ?? []) as Task[]) map.set(x.id, { ...x, source: opportunityId ? "deal" : "contact" });
+        for (const x of (c.tasks ?? []) as Task[]) if (!map.has(x.id)) map.set(x.id, { ...x, source: "contact" });
+        setTasks([...map.values()]);
+      } else {
+        setTasks((t.tasks ?? []) as Task[]);
+      }
     } catch { /* leave as-is */ }
-  }, [idQ, scopeQ, showNotesLog]);
+  }, [idQ, scopeQ, showNotesLog, fullTasks, opportunityId, contactCrmId]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- load on mount
   useEffect(() => { void load(); }, [load]);
@@ -334,7 +354,15 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
     finally { setBusy(false); }
   }
 
+  async function taskDelete(id: string) {
+    setBusy(true);
+    try { await fetch(`/api/sales/tasks/${id}`, { method: "DELETE" }); setConfirmTaskId(null); await load(); }
+    finally { setBusy(false); }
+  }
+
   const planned = tasks.filter((t) => t.status !== "done");
+  // fullTasks lists completed tasks too, after the open ones.
+  const listed = fullTasks ? [...planned, ...tasks.filter((t) => t.status === "done")] : planned;
   const notes = activity.filter((a) => groupOf(a) === "note");
   const messages = activity.filter((a) => groupOf(a) === "message");
   const system = activity.filter((a) => groupOf(a) === "system");
@@ -343,16 +371,19 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
   const ghostBtn: React.CSSProperties = { fontSize: 11.5, color: "var(--foreground)", background: "#fff", border: "0.5px solid #d7dbe3", borderRadius: 6, padding: "4px 10px", cursor: "pointer" };
   const viaBadge: React.CSSProperties = { fontSize: 10, color: "#185FA5", background: "#E6F1FB", borderRadius: 4, padding: "1px 6px", whiteSpace: "nowrap" };
   const odooBadge: React.CSSProperties = { fontSize: 10, color: "#6B21A8", background: "#F3E8FF", borderRadius: 4, padding: "1px 6px", whiteSpace: "nowrap" };
-  const tabBtn = (t: Tab, _i: string, _label: string): React.CSSProperties => ({ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 500, padding: "7px 12px", borderRadius: 8, border: "none", cursor: "pointer", background: tab === t ? "#E6F1FB" : "transparent", color: tab === t ? "#185FA5" : "var(--muted-foreground)" });
+  const tabBtn = (t: Tab, _i: string, _label: string): React.CSSProperties => underlineTabs
+    ? { display: "inline-flex", alignItems: "center", gap: 6, flexShrink: 0, whiteSpace: "nowrap", fontSize: 12.5, fontWeight: tab === t ? 600 : 500, padding: "10px 10px", border: "none", borderBottom: tab === t ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer", background: "none", color: tab === t ? "var(--foreground)" : "var(--muted-foreground)" }
+    : { display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 500, padding: "7px 12px", borderRadius: 8, border: "none", cursor: "pointer", background: tab === t ? "#E6F1FB" : "transparent", color: tab === t ? "#185FA5" : "var(--muted-foreground)" };
   const field: React.CSSProperties = { width: "100%", fontSize: 12.5, padding: "8px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)", boxSizing: "border-box" };
   const primary: React.CSSProperties = { fontSize: 12.5, fontWeight: 600, color: "#fff", background: "#185FA5", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer" };
 
   return (
     <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, overflow: "hidden" }}>
-      <div style={{ display: "flex", gap: 4, padding: "8px 10px", borderBottom: "0.5px solid #eef1f5" }}>
+      <div style={underlineTabs ? { display: "flex", gap: 2, padding: "0 6px", borderBottom: "0.5px solid #eef1f5", overflowX: "auto" } : { display: "flex", gap: 4, padding: "8px 10px", borderBottom: "0.5px solid #eef1f5" }}>
         <button type="button" onClick={() => setTab("message")} style={tabBtn("message", "ti-mail", "")}><i className="ti ti-mail" aria-hidden="true" /> Send message</button>
         <button type="button" onClick={() => setTab("note")} style={tabBtn("note", "ti-note", "")}><i className="ti ti-note" aria-hidden="true" /> Log note</button>
         <button type="button" onClick={() => setTab("activity")} style={tabBtn("activity", "ti-checkbox", "")}><i className="ti ti-checkbox" aria-hidden="true" /> Tasks{planned.length ? ` · ${planned.length}` : ""}</button>
+        {internalPanel !== undefined && <button type="button" onClick={() => setTab("internal")} style={tabBtn("internal", "ti-lock", "")}><i className="ti ti-lock" aria-hidden="true" /> Internal</button>}
       </div>
 
       <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
@@ -442,27 +473,41 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
             <div style={{ display: "flex", justifyContent: "flex-end" }}><button type="button" onClick={addTask} disabled={busy || !task.title.trim()} style={{ ...primary, opacity: busy || !task.title.trim() ? 0.5 : 1 }}>Add task</button></div>
           </>
         )}
+        {tab === "internal" && internalPanel}
         {(ok || err) && <p style={{ fontSize: 12, margin: 0, color: err ? "#A32D2D" : "#0F6E56" }}>{err ?? ok}</p>}
       </div>
 
-      {planned.length > 0 && (
+      {listed.length > 0 && (
         <div style={{ padding: "10px 12px", borderTop: "0.5px solid #eef1f5" }}>
-          <div style={{ fontSize: 10.5, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>Open tasks</div>
-          {planned.map((t) => {
+          <div style={{ fontSize: 10.5, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>{fullTasks ? "Tasks" : "Open tasks"}</div>
+          {listed.map((t) => {
             const d = dueLabel(t.due_date);
+            const done = t.status === "done";
+            if (confirmTaskId === t.id) {
+              return (
+                <div key={t.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap", padding: "8px 10px", marginBottom: 8, borderRadius: 8, background: "#FCEBEB" }}>
+                  <span style={{ fontSize: 12, color: "#A32D2D" }}>Delete &ldquo;{t.title}&rdquo;? This can&rsquo;t be undone.</span>
+                  <span style={{ display: "flex", gap: 6 }}>
+                    <button type="button" onClick={() => taskDelete(t.id)} disabled={busy} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#A32D2D", border: "none", borderRadius: 6, padding: "5px 12px", cursor: "pointer" }}>Delete</button>
+                    <button type="button" onClick={() => setConfirmTaskId(null)} style={ghostBtn}>Cancel</button>
+                  </span>
+                </div>
+              );
+            }
             if (editTaskId === t.id) {
               return <TaskEditRow key={t.id} task={t} staff={staff} taskTypes={taskTypes} onCancel={() => setEditTaskId(null)} onSaved={async () => { setEditTaskId(null); flash("ok", "Activity updated."); await load(); }} />;
             }
             return (
               <div key={t.id} style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 8 }}>
-                <div style={{ width: 24, height: 24, borderRadius: "50%", background: d.overdue ? "#FCEBEB" : "#FAEEDA", color: d.overdue ? "#A32D2D" : "#854F0B", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><i className="ti ti-clock" aria-hidden="true" /></div>
+                <div style={{ width: 24, height: 24, borderRadius: "50%", background: done ? "#E1F5EE" : d.overdue ? "#FCEBEB" : "#FAEEDA", color: done ? "#0F6E56" : d.overdue ? "#A32D2D" : "#854F0B", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><i className={`ti ${done ? "ti-check" : "ti-clock"}`} aria-hidden="true" /></div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 12.5, color: "var(--foreground)" }}>{t.title}</div>
-                  <div style={{ fontSize: 11, color: d.overdue ? "#A32D2D" : "var(--muted-foreground)" }}>{t.task_type} · {d.text}{t.assignee_name ? ` · ${t.assignee_name}` : ""}</div>
+                  <div style={{ fontSize: 12.5, color: done ? "var(--muted-foreground)" : "var(--foreground)", textDecoration: done ? "line-through" : undefined }}>{t.title}</div>
+                  <div style={{ fontSize: 11, color: !done && d.overdue ? "#A32D2D" : "var(--muted-foreground)" }}>{t.task_type} · {done ? "done" : d.text}{t.assignee_name ? ` · ${t.assignee_name}` : ""}{fullTasks && t.source ? ` · ${t.source}` : ""}</div>
                 </div>
                 {/* Odoo activities can only be completed here, not edited. */}
-                {!t.id.startsWith("odoo:") && <button type="button" onClick={() => setEditTaskId(t.id)} disabled={busy} style={{ fontSize: 11, color: "#185FA5", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-pencil" aria-hidden="true" /> Edit</button>}
-                <button type="button" onClick={() => taskDone(t.id)} disabled={busy} style={{ fontSize: 11, color: "#0F6E56", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /> Done</button>
+                {!done && !t.id.startsWith("odoo:") && <button type="button" onClick={() => setEditTaskId(t.id)} disabled={busy} style={{ fontSize: 11, color: "#185FA5", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-pencil" aria-hidden="true" /> Edit</button>}
+                {!done && <button type="button" onClick={() => taskDone(t.id)} disabled={busy} style={{ fontSize: 11, color: "#0F6E56", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /> Done</button>}
+                {fullTasks && <button type="button" onClick={() => setConfirmTaskId(t.id)} disabled={busy} style={{ fontSize: 11, color: "#A32D2D", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-trash" aria-hidden="true" /> Delete</button>}
               </div>
             );
           })}
