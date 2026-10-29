@@ -1,6 +1,5 @@
 "use client";
 import { formatPhone, telHref } from "@/lib/phone";
-import { TaskTitleInput } from "@/components/sales/TaskTitleInput";
 
 import { useState, useEffect } from "react";
 import { OdooStageBar } from "@/components/ui/OdooStageBar";
@@ -8,7 +7,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FounderProfileMirror, type MirrorContact } from "./FounderProfileMirror";
 import { SalesChatter } from "@/components/sales/SalesChatter";
-import { TaskEditRow } from "@/components/sales/TaskEditRow";
 
 type Stage = { id: string; name: string; sort_order: number; is_won: boolean };
 type Opp = {
@@ -39,7 +37,6 @@ function mrr(o: Pick<Opp, "value_cents" | "billing">): string {
 const inp: React.CSSProperties = { fontSize: 12, padding: "7px 9px", borderRadius: 7, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)", boxSizing: "border-box" };
 const cardBox: React.CSSProperties = { background: "var(--muted)", borderRadius: 8, padding: 11 };
 
-type OTask = { id: string; title: string; task_type: string; due_date: string | null; status: string; assignee_name: string | null; assignee_id?: string | null; source: "deal" | "contact" };
 type ActivityItem = { id: string; kind: string; summary: string; actor_name: string | null; created_at: string };
 
 const ACT_ICON: Record<string, { icon: string; color: string; bg: string }> = {
@@ -75,13 +72,8 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [menuOpen]);
-  const [tab, setTab] = useState<"notes" | "activity" | "extra" | "founder" | "tasks">("notes");
+  const [tab, setTab] = useState<"notes" | "activity" | "extra" | "founder">("notes");
   const [noteInput, setNoteInput] = useState("");
-  const [oppTasks, setOppTasks] = useState<OTask[]>([]);
-  const [editTaskId, setEditTaskId] = useState<string | null>(null);
-  const [tasksLoaded, setTasksLoaded] = useState(false);
-  const [confirmTaskId, setConfirmTaskId] = useState<string | null>(null);
-  const [taskDraft, setTaskDraft] = useState({ title: "", taskType: "Call", dueDate: "", assigneeId: "" });
   const [sequences, setSequences] = useState<{ id: string; name: string; status: string }[]>([]);
   const [seqOpen, setSeqOpen] = useState(false);
   const [enrollMsg, setEnrollMsg] = useState<string | null>(null);
@@ -116,51 +108,6 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
   // Company name (from the linked contact) shown under the opportunity title. Its
   // profile is the CRM contact record — there's no standalone company page.
   const companyName = founderContact?.company?.trim() || null;
-
-  async function loadTasks() {
-    try {
-      const reqs = [fetch(`/api/sales/tasks?scope=all&opportunityId=${o.id}`)];
-      if (o.contact_crm_id) reqs.push(fetch(`/api/sales/tasks?scope=all&contactCrmId=${encodeURIComponent(o.contact_crm_id)}`));
-      const results = await Promise.all(reqs);
-      const jsons = await Promise.all(results.map((r) => (r.ok ? r.json() : Promise.resolve({ tasks: [] }))));
-      const map = new Map<string, OTask>();
-      for (const t of (jsons[0]?.tasks ?? [])) map.set(t.id, { ...t, source: "deal" });
-      for (const t of (jsons[1]?.tasks ?? [])) if (!map.has(t.id)) map.set(t.id, { ...t, source: "contact" });
-      setOppTasks([...map.values()]);
-    } catch {
-      setOppTasks([]);
-    }
-    setTasksLoaded(true);
-  }
-  function openTasks() {
-    setTab("tasks");
-    if (!tasksLoaded) void loadTasks();
-  }
-  async function createTask() {
-    if (!taskDraft.title.trim()) return;
-    setBusy(true);
-    try {
-      await fetch("/api/sales/tasks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: taskDraft.title, taskType: taskDraft.taskType, dueDate: taskDraft.dueDate || null, assigneeId: taskDraft.assigneeId || null, opportunityId: o.id, contactCrmId: o.contact_crm_id, contactName: o.contact_name }),
-      });
-      setTaskDraft({ title: "", taskType: "Call", dueDate: "", assigneeId: "" });
-      await loadTasks();
-    } finally {
-      setBusy(false);
-    }
-  }
-  async function taskDone(id: string) {
-    setBusy(true);
-    try { await fetch(`/api/sales/tasks/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "done" }) }); await loadTasks(); }
-    finally { setBusy(false); }
-  }
-  async function taskDelete(id: string) {
-    setBusy(true);
-    try { await fetch(`/api/sales/tasks/${id}`, { method: "DELETE" }); setConfirmTaskId(null); await loadTasks(); }
-    finally { setBusy(false); }
-  }
 
   async function saveNote() {
     const text = noteInput.trim();
@@ -226,6 +173,58 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
   const currentSort = stages.find((s) => s.id === o.stage_id)?.sort_order ?? -1;
   const nextStage = stages.find((s) => s.sort_order > currentSort && !s.is_won);
   const statusColor = o.status === "won" ? "#0F6E56" : o.status === "lost" ? "#A32D2D" : o.status === "archived" ? "#5F5E5A" : "#185FA5";
+
+  // Internal tab content (staff only): what used to be the strip under the chatter.
+  const pill = (on: boolean): React.CSSProperties => ({ flexShrink: 0, whiteSpace: "nowrap", fontSize: 12, fontWeight: on ? 600 : 400, padding: "5px 12px", borderRadius: 999, cursor: "pointer", border: on ? "0.5px solid #E6F1FB" : "0.5px solid #d7dbe3", background: on ? "#E6F1FB" : "transparent", color: on ? "#185FA5" : "var(--muted-foreground)" });
+  const internalPanel = (
+    <div>
+      <div style={{ display: "flex", gap: 6, overflowX: "auto", margin: "0 0 12px", paddingBottom: 2 }}>
+        <button type="button" onClick={() => setTab("notes")} aria-pressed={tab === "notes"} style={pill(tab === "notes")}>Internal notes</button>
+        <button type="button" onClick={() => setTab("activity")} aria-pressed={tab === "activity"} style={pill(tab === "activity")}>Activity{contactActivity.length ? ` · ${contactActivity.length}` : ""}</button>
+        <button type="button" onClick={() => setTab("extra")} aria-pressed={tab === "extra"} style={pill(tab === "extra")}>Extra info</button>
+        {founderContact && (
+          <button type="button" onClick={() => setTab("founder")} aria-pressed={tab === "founder"} style={pill(tab === "founder")}>Founder profile</button>
+        )}
+      </div>
+      {tab === "founder" && founderContact ? (
+        <FounderProfileMirror contact={founderContact} />
+      ) : tab === "notes" ? (
+        <div>
+          <textarea value={noteInput} onChange={(e) => setNoteInput(e.target.value)} placeholder="Add an internal note…" style={{ ...inp, width: "100%", minHeight: 48, resize: "vertical" }} />
+          <div style={{ margin: "6px 0 12px" }}>
+            <button type="button" onClick={saveNote} disabled={busy || !noteInput.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "7px 14px", cursor: "pointer", opacity: busy || !noteInput.trim() ? 0.5 : 1 }}>Save note</button>
+          </div>
+          <div style={{ fontSize: 12, color: "var(--muted-foreground)", background: "var(--muted)", borderRadius: 8, padding: 11, whiteSpace: "pre-wrap", lineHeight: 1.6, minHeight: 40 }}>{o.notes || "No notes yet."}</div>
+        </div>
+      ) : tab === "activity" ? (
+        <div>
+          <p style={{ fontSize: 11, color: "var(--muted-foreground)", margin: "0 0 12px" }}>Full note log and activity for this contact — shared across all their opportunities.</p>
+          {contactActivity.length === 0 ? (
+            <div style={{ fontSize: 11.5, color: "var(--muted-foreground)" }}>No activity yet. Calls, notes, emails, tasks, and stage changes appear here.</div>
+          ) : (
+            <div style={{ position: "relative", paddingLeft: 26 }}>
+              <div style={{ position: "absolute", left: 9, top: 4, bottom: 4, width: 1.5, background: "var(--border)" }} />
+              {contactActivity.map((a) => {
+                const ic = ACT_ICON[a.kind] ?? { icon: "ti-point", color: "#5F5E5A", bg: "#F1EFE8" };
+                return (
+                  <div key={a.id} style={{ position: "relative", marginBottom: 14 }}>
+                    <span style={{ position: "absolute", left: -24, top: 1, width: 18, height: 18, borderRadius: "50%", background: ic.bg, color: ic.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10 }}><i className={`ti ${ic.icon}`} aria-hidden="true" /></span>
+                    <div style={{ fontSize: 12 }}>{a.summary}</div>
+                    <div style={{ fontSize: 10.5, color: "var(--muted-foreground)" }}>{a.actor_name ?? "System"} · {actWhen(a.created_at)}</div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 24px", fontSize: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "var(--muted-foreground)" }}>Tags</span><span>{o.tags.length ? o.tags.join(", ") : "—"}</span></div>
+          <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "var(--muted-foreground)" }}>Priority</span><span>{o.priority ? <>{o.priority}<i className="ti ti-star-filled" aria-hidden="true" /></> : "—"}</span></div>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div>
@@ -359,119 +358,11 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
             </>
           )}
 
-          {/* Chatter — send message / log note / activities */}
+          {/* Chatter — send message / log note / tasks / internal */}
           <div style={{ margin: "16px 0" }}>
-            <SalesChatter opportunityId={o.id} contactCrmId={o.contact_crm_id} contactName={o.contact_name} contactEmail={o.contact_email} staff={staff} />
+            <SalesChatter opportunityId={o.id} contactCrmId={o.contact_crm_id} contactName={o.contact_name} contactEmail={o.contact_email} staff={staff}
+              underlineTabs fullTasks internalPanel={internalPanel} />
           </div>
-
-          {/* Notes / extra tabs */}
-          <div style={{ display: "flex", gap: 0, borderBottom: "0.5px solid #eef1f5", margin: "16px 0 12px" }}>
-            <button type="button" onClick={() => setTab("notes")} style={{ fontSize: 12, fontWeight: tab === "notes" ? 600 : 400, color: tab === "notes" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "8px 12px", borderBottom: tab === "notes" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>Internal notes</button>
-            <button type="button" onClick={() => setTab("activity")} style={{ fontSize: 12, fontWeight: tab === "activity" ? 600 : 400, color: tab === "activity" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "8px 12px", borderBottom: tab === "activity" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>Activity{contactActivity.length ? ` · ${contactActivity.length}` : ""}</button>
-            <button type="button" onClick={() => setTab("extra")} style={{ fontSize: 12, fontWeight: tab === "extra" ? 600 : 400, color: tab === "extra" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "8px 12px", borderBottom: tab === "extra" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>Extra info</button>
-            {founderContact && (
-              <button type="button" onClick={() => setTab("founder")} style={{ fontSize: 12, fontWeight: tab === "founder" ? 600 : 400, color: tab === "founder" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "8px 12px", borderBottom: tab === "founder" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>Founder Profile</button>
-            )}
-            <button type="button" onClick={openTasks} style={{ fontSize: 12, fontWeight: tab === "tasks" ? 600 : 400, color: tab === "tasks" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "8px 12px", borderBottom: tab === "tasks" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>Tasks{tasksLoaded && oppTasks.length ? ` · ${oppTasks.length}` : ""}</button>
-          </div>
-          {tab === "founder" && founderContact ? (
-            <FounderProfileMirror contact={founderContact} />
-          ) : tab === "tasks" ? (
-            <div>
-              <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", marginBottom: 8 }}><i className="ti ti-link" aria-hidden="true" /> New tasks link to this opportunity{o.contact_name ? ` and ${o.contact_name}` : ""}. Shows the deal&rsquo;s and the contact&rsquo;s tasks.</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 96px 128px 130px", gap: 8, background: "#F5F9FF", border: "0.5px solid #eef1f5", borderRadius: 8, padding: 10 }}>
-                <TaskTitleInput value={taskDraft.title} placeholder="Task title" inputStyle={inp} allowedTypes={["Call", "Email", "Demo", "Follow-up", "Proposal"]} taskType={taskDraft.taskType} onChange={(n) => setTaskDraft((d) => ({ ...d, title: n.title, ...(n.taskType ? { taskType: n.taskType } : {}) }))} />
-                <select value={taskDraft.taskType} onChange={(e) => setTaskDraft({ ...taskDraft, taskType: e.target.value })} style={inp}>{["Call", "Email", "Demo", "Follow-up", "Proposal"].map((t) => <option key={t}>{t}</option>)}</select>
-                <input type="date" value={taskDraft.dueDate} onChange={(e) => setTaskDraft({ ...taskDraft, dueDate: e.target.value })} style={inp} />
-                <select value={taskDraft.assigneeId} onChange={(e) => setTaskDraft({ ...taskDraft, assigneeId: e.target.value })} style={inp}><option value="">Assign to me</option>{staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
-                <div style={{ gridColumn: "1 / -1" }}>
-                  <button type="button" onClick={createTask} disabled={busy || !taskDraft.title.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 14px", cursor: "pointer", opacity: busy || !taskDraft.title.trim() ? 0.5 : 1 }}>Add task</button>
-                </div>
-              </div>
-
-              <div style={{ marginTop: 12, border: "0.5px solid #eef1f5", borderRadius: 8, overflow: "hidden" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 74px 84px 96px 66px 100px", gap: 8, padding: "8px 12px", background: "#F7F9FC", fontSize: 10, fontWeight: 600, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--muted-foreground)", borderBottom: "0.5px solid #eef1f5" }}>
-                  <span>Task</span><span>Type</span><span>Due</span><span>Assignee</span><span>Status</span><span style={{ textAlign: "right" }}>Actions</span>
-                </div>
-                {!tasksLoaded ? (
-                  <p style={{ padding: 16, textAlign: "center", fontSize: 12, color: "var(--muted-foreground)" }}>Loading…</p>
-                ) : oppTasks.length === 0 ? (
-                  <p style={{ padding: 16, textAlign: "center", fontSize: 12, color: "var(--muted-foreground)" }}>No tasks for this opportunity or contact yet.</p>
-                ) : oppTasks.map((ct) => {
-                  const cdone = ct.status === "done";
-                  if (editTaskId === ct.id) {
-                    return (
-                      <div key={ct.id} style={{ padding: "6px 12px", borderTop: "0.5px solid #eef1f5" }}>
-                        <TaskEditRow task={ct} staff={staff} onCancel={() => setEditTaskId(null)} onSaved={async () => { setEditTaskId(null); await loadTasks(); }} />
-                      </div>
-                    );
-                  }
-                  if (confirmTaskId === ct.id) {
-                    return (
-                      <div key={ct.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap", padding: "10px 12px", borderTop: "0.5px solid #eef1f5", background: "#FCEBEB" }}>
-                        <span style={{ fontSize: 12, color: "#A32D2D" }}>Delete &ldquo;{ct.title}&rdquo;? This can&rsquo;t be undone.</span>
-                        <span style={{ display: "flex", gap: 6 }}>
-                          <button type="button" onClick={() => taskDelete(ct.id)} disabled={busy} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#A32D2D", border: "none", borderRadius: 6, padding: "5px 12px", cursor: "pointer" }}>Delete</button>
-                          <button type="button" onClick={() => setConfirmTaskId(null)} style={{ fontSize: 11.5, color: "var(--foreground)", background: "#fff", border: "0.5px solid #d7dbe3", borderRadius: 6, padding: "5px 12px", cursor: "pointer" }}>Cancel</button>
-                        </span>
-                      </div>
-                    );
-                  }
-                  return (
-                    <div key={ct.id} style={{ display: "grid", gridTemplateColumns: "1fr 74px 84px 96px 66px 100px", gap: 8, alignItems: "center", padding: "9px 12px", borderTop: "0.5px solid #eef1f5", fontSize: 12.5 }}>
-                      <span style={{ minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        <span style={{ textDecoration: cdone ? "line-through" : "none", color: cdone ? "var(--muted-foreground)" : "var(--foreground)" }}>{ct.title}</span>
-                        <span style={{ fontSize: 10, color: "var(--muted-foreground)" }}> · {ct.source}</span>
-                      </span>
-                      <span style={{ fontSize: 10.5, color: "#185FA5", background: "#E6F1FB", borderRadius: 8, padding: "2px 8px", justifySelf: "start" }}>{ct.task_type}</span>
-                      <span style={{ fontSize: 11.5, color: "var(--muted-foreground)" }}>{ct.due_date ? ct.due_date.slice(5) : "—"}</span>
-                      <span style={{ fontSize: 11.5, color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ct.assignee_name ?? "—"}</span>
-                      <span style={{ fontSize: 10.5, borderRadius: 999, padding: "2px 9px", justifySelf: "start", color: cdone ? "#0F6E56" : "#854F0B", background: cdone ? "#E1F5EE" : "#FAEEDA" }}>{cdone ? "Done" : "Open"}</span>
-                      <span style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                        {!cdone && <button type="button" onClick={() => taskDone(ct.id)} disabled={busy} style={{ fontSize: 10.5, color: "#0F6E56", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /></button>}
-                        {!cdone && !ct.id.startsWith("odoo:") && <button type="button" onClick={() => setEditTaskId(ct.id)} disabled={busy} style={{ fontSize: 10.5, color: "#185FA5", background: "none", border: "none", cursor: "pointer" }}>Edit</button>}
-                        <button type="button" onClick={() => setConfirmTaskId(ct.id)} disabled={busy} style={{ fontSize: 10.5, color: "#A32D2D", background: "none", border: "none", cursor: "pointer" }}>Delete</button>
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ) : tab === "notes" ? (
-            <div>
-              <textarea value={noteInput} onChange={(e) => setNoteInput(e.target.value)} placeholder="Add an internal note…" style={{ ...inp, width: "100%", minHeight: 48, resize: "vertical" }} />
-              <div style={{ margin: "6px 0 12px" }}>
-                <button type="button" onClick={saveNote} disabled={busy || !noteInput.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "7px 14px", cursor: "pointer", opacity: busy || !noteInput.trim() ? 0.5 : 1 }}>Save note</button>
-              </div>
-              <div style={{ fontSize: 12, color: "var(--muted-foreground)", background: "var(--muted)", borderRadius: 8, padding: 11, whiteSpace: "pre-wrap", lineHeight: 1.6, minHeight: 40 }}>{o.notes || "No notes yet."}</div>
-            </div>
-          ) : tab === "activity" ? (
-            <div>
-              <p style={{ fontSize: 11, color: "var(--muted-foreground)", margin: "0 0 12px" }}>Full note log and activity for this contact — shared across all their opportunities.</p>
-              {contactActivity.length === 0 ? (
-                <div style={{ fontSize: 11.5, color: "var(--muted-foreground)" }}>No activity yet. Calls, notes, emails, tasks, and stage changes appear here.</div>
-              ) : (
-                <div style={{ position: "relative", paddingLeft: 26 }}>
-                  <div style={{ position: "absolute", left: 9, top: 4, bottom: 4, width: 1.5, background: "var(--border)" }} />
-                  {contactActivity.map((a) => {
-                    const ic = ACT_ICON[a.kind] ?? { icon: "ti-point", color: "#5F5E5A", bg: "#F1EFE8" };
-                    return (
-                      <div key={a.id} style={{ position: "relative", marginBottom: 14 }}>
-                        <span style={{ position: "absolute", left: -24, top: 1, width: 18, height: 18, borderRadius: "50%", background: ic.bg, color: ic.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10 }}><i className={`ti ${ic.icon}`} aria-hidden="true" /></span>
-                        <div style={{ fontSize: 12 }}>{a.summary}</div>
-                        <div style={{ fontSize: 10.5, color: "var(--muted-foreground)" }}>{a.actor_name ?? "System"} · {actWhen(a.created_at)}</div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 24px", fontSize: 12 }}>
-              <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "var(--muted-foreground)" }}>Tags</span><span>{o.tags.length ? o.tags.join(", ") : "—"}</span></div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "var(--muted-foreground)" }}>Priority</span><span>{o.priority ? <>{o.priority}<i className="ti ti-star-filled" aria-hidden="true" /></> : "—"}</span></div>
-            </div>
-          )}
         </div>
       </div>
     </div>
