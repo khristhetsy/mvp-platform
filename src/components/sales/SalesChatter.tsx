@@ -17,6 +17,7 @@ import { RecipientPicker } from "@/components/email/RecipientPicker";
 import { TaskEditRow } from "./TaskEditRow";
 import { TaskTitleInput } from "./TaskTitleInput";
 import { ptDayDiff } from "@/lib/time/pt-day-diff";
+import { NotesLog } from "./NotesLog";
 
 type Activity = {
   id: string; kind: string; summary: string; actor_name: string | null; created_at: string;
@@ -101,10 +102,15 @@ function firstLine(t: string): string { const l = t.trim().split("\n")[0] ?? "";
  * - `fullTasks`: the task list also shows the contact's tasks and completed ones
  *   (crossed out), labels each deal/contact, and offers Delete with confirm.
  */
-export function SalesChatter({ opportunityId, contactCrmId, contactName, contactEmail, staff, taskTypes = ["Call", "Email", "Demo", "Follow-up", "Proposal"], internalPanel, underlineTabs = false, fullTasks = false }: {
+export function SalesChatter({ opportunityId, contactCrmId, contactName, contactEmail, staff, taskTypes = ["Call", "Email", "Demo", "Follow-up", "Proposal"], notesLog = false, internalPanel, underlineTabs = false, fullTasks = false }: {
   opportunityId?: string; contactCrmId?: string | null; contactName?: string | null; contactEmail?: string | null; staff: Staff[]; taskTypes?: string[];
+  /** Admin contact page: show the Notes log timeline (src/components/sales/NotesLog.tsx) instead of the Notes / Messages / System sections. */
+  notesLog?: boolean;
   internalPanel?: ReactNode; underlineTabs?: boolean; fullTasks?: boolean;
 }) {
+  const showNotesLog = Boolean(notesLog && contactCrmId && !opportunityId);
+  const [logReload, setLogReload] = useState(0);
+  const logLoaded = useRef(false);
   const [tab, setTab] = useState<Tab>("note");
   const [activity, setActivity] = useState<Activity[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -146,6 +152,18 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
 
   const load = useCallback(async () => {
     if (!idQ) return;
+    if (showNotesLog) {
+      // The Notes log loads the timeline and the Odoo note target itself; it loads on
+      // mount, so only later calls (after a send, note or task) ask it to refetch.
+      if (logLoaded.current) setLogReload((k) => k + 1);
+      logLoaded.current = true;
+      try {
+        const tRes = await fetch(`/api/sales/tasks?scope=all&${idQ}`);
+        const t = tRes.ok ? await tRes.json() : { tasks: [] };
+        setTasks((t.tasks ?? []) as Task[]);
+      } catch { /* leave as-is */ }
+      return;
+    }
     try {
       // fullTasks: the deal's tasks plus the contact's, deduped, each labelled.
       const withContact = fullTasks && opportunityId && contactCrmId;
@@ -168,7 +186,7 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
         setTasks((t.tasks ?? []) as Task[]);
       }
     } catch { /* leave as-is */ }
-  }, [idQ, scopeQ, fullTasks, opportunityId, contactCrmId]);
+  }, [idQ, scopeQ, showNotesLog, fullTasks, opportunityId, contactCrmId]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- load on mount
   useEffect(() => { void load(); }, [load]);
@@ -496,6 +514,7 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
         </div>
       )}
 
+      {showNotesLog && contactCrmId ? <NotesLog contactCrmId={contactCrmId} reloadKey={logReload} onOdooTarget={setOdooTarget} /> : (<>
       {/* Notes */}
       <div style={{ padding: "10px 12px", borderTop: "0.5px solid #eef1f5" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
@@ -604,6 +623,7 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
           </div>
         )}
       </div>
+      </>)}
     </div>
   );
 }

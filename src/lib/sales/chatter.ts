@@ -110,7 +110,7 @@ export async function resolveOdooLinks(scope: ChatterScope): Promise<OdooLinks> 
   }
 }
 
-async function odooMessages(links: OdooLinks): Promise<OdooMsg[]> {
+export async function odooMessages(links: OdooLinks): Promise<OdooMsg[]> {
   const lists = await Promise.all([
     ...links.leads.map((l) => fetchRecordMessages("crm.lead", l.id, 50).then((ms) => ms.map((m) => ({ ...m, origin: "Odoo opportunity" })))),
     links.partnerId ? fetchPartnerMessages(String(links.partnerId), 50).then((ms) => ms.map((m) => ({ ...m, origin: "Odoo contact" }))) : Promise.resolve([]),

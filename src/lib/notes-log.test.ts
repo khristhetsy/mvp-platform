@@ -4,6 +4,9 @@ type Result = { data?: unknown; error: { code?: string; message: string } | null
 const inserts: unknown[] = [];
 let insertResults: Result[] = [];
 
+const afterCalls: Array<() => unknown> = [];
+vi.mock("next/server", () => ({ after: (fn: () => unknown) => { afterCalls.push(fn); } }));
+
 vi.mock("@/lib/supabase/admin", () => ({
   createServiceRoleClient: () => ({
     from: () => ({
@@ -15,9 +18,10 @@ vi.mock("@/lib/supabase/admin", () => ({
   }),
 }));
 
+import type { OdooMsg } from "@/lib/sales/chatter-merge";
 import {
-  buildPreview, chipOf, formatPT, groupCounts, logCommunication, logCommunicationBatch,
-  oneYearBefore, pickMeta, rowToEntry, tagOf, toInsertRow, type CommunicationInput,
+  bookingConfirmationLog, buildPreview, campaignLogInputs, logCampaignSends, queueCampaignNotesLog, chipFilter, chipFor, chipOf, stepOf, formatPT, groupCounts, logCommunication, logCommunicationBatch,
+  mergeOdooEntries, oneYearBefore, pickMeta, rowToEntry, tagOf, toInsertRow, type CommunicationInput,
 } from "./notes-log";
 
 beforeEach(() => {
@@ -180,5 +184,161 @@ describe("rowToEntry", () => {
     const e = rowToEntry({ id: "r", kind: "email", summary: "x", created_at: "2026-10-29T09:41:00Z", meta: { href: "https://evil.example", recording_url: "javascript:alert(1)" } });
     expect(e.meta.href).toBeUndefined();
     expect(e.meta.recording_url).toBeUndefined();
+  });
+});
+
+describe("mergeOdooEntries", () => {
+  const cutoff = new Date("2025-10-29T00:00:00Z");
+  const msg = (id: number, over: Partial<OdooMsg> = {}): OdooMsg => ({
+    id, date: "2026-10-01T10:00:00Z", author: "Odoo User", subject: null, body: `Body ${id}`, isNote: true, origin: "Odoo contact", ...over,
+  });
+
+  it("shows every unmirrored Odoo message, once, with its origin", () => {
+    const { entries, extra } = mergeOdooEntries([msg(1), msg(1), msg(2, { isNote: false, subject: "Re: deck" })], [], "c1", cutoff);
+    expect(entries.map((e) => e.id)).toEqual(["odoo:1", "odoo:2"]);
+    expect(entries[0]).toMatchObject({ kind: "odoo_note", chip: "notes", source: "odoo", origin: "Odoo contact", editable: true, tag: null });
+    expect(entries[1]).toMatchObject({ kind: "odoo_message", chip: "messages", editable: false, summary: "Re: deck\nBody 2" });
+    expect(extra.recent).toMatchObject({ all: 2, notes: 1, messages: 1 });
+  });
+
+  it("shows a mirrored message as its iCapOS row (de-duplicated by odoo_message_id)", () => {
+    const mirror = { id: "row-1", kind: "odoo_note", summary: "Edited here", created_at: "2026-10-01T10:00:00Z", odoo_message_id: 1, contact_crm_id: "c1", deleted_at: null, meta: { odoo_author: "Odoo User" } };
+    const { entries, extra } = mergeOdooEntries([msg(1)], [mirror], "c1", cutoff);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({ id: "row-1", summary: "Edited here", actor_name: "Odoo User", source: "odoo" });
+    // Already in the contact's own row counts.
+    expect(extra.recent.all).toBe(0);
+  });
+
+  it("counts a mirror row filed on another contact", () => {
+    const mirror = { id: "row-2", kind: "odoo_note", summary: "x", created_at: "2026-10-01T10:00:00Z", odoo_message_id: 1, contact_crm_id: null, deleted_at: null };
+    expect(mergeOdooEntries([msg(1)], [mirror], "c1", cutoff).extra.recent.all).toBe(1);
+  });
+
+  it("keeps a message hidden when its mirror row was deleted here, as the current Note Log does", () => {
+    const mirror = { id: "row-3", kind: "odoo_note", summary: "x", created_at: "2026-10-01T10:00:00Z", odoo_message_id: 1, contact_crm_id: "c1", deleted_at: "2026-10-20T00:00:00Z" };
+    expect(mergeOdooEntries([msg(1)], [mirror], "c1", cutoff).entries).toEqual([]);
+  });
+
+  it("files an undated or old message under older than 1 year, never drops it", () => {
+    const { entries, extra } = mergeOdooEntries([msg(5, { date: null })], [], "c1", cutoff);
+    expect(entries).toHaveLength(1);
+    expect(extra.older.all).toBe(1);
+  });
+
+  it("skips empty messages, as the current Note Log does", () => {
+    expect(mergeOdooEntries([msg(6, { body: "", subject: null })], [], "c1", cutoff).entries).toEqual([]);
+  });
+});
+
+describe("sequence emails under the Sequences chip", () => {
+  const oldRow = { id: "s-old", kind: "email", summary: "Sequence email sent: Hi", created_at: "2026-10-01T10:00:00Z",
+    meta: { via: "icapos", sequence: { name: "Founders", step: 2 }, email: { to: "a@x.com", subject: "Hi", body: "full body" } } };
+  const newRow = { ...oldRow, id: "s-new", meta: { ...oldRow.meta, step: 3, sequence_id: "seq-1", to: "a@x.com", subject: "Hi", preview: "full body", external_id: "re_1" } };
+
+  it("reads the step from meta.step, or meta.sequence.step on older rows", () => {
+    expect(stepOf(newRow.meta)).toBe(3);
+    expect(stepOf(oldRow.meta)).toBe(2);
+    expect(stepOf({ via: "gmail" })).toBeNull();
+    expect(stepOf(null)).toBeNull();
+  });
+
+  it("files an email with a step under Sequences, a plain email under Email", () => {
+    expect(chipFor("email", 2)).toBe("sequences");
+    expect(chipFor("email", null)).toBe("email");
+    expect(chipFor("sequence", null)).toBe("sequences");
+    expect(chipFor("note", 4)).toBe("notes");
+  });
+
+  it("shows old and new sequence rows as Sequences entries with the step number", () => {
+    expect(rowToEntry(oldRow)).toMatchObject({ chip: "sequences", tag: "auto", meta: { step: 2 } });
+    expect(rowToEntry(newRow)).toMatchObject({ chip: "sequences", meta: { step: 3, sequence_id: "seq-1", external_id: "re_1" } });
+  });
+
+  it("counts them under Sequences, not Email", () => {
+    const c = groupCounts([
+      { kind: "email", created_at: "2026-10-01T00:00:00Z", step: 2 },
+      { kind: "email", created_at: "2026-10-02T00:00:00Z", step: null },
+    ], new Date("2025-10-29T00:00:00Z"));
+    expect(c.recent).toMatchObject({ all: 2, email: 1, sequences: 1 });
+  });
+
+  it("filters the query the same way", () => {
+    const calls: Array<[string, ...unknown[]]> = [];
+    const q: Record<string, (...a: unknown[]) => unknown> = {};
+    for (const m of ["eq", "is", "or", "in"]) q[m] = (...a: unknown[]) => { calls.push([m, ...a]); return q; };
+    chipFilter(q, "email");
+    expect(calls).toEqual([["eq", "kind", "email"], ["is", "meta->>step", null], ["is", "meta->sequence->>step", null]]);
+    calls.length = 0;
+    chipFilter(q, "sequences");
+    expect(calls).toEqual([["or", "kind.eq.sequence,and(kind.eq.email,meta->>step.not.is.null),and(kind.eq.email,meta->sequence->>step.not.is.null)"]]);
+    calls.length = 0;
+    chipFilter(q, "calls");
+    expect(calls).toEqual([["in", "kind", ["call"]]]);
+  });
+});
+
+describe("campaignLogInputs", () => {
+  const campaign = { id: "camp-1", name: "October update", subject: "Our October update" };
+
+  it("writes one marketing row per sent email per matching CRM contact, at the real send time", () => {
+    const rows = campaignLogInputs(campaign, [
+      { email: "Ana@Example.com", resend_id: "re_1", occurred_at: "2026-10-01T15:00:00Z" },
+      { email: "nobody@example.com", resend_id: "re_2", occurred_at: "2026-10-01T15:00:01Z" },
+    ], new Map([["ana@example.com", ["c1", "c2"]]]));
+    expect(rows).toHaveLength(2);
+    expect(rows.map((r) => r.contactCrmId)).toEqual(["c1", "c2"]);
+    expect(rows[0]).toMatchObject({
+      kind: "marketing", summary: "Campaign email sent: Our October update", occurredAt: "2026-10-01T15:00:00Z",
+      meta: { direction: "outbound", to: "Ana@Example.com", campaign_id: "camp-1", campaign_name: "October update", external_id: "re_1" },
+    });
+  });
+
+  it("falls back to campaign and address as the external id when Resend gave none", () => {
+    const rows = campaignLogInputs(campaign, [{ email: "ana@example.com", resend_id: null, occurred_at: null }], new Map([["ana@example.com", ["c1"]]]));
+    expect(rows[0].meta?.external_id).toBe("camp-1:ana@example.com");
+  });
+
+  it("logs nothing for recipients that are not admin CRM contacts", () => {
+    expect(campaignLogInputs(campaign, [{ email: "founder@x.com", resend_id: "re_9", occurred_at: null }], new Map())).toEqual([]);
+  });
+});
+
+describe("campaign Notes log never touches or delays a send", () => {
+  it("queues the log with next/server after() and returns at once", () => {
+    afterCalls.length = 0;
+    expect(queueCampaignNotesLog({ id: "camp-1", name: "n", subject: "s" })).toBeUndefined();
+    expect(afterCalls).toHaveLength(1);
+  });
+
+  it("never throws when the database read fails, and reports to the server log", async () => {
+    // The test client has no select(): the read throws inside logCampaignSends.
+    await expect(logCampaignSends({ id: "camp-1", name: "n", subject: "s" })).resolves.toBeNull();
+    expect(console.error).toHaveBeenCalled();
+  });
+});
+
+describe("bookingConfirmationLog", () => {
+  const base = { contactCrmId: "c1", hostId: "h1", bookingId: "b1", bookerEmail: "ana@x.com", title: "Intro call" };
+  const investorMatches = { total: 12, matches: [{ company: "Acme Ventures", fit: 82, detail: "Seed · Fintech" }, { company: "Beta Capital", fit: 77, detail: "x" }] };
+
+  it("logs the booker's confirmation as an email, safe to write twice", () => {
+    expect(bookingConfirmationLog({ ...base, hostCopySent: true })).toMatchObject({
+      kind: "email", summary: "Booking confirmation sent: Intro call", contactCrmId: "c1", actorId: "h1",
+      meta: { via: "icapos", direction: "outbound", to: "ana@x.com", subject: "Confirmed: Intro call", external_id: "booking-confirmation:b1" },
+    });
+  });
+
+  it("records the investor matches only when the host copy carrying them was sent", () => {
+    expect(bookingConfirmationLog({ ...base, investorMatches, hostCopySent: true }).meta?.investor_matches)
+      .toEqual({ total: 12, matches: [{ company: "Acme Ventures", fit: 82 }, { company: "Beta Capital", fit: 77 }] });
+    expect(bookingConfirmationLog({ ...base, investorMatches, hostCopySent: false }).meta?.investor_matches).toBeUndefined();
+    expect(bookingConfirmationLog({ ...base, investorMatches: null, hostCopySent: true }).meta?.investor_matches).toBeUndefined();
+  });
+
+  it("keeps the matches through the row builder and the reader", () => {
+    const row = toInsertRow(bookingConfirmationLog({ ...base, investorMatches, hostCopySent: true }));
+    expect(row.meta?.investor_matches?.matches).toHaveLength(2);
+    expect(rowToEntry({ id: "r", kind: "email", summary: "x", created_at: "2026-10-29T09:41:00Z", meta: row.meta }).meta.investor_matches?.total).toBe(12);
   });
 });

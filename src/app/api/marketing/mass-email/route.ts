@@ -227,7 +227,7 @@ export async function POST(req: NextRequest): Promise<Response> {
   }, profile.id);
 
   try {
-    const result = await sendCampaign(campaign.id, { attachments: resendFiles });
+    const result = await sendCampaign(campaign.id, { attachments: resendFiles, skipNotesLog: true });
     // Log to the sales timeline so the send shows on each contact + their open opps.
     const icaposEmails = recipients.map((r) => r.email);
     after(() => logOutboundEmailActivity(icaposEmails, subject || "(no subject)", profile.id, 1000));

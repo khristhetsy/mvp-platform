@@ -38,6 +38,8 @@ export interface BookSlotResult {
   /** The structured booking row id (for cancel/reschedule links). Null if the
    *  best-effort booking-record write failed. */
   bookingId: string | null;
+  /** The CRM contact the booking was filed on (the "Booked" timeline row). Null if none. */
+  contactCrmId?: string | null;
 }
 
 /** Throws if [start,end] is outside the host's hours or conflicts with busy time. */
@@ -133,10 +135,10 @@ export async function bookSlot(input: BookSlotInput): Promise<BookSlotResult> {
   // Persist a structured booking (Calendly-style detail) + link it to the CRM and the
   // contact timeline. All best-effort: a failure here must never fail the booking.
   let bookingId: string | null = null;
+  let contactCrmId: string | null = null;
   try {
     const answers = (input.answers ?? []).filter((a) => a.value);
     const company = input.booker.company?.trim() || null;
-    let contactCrmId: string | null = null;
     if (input.booker.email) {
       const { data } = await admin.from("crm_contacts").select("id, overrides, company").ilike("email", input.booker.email).maybeSingle();
       const contact = data as { id: string; overrides: Record<string, unknown> | null; company: string | null } | null;
@@ -200,5 +202,5 @@ export async function bookSlot(input: BookSlotInput): Promise<BookSlotResult> {
     }
   } catch { /* never block a confirmed booking on bookkeeping */ }
 
-  return { event: hostEvent, meetUrl: hostEvent.meet_url, hostEmail, hostName, bookingId };
+  return { event: hostEvent, meetUrl: hostEvent.meet_url, hostEmail, hostName, bookingId, contactCrmId };
 }

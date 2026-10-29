@@ -2,8 +2,9 @@
  * Notes log for one admin CRM contact: notes and every logged communication.
  *   GET ?kind=all|notes|email|messages|calls|sequences|marketing  (default all)
  *       &before=<ISO>                                            (optional)
- *   → { entries, hasMore, cutoff, counts }
- * No `before`: the last 12 months, newest first, plus per chip counts (recent / older).
+ *   → { entries, hasMore, cutoff, counts, odoo, odooTarget }
+ * No `before`: the last 12 months, newest first, plus per chip counts (recent / older)
+ * and the live Odoo chatter (same set as the current Note Log, merged by the browser).
  * `before` inside the 12 months: the next page (Load more). `before` at or before
  * `cutoff`: entries older than 1 year (Show more). See src/lib/notes-log.ts.
  * Same access as the Sales Hub contact record: admin / analyst, and non-managers only on
