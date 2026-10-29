@@ -9,7 +9,7 @@ import { investorNetworkCount, networkLabel } from "@/lib/marketing/match-campai
 import { stageLabel } from "@/lib/marketing/match-campaign/fields";
 import { UNNAMED } from "@/lib/marketing/match-campaign/email";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { getUserPlan } from "@/lib/subscriptions/get-subscription";
+import { getDistributionPlan } from "@/lib/subscriptions/get-subscription";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import { ExpiredLink, ReviewMatchesPage } from "./review-ui";
 
@@ -26,7 +26,7 @@ async function paidFounder(): Promise<boolean> {
     const supabase = await createServerSupabaseClient();
     const { data } = await supabase.auth.getUser();
     if (!data.user) return false;
-    return founderEntitlements(await getUserPlan(data.user.id)).canBrokerIntros;
+    return founderEntitlements(await getDistributionPlan(data.user.id)).canBrokerIntros;
   } catch {
     return false;
   }

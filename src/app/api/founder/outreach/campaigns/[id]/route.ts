@@ -6,7 +6,7 @@ import {
   notifyFounderOutreachBlocked,
 } from "@/lib/notifications/founder-outreach-events";
 import { outreachCampaignQueueSchema } from "@/lib/validation";
-import { getUserPlan } from "@/lib/subscriptions/get-subscription";
+import { getDistributionPlan } from "@/lib/subscriptions/get-subscription";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import { actingBlock } from "@/lib/admin/acting-central";
 
@@ -29,7 +29,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   // Outreach is part of Basic and up, the same rule as creating the campaign.
-  if (!founderEntitlements(await getUserPlan(auth.profile.id)).canDistribute) {
+  if (!founderEntitlements(await getDistributionPlan(auth.profile.id)).canDistribute) {
     return NextResponse.json(
       { error: "Outreach is included in Basic and Professional. Choose a plan to reach investors.", code: "upgrade_required" },
       { status: 403 },

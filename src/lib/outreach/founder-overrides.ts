@@ -1,5 +1,5 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { getUserPlan } from "@/lib/subscriptions/get-subscription";
+import { getDistributionPlan } from "@/lib/subscriptions/get-subscription";
 import type { PlanType } from "@/lib/subscriptions/plans";
 import {
   getInvestorMatchConfig,
@@ -141,7 +141,7 @@ export async function resolveFounderOutreachConfig(
   const g = globals ?? (await loadOutreachGlobals());
   const [override, plan] = await Promise.all([
     getFounderOverride(company.id),
-    getUserPlan(company.founder_id).catch(() => null),
+    getDistributionPlan(company.founder_id).catch(() => null),
   ]);
   const globalMatch = g.match;
   const globalMessage = g.message;

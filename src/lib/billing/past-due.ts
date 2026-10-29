@@ -72,3 +72,19 @@ export function isNewPastDue(input: GraceInput): boolean {
     !isFailedPaymentWindow(input.existingEndsAt, input.existingCancelAtPeriodEnd)
   );
 }
+
+/**
+ * Which follow up email is due for a subscription still inside its grace period.
+ * The reminder job runs once a day, so each 24 hour window is hit exactly once:
+ * "midpoint" with 24 to 48 hours left (day 3 of 5), "final" with under 24 hours
+ * left (day 5 of 5). The first email is sent by the webhook (day 0).
+ */
+export type PastDueStage = "first" | "midpoint" | "final";
+
+export function reminderDue(endsAt: string, now: Date = new Date()): "midpoint" | "final" | null {
+  const hours = (new Date(endsAt).getTime() - now.getTime()) / 3_600_000;
+  if (hours <= 0) return null;
+  if (hours <= 24) return "final";
+  if (hours <= 48) return "midpoint";
+  return null;
+}

@@ -1,5 +1,6 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { isTrialExpired } from "@/lib/subscriptions/access";
+import { pastDueState } from "@/lib/billing/past-due";
 import {
   PLAN_PRICES,
   type PlanType,
@@ -75,6 +76,18 @@ export async function getSubscription(profileId: string): Promise<SubscriptionRe
 export async function getUserPlan(profileId: string) {
   const subscription = await getSubscription(profileId);
   return subscription?.plan_type ?? null;
+}
+
+/**
+ * The plan to use for DISTRIBUTION limits (outreach, introductions, investor
+ * sends). Same as getUserPlan, except a founder whose failed renewal payment ran
+ * past the grace period is treated as Free, so distribution stops while every
+ * tool stays on. Use this wherever founderEntitlements() is fed a plan.
+ */
+export async function getDistributionPlan(profileId: string) {
+  const subscription = await getSubscription(profileId);
+  if (!subscription) return null;
+  return pastDueState(subscription) === "lapsed" ? ("founder_free" as const) : subscription.plan_type;
 }
 
 export async function refreshSubscriptionState(subscription: SubscriptionRecord): Promise<SubscriptionRecord> {

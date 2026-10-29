@@ -5,7 +5,7 @@ import { updateOutreachTarget } from "@/lib/founder-crm/outreach";
 import { notifyFounderPipelineIntroRequested } from "@/lib/notifications/founder-outreach-events";
 import { founderPipelineIntroSchema } from "@/lib/validation";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { getUserPlan } from "@/lib/subscriptions/get-subscription";
+import { getDistributionPlan } from "@/lib/subscriptions/get-subscription";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import { capReached, loadIntroQuota } from "@/lib/matching/intro-quota";
 import { PLATFORM_TZ } from "@/lib/time/platform-tz";
@@ -50,7 +50,7 @@ export async function POST(request: Request, context: RouteContext) {
 
   // Same plan rules as introductions from the matches page: Free founders see
   // investors but can't contact them, and paid plans stay within their limits.
-  const plan = await getUserPlan(auth.profile.id);
+  const plan = await getDistributionPlan(auth.profile.id);
   if (!founderEntitlements(plan).canBrokerIntros) {
     return NextResponse.json(
       { error: "Introduction requests are included in Basic and Professional. Choose a plan to request introductions.", code: "upgrade_required" },

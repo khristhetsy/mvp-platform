@@ -10,7 +10,7 @@ import { getCompanyPledgeSummary, getFounderPledgeCompanyId } from "@/lib/data/i
 import { loadFounderInvestorBoard } from "@/lib/founder/private-market";
 import { loadOutreachRecords } from "@/lib/founder/outreach-records";
 import { OutreachAnalytics } from "@/components/founder/OutreachAnalytics";
-import { getUserPlan } from "@/lib/subscriptions/get-subscription";
+import { getDistributionPlan } from "@/lib/subscriptions/get-subscription";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import { evaluateFounderJourney } from "@/lib/founder-journey/evaluate";
 import { loadFounderInvestorHub } from "@/lib/founder-crm/load-founder-investor-hub";
@@ -147,7 +147,7 @@ export default async function FounderDeployPage({
   const t = await getTranslations("appPages");
   const { company } = await getActiveCompanyForUser(profile);
   // Distribution entitlements: Free sees the board masked and never auto-enrolls.
-  const entitlements = founderEntitlements(await getUserPlan(profile.id));
+  const entitlements = founderEntitlements(await getDistributionPlan(profile.id));
 
   let crmView: ReturnType<typeof buildFounderInvestorCrmView> | null = null;
   let board: Awaited<ReturnType<typeof loadFounderInvestorBoard>> | null = null;

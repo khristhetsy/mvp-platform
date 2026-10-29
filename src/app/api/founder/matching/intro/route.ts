@@ -8,7 +8,7 @@ import { createProspectIntroRequest } from "@/lib/matching/prospect-intros";
 import { countIntroRequestsSince } from "@/lib/matching/intro-quota";
 import { founderCapPeriod } from "@/lib/outreach/investor-cap";
 import { getFounderConnectionConfig } from "@/lib/settings/platform-settings";
-import { getUserPlan } from "@/lib/subscriptions/get-subscription";
+import { getDistributionPlan } from "@/lib/subscriptions/get-subscription";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import { emailDispatchAllowedForUser, EMAIL_DISABLED_MESSAGE } from "@/lib/organizations/organizations";
 import { recordFunnelEvent } from "@/lib/analytics/funnel";
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
   // the weekly pace. Trial/basic use the basic cap; professional uses the
   // professional cap. Only genuinely NEW requests count (re-requesting the same investor is a
   // no-op and isn't charged).
-  const [cfg, plan] = await Promise.all([getFounderConnectionConfig(), getUserPlan(founderId)]);
+  const [cfg, plan] = await Promise.all([getFounderConnectionConfig(), getDistributionPlan(founderId)]);
 
   // Brokered introductions are included from Basic up. Founders on the
   // grandfathered free plan see every profile but need a plan to request.

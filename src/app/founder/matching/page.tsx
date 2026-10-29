@@ -4,7 +4,7 @@ import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { requireRole } from "@/lib/supabase/auth";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { loadFounderMatchingCenter } from "@/lib/matching/founder-matching-center";
-import { getUserPlan } from "@/lib/subscriptions/get-subscription";
+import { getDistributionPlan } from "@/lib/subscriptions/get-subscription";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import { crrFor } from "@/lib/crr/crr-for";
 import { MatchingCenterList, type MatchCenterCard } from "@/components/matching/MatchingCenterList";
@@ -48,7 +48,7 @@ export default async function FounderMatchingPage() {
   }
 
   // Same rating gate as /founder/matches, so the Request intro button locks here too.
-  const [data, plan, crr] = await Promise.all([loadFounderMatchingCenter(company!), getUserPlan(profile.id), crrFor(company!.id)]);
+  const [data, plan, crr] = await Promise.all([loadFounderMatchingCenter(company!), getDistributionPlan(profile.id), crrFor(company!.id)]);
   // Free sees that matches exist (count · sector · fit tier) but NOT who — identities
   // and distribution actions unlock on Basic and up.
   const reveal = founderEntitlements(plan).revealInvestorIdentities;

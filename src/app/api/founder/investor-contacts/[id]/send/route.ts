@@ -3,7 +3,7 @@ import { requireApiProfile } from "@/lib/api/auth";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { emailDispatchAllowedForUser, EMAIL_DISABLED_MESSAGE } from "@/lib/organizations/organizations";
-import { getUserPlan } from "@/lib/subscriptions/get-subscription";
+import { getDistributionPlan } from "@/lib/subscriptions/get-subscription";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import { capMessage, checkManualOutreachCap } from "@/lib/outreach/investor-cap";
 import { checkManualEmailCap } from "@/lib/outreach/email-cap";
@@ -26,7 +26,7 @@ export async function POST(_request: Request, context: RouteContext) {
   const { company, org } = await getActiveCompanyForUser(auth.profile);
   if (!company) return NextResponse.json({ error: "No company found." }, { status: 404 });
 
-  const plan = await getUserPlan(auth.profile.id);
+  const plan = await getDistributionPlan(auth.profile.id);
   if (!founderEntitlements(plan).canDistribute) {
     return NextResponse.json(
       { error: "Sending outreach unlocks on Basic. Upgrade to email investors.", code: "upgrade_required" },

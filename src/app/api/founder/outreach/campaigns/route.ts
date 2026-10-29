@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { enforceRateLimit } from "@/lib/api/rate-limit";
 import { requireFounderInvestorCrmApi } from "@/lib/api/founder-crm";
-import { getUserPlan } from "@/lib/subscriptions/get-subscription";
+import { getDistributionPlan } from "@/lib/subscriptions/get-subscription";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import {
   addOutreachMessage,
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
   }
 
   // Distribution unlocks on Basic — Free can't start outreach campaigns.
-  const entitlements = founderEntitlements(await getUserPlan(auth.profile.id));
+  const entitlements = founderEntitlements(await getDistributionPlan(auth.profile.id));
   if (!entitlements.canDistribute) {
     return NextResponse.json(
       { error: "Starting outreach unlocks on Basic. Upgrade to reach investors.", code: "upgrade_required" },
