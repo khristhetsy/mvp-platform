@@ -277,8 +277,8 @@ export default async function InvestorOnePagerPage({
 
         {/* Key metrics */}
         <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+          display: "flex",
+          flexWrap: "wrap",
           gap: 12, marginBottom: 20,
         }}>
           <MetricCard
@@ -402,6 +402,9 @@ function MetricCard({
 }) {
   return (
     <div style={{
+      flex: href ? "1.7 1 220px" : "1 1 160px",
+      minWidth: 0,
+      boxSizing: "border-box",
       background: accent ? "#EEEDFE" : "white",
       border: `1px solid ${accent ? "#c4b5fd" : "#e5e7eb"}`,
       borderRadius: 12,
@@ -415,12 +418,12 @@ function MetricCard({
           href={href}
           target="_blank"
           rel="noopener noreferrer"
-          style={{ fontSize: 15, fontWeight: 700, color: ACCENT, textDecoration: "none" }}
+          style={{ fontSize: 15, fontWeight: 700, color: ACCENT, textDecoration: "none", overflowWrap: "anywhere" }}
         >
           {value}
         </a>
       ) : (
-        <p style={{ fontSize: 16, fontWeight: 700, color: accent ? "#1A6CE4" : "#111827", margin: 0 }}>
+        <p style={{ fontSize: 16, fontWeight: 700, color: accent ? "#1A6CE4" : "#111827", margin: 0, overflowWrap: "anywhere" }}>
           {value}
         </p>
       )}

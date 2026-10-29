@@ -300,7 +300,7 @@ export default async function FounderPreviewPage({
         </div>
 
         {/* Key metrics */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 20 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 20 }}>
           <MetricCard label="Raising" value={pub.funding_amount ? formatFunding(pub.funding_amount) : "TBD"} accent />
           <MetricCard label={t("revenue_stage")} value={stageLabel ?? "—"} />
           {geography && <MetricCard label={t("location")} value={geography} />}
@@ -379,12 +379,12 @@ export default async function FounderPreviewPage({
 
 function MetricCard({ label, value, accent, href }: { label: string; value: string; accent?: boolean; href?: string }) {
   return (
-    <div style={{ background: accent ? "#EEEDFE" : "white", border: `1px solid ${accent ? "#c4b5fd" : "#e5e7eb"}`, borderRadius: 12, padding: "16px 18px" }}>
+    <div style={{ flex: href ? "1.7 1 220px" : "1 1 160px", minWidth: 0, boxSizing: "border-box", background: accent ? "#EEEDFE" : "white", border: `1px solid ${accent ? "#c4b5fd" : "#e5e7eb"}`, borderRadius: 12, padding: "16px 18px" }}>
       <p style={{ fontSize: 11, fontWeight: 600, color: accent ? ACCENT : "#6b7280", margin: "0 0 4px", textTransform: "uppercase", letterSpacing: ".06em" }}>{label}</p>
       {href ? (
-        <a href={href} target="_blank" rel="noopener noreferrer" style={{ fontSize: 15, fontWeight: 700, color: ACCENT, textDecoration: "none" }}>{value}</a>
+        <a href={href} target="_blank" rel="noopener noreferrer" style={{ fontSize: 15, fontWeight: 700, color: ACCENT, textDecoration: "none", overflowWrap: "anywhere" }}>{value}</a>
       ) : (
-        <p style={{ fontSize: 16, fontWeight: 700, color: accent ? "#1A6CE4" : "#111827", margin: 0 }}>{value}</p>
+        <p style={{ fontSize: 16, fontWeight: 700, color: accent ? "#1A6CE4" : "#111827", margin: 0, overflowWrap: "anywhere" }}>{value}</p>
       )}
     </div>
   );
