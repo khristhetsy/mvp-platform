@@ -127,7 +127,7 @@ export async function ensureSubscriptionForProfile(input: {
   // Upsert with ignoreDuplicates: ensureSubscriptionForProfile runs on every founder
   // page render, so two requests can race on the same new profile. A conflict is
   // not an error here, the other request already created the row.
-  const { error: insertError } = await admin
+  const { data: inserted, error: insertError } = await admin
     .from("subscriptions")
     .upsert(
       {
@@ -146,14 +146,18 @@ export async function ensureSubscriptionForProfile(input: {
         is_grandfathered: false,
       },
       { onConflict: "profile_id", ignoreDuplicates: true },
-    );
+    )
+    .select("*")
+    .maybeSingle();
 
   if (insertError && insertError.code !== "23505") {
     throw new Error(`Failed to create subscription: ${insertError.message}`);
   }
 
-  // Re-read with a short retry in case the winning request has not committed yet.
-  let created = await getSubscription(input.profileId);
+  // Use the row the upsert returned. A separate read straight after the write has
+  // come back empty in production and crashed /founder/onboarding for new founders.
+  // On a conflict (ignoreDuplicates) no row comes back, so fall through to the read.
+  let created = (inserted as SubscriptionRecord | null) ?? (await getSubscription(input.profileId));
   for (let attempt = 0; !created && attempt < 3; attempt += 1) {
     await new Promise((resolve) => setTimeout(resolve, 150 * (attempt + 1)));
     created = await getSubscription(input.profileId);
