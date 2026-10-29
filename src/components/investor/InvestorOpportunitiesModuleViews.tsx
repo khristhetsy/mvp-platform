@@ -7,6 +7,7 @@ import { InvestorMatchOpportunityCard } from "@/components/InvestorMatchOpportun
 import { ModuleEmptyState } from "@/components/ui/ViewToolbar";
 import { PageSection } from "@/components/ui/workspace-layout";
 import { PLATFORM_TZ } from "@/lib/time/platform-tz";
+import { splitIndustries } from "@/lib/industry/list";
 
 type ViewMode = "grid" | "list";
 type SortBy = "match" | "newest" | "readiness";
@@ -75,7 +76,7 @@ function filterMatches(
 ) {
   let result = rows;
   if (industryFilter) {
-    result = result.filter((r) => r.industry === industryFilter);
+    result = result.filter((r) => splitIndustries(r.industry).includes(industryFilter));
   }
   if (stageFilter) {
     result = result.filter((r) => r.stage === stageFilter);
@@ -344,7 +345,7 @@ function InvestorOpportunitiesModuleViewsInner({ matches }: Readonly<{ matches: 
 
   // Derive unique option lists from the full matches array
   const industries = useMemo(
-    () => [...new Set(matches.map((r) => r.industry).filter((v): v is string => !!v))].sort(),
+    () => [...new Set(matches.flatMap((r) => splitIndustries(r.industry)))].sort(),
     [matches],
   );
   const stages = useMemo(

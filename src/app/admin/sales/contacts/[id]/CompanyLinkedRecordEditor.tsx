@@ -6,6 +6,9 @@ import { useVocabularies, useVocabulary } from "@/lib/vocabulary/provider";
 import { useFieldShown } from "@/lib/profile-fields/display-provider";
 import { labelOf, offered } from "@/lib/vocabulary/lists";
 import type { LinkedCompany } from "./ContactProfileClient";
+import { MultiSelectField } from "@/components/founder/FounderConversationalOnboarding";
+import { INDUSTRY_MAX, joinIndustries, splitIndustries } from "@/lib/industry/list";
+import { useTranslations } from "next-intl";
 
 /**
  * Editable "Company · <name> (linked record)" panel on the founder profile.
@@ -124,7 +127,8 @@ export function CompanyLinkedRecordEditor({
   const bandLabel = (v: string) => labelOf(moneyBands, v);
   const [data, setData] = useState<Form>(() => fromCompany(company));
   const [form, setForm] = useState<Form>(data);
-  const { options: industryOptions } = useVocabulary("industry", data.industry);
+  const { options: industryOptions } = useVocabulary("industry", splitIndustries(data.industry));
+  const tf = useTranslations("founderCmp");
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -264,13 +268,23 @@ export function CompanyLinkedRecordEditor({
           <EditRow label="Company name"><input className={INPUT} style={inputStyle} value={form.company_name} onChange={(e) => set("company_name", e.target.value)} /></EditRow>
           {shown("industry") ? (
           <EditRow label="Industry">
-            <select className={INPUT} style={inputStyle} value={form.industry} onChange={(e) => set("industry", e.target.value)}>
-              {!form.industry ? <option value="">— Select —</option> : null}
-              {industryOptions.map((o) => (<option key={o.slug} value={o.label}>{o.label}</option>))}
-              {form.industry && !industryOptions.some((o) => o.label === form.industry)
-                ? <option value={form.industry}>{form.industry}</option>
-                : null}
-            </select>
+            <MultiSelectField
+              className=""
+              ariaLabel="Industry"
+              values={splitIndustries(form.industry)}
+              options={[
+                ...industryOptions.map((o) => ({ value: o.label, label: o.label })),
+                ...splitIndustries(form.industry)
+                  .filter((s) => !industryOptions.some((o) => o.label === s))
+                  .map((s) => ({ value: s, label: s })),
+              ]}
+              onToggle={(opt) => {
+                const selected = splitIndustries(form.industry);
+                set("industry", joinIndustries(selected.includes(opt) ? selected.filter((x) => x !== opt) : [...selected, opt]));
+              }}
+              max={INDUSTRY_MAX}
+              maxHint={tf("dd_up_to_n_industries", { count: INDUSTRY_MAX })}
+            />
           </EditRow>
           ) : null}
           {shown("revenue_stage") ? (

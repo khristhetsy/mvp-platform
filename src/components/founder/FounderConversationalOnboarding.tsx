@@ -25,6 +25,7 @@ import type { EngineWeights } from "@/lib/matching/investor-company-matching";
 import { MatchablePointsMeter, ReadByPersonBadge } from "@/components/matching/MatchablePointsMeter";
 import { saveCapitalStructureInline } from "@/app/founder/onboarding/capital-structure-action";
 import type { OfferingType } from "@/lib/onboarding/offering-type-schema";
+import { INDUSTRY_MAX, joinIndustries, splitIndustries } from "@/lib/industry/list";
 
 /* ─────────────────────────── data ─────────────────────────── */
 
@@ -144,7 +145,7 @@ function ContextCard({ children }: { children: React.ReactNode }) {
 
 /* ── Dropdown fields: one look for every list in the wizard ── */
 
-type DDOpt = { value: string; label: string; sub?: string };
+export type DDOpt = { value: string; label: string; sub?: string };
 
 const DD_BTN =
   "flex w-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-base font-medium text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100";
@@ -225,9 +226,11 @@ function SelectField({
 }
 
 /** Pick several. Rows carry checkboxes and stay open while ticking; the button reads "N selected"
- *  and the chosen values also appear below as removable tags. */
-function MultiSelectField({
-  values, options, onToggle, ariaLabel, placeholder, className = "mt-2",
+ *  and the chosen values also appear below as removable tags. Shared with the Industry
+ *  pickers on founder settings and the admin company editors. With `max`, unchecked rows
+ *  stop being selectable once that many are ticked and `maxHint` (or a generic line) says so. */
+export function MultiSelectField({
+  values, options, onToggle, ariaLabel, placeholder, className = "mt-2", max, maxHint,
 }: {
   values: string[];
   options: DDOpt[];
@@ -235,11 +238,14 @@ function MultiSelectField({
   ariaLabel: string;
   placeholder?: string;
   className?: string;
+  max?: number;
+  maxHint?: string;
 }) {
   const t = useTranslations("founderCmp");
   const [open, setOpen] = useState(false);
   const ref = useCloseOutside(open, setOpen);
   const labelOf = (v: string) => options.find((o) => o.value === v)?.label ?? v;
+  const atMax = max != null && values.length >= max;
   return (
     <div ref={ref} className={`relative ${className}`}>
       <button type="button" aria-label={ariaLabel} aria-haspopup="listbox" aria-expanded={open} className={DD_BTN} onClick={() => setOpen((o) => !o)}>
@@ -252,11 +258,13 @@ function MultiSelectField({
         <ul role="listbox" aria-multiselectable="true" aria-label={ariaLabel} className={DD_LIST}>
           {options.map((o) => {
             const on = values.includes(o.value);
+            const blocked = atMax && !on;
             return (
-              <li key={o.value} role="option" aria-selected={on}>
+              <li key={o.value} role="option" aria-selected={on} aria-disabled={blocked || undefined}>
                 <button
                   type="button"
-                  className={"flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-slate-50 " + (on ? "bg-indigo-50 text-indigo-700" : "text-slate-800")}
+                  disabled={blocked}
+                  className={"flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm " + (on ? "bg-indigo-50 text-indigo-700" : blocked ? "cursor-not-allowed text-slate-400" : "text-slate-800 hover:bg-slate-50")}
                   onClick={() => onToggle(o.value)}
                 >
                   <span aria-hidden="true" className={"flex h-4 w-4 flex-none items-center justify-center rounded border text-[10px] " + (on ? "border-indigo-600 bg-indigo-600 text-white" : "border-slate-300")}>
@@ -269,6 +277,7 @@ function MultiSelectField({
           })}
         </ul>
       ) : null}
+      {atMax ? <p className="mt-1.5 text-xs text-slate-500">{maxHint ?? t("dd_up_to_n_selections", { count: max })}</p> : null}
       {values.length ? (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {values.map((v) => (
@@ -381,10 +390,13 @@ export function FounderConversationalOnboarding({
 
   const [companyName, setCompanyName] = useState(company.company_name ?? "");
   const [phone, setPhone]             = useState(company.contact_phone ?? "");
-  const [industry, setIndustry]       = useState<string | null>(company.industry ?? null);
+  // Industries are stored as one comma separated list; the wizard edits them as an array.
+  const [industries, setIndustries]   = useState<string[]>(() => splitIndustries(company.industry));
   // Offered values, plus whatever this company already holds, so a founder
   // whose value was since retired still sees their answer.
-  const { options: industryOptions } = useVocabulary("industry", company.industry);
+  const { options: industryOptions } = useVocabulary("industry", industries);
+  // The stored form, for the meter, the score and the description draft.
+  const industryText = industries.length ? joinIndustries(industries) : null;
   const [stage, setStage]             = useState<string | null>(company.revenue_stage ?? null);
   // Amount of capital as one of the money bands: the stored band, else the band an
   // existing exact amount falls in.
@@ -444,7 +456,7 @@ export function FounderConversationalOnboarding({
   function canAdvance(): boolean {
     switch (step) {
       case 1: return companyName.trim().length >= 2 && isValidPhone(phone) && country.trim().length >= 2;
-      case 2: return Boolean(industry);
+      case 2: return industries.length > 0;
       case 3: return !needs("revenue_stage", true) || Boolean(stage);
       case 4:
         return (
@@ -495,7 +507,7 @@ export function FounderConversationalOnboarding({
           advanceToStep: "funding_information",
           company_name: companyName.trim(),
           contact_phone: phone.trim(),
-          industry: industry ?? "",
+          industry: joinIndustries(industries),
           country: country.trim(),
           state: companyState.trim(),
           incorporation_jurisdiction: jurisdiction.trim(),
@@ -553,7 +565,7 @@ export function FounderConversationalOnboarding({
     if (!engineWeights) return null;
     const full = founderMeter(
       {
-        industry,
+        industry: industryText,
         stages: fundingStage,
         amountBand: amount || null,
         country,
@@ -575,12 +587,12 @@ export function FounderConversationalOnboarding({
       totalPoints: rows.reduce((n, r) => n + r.weight, 0),
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [engineWeights, industry, fundingStage, amount, country, companyState, invTypes, capTypes, arr, mrr, display]);
+  }, [engineWeights, industryText, fundingStage, amount, country, companyState, invTypes, capTypes, arr, mrr, display]);
   const position = step === 9 ? TOTAL : questionPosition(step);
 
   const firstName = founderName.split(" ")[0] || founderName;
   const actionPlan = computeActionPlan({ stage, amount, timeline });
-  const score      = computeScore({ name: companyName, industry, stage, amount, description, useOfFunds });
+  const score      = computeScore({ name: companyName, industry: industryText, stage, amount, description, useOfFunds });
 
   /* ─── Done screen ─── */
   if (step === 9) {
@@ -773,20 +785,21 @@ export function FounderConversationalOnboarding({
           ) : step === 2 ? (
             <>
               <p className="text-2xl font-semibold tracking-tight text-slate-900">
-                What industry are you in?
+                {t("what_industries_are_you_in")}
               </p>
-              <p className="mt-1 text-sm text-slate-500">{t("select_the_closest_match_we_use_this_to_targ")}</p>
-              <SelectField
+              <p className="mt-1 text-sm text-slate-500">{t("select_all_that_apply_we_use_this_to_target")}</p>
+              <MultiSelectField
                 className="mt-5"
                 ariaLabel={t("industry")}
-                placeholder={t("dd_select_industry")}
-                value={industry}
+                values={industries}
                 options={[
                   ...industryOptions.map((o) => ({ value: o.label, label: o.label })),
-                  // A value this company already holds that is no longer on the list stays selectable.
-                  ...(industry && !industryOptions.some((o) => o.label === industry) ? [{ value: industry, label: industry }] : []),
+                  // A value this company already holds that is no longer on the list stays visible and removable.
+                  ...industries.filter((v) => !industryOptions.some((o) => o.label === v)).map((v) => ({ value: v, label: v })),
                 ]}
-                onChange={setIndustry}
+                onToggle={(v) => toggleIn(setIndustries, v)}
+                max={INDUSTRY_MAX}
+                maxHint={t("dd_up_to_n_industries", { count: INDUSTRY_MAX })}
               />
               <ContextCard>
                 Industry matching is one of the strongest signals our algorithm uses. Investors who back companies in your sector already understand your market — they move faster and ask better questions.
@@ -892,7 +905,7 @@ export function FounderConversationalOnboarding({
               />
               <AIFieldHelper
                 benchmark="Investors spend ~8 seconds reading company descriptions. Lead with the problem you solve — not how you solve it. Replace each [bracket] with your specifics, then trim to 3–4 tight sentences."
-                draft={generateOnboardingDraft({ companyName, industry, stage })}
+                draft={generateOnboardingDraft({ companyName, industry: industryText, stage })}
                 onInsert={(text) => setDescription(text)}
               />
             </>

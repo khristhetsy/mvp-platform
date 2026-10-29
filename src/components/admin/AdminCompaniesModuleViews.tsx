@@ -19,6 +19,7 @@ import { SelectionBar } from "@/components/admin/sales/SelectionBar";
 import { MassEmailComposer } from "@/components/marketing/MassEmailComposer";
 import { CompaniesPlanDonut, type PlanSlice, type PlanSliceKey } from "@/components/admin/companies/CompaniesPlanDonut";
 import { PLATFORM_TZ } from "@/lib/time/platform-tz";
+import { splitIndustries } from "@/lib/industry/list";
 
 type ViewMode = "kanban" | "grid" | "list" | "journey";
 type UserType = "" | "founders" | "investors";
@@ -235,7 +236,7 @@ function AdminCompaniesModuleViewsInner({
   );
   // Search bar quick filters, industry field and the circle graph slice.
   const industries = useMemo(
-    () => [...new Set(companies.map((c) => c.industry).filter((v): v is string => Boolean(v)))].sort(),
+    () => [...new Set(companies.flatMap((c) => splitIndustries(c.industry)))].sort(),
     [companies],
   );
   const filtered = useMemo(() => {
@@ -243,7 +244,7 @@ function AdminCompaniesModuleViewsInner({
     const inds = searchState.fields.industry ?? [];
     return search.rows.filter((c) => {
       if (slice && accountCategory(c) !== slice) return false;
-      if (inds.length && !inds.includes(c.industry ?? "")) return false;
+      if (inds.length && !splitIndustries(c.industry).some((item) => inds.includes(item))) return false;
       if (quick.has("awaiting") && c.stage_approval_status !== "pending") return false;
       if (quick.has("review") && c.review_status !== "pending") return false;
       if (quick.has("published") && !c.is_published) return false;
@@ -742,10 +743,15 @@ function groupRows(rows: AdminCompanyCardData[], groupBy: string): Array<{ heade
     groupBy === "stage" ? (c.journey_stage ? STAGE_LABEL[c.journey_stage] ?? c.journey_stage : "No stage")
     : groupBy === "plan" ? planView(c).label
     : c.industry || "No industry";
+  // Group by industry lists a company under each industry it holds.
+  const keysOf = (c: AdminCompanyCardData): string[] => {
+    if (groupBy !== "industry") return [keyOf(c)];
+    const list = splitIndustries(c.industry);
+    return list.length ? list : ["No industry"];
+  };
   const groups = new Map<string, AdminCompanyCardData[]>();
   for (const c of rows) {
-    const k = keyOf(c);
-    groups.set(k, [...(groups.get(k) ?? []), c]);
+    for (const k of keysOf(c)) groups.set(k, [...(groups.get(k) ?? []), c]);
   }
   const out: Array<{ header?: string; count?: number; company?: AdminCompanyCardData }> = [];
   for (const [header, list] of groups) {

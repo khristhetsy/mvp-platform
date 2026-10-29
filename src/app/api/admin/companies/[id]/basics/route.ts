@@ -5,6 +5,7 @@ import { requireStaffApi } from "@/lib/api/admin";
 import { apiErrorMessage } from "@/lib/api/errors";
 import { writeAuditLog } from "@/lib/data/audit";
 import { MONEY_BAND_OPTIONS } from "@/lib/profile/options";
+import { INDUSTRY_MAX, joinIndustries, splitIndustries } from "@/lib/industry/list";
 
 /** One of the nine contact-record money bands, or null to clear. */
 const MONEY_BAND = z.enum(MONEY_BAND_OPTIONS).nullable().optional();
@@ -15,7 +16,16 @@ const OPTIONAL_TEXT = z.string().trim().max(2000).nullable().optional();
 
 const patchSchema = z.object({
   company_name: z.string().trim().min(2, "Company name must be at least 2 characters.").max(120),
-  industry: z.string().trim().min(2, "Industry must be at least 2 characters.").max(80),
+  // A comma separated list of up to eight industries; each item is validated on its own.
+  industry: z
+    .string()
+    .trim()
+    .max(INDUSTRY_MAX * 81)
+    .transform((value) => joinIndustries(splitIndustries(value)))
+    .refine((value) => splitIndustries(value).length >= 1, "Select at least one industry.")
+    .refine((value) => splitIndustries(value).length <= INDUSTRY_MAX, `Select up to ${INDUSTRY_MAX} industries.`)
+    .refine((value) => splitIndustries(value).every((item) => item.length >= 2), "Each industry must be at least 2 characters.")
+    .refine((value) => splitIndustries(value).every((item) => item.length <= 80), "Each industry must be at most 80 characters."),
   business_description: z.string().trim().max(2000).nullable().optional(),
   revenue_stage: z.enum(REVENUE_STAGES).nullable().optional(),
   funding_amount: z.number().nonnegative().nullable().optional(),

@@ -13,6 +13,7 @@ import { loadNotificationPrefs } from "@/lib/notifications/preferences";
 import { emailDispatchAllowedForUser } from "@/lib/organizations/organizations";
 import { absoluteUrl } from "@/lib/activity/email-templates";
 import { formatRaise, renderInvestorIntroEmail } from "@/lib/matching/investor-intro-email";
+import { splitIndustries } from "@/lib/industry/list";
 
 function db(): SupabaseClient {
   return createServiceRoleClient() as unknown as SupabaseClient;
@@ -65,7 +66,8 @@ export async function emailInvestorIntroMade(input: {
 
     // Only state an alignment the investor's own saved preferences show.
     const alignedOn: string[] = [];
-    if (company?.industry && (prefsRow?.preferred_sectors ?? []).some((s) => norm(s) === norm(company.industry!))) alignedOn.push("industry");
+    const companyIndustries = splitIndustries(company?.industry).map(norm);
+    if (companyIndustries.length && (prefsRow?.preferred_sectors ?? []).some((s) => companyIndustries.includes(norm(s)))) alignedOn.push("industry");
     if (company?.funding_stage && (prefsRow?.preferred_stages ?? []).some((s) => norm(s) === norm(company.funding_stage!))) alignedOn.push("stage");
 
     const fullName = (person?.full_name ?? "").trim();

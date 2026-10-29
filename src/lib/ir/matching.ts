@@ -10,6 +10,7 @@ import { scorablesForIndustries } from "@/lib/fit/match-index";
 import { Q1_STAGE, Q2_RAISE, Q4_REVENUE, Q5_INVESTOR_TYPE, type FitAnswers } from "@/lib/fit/options";
 import { IR_STAGES, type IrStage } from "@/lib/ir/types";
 import { fitDefaultsFromProfile, founderOdooProfile } from "@/lib/ir/founder-profile";
+import { splitIndustries } from "@/lib/industry/list";
 
 export type QueueFilters = FitAnswers & { source: "any" | "verified" | "self_reported"; tier: "any" | "high" | "medium" | "low" };
 /** The furthest this investor has got with the same founder on another of the founder's projects (e.g. an earlier month). */
@@ -49,7 +50,8 @@ async function companyDefaults(companyId: string): Promise<Partial<FitAnswers>> 
   const c = data as { industry: string | null; funding_amount: number | null; revenue_stage: string | null } | null;
   if (!c) return {};
   const out: Partial<FitAnswers> = {};
-  if (c.industry) out.industry = [c.industry];
+  const industries = splitIndustries(c.industry);
+  if (industries.length) out.industry = industries;
   if (c.funding_amount != null) { const band = Q2_RAISE.find((r) => c.funding_amount! >= r.min && c.funding_amount! < r.max); if (band) out.raise = [band.key]; }
   if (c.revenue_stage) {
     const rs = c.revenue_stage.toLowerCase();
