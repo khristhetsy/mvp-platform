@@ -77,6 +77,19 @@ function byNewest(a: NotesLogEntry, b: NotesLogEntry) { return ms(b.created_at) 
 function oldest(list: NotesLogEntry[]): string | null { return list.length ? list.reduce((m, e) => (ms(e.created_at) < ms(m) ? e.created_at : m), list[0].created_at) : null; }
 const SYSTEM = (e: NotesLogEntry) => e.chip === null;
 
+/** Opens and clicks of a Marketing or Sequence send, read live from email_log by the API. */
+function Engagement({ value, style }: { value: NonNullable<NotesLogEntry["engagement"]>; style: React.CSSProperties }) {
+  if (!value.tracked) return <div style={style}>Opens and clicks not tracked for this send</div>;
+  if (!value.opened_at_pt && !value.clicked_at_pt) return <div style={style}>Not opened yet</div>;
+  return (
+    <div style={{ ...style, color: "#0F6E56" }}>
+      {value.opened_at_pt && <><i className="ti ti-eye" aria-hidden="true" /> Opened {value.opened_at_pt}</>}
+      {value.opened_at_pt && value.clicked_at_pt && " · "}
+      {value.clicked_at_pt && <><i className="ti ti-click" aria-hidden="true" /> Clicked {value.clicked_at_pt}</>}
+    </div>
+  );
+}
+
 export function NotesLog({ contactCrmId, reloadKey, onOdooTarget }: {
   contactCrmId: string;
   /** Bumped by the parent after a send, note or task so the log refetches. */
@@ -381,6 +394,7 @@ export function NotesLog({ contactCrmId, reloadKey, onOdooTarget }: {
               {m.subject && <div style={detail}>Subject: {m.subject}</div>}
               {m.campaign_name && <div style={detail}>Campaign: {m.campaign_name}</div>}
               {m.step != null && <div style={detail}>Step {m.step}</div>}
+              {e.engagement && <Engagement value={e.engagement} style={detail} />}
               {m.investor_matches && (
                 <div style={{ ...detail, whiteSpace: "normal" }}>
                   Investor matches in the host&apos;s copy (top {m.investor_matches.matches.length} of {m.investor_matches.total}): {m.investor_matches.matches.map((x) => `${x.company} ${x.fit}%`).join(" · ")}

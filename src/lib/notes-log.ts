@@ -305,6 +305,8 @@ export type NotesLogEntry = {
   /** An iCapOS note that was also posted to Odoo. */
   odoo_synced: boolean;
   meta: NotesLogMeta;
+  /** Marketing and Sequence sends: opens and clicks read live from email_log. Never stored. */
+  engagement?: Engagement;
 };
 
 export type ChipCounts = Record<NotesLogChip, number>;
@@ -494,7 +496,7 @@ export async function listNotesLog(
       .map((r) => ({ kind: r.kind, created_at: r.created_at, step: stepOf({ step: r.step, sequence: { step: r.seq_step } }) })), cutoff)
     : null;
   return {
-    entries: raw.slice(0, limit).map(rowToEntry),
+    entries: await withEngagement(raw.slice(0, limit).map(rowToEntry)),
     hasMore: raw.length > limit,
     cutoff: cutoffIso,
     counts: own && odoo ? addCounts(own, odoo.extra) : own,
@@ -517,6 +519,103 @@ async function loadOdoo(contactCrmId: string, cutoff: Date) {
   return { ...mergeOdooEntries(msgs, mirrors, contactCrmId, cutoff), target: links.noteTarget };
 }
 
+// ---------------------------------------------------------------- live opens and clicks
+
+/**
+ * Opens and clicks for a Marketing or Sequence send, read from email_log each time the
+ * entry is shown (the Resend webhook stamps them there). Never copied, never written.
+ * `tracked: false`: no email_log row for this send (none was written, or it was pruned
+ * after 180 days), so opens and clicks are unknown, not zero.
+ */
+export type Engagement =
+  | { tracked: false }
+  | { tracked: true; opened_at: string | null; opened_at_pt: string | null; clicked_at: string | null; clicked_at_pt: string | null };
+
+export type EmailLogEngagementRow = {
+  id: number | string; provider_id: string | null; to_email: string | null; opened_at: string | null; clicked_at: string | null;
+};
+
+/** Entries that show opens and clicks: Marketing sends and Sequence steps. */
+export function tracksEngagement(e: Pick<NotesLogEntry, "chip">): boolean {
+  return e.chip === "marketing" || e.chip === "sequences";
+}
+
+/**
+ * The opens and clicks behind one entry. Pure. The email_log row is found through
+ * meta.email_log_id; rows logged before that key existed fall back to Resend's id
+ * (meta.external_id = email_log.provider_id) and the recipient.
+ */
+export function engagementFor(
+  meta: NotesLogMeta, byId: Map<string, EmailLogEngagementRow>, byProvider: Map<string, EmailLogEngagementRow[]>,
+): Engagement {
+  let row = meta.email_log_id ? byId.get(String(meta.email_log_id)) : undefined;
+  if (!row && !meta.email_log_id && meta.external_id) {
+    const rows = byProvider.get(meta.external_id) ?? [];
+    const to = meta.to?.trim().toLowerCase();
+    row = rows.find((r) => to && r.to_email?.trim().toLowerCase() === to) ?? (rows.length === 1 ? rows[0] : undefined);
+  }
+  if (!row) return { tracked: false };
+  return {
+    tracked: true,
+    opened_at: row.opened_at, opened_at_pt: row.opened_at ? formatPT(row.opened_at) : null,
+    clicked_at: row.clicked_at, clicked_at_pt: row.clicked_at ? formatPT(row.clicked_at) : null,
+  };
+}
+
+const ENGAGEMENT_COLS = "id, provider_id, to_email, opened_at, clicked_at";
+
+/**
+ * Add live opens and clicks to the Marketing and Sequence entries of one page: at most two
+ * indexed reads of email_log (by id, and by provider_id for older rows). Read only. Never
+ * throws: if the read fails the entries go out without engagement and nothing is shown.
+ */
+export async function withEngagement(entries: NotesLogEntry[]): Promise<NotesLogEntry[]> {
+  const tracked = entries.filter(tracksEngagement);
+  if (tracked.length === 0) return entries;
+  const ids = [...new Set(tracked.map((e) => e.meta.email_log_id).filter((v): v is string => Boolean(v && /^\d+$/.test(v))))];
+  const providers = [...new Set(tracked.filter((e) => !e.meta.email_log_id && e.meta.external_id).map((e) => e.meta.external_id as string))];
+  try {
+    const none = Promise.resolve({ data: [] as EmailLogEngagementRow[], error: null });
+    const [a, b] = await Promise.all([
+      ids.length ? db().from("email_log").select(ENGAGEMENT_COLS).in("id", ids) : none,
+      providers.length ? db().from("email_log").select(ENGAGEMENT_COLS).in("provider_id", providers) : none,
+    ]);
+    const error = a.error ?? b.error;
+    if (error) throw new Error(error.message);
+    const byId = new Map<string, EmailLogEngagementRow>();
+    for (const r of (a.data ?? []) as EmailLogEngagementRow[]) byId.set(String(r.id), r);
+    const byProvider = new Map<string, EmailLogEngagementRow[]>();
+    for (const r of (b.data ?? []) as EmailLogEngagementRow[]) {
+      if (r.provider_id) byProvider.set(r.provider_id, [...(byProvider.get(r.provider_id) ?? []), r]);
+    }
+    return entries.map((e) => (tracksEngagement(e) ? { ...e, engagement: engagementFor(e.meta, byId, byProvider) } : e));
+  } catch (err) {
+    console.error("[notes-log] email_log engagement read failed", { error: err instanceof Error ? err.message : String(err) });
+    return entries;
+  }
+}
+
+/**
+ * email_log ids by Resend id (email_log.provider_id), for meta.email_log_id. Never throws:
+ * a failed read returns what it found so far, and the Notes log row is written without it.
+ */
+export async function emailLogIdsByProvider(providerIds: Array<string | null | undefined>): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  const ids = [...new Set(providerIds.filter((v): v is string => Boolean(v)))];
+  try {
+    for (let i = 0; i < ids.length; i += 200) {
+      const { data, error } = await db().from("email_log").select("id, provider_id").in("provider_id", ids.slice(i, i + 200));
+      if (error) throw new Error(error.message);
+      for (const r of (data ?? []) as Array<{ id: number | string; provider_id: string | null }>) {
+        if (r.provider_id && !map.has(r.provider_id)) map.set(r.provider_id, String(r.id));
+      }
+    }
+  } catch (err) {
+    console.error("[notes-log] email_log id lookup failed", { error: err instanceof Error ? err.message : String(err) });
+  }
+  return map;
+}
+
 // ---------------------------------------------------------------- Marketing campaign sends
 
 export type CampaignSend = { email: string; resend_id: string | null; occurred_at: string | null };
@@ -529,10 +628,13 @@ export type CampaignInfo = { id: string; name: string; subject: string };
  */
 export function campaignLogInputs(
   campaign: CampaignInfo, sends: CampaignSend[], contactsByEmail: Map<string, string[]>,
+  /** email_log ids by Resend id (emailLogIdsByProvider). Optional: a send without one is still logged. */
+  emailLogIds: Map<string, string> = new Map(),
 ): CommunicationInput[] {
   const out: CommunicationInput[] = [];
   for (const s of sends) {
     const email = s.email.trim().toLowerCase();
+    const emailLogId = s.resend_id ? emailLogIds.get(s.resend_id) : undefined;
     for (const contactCrmId of contactsByEmail.get(email) ?? []) {
       out.push({
         kind: "marketing",
@@ -544,6 +646,8 @@ export function campaignLogInputs(
           campaign_id: campaign.id, campaign_name: campaign.name,
           // Resend's id for this email; the campaign and address when Resend gave none.
           external_id: s.resend_id ?? `${campaign.id}:${email}`,
+          // The email_log row the opens and clicks are read from (withEngagement).
+          ...(emailLogId ? { email_log_id: emailLogId } : {}),
         },
       });
     }
@@ -589,7 +693,8 @@ export async function logCampaignSends(campaign: CampaignInfo): Promise<Record<L
     }
     if (sends.length === 0) return { logged: 0, duplicate: 0, failed: 0 };
     const contacts = await crmContactsByEmail(sends.map((s) => s.email));
-    return await logCommunicationBatch(campaignLogInputs(campaign, sends, contacts));
+    const emailLogIds = await emailLogIdsByProvider(sends.map((s) => s.resend_id));
+    return await logCommunicationBatch(campaignLogInputs(campaign, sends, contacts, emailLogIds));
   } catch (err) {
     console.error("[notes-log] logCampaignSends failed", { campaignId: campaign.id, error: err instanceof Error ? err.message : String(err) });
     return null;
