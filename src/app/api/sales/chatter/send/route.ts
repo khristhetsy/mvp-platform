@@ -77,7 +77,8 @@ export async function POST(req: Request): Promise<Response> {
       if (!thread.sent) {
         return NextResponse.json({ error: "iCapOS couldn't send the email. Try again, or send via Gmail." }, { status: 502 });
       }
-      await logOutboundEmailActivity([...toList, ...ccList], subject, profile.id, 25, "icapos");
+      // The iCapOS thread is new per compose, so its id identifies this send.
+      await logOutboundEmailActivity([...toList, ...ccList], subject, profile.id, 25, "icapos", { body, externalId: thread.id });
       return NextResponse.json({ ok: true, via, threadId: thread.id });
     } catch (err) {
       return NextResponse.json({ error: err instanceof Error ? err.message : "Couldn't send the email." }, { status: 500 });
@@ -91,6 +92,6 @@ export async function POST(req: Request): Promise<Response> {
   }
   const result = await sendViaGmail({ userId: profile.id, to: toList.join(", "), cc: ccList.join(", ") || null, subject, body });
   if ("error" in result) return NextResponse.json({ error: result.error.message }, { status: 502 });
-  await logOutboundEmailActivity([...toList, ...ccList], subject, profile.id, 25, "gmail");
+  await logOutboundEmailActivity([...toList, ...ccList], subject, profile.id, 25, "gmail", { body, externalId: result.messageId });
   return NextResponse.json({ ok: true, via, messageId: result.messageId });
 }

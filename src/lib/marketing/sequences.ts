@@ -1,6 +1,7 @@
 import { marketingDb } from "./db";
 import { makeUnsubscribeToken, sendMarketingEmail, emailConfigured, interpolate, htmlToText } from "./send";
 import { logActivity } from "@/lib/sales/activity";
+import { buildPreview } from "@/lib/notes-log-preview";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { isUnsubscribed } from "./contacts";
 import type { MarketingSequence, MarketingSequenceStep } from "./types";
@@ -447,6 +448,8 @@ export async function getPendingBatches(): Promise<PendingBatch[]> {
 async function logSequenceEmailNote(input: {
   email: string; firstName?: string | null; company?: string | null;
   sequenceName: string; stepOrder: number; subject: string; htmlBody: string; textBody?: string | null;
+  /** Notes log details (optional): the sequence and Resend's id for this send. */
+  sequenceId?: string | null; resendId?: string | null;
 }): Promise<void> {
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -458,7 +461,13 @@ async function logSequenceEmailNote(input: {
     const vars = { first_name: input.firstName ?? "", company: input.company ?? "", email: input.email };
     const subject = interpolate(input.subject, vars);
     const body = (input.textBody ? interpolate(input.textBody, vars) : htmlToText(interpolate(input.htmlBody, vars))).slice(0, 20000);
-    const meta = { via: "icapos", sequence: { name: input.sequenceName, step: input.stepOrder }, email: { to: input.email, toName: input.firstName ?? null, subject, body } };
+    const meta = {
+      via: "icapos", sequence: { name: input.sequenceName, step: input.stepOrder }, email: { to: input.email, toName: input.firstName ?? null, subject, body },
+      // Notes log keys (src/lib/notes-log.ts). The Resend id makes a retried log write a no-op.
+      direction: "outbound", to: input.email, subject: subject.slice(0, 300), preview: buildPreview(body), step: input.stepOrder,
+      ...(input.sequenceId ? { sequence_id: input.sequenceId } : {}),
+      ...(input.resendId ? { external_id: input.resendId } : {}),
+    };
     const summary = `Sequence email sent: ${subject.slice(0, 160)}`;
     const { data: opps } = await sdb.from("sales_opportunities").select("id").eq("contact_crm_id", contactId).eq("status", "open");
     const open = (opps ?? []) as Array<{ id: string }>;
@@ -521,6 +530,7 @@ export async function releaseSequenceBatch(batchId: string, releasedBy: string |
         email: contact.email, firstName: contact.first_name, company: contact.company,
         sequenceName: seqName, stepOrder: step.step_order,
         subject: step.template.subject, htmlBody: step.template.html_body, textBody: step.template.text_body,
+        sequenceId: e.sequence_id, resendId: result.resend_id,
       });
     } else failed++;
     await advanceEnrollment(db, e, step);

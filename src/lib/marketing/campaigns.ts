@@ -7,6 +7,7 @@ import type { MarketingCampaign } from "./types";
 import { needsEmailReview } from "./recipient";
 import { isMatchCampaign } from "./match-campaign/types";
 import { sendMatchCampaign } from "./match-campaign/send";
+import { queueCampaignNotesLog } from "@/lib/notes-log";
 
 export async function getCampaigns(): Promise<MarketingCampaign[]> {
   const db = await marketingDb();
@@ -142,6 +143,8 @@ export async function sendCampaignTest(
 export async function sendCampaign(campaignId: string, opts?: {
   /** Files attached to every email of this send (the mass-email dialog). Not stored on the campaign. */
   attachments?: Array<{ filename: string; content: string }>;
+  /** Mass email logs its sends as "email" itself, so it skips the campaign Notes log. */
+  skipNotesLog?: boolean;
 }): Promise<{
   sent: number;
   skipped: number;
@@ -310,6 +313,14 @@ export async function sendCampaign(campaignId: string, opts?: {
     );
   } catch {
     /* notifications are best-effort */
+  }
+
+  // Notes log: after every send is done, in the background, batched (src/lib/notes-log.ts).
+  if (!opts?.skipNotesLog && sent > 0) {
+    queueCampaignNotesLog({
+      id: campaignId, name: (campaign.name as string) ?? "Campaign",
+      subject: campaign.subject_override || template?.subject || "(no subject)",
+    });
   }
 
   return { sent, skipped, failed };

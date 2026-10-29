@@ -3,11 +3,13 @@
 // meta.external_id so a write, or the backfill, is safe to run twice: the unique
 // index sales_activity_log_external_uq turns the second insert into a no-op.
 // Admin only. Nothing here is used by founder pages.
+import { after } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { isNoteKind, type OdooMsg } from "@/lib/sales/chatter-merge";
 import { odooMessages, resolveOdooLinks } from "@/lib/sales/chatter";
 import type { OdooNoteTarget } from "@/lib/crm-connectors/odoo/notes";
 import { safeInternalHref } from "@/lib/sales/proposal-activity";
+import { buildPreview } from "@/lib/notes-log-preview";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return createServiceRoleClient(); }
@@ -20,7 +22,11 @@ export type CommunicationKind = "email" | "message" | "call" | "marketing" | "se
 export const NOTES_LOG_CHIPS = ["all", "notes", "email", "messages", "calls", "sequences", "marketing"] as const;
 export type NotesLogChip = (typeof NOTES_LOG_CHIPS)[number];
 
-/** Kinds behind each chip. "all" also shows the system kinds (contact_edit, task_created, ...). */
+/**
+ * Kinds behind each chip. "all" also shows the system kinds (contact_edit, task_created, ...).
+ * Sequence sends are logged as kind "email" carrying a step (meta.step, or meta.sequence.step on
+ * older rows): those count under Sequences, not Email. See chipFor and chipFilter.
+ */
 export const CHIP_KINDS: Record<Exclude<NotesLogChip, "all">, readonly string[]> = {
   notes: ["note", "opp_note", "odoo_note"],
   email: ["email"],
@@ -40,6 +46,36 @@ export function chipOf(kind: string): Exclude<NotesLogChip, "all"> | null {
     if (kinds.includes(kind)) return chip as Exclude<NotesLogChip, "all">;
   }
   return null;
+}
+
+/** The sequence step on a row's meta: meta.step, or meta.sequence.step on older rows. */
+export function stepOf(meta: unknown): number | null {
+  if (!meta || typeof meta !== "object") return null;
+  const m = meta as { step?: unknown; sequence?: { step?: unknown } | null };
+  for (const v of [m.step, m.sequence?.step]) {
+    if (v === undefined || v === null || v === "") continue;
+    const n = Number(v);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
+/** The chip a row is counted and filtered under: an email with a sequence step is a Sequences entry. */
+export function chipFor(kind: string, step: number | null): Exclude<NotesLogChip, "all"> | null {
+  if (kind === "email" && step != null) return "sequences";
+  return chipOf(kind);
+}
+
+const HAS_STEP = ["meta->>step", "meta->sequence->>step"] as const;
+
+/** Apply a chip filter to a sales_activity_log query, matching chipFor. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function chipFilter(q: any, chip: Exclude<NotesLogChip, "all">): any {
+  if (chip === "email") return HAS_STEP.reduce((acc, col) => acc.is(col, null), q.eq("kind", "email"));
+  if (chip === "sequences") {
+    return q.or(["kind.eq.sequence", ...HAS_STEP.map((col) => `and(kind.eq.email,${col}.not.is.null)`)].join(","));
+  }
+  return q.in("kind", [...CHIP_KINDS[chip]]);
 }
 
 // Odoo chatter is not tagged: it carries its Odoo origin badge instead.
@@ -100,6 +136,11 @@ export function pickMeta(raw: unknown): NotesLogMeta {
       out[k] = String(v);
     }
   }
+  // Sequence rows written before meta.step existed carry it as meta.sequence.step.
+  if (out.step === undefined) {
+    const step = stepOf(raw);
+    if (step != null) out.step = step;
+  }
   // Older call rows store `duration` (seconds) instead of duration_seconds.
   if (out.duration_seconds === undefined && src.duration != null && Number.isFinite(Number(src.duration))) {
     out.duration_seconds = Number(src.duration);
@@ -109,28 +150,8 @@ export function pickMeta(raw: unknown): NotesLogMeta {
 
 // ---------------------------------------------------------------- preview and dates
 
-export const PREVIEW_LENGTH = 280;
-
-const ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: "\"", apos: "'", nbsp: " " };
-
-/** First 280 characters of a body as plain text. Accepts HTML or plain text. */
-export function buildPreview(body: string | null | undefined, max = PREVIEW_LENGTH): string {
-  if (!body) return "";
-  const text = body
-    .replace(/<(style|script|head)[^>]*>[\s\S]*?<\/\1>/gi, " ")
-    .replace(/<br\s*\/?>|<\/(p|div|li|tr|h[1-6])>/gi, " ")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&(#\d+|#x[0-9a-f]+|[a-z]+);/gi, (m, e: string) => {
-      if (e[0] === "#") {
-        const code = e[1] === "x" || e[1] === "X" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
-        return Number.isFinite(code) && code > 0 && code < 0x110000 ? String.fromCodePoint(code) : " ";
-      }
-      return ENTITIES[e.toLowerCase()] ?? m;
-    })
-    .replace(/\s+/g, " ")
-    .trim();
-  return text.length > max ? text.slice(0, max).trimEnd() : text;
-}
+// buildPreview lives in a pure module so send paths can use it; re-exported here.
+export { buildPreview, PREVIEW_LENGTH } from "@/lib/notes-log-preview";
 
 const PT = new Intl.DateTimeFormat("en-US", {
   timeZone: "America/Los_Angeles",
@@ -283,13 +304,13 @@ function emptyCounts(): ChipCounts {
 }
 
 /** Per chip counts, split at the 12 month cutoff. Pure. */
-export function groupCounts(rows: Array<{ kind: string; created_at: string }>, cutoff: Date): NotesLogCounts {
+export function groupCounts(rows: Array<{ kind: string; created_at: string; step?: number | null }>, cutoff: Date): NotesLogCounts {
   const out: NotesLogCounts = { recent: emptyCounts(), older: emptyCounts() };
   const cut = cutoff.getTime();
   for (const r of rows) {
     const bucket = new Date(r.created_at).getTime() >= cut ? out.recent : out.older;
     bucket.all += 1;
-    const chip = chipOf(r.kind);
+    const chip = chipFor(r.kind, r.step ?? null);
     if (chip) bucket[chip] += 1;
   }
   return out;
@@ -317,7 +338,7 @@ export function rowToEntry(r: Record<string, unknown>): NotesLogEntry {
   return {
     id: String(r.id),
     kind,
-    chip: chipOf(kind),
+    chip: chipFor(kind, meta.step ?? null),
     tag: tagOf(kind, meta),
     summary: String(r.summary ?? ""),
     actor_name: (odoo ? rawMeta?.odoo_author ?? null : null) ?? actor,
@@ -442,13 +463,13 @@ export async function listNotesLog(
   const first = !before;
 
   let q = db().from("sales_activity_log").select(ENTRY_COLS).eq("contact_crm_id", contactCrmId).is("deleted_at", null);
-  if (chip !== "all") q = q.in("kind", [...CHIP_KINDS[chip]]);
+  if (chip !== "all") q = chipFilter(q, chip);
   if (before) q = q.lt("created_at", before.toISOString());
   if (!before || before.getTime() > cutoff.getTime()) q = q.gte("created_at", cutoffIso);
   q = q.order("created_at", { ascending: false }).limit(limit + 1);
 
   const countsQuery = first
-    ? db().from("sales_activity_log").select("kind, created_at").eq("contact_crm_id", contactCrmId).is("deleted_at", null).limit(COUNT_CAP)
+    ? db().from("sales_activity_log").select("kind, created_at, step:meta->>step, seq_step:meta->sequence->>step").eq("contact_crm_id", contactCrmId).is("deleted_at", null).limit(COUNT_CAP)
     : Promise.resolve(null);
   const odooQuery = first ? loadOdoo(contactCrmId, cutoff) : Promise.resolve(null);
 
@@ -457,7 +478,10 @@ export async function listNotesLog(
   if (countRows?.error) throw new Error(`Notes log counts: ${countRows.error.message}`);
 
   const raw = (list.data ?? []) as Array<Record<string, unknown>>;
-  const own = countRows ? groupCounts((countRows.data ?? []) as Array<{ kind: string; created_at: string }>, cutoff) : null;
+  const own = countRows
+    ? groupCounts(((countRows.data ?? []) as Array<{ kind: string; created_at: string; step: unknown; seq_step: unknown }>)
+      .map((r) => ({ kind: r.kind, created_at: r.created_at, step: stepOf({ step: r.step, sequence: { step: r.seq_step } }) })), cutoff)
+    : null;
   return {
     entries: raw.slice(0, limit).map(rowToEntry),
     hasMore: raw.length > limit,
@@ -480,4 +504,96 @@ async function loadOdoo(contactCrmId: string, cutoff: Date) {
     mirrors = (data ?? []) as Array<Record<string, unknown>>;
   }
   return { ...mergeOdooEntries(msgs, mirrors, contactCrmId, cutoff), target: links.noteTarget };
+}
+
+// ---------------------------------------------------------------- Marketing campaign sends
+
+export type CampaignSend = { email: string; resend_id: string | null; occurred_at: string | null };
+export type CampaignInfo = { id: string; name: string; subject: string };
+
+/**
+ * One "marketing" row per sent email per matching admin CRM contact. Pure.
+ * `contactsByEmail` is keyed by lower case email. Emails with no CRM contact (platform
+ * mail to founders and staff, unknown recipients) produce no row.
+ */
+export function campaignLogInputs(
+  campaign: CampaignInfo, sends: CampaignSend[], contactsByEmail: Map<string, string[]>,
+): CommunicationInput[] {
+  const out: CommunicationInput[] = [];
+  for (const s of sends) {
+    const email = s.email.trim().toLowerCase();
+    for (const contactCrmId of contactsByEmail.get(email) ?? []) {
+      out.push({
+        kind: "marketing",
+        summary: `Campaign email sent: ${(campaign.subject || campaign.name).slice(0, 160)}`,
+        contactCrmId,
+        occurredAt: s.occurred_at,
+        meta: {
+          direction: "outbound", to: s.email, subject: campaign.subject.slice(0, 300),
+          campaign_id: campaign.id, campaign_name: campaign.name,
+          // Resend's id for this email; the campaign and address when Resend gave none.
+          external_id: s.resend_id ?? `${campaign.id}:${email}`,
+        },
+      });
+    }
+  }
+  return out;
+}
+
+/** Admin CRM contacts by lower case email, matched on the address as sent and lower cased. */
+async function crmContactsByEmail(emails: string[]): Promise<Map<string, string[]>> {
+  const map = new Map<string, string[]>();
+  const variants = [...new Set(emails.flatMap((e) => [e.trim(), e.trim().toLowerCase()]).filter(Boolean))];
+  for (let i = 0; i < variants.length; i += 200) {
+    const { data, error } = await db().from("crm_contacts").select("id, email").in("email", variants.slice(i, i + 200));
+    if (error) throw new Error(`crm_contacts: ${error.message}`);
+    for (const r of (data ?? []) as Array<{ id: string; email: string | null }>) {
+      const key = String(r.email ?? "").trim().toLowerCase();
+      if (!key) continue;
+      const ids = map.get(key) ?? [];
+      if (!ids.includes(String(r.id))) ids.push(String(r.id));
+      map.set(key, ids);
+    }
+  }
+  return map;
+}
+
+/**
+ * Log a finished campaign send on each recipient's Notes log. Reads the campaign's
+ * "sent" rows from marketing_events (written by the send loop), so it never touches a
+ * send. Inserts in batches of 500; safe to run twice (external_id). Never throws.
+ */
+export async function logCampaignSends(campaign: CampaignInfo): Promise<Record<LogResult, number> | null> {
+  try {
+    const sends: CampaignSend[] = [];
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await db().from("marketing_events")
+        .select("email, resend_id, occurred_at")
+        .eq("campaign_id", campaign.id).eq("event_type", "sent")
+        .order("id").range(from, from + 999);
+      if (error) throw new Error(`marketing_events: ${error.message}`);
+      const rows = (data ?? []) as CampaignSend[];
+      sends.push(...rows);
+      if (rows.length < 1000) break;
+    }
+    if (sends.length === 0) return { logged: 0, duplicate: 0, failed: 0 };
+    const contacts = await crmContactsByEmail(sends.map((s) => s.email));
+    return await logCommunicationBatch(campaignLogInputs(campaign, sends, contacts));
+  } catch (err) {
+    console.error("[notes-log] logCampaignSends failed", { campaignId: campaign.id, error: err instanceof Error ? err.message : String(err) });
+    return null;
+  }
+}
+
+/**
+ * Run logCampaignSends after the response is sent (next/server `after`), so it never
+ * delays the caller. Outside a request (no `after` scope) it runs detached. Never throws.
+ */
+export function queueCampaignNotesLog(campaign: CampaignInfo): void {
+  const run = () => logCampaignSends(campaign).then(() => undefined);
+  try {
+    after(run);
+  } catch {
+    void run();
+  }
 }

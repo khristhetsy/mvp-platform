@@ -1,6 +1,7 @@
 // Sales activity log — records tracked events and reads a contact's timeline.
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { proposalActivity, type ProposalActivityInput } from "@/lib/sales/proposal-activity";
+import { buildPreview } from "@/lib/notes-log-preview";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return createServiceRoleClient(); }
@@ -38,11 +39,29 @@ export async function logOutboundEmailActivity(
   limit = 25,
   /** Which mailbox sent it, shown as a badge on the timeline. */
   via?: "gmail" | "icapos",
+  /**
+   * Optional Notes log details: the body (stored as a 280 character plain text preview,
+   * never in full) and the provider's message id (meta.external_id, so a retried log
+   * write is a no-op). Each row also gets its own recipient and the subject.
+   */
+  details?: { body?: string | null; externalId?: string | null },
 ): Promise<void> {
   try {
     const emails = [...new Set(recipients.map((e) => e.trim().toLowerCase()).filter(Boolean))].slice(0, limit);
     if (emails.length === 0) return;
     const summary = `Email sent${subject ? `: ${subject.slice(0, 160)}` : ""}`;
+    const preview = details ? buildPreview(details.body) : "";
+    const metaFor = (email: string): Record<string, unknown> | undefined => {
+      if (!details) return via ? { via } : undefined;
+      return {
+        ...(via ? { via } : {}),
+        direction: "outbound",
+        to: email,
+        ...(subject ? { subject: subject.slice(0, 300) } : {}),
+        ...(preview ? { preview } : {}),
+        ...(details.externalId ? { external_id: details.externalId } : {}),
+      };
+    };
     for (const email of emails) {
       const { data: contact } = await db().from("crm_contacts").select("id").ilike("email", email).maybeSingle();
       const contactId = (contact?.id as string | undefined) ?? null;
@@ -54,9 +73,9 @@ export async function logOutboundEmailActivity(
         .eq("status", "open");
       const openOpps = (opps ?? []) as Array<{ id: string }>;
       if (openOpps.length > 0) {
-        for (const o of openOpps) await logActivity({ kind: "email", summary, actorId, opportunityId: o.id, meta: via ? { via } : undefined });
+        for (const o of openOpps) await logActivity({ kind: "email", summary, actorId, opportunityId: o.id, meta: metaFor(email) });
       } else {
-        await logActivity({ kind: "email", summary, actorId, contactCrmId: contactId, meta: via ? { via } : undefined });
+        await logActivity({ kind: "email", summary, actorId, contactCrmId: contactId, meta: metaFor(email) });
       }
     }
   } catch { /* never block the send */ }
