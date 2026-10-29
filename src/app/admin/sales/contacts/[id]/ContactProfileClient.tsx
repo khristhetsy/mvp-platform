@@ -1430,7 +1430,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
             </div>
           )}
           <div style={{ marginBottom: 16 }}>
-            <SalesChatter contactCrmId={initialContact.id} contactName={initialContact.name} contactEmail={initialContact.email} staff={staff} />
+            <SalesChatter contactCrmId={initialContact.id} contactName={initialContact.name} contactEmail={initialContact.email} staff={staff} notesLog />
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
             {([["all", "All"], ["call", "Calls"], ["note", "Notes"], ["task", "Tasks"], ["stage", "Stage changes"]] as const).map(([f, label]) => (

@@ -15,9 +15,10 @@ vi.mock("@/lib/supabase/admin", () => ({
   }),
 }));
 
+import type { OdooMsg } from "@/lib/sales/chatter-merge";
 import {
   buildPreview, chipOf, formatPT, groupCounts, logCommunication, logCommunicationBatch,
-  oneYearBefore, pickMeta, rowToEntry, tagOf, toInsertRow, type CommunicationInput,
+  mergeOdooEntries, oneYearBefore, pickMeta, rowToEntry, tagOf, toInsertRow, type CommunicationInput,
 } from "./notes-log";
 
 beforeEach(() => {
@@ -180,5 +181,49 @@ describe("rowToEntry", () => {
     const e = rowToEntry({ id: "r", kind: "email", summary: "x", created_at: "2026-10-29T09:41:00Z", meta: { href: "https://evil.example", recording_url: "javascript:alert(1)" } });
     expect(e.meta.href).toBeUndefined();
     expect(e.meta.recording_url).toBeUndefined();
+  });
+});
+
+describe("mergeOdooEntries", () => {
+  const cutoff = new Date("2025-10-29T00:00:00Z");
+  const msg = (id: number, over: Partial<OdooMsg> = {}): OdooMsg => ({
+    id, date: "2026-10-01T10:00:00Z", author: "Odoo User", subject: null, body: `Body ${id}`, isNote: true, origin: "Odoo contact", ...over,
+  });
+
+  it("shows every unmirrored Odoo message, once, with its origin", () => {
+    const { entries, extra } = mergeOdooEntries([msg(1), msg(1), msg(2, { isNote: false, subject: "Re: deck" })], [], "c1", cutoff);
+    expect(entries.map((e) => e.id)).toEqual(["odoo:1", "odoo:2"]);
+    expect(entries[0]).toMatchObject({ kind: "odoo_note", chip: "notes", source: "odoo", origin: "Odoo contact", editable: true, tag: null });
+    expect(entries[1]).toMatchObject({ kind: "odoo_message", chip: "messages", editable: false, summary: "Re: deck\nBody 2" });
+    expect(extra.recent).toMatchObject({ all: 2, notes: 1, messages: 1 });
+  });
+
+  it("shows a mirrored message as its iCapOS row (de-duplicated by odoo_message_id)", () => {
+    const mirror = { id: "row-1", kind: "odoo_note", summary: "Edited here", created_at: "2026-10-01T10:00:00Z", odoo_message_id: 1, contact_crm_id: "c1", deleted_at: null, meta: { odoo_author: "Odoo User" } };
+    const { entries, extra } = mergeOdooEntries([msg(1)], [mirror], "c1", cutoff);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({ id: "row-1", summary: "Edited here", actor_name: "Odoo User", source: "odoo" });
+    // Already in the contact's own row counts.
+    expect(extra.recent.all).toBe(0);
+  });
+
+  it("counts a mirror row filed on another contact", () => {
+    const mirror = { id: "row-2", kind: "odoo_note", summary: "x", created_at: "2026-10-01T10:00:00Z", odoo_message_id: 1, contact_crm_id: null, deleted_at: null };
+    expect(mergeOdooEntries([msg(1)], [mirror], "c1", cutoff).extra.recent.all).toBe(1);
+  });
+
+  it("keeps a message hidden when its mirror row was deleted here, as the current Note Log does", () => {
+    const mirror = { id: "row-3", kind: "odoo_note", summary: "x", created_at: "2026-10-01T10:00:00Z", odoo_message_id: 1, contact_crm_id: "c1", deleted_at: "2026-10-20T00:00:00Z" };
+    expect(mergeOdooEntries([msg(1)], [mirror], "c1", cutoff).entries).toEqual([]);
+  });
+
+  it("files an undated or old message under older than 1 year, never drops it", () => {
+    const { entries, extra } = mergeOdooEntries([msg(5, { date: null })], [], "c1", cutoff);
+    expect(entries).toHaveLength(1);
+    expect(extra.older.all).toBe(1);
+  });
+
+  it("skips empty messages, as the current Note Log does", () => {
+    expect(mergeOdooEntries([msg(6, { body: "", subject: null })], [], "c1", cutoff).entries).toEqual([]);
   });
 });

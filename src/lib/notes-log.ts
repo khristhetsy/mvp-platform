@@ -4,7 +4,9 @@
 // index sales_activity_log_external_uq turns the second insert into a no-op.
 // Admin only. Nothing here is used by founder pages.
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { isNoteKind } from "@/lib/sales/chatter-merge";
+import { isNoteKind, type OdooMsg } from "@/lib/sales/chatter-merge";
+import { odooMessages, resolveOdooLinks } from "@/lib/sales/chatter";
+import type { OdooNoteTarget } from "@/lib/crm-connectors/odoo/notes";
 import { safeInternalHref } from "@/lib/sales/proposal-activity";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -40,7 +42,8 @@ export function chipOf(kind: string): Exclude<NotesLogChip, "all"> | null {
   return null;
 }
 
-const AUTO_KINDS = new Set<string>(["email", "message", "call", "sequence", "marketing", "odoo_message"]);
+// Odoo chatter is not tagged: it carries its Odoo origin badge instead.
+const AUTO_KINDS = new Set<string>(["email", "message", "call", "sequence", "marketing"]);
 
 export type NotesLogTag = "auto" | "inbound" | "marketing";
 
@@ -250,6 +253,7 @@ export async function logCommunicationBatch(inputs: CommunicationInput[]): Promi
 // ---------------------------------------------------------------- reads
 
 export type NotesLogEntry = {
+  /** Row id, or "odoo:<message id>" for Odoo chatter not mirrored into iCapOS. */
   id: string;
   kind: string;
   chip: Exclude<NotesLogChip, "all"> | null;
@@ -260,8 +264,14 @@ export type NotesLogEntry = {
   /** "Oct 29, 2026, 2:41 AM PT" */
   created_at_pt: string;
   edited_at: string | null;
-  /** Only manual notes can be edited or deleted. Auto entries never. */
+  /** Notes only (iCapOS and Odoo notes, as in the current Note Log). Auto entries never. */
   editable: boolean;
+  /** "odoo" for Odoo chatter and the iCapOS rows that mirror it. */
+  source: "icapos" | "odoo";
+  /** Odoo badge: "Odoo contact", "Odoo opportunity" or "Odoo". */
+  origin: string | null;
+  /** An iCapOS note that was also posted to Odoo. */
+  odoo_synced: boolean;
   meta: NotesLogMeta;
 };
 
@@ -285,9 +295,16 @@ export function groupCounts(rows: Array<{ kind: string; created_at: string }>, c
   return out;
 }
 
+function addCounts(a: NotesLogCounts, b: NotesLogCounts): NotesLogCounts {
+  const sum = (x: ChipCounts, y: ChipCounts) =>
+    Object.fromEntries(NOTES_LOG_CHIPS.map((c) => [c, x[c] + y[c]])) as ChipCounts;
+  return { recent: sum(a.recent, b.recent), older: sum(a.older, b.older) };
+}
+
 export function rowToEntry(r: Record<string, unknown>): NotesLogEntry {
   const a = r.actor as { full_name?: string | null; email?: string | null } | null;
   const kind = String(r.kind);
+  const rawMeta = (r.meta ?? null) as { odoo_author?: string | null } | null;
   const meta = pickMeta(r.meta);
   if (meta.href) {
     const safe = safeInternalHref(meta.href);
@@ -295,22 +312,97 @@ export function rowToEntry(r: Record<string, unknown>): NotesLogEntry {
   }
   if (meta.recording_url && !/^https:\/\//i.test(meta.recording_url)) delete meta.recording_url;
   const created = String(r.created_at);
+  const odoo = kind === "odoo_note" || kind === "odoo_message";
+  const actor = a?.full_name ?? a?.email ?? null;
   return {
     id: String(r.id),
     kind,
     chip: chipOf(kind),
     tag: tagOf(kind, meta),
     summary: String(r.summary ?? ""),
-    actor_name: a?.full_name ?? a?.email ?? null,
+    actor_name: (odoo ? rawMeta?.odoo_author ?? null : null) ?? actor,
     created_at: created,
     created_at_pt: formatPT(created),
     edited_at: (r.edited_at as string | null) ?? null,
     editable: isNoteKind(kind),
+    source: odoo ? "odoo" : "icapos",
+    origin: odoo ? "Odoo" : null,
+    odoo_synced: !odoo && r.odoo_message_id != null,
     meta,
   };
 }
 
-const ENTRY_COLS = "id, kind, summary, created_at, edited_at, meta, actor:profiles!sales_activity_log_actor_id_fkey(full_name, email)";
+function odooMsgToEntry(m: OdooMsg): NotesLogEntry {
+  // Same shape as the current Note Log (chatter-merge odooToItem): a message keeps its subject line.
+  const kind = m.isNote ? "odoo_note" : "odoo_message";
+  const created = m.date ?? new Date(0).toISOString();
+  return {
+    id: `odoo:${m.id}`,
+    kind,
+    chip: chipOf(kind),
+    tag: null,
+    summary: (m.subject && !m.isNote ? `${m.subject}\n` : "") + m.body,
+    actor_name: m.author,
+    created_at: created,
+    created_at_pt: formatPT(created),
+    edited_at: null,
+    editable: m.isNote,
+    source: "odoo",
+    origin: m.origin,
+    odoo_synced: false,
+    meta: {},
+  };
+}
+
+/**
+ * Live Odoo chatter for the Notes log, merged the same way as the current Note Log:
+ *  - A message an iCapOS row mirrors (odoo_message_id) is shown as that row, so edits
+ *    made here win. The row is returned even when it isn't on the loaded page, and the
+ *    browser de-duplicates by id when the page later brings it in.
+ *  - A message whose mirror row was deleted here stays hidden (it is in Recently deleted).
+ *  - The same message reached twice shows once. Empty messages are skipped.
+ * `extra` counts the entries the contact's own row counts don't already include:
+ * Odoo messages with no mirror row, and mirror rows filed on another contact.
+ * Pure.
+ */
+export function mergeOdooEntries(
+  msgs: OdooMsg[], mirrors: Array<Record<string, unknown>>, contactCrmId: string, cutoff: Date,
+): { entries: NotesLogEntry[]; extra: NotesLogCounts } {
+  const byMsg = new Map<number, Array<Record<string, unknown>>>();
+  for (const r of mirrors) {
+    const id = Number(r.odoo_message_id);
+    if (!Number.isFinite(id)) continue;
+    byMsg.set(id, [...(byMsg.get(id) ?? []), r]);
+  }
+  const entries: NotesLogEntry[] = [];
+  const counted: Array<{ kind: string; created_at: string }> = [];
+  const seenMsg = new Set<number>();
+  const seenRow = new Set<string>();
+  for (const m of msgs) {
+    if (!(m.body || m.subject)) continue;
+    if (seenMsg.has(m.id)) continue;
+    seenMsg.add(m.id);
+    const rows = byMsg.get(m.id);
+    if (!rows) {
+      const e = odooMsgToEntry(m);
+      entries.push(e);
+      counted.push(e);
+      continue;
+    }
+    for (const r of rows) {
+      const rowId = String(r.id);
+      if (r.deleted_at || seenRow.has(rowId)) continue;
+      seenRow.add(rowId);
+      const e = rowToEntry(r);
+      entries.push(e);
+      if (r.contact_crm_id !== contactCrmId) counted.push(e);
+    }
+  }
+  return { entries, extra: groupCounts(counted, cutoff) };
+}
+
+const ENTRY_COLS = "id, kind, summary, created_at, edited_at, meta, odoo_message_id, actor:profiles!sales_activity_log_actor_id_fkey(full_name, email)";
+const MIRROR_COLS = `${ENTRY_COLS}, contact_crm_id, deleted_at`;
 export const PAGE_SIZE = 50;
 const COUNT_CAP = 20000;
 
@@ -319,13 +411,21 @@ export type NotesLogPage = {
   hasMore: boolean;
   /** ISO start of the 12 month window. Pass it as `before` to load the older entries. */
   cutoff: string;
-  /** Only on the first page (no `before`). */
+  /** Only on the first page (no `before`). Includes the Odoo chatter below. */
   counts: NotesLogCounts | null;
+  /**
+   * Only on the first page: the live Odoo chatter of the contact's Odoo partner, the same
+   * set the current Note Log shows. Kept by the browser across pages and chip changes and
+   * merged into the timeline by date, de-duplicated by id.
+   */
+  odoo: NotesLogEntry[] | null;
+  /** Where "Also log in Odoo" posts. Only on the first page. */
+  odooTarget: OdooNoteTarget | null;
 };
 
 /**
  * One page of a contact's Notes log, newest first.
- *  - No `before`: the last 12 months, plus the per chip counts.
+ *  - No `before`: the last 12 months, the per chip counts and the live Odoo chatter.
  *  - `before` inside the 12 months: the next page of the last 12 months (Load more).
  *  - `before` at or before the cutoff: older than 1 year (Show more, and its Load more).
  */
@@ -339,6 +439,7 @@ export async function listNotesLog(
   const before = opts.before ? new Date(opts.before) : null;
   if (before && Number.isNaN(before.getTime())) throw new Error("Invalid before.");
   const chip = opts.chip ?? "all";
+  const first = !before;
 
   let q = db().from("sales_activity_log").select(ENTRY_COLS).eq("contact_crm_id", contactCrmId).is("deleted_at", null);
   if (chip !== "all") q = q.in("kind", [...CHIP_KINDS[chip]]);
@@ -346,19 +447,37 @@ export async function listNotesLog(
   if (!before || before.getTime() > cutoff.getTime()) q = q.gte("created_at", cutoffIso);
   q = q.order("created_at", { ascending: false }).limit(limit + 1);
 
-  const countsQuery = before
-    ? Promise.resolve(null)
-    : db().from("sales_activity_log").select("kind, created_at").eq("contact_crm_id", contactCrmId).is("deleted_at", null).limit(COUNT_CAP);
+  const countsQuery = first
+    ? db().from("sales_activity_log").select("kind, created_at").eq("contact_crm_id", contactCrmId).is("deleted_at", null).limit(COUNT_CAP)
+    : Promise.resolve(null);
+  const odooQuery = first ? loadOdoo(contactCrmId, cutoff) : Promise.resolve(null);
 
-  const [list, countRows] = await Promise.all([q, countsQuery]);
+  const [list, countRows, odoo] = await Promise.all([q, countsQuery, odooQuery]);
   if (list.error) throw new Error(`Notes log: ${list.error.message}`);
   if (countRows?.error) throw new Error(`Notes log counts: ${countRows.error.message}`);
 
   const raw = (list.data ?? []) as Array<Record<string, unknown>>;
+  const own = countRows ? groupCounts((countRows.data ?? []) as Array<{ kind: string; created_at: string }>, cutoff) : null;
   return {
     entries: raw.slice(0, limit).map(rowToEntry),
     hasMore: raw.length > limit,
     cutoff: cutoffIso,
-    counts: countRows ? groupCounts((countRows.data ?? []) as Array<{ kind: string; created_at: string }>, cutoff) : null,
+    counts: own && odoo ? addCounts(own, odoo.extra) : own,
+    odoo: odoo?.entries ?? null,
+    odooTarget: odoo?.target ?? null,
   };
+}
+
+/** The contact's live Odoo chatter, through the same links and fetch as the current Note Log. */
+async function loadOdoo(contactCrmId: string, cutoff: Date) {
+  const links = await resolveOdooLinks({ contactCrmId });
+  const msgs = await odooMessages(links);
+  const ids = [...new Set(msgs.map((m) => m.id))];
+  let mirrors: Array<Record<string, unknown>> = [];
+  if (ids.length > 0) {
+    const { data, error } = await db().from("sales_activity_log").select(MIRROR_COLS).in("odoo_message_id", ids);
+    if (error) throw new Error(`Notes log Odoo: ${error.message}`);
+    mirrors = (data ?? []) as Array<Record<string, unknown>>;
+  }
+  return { ...mergeOdooEntries(msgs, mirrors, contactCrmId, cutoff), target: links.noteTarget };
 }
