@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { z } from "zod";
 import { enforceRateLimit } from "@/lib/api/rate-limit";
 import { bookSlot } from "@/lib/scheduling/book";
@@ -12,6 +12,7 @@ import { fitSessionTag, heardAboutAnswer, listCampaignOptions, matchCampaignAnsw
 import { verifyFounderToken } from "@/lib/marketing/match-campaign/token";
 import { recordFounderBooking } from "@/lib/marketing/match-campaign/store";
 import { PLATFORM_TZ } from "@/lib/time/platform-tz";
+import { bookingConfirmationLog, logCommunication } from "@/lib/notes-log";
 
 // Public endpoint: anyone with the link can book (guest booking). Booker
 // identity comes from the form, not a session.
@@ -120,7 +121,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       await logBookingMatchNote({ email: parsed.data.email, bookingId: result.bookingId, answers: parsed.data.answers ?? [], result: investorMatches });
     }
 
-    await sendBookingEmails({
+    const emailed = await sendBookingEmails({
       bookingId: result.bookingId,
       hostEmail: result.hostEmail,
       hostName: result.hostName,
@@ -133,7 +134,17 @@ export async function POST(req: NextRequest): Promise<Response> {
       meetUrl: result.meetUrl,
       answers: parsed.data.answers,
       investorMatches,
-    }).catch(() => {});
+    }).catch(() => null);
+
+    // Notes log: the confirmation the booker received, on the contact the booking was filed
+    // on. After the response; logCommunication never throws.
+    const contactCrmId = result.contactCrmId;
+    if (emailed?.booker && contactCrmId) {
+      after(() => logCommunication(bookingConfirmationLog({
+        contactCrmId, hostId: parsed.data.hostId, bookingId: result.bookingId, bookerEmail: parsed.data.email,
+        title: result.event.title, investorMatches, hostCopySent: emailed.host,
+      })));
+    }
 
     // Match campaign: mark the founder booked. Best-effort.
     const matchFounderId = verifyFounderToken(parsed.data.matchToken);

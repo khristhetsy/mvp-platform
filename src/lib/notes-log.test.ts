@@ -20,7 +20,7 @@ vi.mock("@/lib/supabase/admin", () => ({
 
 import type { OdooMsg } from "@/lib/sales/chatter-merge";
 import {
-  buildPreview, campaignLogInputs, logCampaignSends, queueCampaignNotesLog, chipFilter, chipFor, chipOf, stepOf, formatPT, groupCounts, logCommunication, logCommunicationBatch,
+  bookingConfirmationLog, buildPreview, campaignLogInputs, logCampaignSends, queueCampaignNotesLog, chipFilter, chipFor, chipOf, stepOf, formatPT, groupCounts, logCommunication, logCommunicationBatch,
   mergeOdooEntries, oneYearBefore, pickMeta, rowToEntry, tagOf, toInsertRow, type CommunicationInput,
 } from "./notes-log";
 
@@ -315,5 +315,30 @@ describe("campaign Notes log never touches or delays a send", () => {
     // The test client has no select(): the read throws inside logCampaignSends.
     await expect(logCampaignSends({ id: "camp-1", name: "n", subject: "s" })).resolves.toBeNull();
     expect(console.error).toHaveBeenCalled();
+  });
+});
+
+describe("bookingConfirmationLog", () => {
+  const base = { contactCrmId: "c1", hostId: "h1", bookingId: "b1", bookerEmail: "ana@x.com", title: "Intro call" };
+  const investorMatches = { total: 12, matches: [{ company: "Acme Ventures", fit: 82, detail: "Seed · Fintech" }, { company: "Beta Capital", fit: 77, detail: "x" }] };
+
+  it("logs the booker's confirmation as an email, safe to write twice", () => {
+    expect(bookingConfirmationLog({ ...base, hostCopySent: true })).toMatchObject({
+      kind: "email", summary: "Booking confirmation sent: Intro call", contactCrmId: "c1", actorId: "h1",
+      meta: { via: "icapos", direction: "outbound", to: "ana@x.com", subject: "Confirmed: Intro call", external_id: "booking-confirmation:b1" },
+    });
+  });
+
+  it("records the investor matches only when the host copy carrying them was sent", () => {
+    expect(bookingConfirmationLog({ ...base, investorMatches, hostCopySent: true }).meta?.investor_matches)
+      .toEqual({ total: 12, matches: [{ company: "Acme Ventures", fit: 82 }, { company: "Beta Capital", fit: 77 }] });
+    expect(bookingConfirmationLog({ ...base, investorMatches, hostCopySent: false }).meta?.investor_matches).toBeUndefined();
+    expect(bookingConfirmationLog({ ...base, investorMatches: null, hostCopySent: true }).meta?.investor_matches).toBeUndefined();
+  });
+
+  it("keeps the matches through the row builder and the reader", () => {
+    const row = toInsertRow(bookingConfirmationLog({ ...base, investorMatches, hostCopySent: true }));
+    expect(row.meta?.investor_matches?.matches).toHaveLength(2);
+    expect(rowToEntry({ id: "r", kind: "email", summary: "x", created_at: "2026-10-29T09:41:00Z", meta: row.meta }).meta.investor_matches?.total).toBe(12);
   });
 });

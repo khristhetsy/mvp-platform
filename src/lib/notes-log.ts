@@ -114,7 +114,11 @@ export type NotesLogMeta = {
   /** Gmail message id, email_log.id, call_attempts.id: the idempotency key. */
   external_id?: string;
   href?: string;
+  /** Booking confirmation: the investor matches that went in the host's copy of the email. */
+  investor_matches?: InvestorMatchesMeta;
 };
+
+export type InvestorMatchesMeta = { total: number; matches: Array<{ company: string; fit: number }> };
 
 const META_KEYS = [
   "via", "direction", "to", "subject", "preview", "campaign_id", "campaign_name", "sequence_id", "step",
@@ -144,6 +148,13 @@ export function pickMeta(raw: unknown): NotesLogMeta {
   // Older call rows store `duration` (seconds) instead of duration_seconds.
   if (out.duration_seconds === undefined && src.duration != null && Number.isFinite(Number(src.duration))) {
     out.duration_seconds = Number(src.duration);
+  }
+  const im = src.investor_matches as { total?: unknown; matches?: unknown } | null | undefined;
+  if (im && Array.isArray(im.matches)) {
+    const matches = (im.matches as Array<{ company?: unknown; fit?: unknown }>)
+      .map((m) => ({ company: String(m?.company ?? "").slice(0, 120), fit: Number(m?.fit) }))
+      .filter((m) => m.company && Number.isFinite(m.fit));
+    if (matches.length) out.investor_matches = { total: Number.isFinite(Number(im.total)) ? Number(im.total) : matches.length, matches };
   }
   return out as NotesLogMeta;
 }
@@ -596,4 +607,31 @@ export function queueCampaignNotesLog(campaign: CampaignInfo): void {
   } catch {
     void run();
   }
+}
+
+// ---------------------------------------------------------------- Booking confirmation email
+
+/**
+ * The Notes log row for the booking confirmation sent to the booker. Pure. When the
+ * host's copy of the booking email carried investor matches, they are recorded too
+ * (company and fit only); the booker's email never contains them.
+ */
+export function bookingConfirmationLog(input: {
+  contactCrmId: string; hostId: string; bookingId: string | null; bookerEmail: string; title: string;
+  investorMatches?: { matches: Array<{ company: string; fit: number }>; total: number } | null; hostCopySent: boolean;
+}): CommunicationInput {
+  const matches = input.hostCopySent && input.investorMatches?.matches.length
+    ? { total: input.investorMatches.total, matches: input.investorMatches.matches.map((m) => ({ company: m.company, fit: m.fit })) }
+    : null;
+  return {
+    kind: "email",
+    summary: `Booking confirmation sent: ${input.title.slice(0, 160)}`,
+    contactCrmId: input.contactCrmId,
+    actorId: input.hostId,
+    meta: {
+      via: "icapos", direction: "outbound", to: input.bookerEmail, subject: `Confirmed: ${input.title}`.slice(0, 300),
+      ...(input.bookingId ? { external_id: `booking-confirmation:${input.bookingId}` } : {}),
+      ...(matches ? { investor_matches: matches } : {}),
+    },
+  };
 }

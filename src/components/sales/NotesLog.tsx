@@ -381,6 +381,11 @@ export function NotesLog({ contactCrmId, reloadKey, onOdooTarget }: {
               {m.subject && <div style={detail}>Subject: {m.subject}</div>}
               {m.campaign_name && <div style={detail}>Campaign: {m.campaign_name}</div>}
               {m.step != null && <div style={detail}>Step {m.step}</div>}
+              {m.investor_matches && (
+                <div style={{ ...detail, whiteSpace: "normal" }}>
+                  Investor matches in the host&apos;s copy (top {m.investor_matches.matches.length} of {m.investor_matches.total}): {m.investor_matches.matches.map((x) => `${x.company} ${x.fit}%`).join(" · ")}
+                </div>
+              )}
               {e.chip === "calls" && (m.direction || m.phone || m.duration_seconds != null || m.outcome) && (
                 <div style={{ ...detail, whiteSpace: "normal" }}>
                   {[m.direction === "inbound" ? "Inbound" : m.direction === "outbound" ? "Outbound" : null, m.phone ? formatPhone(m.phone) : null,

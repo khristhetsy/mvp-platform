@@ -137,7 +137,7 @@ function bookingEmailHtml(opts: BookingEmailOpts): string {
  * silently no-ops when RESEND_API_KEY isn't configured, and never throws into the
  * booking flow. When bookingId is present the emails carry Cancel + Reschedule links.
  */
-export async function sendBookingEmails(input: BookingEmailInput): Promise<void> {
+export async function sendBookingEmails(input: BookingEmailInput): Promise<{ booker: boolean; host: boolean }> {
   const whenText = formatWhen(input.startTime, input.endTime, input.timezone);
   const mins = durationMin(input.startTime, input.endTime);
   const addToCalUrl = gcalUrl(input.title, input.startTime, input.endTime, input.meetUrl);
@@ -153,8 +153,10 @@ export async function sendBookingEmails(input: BookingEmailInput): Promise<void>
   };
 
   const sends: Array<Promise<boolean>> = [];
+  let bookerSend: Promise<boolean> | null = null;
+  let hostSend: Promise<boolean> | null = null;
   if (input.bookerEmail) {
-    sends.push(sendEmail({
+    sends.push(bookerSend = sendEmail({
       to: input.bookerEmail,
       subject: `Confirmed: ${input.title}`,
       html: bookingEmailHtml({ ...base, subject: `Confirmed: ${input.title}`, greetingName: input.bookerName, heroTitle: "You're scheduled", heroSub: "A calendar invitation has been sent to your email." }),
@@ -162,7 +164,7 @@ export async function sendBookingEmails(input: BookingEmailInput): Promise<void>
     }));
   }
   if (input.hostEmail) {
-    sends.push(sendEmail({
+    sends.push(hostSend = sendEmail({
       to: input.hostEmail,
       subject: `New booking: ${input.title}`,
       html: bookingEmailHtml({ ...base, subject: `New booking: ${input.title}`, greetingName: input.hostName, heroTitle: "New event scheduled", heroSub: `${input.bookerName ?? "Someone"} booked time with you.`, investorMatches: input.investorMatches }),
@@ -170,6 +172,9 @@ export async function sendBookingEmails(input: BookingEmailInput): Promise<void>
     }));
   }
   await Promise.allSettled(sends);
+  // Which emails the provider accepted, for the Notes log. The sends above are unchanged.
+  const accepted = async (p: Promise<boolean> | null) => (p ? p.catch(() => false) : false);
+  return { booker: await accepted(bookerSend), host: await accepted(hostSend) };
 }
 
 function cancelBodyHtml(opts: { greetingName: string | null; otherName: string | null; when: string; title?: string }): string {
