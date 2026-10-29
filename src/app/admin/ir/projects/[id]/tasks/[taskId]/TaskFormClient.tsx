@@ -20,12 +20,13 @@ import type { OdooOpenActivity } from "@/lib/ir/odoo-open-activities";
 import { InvestorContactDialog } from "../../../../_shared/InvestorContactDialog";
 import { MatchBulkActions } from "./MatchBulkActions";
 import { ActivityPopover } from "./ActivityPopover";
+import { MeetingContactsTab } from "./MeetingContactsTab";
 import { OdooProjectStage } from "../../../../_shared/OdooProjectStage";
 import { TaskDeleteDialog, runTaskAction, type TaskAction } from "../TaskArchiveDelete";
 import { platformInputToIso, toPlatformInput } from "@/lib/time/platform-input";
 
 type Contact = { email: string | null; phone: string | null; country: string | null; membership: string | null };
-type Payload = { task: IrTask; project: IrProject; entrepreneur: EntrepreneurProfile | null; contacts: Record<string, Contact>; weeks: IrMilestone[]; months: IrMilestone[]; matches: IrMatch[]; activities: IrActivity[]; notes: IrNote[]; staff: Array<{ id: string; name: string }>; siblings: Array<{ id: string; title: string; milestone_id: string }> };
+type Payload = { task: IrTask; project: IrProject; entrepreneur: EntrepreneurProfile | null; contacts: Record<string, Contact>; weeks: IrMilestone[]; months: IrMilestone[]; matches: IrMatch[]; activities: IrActivity[]; notes: IrNote[]; staff: Array<{ id: string; name: string }>; siblings: Array<{ id: string; title: string; milestone_id: string }>; meetingContacts?: number };
 type Tab = "agent" | "subtasks" | "blocked" | "extra" | "founder" | "matching" | "meetings";
 const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—");
 const inp = "w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-indigo-400 focus:outline-none";
@@ -67,6 +68,8 @@ export function TaskFormClient({ taskId, meId, initialTab, added, sequenced = nu
     return () => { document.removeEventListener("mousedown", close); document.removeEventListener("keydown", esc); };
   }, [colsOpen]);
   function setMatchCols(next: MatchColKey[]) { setMcols(next); try { window.localStorage.setItem(MATCH_COLS_KEY, JSON.stringify(next)); } catch { /* ignore */ } }
+  const [meetingCount, setMeetingCount] = useState<number | null>(null);
+  const onMeetingCount = useCallback((n: number) => setMeetingCount(n), []);
   const [tab, setTab] = useState<Tab>((["agent", "subtasks", "blocked", "extra", "founder", "matching", "meetings"].includes(initialTab ?? "") ? initialTab : "agent") as Tab);
   const [busy, setBusy] = useState(false);
   const [title, setTitle] = useState<string | null>(null);
@@ -269,7 +272,7 @@ export function TaskFormClient({ taskId, meId, initialTab, added, sequenced = nu
         </div>
 
         <div className="flex gap-1 border-t border-slate-100 px-4">
-          {([["agent", "Agent field"], ["subtasks", `Sub-tasks · ${data.activities.length}`], ["blocked", `Blocked by${(data.task.blockers ?? []).filter((b) => !b.cleared_at).length ? ` · ${(data.task.blockers ?? []).filter((b) => !b.cleared_at).length}` : ""}`], ["extra", "Extra info"], ["founder", "Entrepreneur profile"], ["matching", `Matching · ${data.matches.length}`], ["meetings", `Meetings · ${data.activities.filter((a) => a.type === "meeting").length}`]] as const).map(([k, l]) => (
+          {([["agent", "Agent field"], ["subtasks", `Sub-tasks · ${data.activities.length}`], ["blocked", `Blocked by${(data.task.blockers ?? []).filter((b) => !b.cleared_at).length ? ` · ${(data.task.blockers ?? []).filter((b) => !b.cleared_at).length}` : ""}`], ["extra", "Extra info"], ["founder", "Entrepreneur profile"], ["matching", `Matching · ${data.matches.length}`], ["meetings", `Meetings · ${meetingCount ?? data.meetingContacts ?? 0}`]] as const).map(([k, l]) => (
             <button key={k} type="button" onClick={() => setTab(k)} className={`-mb-px border-b-2 px-3 py-2 text-[12.5px] font-medium ${tab === k ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}>{l}</button>
           ))}
         </div>
@@ -387,10 +390,7 @@ export function TaskFormClient({ taskId, meId, initialTab, added, sequenced = nu
           {tab === "blocked" ? <BlockersPanel blockers={data.task.blockers ?? []} dealTitle={data.project.title} busy={busy} onChange={(next: IrBlocker[]) => patch({ blockers: next })} /> : null}
           {tab === "extra" ? <ExtraInfo task={data.task} week={week ?? null} investors={data.matches.length} linked={data.activities.length} busy={busy} onSave={(notes) => patch({ notes })} /> : null}
           {tab === "founder" ? <EntrepreneurTab e={data.entrepreneur} onSaved={load} /> : null}
-          {tab === "meetings" ? (
-            (() => { const ms = data.activities.filter((a) => a.type === "meeting"); return ms.length === 0 ? <p className="text-[12.5px] text-slate-400">No meetings this week.</p> : (
-              <ul className="divide-y divide-slate-100 text-[12.5px]">{ms.map((a) => <li key={a.id} className="flex gap-2 py-1.5"><span className="font-medium text-slate-900">{matchName(a.match_id)}</span><span className="flex-1 text-slate-600">{a.subject}</span><span className="text-slate-500">{a.done_at ? `held ${fmt(a.done_at)}` : `booked ${fmt(a.due_at)}`}</span></li>)}</ul>); })()
-          ) : null}
+          {tab === "meetings" ? <MeetingContactsTab taskId={taskId} onCount={onMeetingCount} /> : null}
         </div>
         <div className="flex flex-wrap items-center gap-1.5 border-t border-slate-100 px-4 py-3 text-[12.5px]">
           {month ? <span className="text-slate-500">{week?.label ? `${week.label} · ` : ""}{month.label} of {data.months.length}</span> : null}
