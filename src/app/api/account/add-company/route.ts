@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireApiProfile } from "@/lib/api/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { userCanAddCompanies } from "@/lib/organizations/organizations";
-import { getUserPlan } from "@/lib/subscriptions/get-subscription";
+import { getDistributionPlan } from "@/lib/subscriptions/get-subscription";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import { addCompanyLabel } from "@/lib/subscriptions/pricing-catalog";
 import { loadPricing } from "@/lib/subscriptions/pricing-server";
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
   // can also grant it per-account via can_add_companies (Admin → Accounts).
   const [flagged, plan] = await Promise.all([
     userCanAddCompanies(admin, auth.profile.id),
-    getUserPlan(auth.profile.id),
+    getDistributionPlan(auth.profile.id),
   ]);
   if (!flagged && !founderEntitlements(plan).canAddCompany) {
     return NextResponse.json(

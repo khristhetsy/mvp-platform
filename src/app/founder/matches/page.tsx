@@ -5,7 +5,7 @@ import { requireRole } from "@/lib/supabase/auth";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { getFounderMatchQueue, countViewersForFounder } from "@/lib/matching/queue";
 import { loadFounderMatchingCenter } from "@/lib/matching/founder-matching-center";
-import { getUserPlan } from "@/lib/subscriptions/get-subscription";
+import { getDistributionPlan } from "@/lib/subscriptions/get-subscription";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import { FounderMatchQueue } from "@/components/matching/FounderMatchQueue";
 import { MatchStatusStepper } from "@/components/matching/MatchStatusStepper";
@@ -72,7 +72,7 @@ export default async function FounderMatchesPage() {
   const companyIds = queue?.companyIds ?? [];
   const viewers = company ? await countViewersForFounder(companyIds) : 0;
   const data = company ? await loadFounderMatchingCenter(company) : { cards: [], total: 0, strong: 0 };
-  const plan = await getUserPlan(profile.id);
+  const plan = await getDistributionPlan(profile.id);
   // The rating gate, read from the engine rather than a threshold typed on this
   // page. The admin model already says this surface is CRR-qualified; now the
   // button agrees with it.

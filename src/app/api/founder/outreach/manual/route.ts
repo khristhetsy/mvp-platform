@@ -3,7 +3,7 @@ import { requireApiProfile } from "@/lib/api/auth";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { emailDispatchAllowedForUser, EMAIL_DISABLED_MESSAGE } from "@/lib/organizations/organizations";
-import { getUserPlan } from "@/lib/subscriptions/get-subscription";
+import { getDistributionPlan } from "@/lib/subscriptions/get-subscription";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import { capMessage, checkManualOutreachCap } from "@/lib/outreach/investor-cap";
 import { checkManualEmailCap } from "@/lib/outreach/email-cap";
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
   if (!company) return NextResponse.json({ error: "No company found." }, { status: 404 });
 
   // DIY outreach unlocks on Basic. Free can draft but not send/enroll.
-  const plan = body.action === "start" ? await getUserPlan(auth.profile.id) : null;
+  const plan = body.action === "start" ? await getDistributionPlan(auth.profile.id) : null;
   if (body.action === "start" && !founderEntitlements(plan).canDistribute) {
     return NextResponse.json(
       {

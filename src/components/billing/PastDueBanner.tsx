@@ -10,8 +10,8 @@ export function PastDueBanner({ state, endsAt }: Readonly<{ state: PastDueState;
   const lapsed = state === "lapsed";
   const days = graceDaysLeft(endsAt);
   const message = lapsed
-    ? "Your access is paused because your last payment failed. Update your card to turn it back on."
-    : `Your last payment failed. Update your card by ${formatPtDate(endsAt)} (${days} day${days === 1 ? "" : "s"} left) to keep your access.`;
+    ? "Investor outreach is paused because your last payment failed. Your tools are still on. Update your card to turn outreach back on."
+    : `Your last payment failed. Update your card by ${formatPtDate(endsAt)} (${days} day${days === 1 ? "" : "s"} left) to keep investor outreach running.`;
   return (
     <div
       role="alert"

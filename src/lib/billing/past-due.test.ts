@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { graceDaysLeft, isNewPastDue, keepGraceWindow, pastDueState } from "./past-due";
+import { graceDaysLeft, isNewPastDue, keepGraceWindow, pastDueState, reminderDue } from "./past-due";
 import { renderFounderPastDueEmail } from "./past-due-email";
 import { mapStatus, PAST_DUE_GRACE_DAYS } from "./webhook-mapping";
 
@@ -61,19 +61,52 @@ describe("grace length", () => {
   });
 });
 
+describe("reminderDue", () => {
+  const ends = "2026-11-02T12:00:00.000Z";
+  it("sends nothing while more than 48 hours remain (day 0 to 3)", () => {
+    expect(reminderDue(ends, new Date("2026-10-30T11:00:00.000Z"))).toBeNull();
+  });
+  it("sends the day 3 reminder with 24 to 48 hours left", () => {
+    expect(reminderDue(ends, new Date("2026-10-31T13:00:00.000Z"))).toBe("midpoint");
+    expect(reminderDue(ends, new Date("2026-11-01T11:00:00.000Z"))).toBe("midpoint");
+  });
+  it("sends the last day reminder with under 24 hours left", () => {
+    expect(reminderDue(ends, new Date("2026-11-01T13:00:00.000Z"))).toBe("final");
+    expect(reminderDue(ends, new Date("2026-11-02T11:59:00.000Z"))).toBe("final");
+  });
+  it("sends nothing once the window has closed", () => {
+    expect(reminderDue(ends, new Date("2026-11-02T12:00:00.000Z"))).toBeNull();
+    expect(reminderDue(ends, new Date("2026-11-03T12:00:00.000Z"))).toBeNull();
+  });
+  it("a daily run lands in each window exactly once", () => {
+    const start = Date.parse("2026-10-28T16:30:00.000Z");
+    const stages: Array<string | null> = [];
+    for (let d = 0; d <= 5; d += 1) stages.push(reminderDue(ends, new Date(start + d * 86_400_000)));
+    expect(stages.filter((x) => x === "midpoint")).toHaveLength(1);
+    expect(stages.filter((x) => x === "final")).toHaveLength(1);
+  });
+});
+
 describe("renderFounderPastDueEmail", () => {
-  it("names the plan and the date and links to billing", () => {
-    const email = renderFounderPastDueEmail({
-      firstName: "Ana",
-      planLabel: "Premium",
-      endsAt: "2026-11-02T12:00:00.000Z",
-      billingUrl: "https://icapos.com/founder/settings/billing",
-      now: NOW,
-    });
+  const base = {
+    firstName: "Ana",
+    planLabel: "Premium",
+    endsAt: "2026-11-02T12:00:00.000Z",
+    billingUrl: "https://icapos.com/founder/settings/billing",
+  };
+  it("day 0 names the plan and the date and links to billing", () => {
+    const email = renderFounderPastDueEmail(base);
     expect(email.subject).toBe("Your iCapOS payment did not go through");
     expect(email.html).toContain("Premium");
     expect(email.html).toContain("Nov 2, 2026");
     expect(email.html).toContain("https://icapos.com/founder/settings/billing");
     expect(email.text).toContain("Nov 2, 2026");
+  });
+  it("says the tools stay on and only investor outreach pauses", () => {
+    expect(renderFounderPastDueEmail(base).text).toContain("Your tools stay on");
+  });
+  it("day 3 and day 5 have their own subjects", () => {
+    expect(renderFounderPastDueEmail({ ...base, stage: "midpoint" }).subject).toContain("Reminder");
+    expect(renderFounderPastDueEmail({ ...base, stage: "final" }).subject).toBe("Last day to update your card");
   });
 });

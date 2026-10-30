@@ -4,7 +4,7 @@ import { requireFounderSocial } from "@/lib/social/founder-auth";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { emailDispatchAllowedForUser, EMAIL_DISABLED_MESSAGE } from "@/lib/organizations/organizations";
-import { getUserPlan } from "@/lib/subscriptions/get-subscription";
+import { getDistributionPlan } from "@/lib/subscriptions/get-subscription";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import { capMessage, checkManualOutreachCap } from "@/lib/outreach/investor-cap";
 import { checkManualEmailCap } from "@/lib/outreach/email-cap";
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest): Promise<Response> {
   const { company, org } = await getActiveCompanyForUser(auth.profile as never);
   if (!company) return NextResponse.json({ error: "No company found." }, { status: 404 });
 
-  const plan = await getUserPlan(auth.founderId);
+  const plan = await getDistributionPlan(auth.founderId);
   if (!founderEntitlements(plan).canDistribute) {
     return NextResponse.json({ error: "Sending email unlocks on Basic. You can save a draft now and upgrade to reach investors.", code: "upgrade_required" }, { status: 403 });
   }
