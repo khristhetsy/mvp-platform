@@ -140,6 +140,34 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
       if (res.ok && data.opportunity) setO(data.opportunity);
     } finally { setBusy(false); }
   }
+  // Inline Deal value editor (amount + billing period).
+  const [dvEditing, setDvEditing] = useState(false);
+  const [dvAmount, setDvAmount] = useState("");
+  const [dvBilling, setDvBilling] = useState<"yearly" | "monthly">("yearly");
+  const [dvError, setDvError] = useState("");
+  function dvStart() {
+    setDvAmount(o.value_cents == null ? "" : String(o.value_cents / 100));
+    setDvBilling(o.billing);
+    setDvError("");
+    setDvEditing(true);
+  }
+  // null = empty (clears the value), undefined = invalid, number = cents.
+  function dvParse(): number | null | undefined {
+    const t = dvAmount.replace(/[$,\s]/g, "");
+    if (t === "") return null;
+    const n = Number(t);
+    return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) : undefined;
+  }
+  async function dvSave() {
+    const cents = dvParse();
+    if (cents === undefined) { setDvError("Enter a valid amount"); return; }
+    if (cents === o.value_cents && dvBilling === o.billing) { setDvEditing(false); return; }
+    await patch({ valueCents: cents, billing: dvBilling });
+    setDvEditing(false);
+  }
+  const dvParsed = dvEditing ? dvParse() : null;
+  const dvPreviewMrr = dvParsed == null ? "—" : mrr({ value_cents: dvParsed, billing: dvBilling });
+
   async function saveEdit() {
     await patch({
       title: draft.title,
@@ -336,7 +364,42 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginBottom: 16 }}>
-                <div style={cardBox}><div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Deal value</div><div style={{ fontSize: 19, fontWeight: 600 }}>{money(o.value_cents)}<span style={{ fontSize: 11, color: "var(--muted-foreground)", fontWeight: 400 }}>/{o.billing === "monthly" ? "mo" : "yr"}</span></div></div>
+                <div style={cardBox}>
+                  <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Deal value</div>
+                  {dvEditing ? (
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 3 }}>
+                        <span style={{ fontSize: 15, fontWeight: 600 }}>$</span>
+                        <input
+                          autoFocus inputMode="decimal" aria-label="Deal value amount" value={dvAmount}
+                          onChange={(e) => { setDvAmount(e.target.value); setDvError(""); }}
+                          onKeyDown={(e) => { if (e.key === "Enter") void dvSave(); if (e.key === "Escape") setDvEditing(false); }}
+                          style={{ ...inp, width: 96, fontSize: 15, fontWeight: 600, padding: "4px 7px" }}
+                        />
+                        <select aria-label="Billing period" value={dvBilling} onChange={(e) => setDvBilling(e.target.value as "yearly" | "monthly")} style={{ ...inp, padding: "4px 5px" }}>
+                          <option value="yearly">/yr</option>
+                          <option value="monthly">/mo</option>
+                        </select>
+                      </div>
+                      {dvError
+                        ? <div style={{ fontSize: 11, color: "#A32D2D", marginTop: 4 }}>{dvError}</div>
+                        : <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 4 }}>Expected MRR becomes {dvPreviewMrr}</div>}
+                      <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                        <button type="button" onClick={() => void dvSave()} disabled={busy} style={{ ...inp, cursor: "pointer", fontWeight: 600 }}>Save</button>
+                        <button type="button" onClick={() => setDvEditing(false)} style={{ ...inp, cursor: "pointer" }}>Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      role="button" tabIndex={0} title="Edit deal value" onClick={dvStart}
+                      onKeyDown={(ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); dvStart(); } }}
+                      style={{ fontSize: 19, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "baseline", gap: 2 }}
+                    >
+                      {money(o.value_cents)}<span style={{ fontSize: 11, color: "var(--muted-foreground)", fontWeight: 400 }}>/{o.billing === "monthly" ? "mo" : "yr"}</span>
+                      <i className="ti ti-pencil" aria-hidden="true" style={{ fontSize: 14, color: "var(--muted-foreground)", marginLeft: 6 }} />
+                    </div>
+                  )}
+                </div>
                 <div style={cardBox}><div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Expected MRR</div><div style={{ fontSize: 19, fontWeight: 600 }}>{mrr(o)}</div></div>
                 <div style={cardBox}><div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Close probability</div><div style={{ fontSize: 19, fontWeight: 600, color: "#3B6D11" }}>{o.probability != null ? `${o.probability}%` : "—"}</div></div>
                 <div style={cardBox}><div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Expected close</div><div style={{ fontSize: 15, fontWeight: 600, marginTop: 3 }}>{o.expected_close ?? "—"}</div></div>
