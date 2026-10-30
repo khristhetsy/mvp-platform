@@ -100,6 +100,64 @@ function PlanCard({
   );
 }
 
+/**
+ * Shown instead of the form when the email already has an account. Supabase
+ * answers an existing address with no error (and an empty identities list) so
+ * it cannot be used to probe for accounts; this notice reads the same way.
+ */
+function AlreadyRegisteredNotice({ email, role }: Readonly<{ email: string; role: SignupRole }>) {
+  const [state, setState] = useState<"idle" | "sending" | "sent" | "error">("idle");
+
+  async function requestEmail() {
+    if (state === "sending" || state === "sent") return;
+    setState("sending");
+    try {
+      const res = await fetch("/api/lead", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, role, details: { request: "onboarding_email" }, source_page: "/auth/sign-up" }),
+      });
+      setState(res.ok ? "sent" : "error");
+    } catch {
+      setState("error");
+    }
+  }
+
+  return (
+    <div className="flex w-full max-w-xl flex-col" role="status">
+      <div className="flex items-center gap-4">
+        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-600" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 7l9 6 9-6" /></svg>
+        </span>
+        <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Thank you for your registration</h1>
+      </div>
+      <p className="mt-5 text-base leading-7 text-slate-600">
+        We sent your onboarding link to <strong className="font-semibold text-slate-950">{email}</strong>.
+      </p>
+      <ol className="mt-6 grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-5">
+        {["Open your email inbox.", "Find the latest email from iCapOS.", "Select Continue onboarding to finish your setup."].map((step, i) => (
+          <li key={step} className="flex items-start gap-3 text-sm leading-6 text-slate-800">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white">{i + 1}</span>
+            {step}
+          </li>
+        ))}
+      </ol>
+      <p className="mt-6 text-sm leading-6 text-slate-600">
+        {state === "sent" ? "Thank you. Our team will send your onboarding email shortly." : "If you did not receive your onboarding email, please contact us."}
+      </p>
+      {state === "error" ? <p className="mt-2 text-sm text-red-700" role="alert">Something went wrong. Please try again.</p> : null}
+      <button
+        type="button"
+        onClick={requestEmail}
+        disabled={state === "sending" || state === "sent"}
+        className="mt-3 self-start rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:from-indigo-500 hover:to-violet-500 disabled:opacity-60"
+      >
+        {state === "sent" ? "Request sent" : state === "sending" ? "Sending..." : "Request onboarding email"}
+      </button>
+    </div>
+  );
+}
+
 const signUpSchema = z.object({
   fullName: z.string().min(1),
   email: z.string().email(),
@@ -134,6 +192,7 @@ export function SignUpForm({
   const [password, setPassword] = useState("");
   const [apiError, setApiError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
 
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect -- prefill signup form from URL params */
@@ -165,7 +224,7 @@ export function SignUpForm({
 
     setIsLoading(true);
     const supabase = createClient();
-    const { error: signUpError } = await supabase.auth.signUp({
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -184,6 +243,15 @@ export function SignUpForm({
 
     setIsLoading(false);
 
+    // An address that already has an account: show the confirmation, not the form.
+    const existingAccount =
+      (!signUpError && signUpData?.user?.identities?.length === 0) ||
+      (signUpError !== null && /already (been )?registered/i.test(signUpError.message));
+    if (existingAccount) {
+      setRegisteredEmail(email.trim());
+      return;
+    }
+
     if (signUpError) {
       setApiError(signUpError.message);
       return;
@@ -192,6 +260,8 @@ export function SignUpForm({
     router.push(signUpDestinationByRole(role, privateBetaMode));
     router.refresh();
   }
+
+  if (registeredEmail) return <AlreadyRegisteredNotice email={registeredEmail} role={role} />;
 
   const submitLabel = role === "founder" ? "Create founder account" : "Create investor account";
 

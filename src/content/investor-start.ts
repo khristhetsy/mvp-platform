@@ -18,8 +18,10 @@ export const investorStart = {
     investorType: { label: "Investor type", options: INVESTOR_TYPE_OPTIONS },
     checkSize: { label: "Typical check size", options: MONEY_BAND_OPTIONS },
     // Options come from the stored industry list (see InvestorStartForm).
-    sectors: { label: "Sectors (optional)" },
+    sectors: { label: "Sectors (optional)", placeholder: "Select sectors", search: "Search sectors" },
+    confirmEmail: { label: "Confirm work email", mismatch: "The two emails do not match. Your onboarding link is sent to this address." },
   },
+  multiHint: "Select all that apply",
   freeNote: "Free for investors.",
   freeNoteSub: "No subscription, no card, now or later.",
   submit: "Create free investor account",
