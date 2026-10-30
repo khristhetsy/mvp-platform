@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  announcementFor, changeOf, claimsFor, csvRow, emailFor, isFullyProven, isMeasured, missingFor,
+  announcementFor, changeOf, evidenceFlags, claimsFor, csvRow, emailFor, isFullyProven, isMeasured, missingFor,
   monthsBetween, proofStats, signed, statementOf, type ProofCompany, type ProofScore,
 } from "@/lib/crr/proof";
 import type { Dimension } from "@/lib/crr/profiles";
@@ -84,6 +84,15 @@ describe("proofStats", () => {
   it("has no statement without measured founders", () => {
     expect(statementOf(proofStats([C], 65))).toContain("No founder has a measured before and after");
     expect(statementOf(s)).toBe("2 founders, measured over 5 to 6 months, average CRR change +43.5 points.");
+  });
+});
+
+describe("evidenceFlags", () => {
+  it("flags weak baselines, short spans and tiny changes, only on measured founders", () => {
+    expect(evidenceFlags(A)).toEqual([]);
+    expect(evidenceFlags(C)).toEqual([]);
+    const weak = company({ id: "w", first: [5, "2026-10-01T00:00:00Z"], latest: [8, "2026-10-10T00:00:00Z"] });
+    expect(evidenceFlags(weak).map((f) => f.key)).toEqual(["low_baseline", "short_span", "tiny_change"]);
   });
 });
 
