@@ -29,6 +29,7 @@ const LABELS: Record<string, Label> = {
   "/api/cron/wire-invoices": { name: "Premium wire invoices", group: "Platform", description: "Marks overdue wire invoices, creates renewal invoices 7 days ahead and pauses Premium after 10 days overdue" },
   "/api/cron/accounting-daily": { name: "Accounting daily", group: "Platform", description: "Emails scheduled invoices on their issue date and pulls new Bank of America transactions through Plaid" },
   "/api/cron/ai-budget-alerts": { name: "AI budget alerts", group: "Platform", description: "Emails when an AI budget reaches 80% or 100% this month" },
+  "/api/cron/db-health": { name: "Database health check", group: "Platform", description: "Times a test query, records connections and the longest query, and alerts admins when the database slows down" },
   "/api/cron/job-dispatcher": { name: "Schedule dispatcher", group: "Platform", description: "Starts jobs with a custom schedule or a set next run" },
   "/api/cron/activity-escalations": { name: "Activity escalations", group: "Platform", description: "Chases account activity alerts nobody has opened" },
   "/api/cron/operations-escalations": { name: "Operations escalations", group: "Platform" },
@@ -67,6 +68,11 @@ export function listCronJobs(): CronJob[] {
     schedules,
     ...(LABELS[path] ?? { name: path.replace(/^\/api\/(cron\/)?/, ""), group: "Other" as const }),
   }));
+}
+
+/** The name shown on Scheduled jobs for a path, or the path tidied up. */
+export function cronJobName(path: string): string {
+  return LABELS[path]?.name ?? path.replace(/^\/api\/(cron\/)?/, "");
 }
 
 export function isCronPath(path: string): boolean {

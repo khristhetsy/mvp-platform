@@ -9,6 +9,10 @@
       "schedule": "*/5 * * * *"
     },
     {
+      "path": "/api/cron/db-health",
+      "schedule": "4-59/5 * * * *"
+    },
+    {
       "path": "/api/cron/scheduled-reach-outs",
       "schedule": "2-59/5 * * * *"
     },
