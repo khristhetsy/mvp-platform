@@ -33,6 +33,22 @@ describe("formatRange", () => {
   });
 });
 
+describe("buildReminderMessages investor matches", () => {
+  it("lists the matched investors for the host only", () => {
+    const matches = { total: 12, matches: [{ company: "Acme Capital", fit: 92, detail: "Venture fund, SaaS focus" }] };
+    const [host, guest] = buildReminderMessages({ tier: "1h", event, owner, booking, matches });
+    const hostHtml = renderEmail(host.spec).html;
+    expect(hostHtml).toContain("Investor matches (top 1 of 12)");
+    expect(hostHtml).toContain("Acme Capital");
+    expect(hostHtml).toContain("92% fit");
+    expect(renderEmail(guest.spec).html).not.toContain("Acme Capital");
+  });
+  it("adds nothing without matches", () => {
+    const [host] = buildReminderMessages({ tier: "1h", event, owner, booking });
+    expect(renderEmail(host.spec).html).not.toContain("Investor matches");
+  });
+});
+
 describe("buildReminderMessages", () => {
   it("sends the host the contact, reason and note, and attendees the details only", () => {
     const [host, guest] = buildReminderMessages({ tier: "1h", event, owner, booking });
