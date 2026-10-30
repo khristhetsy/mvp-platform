@@ -171,6 +171,6 @@ export function alertText(input: {
   const lead = peakState === "overload" ? "Database overloaded" : "Database slow";
   return {
     title: `${lead}: ${CAUSE_LABEL[cause].toLowerCase()}`,
-    message: `${parts.join(", ")}. ${input.pointer ?? "Open System health to see what to do."}`.replace(/^./, (c) => c.toUpperCase()),
+    message: `${parts.join(", ")}. ${input.pointer ?? "Open Database health to see what to do."}`.replace(/^./, (c) => c.toUpperCase()),
   };
 }

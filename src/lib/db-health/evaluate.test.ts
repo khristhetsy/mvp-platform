@@ -90,6 +90,6 @@ describe("alertText", () => {
   it("says what was seen and where to look", () => {
     const t = alertText({ cause: "jobs_and_queries", peakState: "overload", reading: { responseMs: 7400, probeFailed: false, longestQueryS: 48, newCronTimeouts: 2 } });
     expect(t.title).toBe("Database overloaded: jobs and queries running at once");
-    expect(t.message).toBe("The test query took 7.4 s, the longest query has run 48 s, 2 scheduled jobs timed out. Open System health to see what to do.");
+    expect(t.message).toBe("The test query took 7.4 s, the longest query has run 48 s, 2 scheduled jobs timed out. Open Database health to see what to do.");
   });
 });
