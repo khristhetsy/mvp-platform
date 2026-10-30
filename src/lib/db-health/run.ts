@@ -17,8 +17,8 @@ import {
 } from "@/lib/db-health/evaluate";
 
 export const DB_HEALTH_SETTINGS_KEY = "db_health_settings";
-/** Where alerts send the reader. Points at the Database health page once it exists. */
-export const DB_HEALTH_LINK = "/admin/system-health";
+/** Where alerts send the reader. */
+export const DB_HEALTH_LINK = "/admin/system-health/database";
 const SAMPLE_RETENTION_DAYS = 30;
 
 function db(): SupabaseClient {

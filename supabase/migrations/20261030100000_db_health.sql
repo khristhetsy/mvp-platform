@@ -58,15 +58,16 @@ alter table public.db_health_incidents enable row level security;
 drop policy if exists db_health_samples_staff_read on public.db_health_samples;
 create policy db_health_samples_staff_read on public.db_health_samples
   for select to authenticated
-  using (public.is_staff());
+  using ((select public.is_staff()));
 
 drop policy if exists db_health_incidents_staff_read on public.db_health_incidents;
 create policy db_health_incidents_staff_read on public.db_health_incidents
   for select to authenticated
-  using (public.is_staff());
+  using ((select public.is_staff()));
 
--- Connections and the longest running query, for the check. Excludes the
--- caller's own connection and idle connections.
+-- Open connections and the longest running query, for the check. Excludes the
+-- caller's own connection. The connection count includes idle connections; the
+-- longest query looks only at queries running right now.
 create or replace function public.db_health_snapshot()
 returns jsonb
 language sql
