@@ -15,6 +15,13 @@ type Pick = { id: string; name: string; company: string; type: string; email: st
 
 const PAGE = 80;
 const LEAD_STATUSES = ["new", "contacted", "qualified", "paused", "not interested", "won", "lost"];
+const OPTIONS: Partial<Record<FieldKey, string[]>> = {
+  membership: ["Entrepreneur", "Investor", "Advisor", "Both", "Prospect", "None"],
+  member_portal_plan: ["Basic plan", "Business plan", "Premium plan", "Demo plan", "Financing", "Consulting service"],
+  lead_source: ["LinkedIn", "Agile", "SEC Form D", "Website", "Email", "Referral", "Deals2Match", "Instagram", "Other"],
+  job_position: ["CEO", "CFO", "COO", "CTO", "Founder", "Co-founder", "President", "Managing partner", "Managing director", "Partner", "VP", "Director", "Investor", "Advisor"],
+};
+const OTHER = "__other__";
 const FIELD_KEYS = ["company", "membership", "member_portal_plan", "lead_status", "lead_source", "street", "street2", "city", "state", "zip", "country", "ein", "operator_licence", "curp", "job_position", "phone", "phone2", "email", "website", "language"] as const;
 type FieldKey = (typeof FIELD_KEYS)[number];
 type Vals = Record<FieldKey | "name" | "tags", string>;
@@ -53,11 +60,42 @@ function Modal({ title, onClose, children, footer }: { title: string; onClose: (
   );
 }
 
+/** A dropdown over a fixed list. A saved value that is not in the list stays selectable, so editing never blanks it. */
+function Dropdown({ k, v, set }: { k: FieldKey; v: string; set: (k: keyof Vals, x: string) => void }) {
+  const opts = OPTIONS[k] ?? [];
+  return (
+    <select className={inp} value={v} onChange={(e) => set(k, e.target.value)} aria-label={LABEL[k]}>
+      <option value="" />
+      {v && !opts.includes(v) ? <option value={v}>{v}</option> : null}
+      {opts.map((o) => <option key={o} value={o}>{o}</option>)}
+    </select>
+  );
+}
+
+/** Job position: a list of common titles, plus "Other, type it" which reveals a text box. */
+function JobPosition({ v, set }: { v: string; set: (k: keyof Vals, x: string) => void }) {
+  const opts = OPTIONS.job_position ?? [];
+  const [typing, setTyping] = useState(false);
+  const custom = typing || (v !== "" && !opts.includes(v));
+  return (
+    <div className="flex flex-col gap-1">
+      <select className={inp} value={custom ? OTHER : v} onChange={(e) => { if (e.target.value === OTHER) { setTyping(true); if (opts.includes(v)) set("job_position", ""); } else { setTyping(false); set("job_position", e.target.value); } }} aria-label="Job position">
+        <option value="" />
+        {opts.map((o) => <option key={o} value={o}>{o}</option>)}
+        <option value={OTHER}>Other, type it</option>
+      </select>
+      {custom ? <input className={inp} value={v} onChange={(e) => set("job_position", e.target.value)} placeholder="Type the job position" aria-label="Job position, other" autoFocus={typing} /> : null}
+    </div>
+  );
+}
+
 function ContactForm({ v, set, createdOn }: { v: Vals; set: (k: keyof Vals, x: string) => void; createdOn?: string }) {
   const field = (k: FieldKey) => (
     <label key={k} className="grid grid-cols-[130px_1fr] items-center gap-3 text-[13px]"><span className="text-slate-600">{LABEL[k]}</span>
-      {k === "lead_status" ? <select className={inp} value={v[k]} onChange={(e) => set(k, e.target.value)}><option value="" />{LEAD_STATUSES.map((s) => <option key={s} value={s}>{s[0].toUpperCase() + s.slice(1)}</option>)}</select>
-        : <input className={inp} value={v[k]} onChange={(e) => set(k, e.target.value)} placeholder={k === "job_position" ? "e.g. Sales Director" : k === "website" ? "e.g. https://www.icapos.com" : ""} />}
+      {k === "job_position" ? <JobPosition v={v[k]} set={set} />
+        : OPTIONS[k] ? <Dropdown k={k} v={v[k]} set={set} />
+        : k === "lead_status" ? <select className={inp} value={v[k]} onChange={(e) => set(k, e.target.value)}><option value="" />{LEAD_STATUSES.map((s) => <option key={s} value={s}>{s[0].toUpperCase() + s.slice(1)}</option>)}</select>
+        : <input className={inp} value={v[k]} onChange={(e) => set(k, e.target.value)} placeholder={k === "website" ? "e.g. https://www.icapos.com" : ""} />}
     </label>
   );
   return (
@@ -200,7 +238,7 @@ function EditDialog({ id, onClose, onSaved }: { id: string; onClose: () => void;
   useEffect(() => {
     let live = true;
     void api(`/api/sales/contacts/${id}`, "GET").then((j) => {
-      if (!live) return; const c = j.contact as Record<string, unknown>; const s = (k: string) => (typeof c[k] === "string" ? (c[k] as string) : "");
+      if (!live) return; const c = j.contact as Record<string, unknown>; const s = (k: string) => (typeof c[k] === "string" && (c[k] as string).trim().toLowerCase() !== "false" ? (c[k] as string) : "");
       const next: Vals = { ...EMPTY, name: s("name"), tags: Array.isArray(c.tags) ? (c.tags as string[]).join(", ") : "" };
       for (const k of FIELD_KEYS) next[k] = s(k);
       setV(next); setCreated(s("created_on").slice(0, 10));
