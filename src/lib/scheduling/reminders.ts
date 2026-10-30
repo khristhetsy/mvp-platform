@@ -4,6 +4,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/send-email";
 import { renderEmail, type EmailBlock, type EmailSpec } from "@/lib/email/layout";
 import { googleCalUrl } from "@/lib/icfo-events/calendar-links";
+import { investorMatchesForBooking, type BookingMatches } from "./booking-matches";
 
 // calendar_events and scheduling_bookings aren't in the generated types — raw client.
 function raw(supabase: SupabaseClient<Database>): SupabaseClient {
@@ -94,7 +95,7 @@ function calendarPath(role: string | null): string | null {
   return null;
 }
 
-function bookingBlocks(booking: ReminderBooking): EmailBlock[] {
+function bookingBlocks(booking: ReminderBooking, matches: BookingMatches | null = null): EmailBlock[] {
   const blocks: EmailBlock[] = [];
   const name = booking.booker_name?.trim() || booking.booker_email?.trim() || null;
   if (name) {
@@ -110,6 +111,13 @@ function bookingBlocks(booking: ReminderBooking): EmailBlock[] {
       type: "rows",
       title: "Reason for the call",
       items: answers.map((a) => ({ title: a.value, subtitle: a.label })),
+    });
+  }
+  if (matches && matches.matches.length > 0) {
+    blocks.push({
+      type: "rows",
+      title: `Investor matches (top ${matches.matches.length} of ${matches.total})`,
+      items: matches.matches.map((m) => ({ title: m.company, subtitle: m.detail, right: `${m.fit}% fit` })),
     });
   }
   if (booking.note?.trim()) {
@@ -130,8 +138,10 @@ export function buildReminderMessages(input: {
   event: DueEvent;
   owner: ReminderOwner | null;
   booking: ReminderBooking | null;
+  /** Top investor matches for the booker, host email only. */
+  matches?: BookingMatches | null;
 }): ReminderMessage[] {
-  const { tier, event, owner, booking } = input;
+  const { tier, event, owner, booking, matches = null } = input;
   const when = formatWhen(event.start_time, event.timezone);
   const range = formatRange(event.start_time, event.end_time, event.timezone);
   const subject = `Reminder: ${event.title}, ${tier === "24h" ? "tomorrow" : when}`;
@@ -159,7 +169,7 @@ export function buildReminderMessages(input: {
   if (ownerEmail) {
     const blocks: EmailBlock[] = [];
     if (booking) {
-      blocks.push(...bookingBlocks(booking));
+      blocks.push(...bookingBlocks(booking, matches));
     } else {
       const named = (event.attendees ?? []).filter((a) => a.email && a.email.trim().toLowerCase() !== ownerEmail);
       if (named.length > 0) {
@@ -270,11 +280,16 @@ async function sendTier(
   let reminded = 0;
   const done: string[] = [];
   for (const event of events) {
+    // Founder bookings carry their stage, industry and raise answers: match them the same
+    // way the booking email does. Best-effort, null when it does not apply or fails.
+    const booking = bookingByEvent.get(event.id) ?? null;
+    const matches = booking?.answers ? await investorMatchesForBooking(booking.answers) : null;
     const messages = buildReminderMessages({
       tier,
       event,
       owner: ownerById.get(event.owner_id) ?? null,
-      booking: bookingByEvent.get(event.id) ?? null,
+      booking,
+      matches,
     });
     let sent = false;
     for (const m of messages) {
