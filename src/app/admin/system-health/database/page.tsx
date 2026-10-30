@@ -5,9 +5,12 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { WorkspaceSection } from "@/components/admin/company-workspace/WorkspaceSection";
 import { DbHealthAlertRules } from "@/components/admin/db-health/DbHealthAlertRules";
+import { DbHealthAskAi } from "@/components/admin/db-health/DbHealthAskAi";
 import { DbHealthFixes } from "@/components/admin/db-health/DbHealthFixes";
 import { requirePermissionPage } from "@/lib/api/permissions";
 import { formatWhen } from "@/lib/cron/schedule";
+import { listCronJobs } from "@/lib/cron/jobs";
+import { findPatterns } from "@/lib/db-health/patterns";
 import { loadDbHealth, type IncidentRow } from "@/lib/db-health/load";
 import { buildTiles, fmtMs } from "@/lib/db-health/tiles";
 import { VERDICT_LABEL, labelQuery, queryVerdict, type Verdict } from "@/lib/db-health/baseline";
@@ -81,6 +84,7 @@ export default async function AdminDatabaseHealthPage() {
     : null;
   const cause: IncidentCause | null = open ? (open.cause as IncidentCause) : reading && latest && latest.state !== "ok" ? classifyCause(reading, settings) : null;
 
+  const patterns = findPatterns({ incidents, jobs: listCronJobs().map((j) => ({ name: j.name, schedules: j.schedules })), queryStats });
   const p90 = queryStats?.norms.p90_mean_ms ?? null;
   const median = queryStats?.norms.median_mean_ms ?? null;
 
@@ -140,12 +144,18 @@ export default async function AdminDatabaseHealthPage() {
           </>
         )}
 
+        <div id="fix-it" className="scroll-mt-24">
         <WorkspaceSection icon="ti-tool" tone="red" title="Fix it" subtitle="Each action asks you to confirm and is written to the audit log.">
           <DbHealthFixes
             longQueries={longQueries}
             queryLimitS={settings.queryLimitS}
             jobs={timedOut.map((j) => ({ path: j.path, name: j.name, timeouts: j.timeouts, paused: data.pausedPaths.includes(j.path) }))}
           />
+        </WorkspaceSection>
+        </div>
+
+        <WorkspaceSection icon="ti-sparkles" tone="purple" title="Ask AI to fix this" subtitle="Explains the readings in plain words. You confirm every action under Fix it.">
+          <DbHealthAskAi />
         </WorkspaceSection>
 
         <WorkspaceSection icon="ti-clock-exclamation" tone="amber" title="Timeouts by job, last 24 hours" subtitle="Share of runs that did not finish. From the Scheduled jobs run log.">
@@ -202,6 +212,23 @@ export default async function AdminDatabaseHealthPage() {
               ))}
             </div>
           )}
+        </WorkspaceSection>
+
+        <WorkspaceSection icon="ti-chart-dots" tone="purple" title="Patterns and improvements" subtitle="Counted from the incident log and the query statistics. Incident patterns need 3 incidents.">
+          <div className="space-y-3">
+            {patterns.patterns.map((p) => (
+              <div key={p.key} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+                <p className="font-semibold text-slate-900">{p.title}</p>
+                <p className="mt-1 text-xs leading-relaxed text-slate-600">{p.detail}</p>
+                <p className="mt-1 text-xs leading-relaxed text-slate-700"><b className="text-slate-900">Suggested improvement:</b> {p.suggestion}</p>
+              </div>
+            ))}
+            {patterns.incidents < patterns.needed ? (
+              <p className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs text-slate-500">Not enough incidents yet to show a pattern over time: {patterns.incidents} of {patterns.needed} needed.</p>
+            ) : patterns.patterns.length === 0 ? (
+              <p className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs text-slate-500">{patterns.incidents} incidents logged and no repeating hour or cause found.</p>
+            ) : null}
+          </div>
         </WorkspaceSection>
 
         <DbHealthAlertRules initial={settings} />

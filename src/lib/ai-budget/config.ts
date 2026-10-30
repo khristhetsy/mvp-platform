@@ -76,6 +76,7 @@ export const AI_FEATURE_META: Record<string, { label: string; group?: string }> 
   spotlight_intro: { label: "Spotlight intro drafts", group: "Events" },
   operations_assistant: { label: "Operations assistant", group: "Operations" },
   metrics_explain: { label: "Metric explanations", group: "Operations" },
+  db_health_ask: { label: "Database health assistant", group: "Operations" },
   ir_analytics: { label: "Investor Relations analytics", group: "Admin tools" },
   admin_company_ai: { label: "Company assessment and outreach", group: "Admin tools" },
   admin_investor_ai: { label: "Investor review and drafts", group: "Admin tools" },
