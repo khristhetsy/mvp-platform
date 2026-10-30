@@ -113,7 +113,7 @@ export function evidenceFlags(c: ProofCompany): EvidenceFlag[] {
   return out;
 }
 
-export type MissingKey ="baseline" | "quote_pending" | "quote_none" | "activity";
+export type MissingKey = "baseline" | "quote_pending" | "quote_none" | "activity";
 export type Missing = { key: MissingKey; label: string; tone: "bad" | "warn" };
 
 /** What stops a company being proven on all three: baseline, quote, activity. */

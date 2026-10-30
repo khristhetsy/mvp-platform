@@ -29,7 +29,7 @@ function company(over: Omit<Partial<ProofCompany>, "first" | "latest"> & { id: s
 
 const A = company({ id: "a", first: [29, "2026-05-01T00:00:00Z"], latest: [76, "2026-10-01T00:00:00Z"], quote: "yes", activity: { meetings: 4, conversations: 7, intros: 2 } });
 const B = company({ id: "b", first: [20, "2026-04-01T00:00:00Z"], latest: [60, "2026-10-01T00:00:00Z"], quote: "pending", activity: null });
-const C = company({ id: "c", latest: [67, "2026-10-01T00:00:00Z"], history: [{ score: 67, at: "2026-10-01T00:00:00Z" }], quote: "none" });
+const C = company({ id: "c", first: [67, "2026-10-01T00:00:00Z"], latest: [67, "2026-10-01T00:00:00Z"], history: [{ score: 67, at: "2026-10-01T00:00:00Z" }], quote: "none" });
 
 describe("proof basics", () => {
   it("measures only companies with two or more score rows", () => {
@@ -64,7 +64,7 @@ describe("proofStats", () => {
 
   it("counts the gate at first and now", () => {
     expect(s.gateNow).toBe(2); // A 76, C 67
-    expect(s.gateFirst).toBe(1); // C 67 is its only score
+    expect(s.gateFirst).toBe(1); // C 67 is its only score, first and latest alike
   });
 
   it("treats missing activity as none recorded, not zero", () => {
@@ -121,6 +121,6 @@ describe("claims and copy", () => {
 
   it("builds the export row", () => {
     expect(csvRow(A)).toEqual(["Co a", "Founder a", "Seed", 29, 76, 47, 5, "yes", 4, 7, 2]);
-    expect(csvRow(C)).toEqual(["Co c", "Founder c", "Seed", "", 67, "", "", "none", "", "", ""]);
+    expect(csvRow(C)).toEqual(["Co c", "Founder c", "Seed", 67, 67, "", "", "none", "", "", ""]);
   });
 });
