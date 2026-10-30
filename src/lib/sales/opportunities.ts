@@ -176,8 +176,21 @@ export async function updateOpportunity(id: string, patch: UpdateOpportunityPatc
   if (patch.status !== undefined) update.status = patch.status;
   if (patch.notes !== undefined) update.notes = patch.notes;
   if (patch.ownerId !== undefined) update.owner_id = patch.ownerId || null;
+  let before: { value_cents: number | null; billing: string | null } | null = null;
+  if (patch.valueCents !== undefined || patch.billing !== undefined) {
+    const { data: prev } = await db().from("sales_opportunities").select("value_cents, billing").eq("id", id).maybeSingle();
+    before = (prev as { value_cents: number | null; billing: string | null } | null) ?? null;
+  }
   const { error } = await db().from("sales_opportunities").update(update).eq("id", id);
   if (error) throw new Error(error.message);
+  if (before) {
+    const fmt = (c: number | null, b: string | null) => (c == null ? "none" : `$${(c / 100).toLocaleString()}/${b === "monthly" ? "mo" : "yr"}`);
+    const nextCents = patch.valueCents !== undefined ? patch.valueCents : before.value_cents;
+    const nextBilling = patch.billing !== undefined ? patch.billing : before.billing;
+    if (nextCents !== before.value_cents || nextBilling !== before.billing) {
+      await logActivity({ kind: "opp_note", summary: `Deal value changed from ${fmt(before.value_cents, before.billing)} to ${fmt(nextCents, nextBilling)}`, actorId, opportunityId: id });
+    }
+  }
 
   if (patch.status === "won") await logActivity({ kind: "won", summary: "Opportunity marked won", actorId, opportunityId: id });
   else if (patch.status === "lost") await logActivity({ kind: "lost", summary: "Opportunity marked lost", actorId, opportunityId: id });
