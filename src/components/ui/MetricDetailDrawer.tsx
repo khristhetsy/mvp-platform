@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { MetricChart, type MetricChartData } from "@/components/ui/MetricChart";
 
 export type MetricBreakdownRow = { label: string; value: string; tone?: "good" | "warn" | "bad" };
 
@@ -13,6 +14,8 @@ export type MetricDetail = {
   hrefLabel?: string;
   /** Extra context shown above the breakdown. */
   note?: string;
+  /** A graph of recent readings, shown under the note. Optional. */
+  chart?: MetricChartData;
 };
 
 /**
@@ -104,6 +107,8 @@ export function MetricDetailDrawer({
         ) : null}
 
         {extra?.note ? <p className="mt-3 text-[12.5px] leading-relaxed text-slate-600">{extra.note}</p> : null}
+
+        {extra?.chart ? <MetricChart data={extra.chart} /> : null}
 
         {extra?.breakdown?.length ? (
           <div className="mt-4 overflow-hidden rounded-lg border border-slate-200">

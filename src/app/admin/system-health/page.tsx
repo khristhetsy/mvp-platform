@@ -48,6 +48,20 @@ export default async function AdminSystemHealthPage() {
         <AdminLaunchReadinessPanel snapshot={launchReadiness} />
 
         <div className="mt-8">
+          <WorkspacePanel title="Database health" subtitle="Speed, overload alerts and fixes">
+            <p className="text-sm text-slate-600">
+              See how fast the database answers, which scheduled jobs time out, and what to do when it slows down.
+            </p>
+            <Link
+              href="/admin/system-health/database"
+              className="mt-3 inline-block rounded-lg bg-[var(--navy)] px-4 py-2 text-sm font-semibold text-white"
+            >
+              Open database health
+            </Link>
+          </WorkspacePanel>
+        </div>
+
+        <div className="mt-8">
           <WorkspacePanel title={t("betaOperations2")} subtitle={t("cohortActivationAndSupport")}>
             <p className="text-sm text-slate-600">
               Monitor founder/investor activation, inactivity flags, feedback queue, and operational event stream.
