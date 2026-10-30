@@ -104,11 +104,11 @@ function firstLine(t: string): string { const l = t.trim().split("\n")[0] ?? "";
  */
 export function SalesChatter({ opportunityId, contactCrmId, contactName, contactEmail, staff, taskTypes = ["Call", "Email", "Demo", "Follow-up", "Proposal"], notesLog = false, internalPanel, underlineTabs = false, fullTasks = false }: {
   opportunityId?: string; contactCrmId?: string | null; contactName?: string | null; contactEmail?: string | null; staff: Staff[]; taskTypes?: string[];
-  /** Admin contact page: show the Notes log timeline (src/components/sales/NotesLog.tsx) instead of the Notes / Messages / System sections. */
+  /** Admin contact and opportunity pages: show the Notes log timeline (src/components/sales/NotesLog.tsx) instead of the Notes / Messages / System sections. */
   notesLog?: boolean;
   internalPanel?: ReactNode; underlineTabs?: boolean; fullTasks?: boolean;
 }) {
-  const showNotesLog = Boolean(notesLog && contactCrmId && !opportunityId);
+  const showNotesLog = Boolean(notesLog && contactCrmId);
   const [logReload, setLogReload] = useState(0);
   const logLoaded = useRef(false);
   const [tab, setTab] = useState<Tab>("note");
@@ -156,7 +156,16 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
       // The Notes log loads the timeline and the Odoo note target itself; it loads on
       // mount, so only later calls (after a send, note or task) ask it to refetch.
       if (logLoaded.current) setLogReload((k) => k + 1);
+      const first = !logLoaded.current;
       logLoaded.current = true;
+      // On an opportunity the Notes log supplies the timeline, but "Also log in Odoo
+      // opportunity" still needs the opportunity's own note target: read it once.
+      if (first && opportunityId) {
+        try {
+          const aRes = await fetch(`/api/sales/chatter?${scopeQ}`);
+          if (aRes.ok) setOdooTarget(((await aRes.json()).odooTarget ?? null) as OdooTarget);
+        } catch { /* leave as-is */ }
+      }
       try {
         const tRes = await fetch(`/api/sales/tasks?scope=all&${idQ}`);
         const t = tRes.ok ? await tRes.json() : { tasks: [] };
@@ -514,7 +523,7 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
         </div>
       )}
 
-      {showNotesLog && contactCrmId ? <NotesLog contactCrmId={contactCrmId} reloadKey={logReload} onOdooTarget={setOdooTarget} /> : (<>
+      {showNotesLog && contactCrmId ? <NotesLog contactCrmId={contactCrmId} reloadKey={logReload} onOdooTarget={opportunityId ? undefined : setOdooTarget} /> : (<>
       {/* Notes */}
       <div style={{ padding: "10px 12px", borderTop: "0.5px solid #eef1f5" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>

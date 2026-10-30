@@ -361,7 +361,7 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
           {/* Chatter — send message / log note / tasks / internal */}
           <div style={{ margin: "16px 0" }}>
             <SalesChatter opportunityId={o.id} contactCrmId={o.contact_crm_id} contactName={o.contact_name} contactEmail={o.contact_email} staff={staff}
-              underlineTabs fullTasks internalPanel={internalPanel} />
+              underlineTabs fullTasks notesLog internalPanel={internalPanel} />
           </div>
         </div>
       </div>
