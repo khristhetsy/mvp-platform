@@ -27,6 +27,7 @@ import { formatPledgeTotal, getCompanyPledgeSummary, getFounderPledgeCompanyId }
 import { listFounderInvestorActivity } from "@/lib/data/investor-interests";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { loadBusinessPlanInputs } from "@/lib/ai/business-plan-inputs";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { getJourneyOverview } from "@/lib/founder/stage-gate-status";
@@ -80,6 +81,11 @@ export default async function FounderDashboardPage() {
 
   const supabase = await createServerSupabaseClient();
   const serviceSupabase = createServiceRoleClient();
+  // Funding tile falls back to the business plan raise amount, like the public one-pager.
+  const planRaiseAmount =
+    company && !company.funding_amount
+      ? (await loadBusinessPlanInputs(serviceSupabase, company.id).catch(() => null))?.raiseAmount ?? null
+      : null;
   const { data: documents } = company ? await listCompanyDocuments(supabase, company.id) : { data: [] };
   const { data: diligenceReport } = company ? await getLatestDiligenceReport(supabase, company.id) : { data: null };
   // Side effect: advances the founder's journey stage (result no longer rendered).
@@ -438,7 +444,7 @@ export default async function FounderDashboardPage() {
                 <div className="rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
                   <p className="text-xs font-medium text-slate-600">{t("funding_target")}</p>
                   <p className="mt-1.5 font-mono text-2xl font-semibold text-slate-950">
-                    {company?.funding_amount ? formatPledgeTotal(Number(company.funding_amount)) : "TBD"}
+                    {company?.funding_amount ? formatPledgeTotal(Number(company.funding_amount)) : planRaiseAmount ? formatPledgeTotal(planRaiseAmount) : "TBD"}
                   </p>
                   <p className="mt-1 text-[11px] text-slate-500">
                     {raiseProgress}

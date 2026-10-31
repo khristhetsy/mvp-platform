@@ -144,7 +144,9 @@ export function buildProfileCompletion(company: Company | null) {
     { label: "Company name", complete: Boolean(company.company_name?.trim()) },
     { label: "Industry", complete: Boolean(company.industry?.trim()) },
     { label: "Business description", complete: Boolean(company.business_description && company.business_description.length >= 20) },
-    { label: "Funding amount", complete: company.funding_amount != null && company.funding_amount > 0 },
+    // A saved funding band counts: the settings form only offers the band, and the database
+    // trigger clears the exact amount when it sits outside the chosen band.
+    { label: "Funding amount", complete: (company.funding_amount != null && company.funding_amount > 0) || Boolean(company.funding_amount_band?.trim()) },
     { label: "Use of funds", complete: Boolean(company.use_of_funds?.trim()) },
     { label: "Revenue stage", complete: Boolean(company.revenue_stage?.trim()) },
     { label: "Team summary", complete: Boolean(company.team_summary?.trim()) },

@@ -438,6 +438,33 @@ export async function resolveActionsForEntity(
     .or(orFilter);
 }
 
+/**
+ * Close persisted founder actions the generator no longer produces (the condition is
+ * resolved: CRR now above the threshold, onboarding finished). Without this a row written
+ * once stays on screen forever. Only open or overdue rows are closed; snoozed, blocked and
+ * escalated rows are left alone, and so are non founder rows.
+ */
+export async function retireResolvedFounderActions(
+  supabase: SupabaseClient<Database>,
+  profile: Profile,
+  companyId: string,
+  keepIds: string[],
+): Promise<void> {
+  if (keepIds.length === 0) return;
+  const now = new Date().toISOString();
+  const keepList = `(${keepIds.map((id) => `"${id.replaceAll('"', "")}"`).join(",")})`;
+  const { error } = await supabase
+    .from("next_best_actions")
+    .update({ status: "completed", completed_at: now, updated_at: now })
+    .eq("user_id", profile.id)
+    .eq("role", "founder")
+    .eq("company_id", companyId)
+    .like("action_type", "founder:%")
+    .in("status", ["open", "overdue"])
+    .not("action_type", "in", keepList);
+  if (error) console.error("[next-best-actions] retire resolved failed", error.message);
+}
+
 export async function loadAndMergeNextBestActions(input: {
   profile: Profile;
   supabase: SupabaseClient<Database>;
@@ -463,6 +490,10 @@ export async function loadAndMergeNextBestActions(input: {
     } else {
       await upsertComputedActions(input.supabase, input.profile, computedResult.actions);
     }
+  }
+
+  if (role === "founder" && !computedResult.degraded && computedResult.allActionIds && computedResult.companyId) {
+    await retireResolvedFounderActions(input.supabase, input.profile, computedResult.companyId, computedResult.allActionIds);
   }
 
   await markOverdueActions(input.supabase, input.profile.id, role);
