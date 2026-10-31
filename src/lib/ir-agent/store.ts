@@ -10,6 +10,7 @@ import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { DEFAULT_AGENT_TYPE, templateForType, type AgentType } from "./agent-types";
 import { DEFAULT_TEMPLATE, LOCKED_DISCLAIMER, SLOT_MINUTES, normalizeTemplate, type AgentTemplate } from "./defaults";
+import { agentRunsInDemoMode, type OrgDemoFacts } from "./demo-mode";
 import { DEFAULT_ENDING, uniqueCompanySlug, validateEnding } from "./slug";
 import type { AgentContactField, AgentPublicConfig, AgentQuestion, AgentRow, TaughtAnswer } from "./types";
 
@@ -242,10 +243,10 @@ async function hostBookingReady(hostId: string | null): Promise<boolean> {
   return Array.isArray(rules) && rules.length > 0;
 }
 
-async function orgIsDemo(orgId: string | null): Promise<boolean> {
+async function orgIsDemo(orgId: string | null, agentType?: string | null): Promise<boolean> {
   if (!orgId) return false;
   const { data } = await db().from("organizations").select("purpose, email_dispatch_enabled").eq("id", orgId).maybeSingle();
-  return Boolean(data && (data.purpose === "demo" || data.purpose === "internal" || data.email_dispatch_enabled === false));
+  return agentRunsInDemoMode((data as OrgDemoFacts | null) ?? null, agentType);
 }
 
 /** The config the chat component renders. Nothing private in it. */
@@ -255,7 +256,7 @@ export async function buildPublicConfig(agent: AgentRow): Promise<AgentPublicCon
     getContactFields(agent.id),
     getTaughtAnswers(agent.id),
     hostBookingReady(agent.host_profile_id),
-    orgIsDemo(agent.organization_id),
+    orgIsDemo(agent.organization_id, agent.agent_type),
   ]);
   const vars = { company: agent.company_name, name: agent.display_name };
   const welcome = (agent.welcome_message ?? DEFAULT_TEMPLATE.welcome.join("\n"))
