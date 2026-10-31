@@ -11,6 +11,7 @@ import { getCompanyPledgeSummary, getFounderPledgeCompanyId } from "@/lib/data/i
 import { listFounderInvestorActivity } from "@/lib/data/investor-interests";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { loadBusinessPlanInputs } from "@/lib/ai/business-plan-inputs";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
 import type { Company } from "@/lib/supabase/types";
@@ -39,9 +40,15 @@ export default async function FounderCapitalRaisePage() {
     companyError = formatError(error);
   }
 
+  let planRaiseAmount: number | null = null;
+
   if (company) {
     try {
       const serviceSupabase = createServiceRoleClient();
+      // Raise amount falls back to the business plan, like the public one-pager.
+      if (!company.funding_amount) {
+        planRaiseAmount = (await loadBusinessPlanInputs(serviceSupabase, company.id).catch(() => null))?.raiseAmount ?? null;
+      }
       const pledgeCompanyId = await getFounderPledgeCompanyId(serviceSupabase, profile.id, company.id);
       pledgeSummary = await getCompanyPledgeSummary(serviceSupabase, pledgeCompanyId);
     } catch (error) {
@@ -99,7 +106,7 @@ export default async function FounderCapitalRaisePage() {
           <CapitalRaiseCardsClient
             pledgeSummary={pledgeSummary}
             company={{
-              funding_amount: company.funding_amount ? Number(company.funding_amount) : null,
+              funding_amount: company.funding_amount ? Number(company.funding_amount) : planRaiseAmount,
               is_published: company.is_published ?? false,
               review_status: company.review_status ?? null,
               status: company.status ?? null,
@@ -134,7 +141,7 @@ export default async function FounderCapitalRaisePage() {
               <CapitalRaiseOverviewClient
                 pledgeSummary={pledgeSummary}
                 investorActivity={investorActivity}
-                fundingAmount={company.funding_amount ? Number(company.funding_amount) : null}
+                fundingAmount={company.funding_amount ? Number(company.funding_amount) : planRaiseAmount}
               />
               <p className="mt-4 text-xs leading-5 text-slate-500">
                 Indications of interest are indicative and not legally committed investment.

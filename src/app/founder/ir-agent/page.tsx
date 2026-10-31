@@ -50,7 +50,7 @@ function AccessNotice({ reason }: { reason: string }) {
     plan: "Your plan does not include the investor relations agent yet. Upgrade to turn it on.",
     override_deny: "The investor relations agent is turned off for this account. Contact the iCFO team if you think that is wrong.",
     feature_off: "The investor relations agent is not available right now.",
-    no_org: "Finish setting up your company first.",
+    no_org: "Your company is not linked to an organization account yet, so your agent cannot be created. Nothing is missing from your company profile. Contact iCFO Customer Support and we will link it for you.",
   };
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-700">

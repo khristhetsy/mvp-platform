@@ -61,9 +61,13 @@ export async function loadAndComputeNextBestActions(input: {
       : undefined;
 
   let actions: NextBestAction[] = [];
+  let degraded = false;
+  let runCompanyId: string | undefined;
 
   if (role === "founder") {
     const ctx = await loadFounderNbaContext(input.profile, input.supabase);
+    degraded = Boolean(ctx.documentsUnavailable);
+    runCompanyId = ctx.company?.id;
     actions = computeFounderActions(ctx, entityFilter);
   } else if (role === "investor") {
     const ctx = await loadInvestorNbaContext(input.profile, input.supabase);
@@ -87,6 +91,10 @@ export async function loadAndComputeNextBestActions(input: {
     actions: limitNextBestActions(actions, limit),
     role,
     disclaimer: NBA_DISCLAIMER,
+    degraded,
+    // A run with no company or no actions is "unknown", never "everything resolved".
+    allActionIds: role === "founder" && !entityFilter && runCompanyId && actions.length > 0 ? actions.map((a) => a.id) : undefined,
+    companyId: runCompanyId,
   };
 }
 

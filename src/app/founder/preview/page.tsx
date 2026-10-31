@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { loadBusinessPlanInputs } from "@/lib/ai/business-plan-inputs";
 import { loadInvestableScore } from "@/lib/founder/investable-score";
 import { InvestableScoreBadge } from "@/components/founder/InvestableScoreBadge";
 import { parseUseOfFunds } from "@/lib/founder/use-of-funds";
@@ -84,6 +85,11 @@ export default async function FounderPreviewPage({
 
   const pub = data as PublicCompany | null;
   if (!pub) notFound();
+
+  // Same rule as the public page: "Raising" falls back to the business plan's raise amount.
+  const raiseAmount = pub.funding_amount
+    ? Number(pub.funding_amount)
+    : (await loadBusinessPlanInputs(admin, company.id)).raiseAmount;
 
   const geography = [pub.state, pub.country].filter(Boolean).join(", ") || null;
   const stageLabel = pub.revenue_stage
@@ -301,7 +307,7 @@ export default async function FounderPreviewPage({
 
         {/* Key metrics */}
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 20 }}>
-          <MetricCard label="Raising" value={pub.funding_amount ? formatFunding(pub.funding_amount) : "TBD"} accent />
+          <MetricCard label="Raising" value={raiseAmount ? formatFunding(raiseAmount) : "TBD"} accent />
           <MetricCard label={t("revenue_stage")} value={stageLabel ?? "—"} />
           {geography && <MetricCard label={t("location")} value={geography} />}
           {pub.website && (

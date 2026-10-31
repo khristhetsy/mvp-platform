@@ -123,6 +123,12 @@ export type NextBestActionsResult = {
   actions: NextBestAction[];
   role: NextBestActionRole;
   disclaimer: string;
+  /** Ids of every action computed this run, before the display limit. Set only for a full founder run. */
+  allActionIds?: string[];
+  /** The company the full founder run was computed for. */
+  companyId?: string;
+  /** True when an input query failed, so the computed list may be incomplete and must not retire anything. */
+  degraded?: boolean;
 };
 
 export const NBA_DISCLAIMER =

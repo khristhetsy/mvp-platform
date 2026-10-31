@@ -42,6 +42,8 @@ export type FounderNbaContext = {
   introRequestCount: number;
   unreadNotifications: number;
   spvAttention: Array<{ id: string; name: string; status: string; readiness: string | null }>;
+  /** The documents query failed: document based actions are skipped instead of reporting everything missing. */
+  documentsUnavailable?: boolean;
 };
 
 export async function loadFounderNbaContext(
@@ -75,7 +77,7 @@ export async function loadFounderNbaContext(
     return empty;
   }
 
-  const [{ data: documents }, { data: diligenceReport }, remediation, progressRows, contacts, updates, investorActivity, outreachReadiness, spvRows, unreadNotifications] =
+  const [{ data: documents, error: documentsError }, { data: diligenceReport }, remediation, progressRows, contacts, updates, investorActivity, outreachReadiness, spvRows, unreadNotifications] =
     await Promise.all([
       listCompanyDocuments(supabase, company.id),
       getLatestDiligenceReport(supabase, company.id),
@@ -159,6 +161,7 @@ export async function loadFounderNbaContext(
     onboardingComplete: onboarding.isComplete,
     currentOnboardingStep: onboarding.currentStep,
     dataRoom: computeDataRoomState(docs, notApplicable),
+    documentsUnavailable: Boolean(documentsError),
     readinessScore,
     remediationHighOpen: highOpen,
     remediationActive: remediation.summary.active,
@@ -206,7 +209,7 @@ export function computeFounderActions(ctx: FounderNbaContext, entityFilter?: { e
 
   const company = ctx.company;
 
-  if (!ctx.onboardingComplete) {
+  if (!ctx.onboardingComplete && !ctx.documentsUnavailable) {
     actions.push(
       createNextBestAction({
         id: buildActionId(["founder", "onboarding", company.id]),
@@ -230,7 +233,10 @@ export function computeFounderActions(ctx: FounderNbaContext, entityFilter?: { e
 
   // Data room — the #1 priority. Drive founders to complete diligence docs.
   const dr = ctx.dataRoom;
-  if (!dr.coreComplete) {
+  if (ctx.documentsUnavailable) {
+    // Documents could not be read this run (database timeout). Say nothing rather than
+    // report every document as missing.
+  } else if (!dr.coreComplete) {
     const missingNames = dr.coreMissing.map((i) => i.label).join(", ");
     const next = dr.nextItem;
     actions.push(

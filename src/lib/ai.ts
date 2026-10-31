@@ -30,6 +30,54 @@ function stripJsonFences(s: string): string {
   return s.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
 }
 
+type ParsedReport = { executiveSummary?: string; sections?: Array<{ title?: string; body?: string }>; riskFlags?: string[] };
+
+/** Decode one JSON string literal body (without the surrounding quotes). */
+function decodeJsonString(body: string): string | null {
+  try {
+    return JSON.parse(`"${body}"`) as string;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Recover what is complete from a JSON reply that was cut off (output token limit).
+ * Takes the executive summary, every fully closed section and every fully closed risk flag.
+ * Returns null when nothing usable is found.
+ */
+function salvageTruncatedReport(raw: string): ParsedReport | null {
+  const text = stripJsonFences(raw);
+  const str = String.raw`"((?:[^"\\]|\\.)*)"`;
+  const out: ParsedReport = {};
+
+  const exec = new RegExp(String.raw`"executiveSummary"\s*:\s*` + str).exec(text);
+  const execText = exec ? decodeJsonString(exec[1]) : null;
+  if (execText) out.executiveSummary = execText;
+
+  const sections: Array<{ title: string; body: string }> = [];
+  const sectionRe = new RegExp(String.raw`\{\s*"title"\s*:\s*` + str + String.raw`\s*,\s*"body"\s*:\s*` + str + String.raw`\s*\}`, "g");
+  for (const m of text.matchAll(sectionRe)) {
+    const title = decodeJsonString(m[1]);
+    const body = decodeJsonString(m[2]);
+    if (title && body) sections.push({ title, body });
+  }
+  if (sections.length > 0) out.sections = sections;
+
+  const flagsStart = text.search(/"riskFlags"\s*:\s*\[/);
+  if (flagsStart >= 0) {
+    const flags: string[] = [];
+    const tail = text.slice(text.indexOf("[", flagsStart) + 1);
+    for (const m of tail.matchAll(new RegExp(str + String.raw`\s*(?:,|\])`, "g"))) {
+      const f = decodeJsonString(m[1]);
+      if (f) flags.push(f);
+    }
+    if (flags.length > 0) out.riskFlags = flags;
+  }
+
+  return out.executiveSummary || out.sections || out.riskFlags ? out : null;
+}
+
 export type GeneratedDiligenceReport = {
   executiveSummary: string;
   sections: Array<{ title: string; body: string }>;
@@ -97,7 +145,8 @@ export async function generateDiligenceReport(input: AnalysisInput): Promise<Gen
     ],
     { usage: { category: "founder", feature: "diligence_report" },
       model: CLAUDE_SONNET,
-      maxTokens: 3000,
+      // 3000 cut the JSON off mid string on document-heavy companies, so it never parsed.
+      maxTokens: 8000,
       system: [
         "You are an investment analyst producing a conservative, detailed venture diligence memo for a startup.",
         "Return ONLY a valid JSON object (no prose, no markdown fences) with these keys:",
@@ -118,11 +167,12 @@ export async function generateDiligenceReport(input: AnalysisInput): Promise<Gen
     },
   );
 
-  let parsed: { executiveSummary?: string; sections?: Array<{ title?: string; body?: string }>; riskFlags?: string[] } | null = null;
+  let parsed: ParsedReport | null = null;
   try {
     parsed = JSON.parse(stripJsonFences(raw));
   } catch {
-    parsed = null;
+    // Usually a reply cut off at the token limit: keep whatever is complete.
+    parsed = salvageTruncatedReport(raw);
   }
 
   const bodyByTitle = new Map<string, string>();
@@ -140,8 +190,10 @@ export async function generateDiligenceReport(input: AnalysisInput): Promise<Gen
 
   const executiveSummary =
     (parsed?.executiveSummary && parsed.executiveSummary.trim()) ||
-    // Fallback: model didn't return JSON — keep the raw text as the summary.
-    raw.trim();
+    // Fallback: the reply was prose, keep it. Never store raw JSON as the summary.
+    (/^\s*(```|\{)/.test(raw)
+      ? "The AI analysis could not be read. Regenerate the report to try again."
+      : raw.trim());
 
   return {
     executiveSummary,
