@@ -36,7 +36,7 @@ type Undo =
 const UNDO_SECONDS = 10;
 type Task = { id: string; title: string; task_type: string; due_date: string | null; status: string; assignee_name: string | null; assignee_id?: string | null; source?: "deal" | "contact" };
 type Staff = { id: string; name: string };
-type Tab = "message" | "note" | "activity" | "internal";
+type Tab = "message" | "note" | "activity" | "internal" | "ai";
 
 const KIND_ICON: Record<string, { icon: string; color: string; bg: string }> = {
   note: { icon: "ti-note", color: "#185FA5", bg: "#E6F1FB" },
@@ -98,15 +98,18 @@ function firstLine(t: string): string { const l = t.trim().split("\n")[0] ?? "";
 /**
  * Opt-in props (all off by default; the opportunity page turns them on):
  * - `internalPanel`: adds an Internal tab (lock icon) that renders this content.
+ * - `aiPanel`: adds an AI agent tab that renders this content.
  * - `underlineTabs`: underline-style tab row instead of filled pills.
  * - `fullTasks`: the task list also shows the contact's tasks and completed ones
  *   (crossed out), labels each deal/contact, and offers Delete with confirm.
  */
-export function SalesChatter({ opportunityId, contactCrmId, contactName, contactEmail, staff, taskTypes = ["Call", "Email", "Demo", "Follow-up", "Proposal"], notesLog = false, internalPanel, underlineTabs = false, fullTasks = false }: {
+export function SalesChatter({ opportunityId, contactCrmId, contactName, contactEmail, staff, taskTypes = ["Call", "Email", "Demo", "Follow-up", "Proposal"], notesLog = false, internalPanel, aiPanel, underlineTabs = false, fullTasks = false }: {
   opportunityId?: string; contactCrmId?: string | null; contactName?: string | null; contactEmail?: string | null; staff: Staff[]; taskTypes?: string[];
   /** Admin contact and opportunity pages: show the Notes log timeline (src/components/sales/NotesLog.tsx) instead of the Notes / Messages / System sections. */
   notesLog?: boolean;
   internalPanel?: ReactNode; underlineTabs?: boolean; fullTasks?: boolean;
+  /** Adds an AI agent tab that renders this content (admin opportunity page). */
+  aiPanel?: ReactNode;
 }) {
   const showNotesLog = Boolean(notesLog && contactCrmId);
   const [logReload, setLogReload] = useState(0);
@@ -393,6 +396,7 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
         <button type="button" onClick={() => setTab("note")} style={tabBtn("note", "ti-note", "")}><i className="ti ti-note" aria-hidden="true" /> Log note</button>
         <button type="button" onClick={() => setTab("activity")} style={tabBtn("activity", "ti-checkbox", "")}><i className="ti ti-checkbox" aria-hidden="true" /> Tasks{planned.length ? ` · ${planned.length}` : ""}</button>
         {internalPanel !== undefined && <button type="button" onClick={() => setTab("internal")} style={tabBtn("internal", "ti-lock", "")}><i className="ti ti-lock" aria-hidden="true" /> Internal</button>}
+        {aiPanel !== undefined && <button type="button" onClick={() => setTab("ai")} style={tabBtn("ai", "ti-sparkles", "")}><i className="ti ti-sparkles" aria-hidden="true" /> AI agent</button>}
       </div>
 
       <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
@@ -483,6 +487,7 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
           </>
         )}
         {tab === "internal" && internalPanel}
+        {tab === "ai" && aiPanel}
         {(ok || err) && <p style={{ fontSize: 12, margin: 0, color: err ? "#A32D2D" : "#0F6E56" }}>{err ?? ok}</p>}
       </div>
 
