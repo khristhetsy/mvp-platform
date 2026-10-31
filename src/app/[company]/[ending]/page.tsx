@@ -4,6 +4,7 @@ import { AgentChat } from "@/components/ir-agent/AgentChat";
 import { sourceTagFromQuery } from "@/lib/attribution/source";
 import { isReservedSlug, validateCompanySlug, validateEnding } from "@/lib/ir-agent/slug";
 import { buildPublicConfig, getLiveAgentByAddress } from "@/lib/ir-agent/store";
+import { loadProspectContext, personalizeConfig } from "@/lib/sales-ai/chat-context";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +42,10 @@ export default async function FounderAgentPage({ params, searchParams }: Props) 
   const sp = await searchParams;
   const query = new URLSearchParams(Object.entries(sp).flatMap(([k, v]) => (typeof v === "string" ? [[k, v] as [string, string]] : [])));
   const sourceTag = sourceTagFromQuery(query);
-  const config = await buildPublicConfig(agent);
+  const baseConfig = await buildPublicConfig(agent);
+  // A link from a sales AI email (?src=opp-...) opens with the prospect's own thread.
+  const prospect = await loadProspectContext(sourceTag, agent.id).catch(() => null);
+  const config = prospect ? personalizeConfig(baseConfig, prospect) : baseConfig;
 
   return (
     <main className="flex min-h-screen flex-col items-center bg-white px-4 py-6">

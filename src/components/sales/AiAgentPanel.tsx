@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import type { SalesAiDraft, SalesAiState } from "@/lib/sales-ai/types";
+import type { MeetingBrief, SalesAiDraft, SalesAiState, SuggestedTask } from "@/lib/sales-ai/types";
 
 /**
  * The AI agent tab on an opportunity (admin only). The agent reads everything
@@ -29,6 +29,8 @@ async function call<T>(url: string, init?: RequestInit): Promise<{ ok: true; dat
   }
 }
 
+const dueIn = (days: number): string => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
+
 const json = (method: string, body: unknown): RequestInit => ({ method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 
 export function AiAgentPanel({ opportunityId, contactEmail, contactName }: { opportunityId: string; contactEmail: string | null; contactName: string | null }) {
@@ -42,6 +44,11 @@ export function AiAgentPanel({ opportunityId, contactEmail, contactName }: { opp
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [confirmSend, setConfirmSend] = useState(false);
+  const [brief, setBrief] = useState<MeetingBrief | null>(null);
+  const [notes, setNotes] = useState("");
+  const [saveNote, setSaveNote] = useState(true);
+  const [tasks, setTasks] = useState<SuggestedTask[]>([]);
+  const [addedTasks, setAddedTasks] = useState<string[]>([]);
 
   const syncDraft = useCallback((d: SalesAiDraft | null) => {
     setSubject(d?.subject ?? "");
@@ -110,6 +117,24 @@ export function AiAgentPanel({ opportunityId, contactEmail, contactName }: { opp
   const decide = (suggestionId: string, action: "apply" | "dismiss") =>
     run("suggestion", () => call(`${base}/suggestions`, json("POST", { suggestionId, action })), async () => { await load(); if (action === "apply") router.refresh(); });
 
+  const showBrief = () => run("brief", () => call<{ brief: MeetingBrief }>(`${base}/meeting`), (d) => setBrief(d.brief));
+
+  const draftFollowUp = () =>
+    run("followup", () => call<{ draft: SalesAiDraft; tasks: SuggestedTask[] }>(`${base}/meeting`, json("POST", { notes, saveNote, includeRefundOffer: includeRefund })), async (d) => {
+      syncDraft(d.draft);
+      setTasks(d.tasks);
+      setAddedTasks([]);
+      await load();
+      router.refresh();
+    });
+
+  // Same route the Tasks tab uses. A task is added only by this click.
+  const addTask = (t: SuggestedTask) =>
+    run("task", () => call("/api/sales/tasks", json("POST", { title: t.title, taskType: t.taskType, summary: t.summary, dueDate: dueIn(t.dueInDays), opportunityId, contactName })), () => {
+      setAddedTasks((a) => [...a, t.title]);
+      setOk(`Task added: ${t.title}`);
+    });
+
   if (!state) return <div style={{ fontSize: 12.5, color: "var(--muted-foreground)" }}>{err ?? "Loading the AI agent."}</div>;
 
   if (!state.stageActive) {
@@ -155,6 +180,59 @@ export function AiAgentPanel({ opportunityId, contactEmail, contactName }: { opp
       {!state.aiConfigured && (
         <p style={{ margin: 0, fontSize: 11.5, color: "#854F0B" }}>The AI reading is not configured here, so the audit uses record facts only and cannot quote the prospect.</p>
       )}
+
+      <details style={box}>
+        <summary style={{ cursor: "pointer", fontSize: 12.5, fontWeight: 600 }}>Meeting: brief before, follow up after</summary>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 10 }}>
+          <div>
+            <button type="button" onClick={() => void showBrief()} disabled={busy !== null} style={secondary}>
+              {busy === "brief" ? "Building the brief" : "Show the meeting brief"}
+            </button>
+            {brief && (
+              <div style={{ marginTop: 8, fontSize: 12.5, lineHeight: 1.5 }}>
+                <p style={{ margin: "0 0 4px" }}><b>Who:</b> {brief.who}{brief.stageName ? ` · ${brief.stageName}` : ""}</p>
+                <p style={{ margin: "0 0 4px" }}><b>Said so far:</b>{brief.said.length === 0 ? " nothing on file." : ""}</p>
+                {brief.said.length > 0 && (
+                  <ul style={{ margin: "0 0 4px", paddingLeft: 18 }}>
+                    {brief.said.map((x, i) => <li key={i}>{x.text}<span style={chip}>{x.source}</span></li>)}
+                  </ul>
+                )}
+                <p style={{ margin: "0 0 4px" }}><b>Likely objection:</b> {brief.likelyObjection}</p>
+                <p style={{ margin: "0 0 4px" }}><b>Questions to use:</b></p>
+                <ol style={{ margin: "0 0 4px", paddingLeft: 20 }}>{brief.questions.map((q) => <li key={q}>{q}</li>)}</ol>
+                {brief.notOnFile.length > 0 && <p style={{ margin: 0 }}><b>Not on file:</b> {brief.notOnFile.join(", ")}</p>}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <p style={label}>After the meeting</p>
+            <textarea aria-label="Meeting notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} placeholder="Two lines on what was said and what they raised." style={{ ...input, resize: "vertical", lineHeight: 1.5 }} />
+            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, margin: "6px 0 8px" }}>
+              <input type="checkbox" checked={saveNote} onChange={(e) => setSaveNote(e.target.checked)} />
+              <span>Also save these lines to the Notes log</span>
+            </label>
+            <button type="button" onClick={() => void draftFollowUp()} disabled={busy !== null || notes.trim().length < 10} style={{ ...primary, opacity: busy || notes.trim().length < 10 ? 0.5 : 1 }}>
+              {busy === "followup" ? "Drafting" : "Draft the follow up"}
+            </button>
+            <p style={{ margin: "6px 0 0", fontSize: 11.5, color: "var(--muted-foreground)" }}>The draft appears below for you to review. It uses your notes to choose what to answer, and never quotes them to the prospect.</p>
+          </div>
+
+          {tasks.length > 0 && (
+            <div>
+              <p style={label}>Suggested tasks</p>
+              {tasks.map((t) => (
+                <div key={t.title} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 6, fontSize: 12.5 }}>
+                  <span>{t.title}<span style={{ color: "var(--muted-foreground)" }}> · due in {t.dueInDays} day{t.dueInDays === 1 ? "" : "s"}</span></span>
+                  <button type="button" onClick={() => void addTask(t)} disabled={busy !== null || addedTasks.includes(t.title)} style={secondary}>
+                    {addedTasks.includes(t.title) ? "Added" : "Add task"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </details>
 
       {!draft ? (
         <div>

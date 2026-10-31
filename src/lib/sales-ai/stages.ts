@@ -24,7 +24,7 @@ export function stagePatchFor(stage: Pick<StageLite, "id" | "name" | "is_won">):
 }
 
 export type ChatFacts = { booked: boolean; stopped: boolean };
-export type MoveSuggestion = { toStageId: string; reason: string; source: "chat_booked" | "chat_stopped" };
+export type MoveSuggestion = { toStageId: string; reason: string; source: "chat_booked" | "chat_stopped" | "meeting_notes" };
 
 export function suggestMoves(stages: StageLite[], currentStageId: string | null, facts: ChatFacts): MoveSuggestion[] {
   const current = stages.find((s) => s.id === currentStageId) ?? null;
@@ -42,4 +42,13 @@ export function suggestMoves(stages: StageLite[], currentStageId: string | null,
     if (loss) out.push({ toStageId: loss.id, source: "chat_stopped", reason: "The prospect stopped the conversation. Confirm only if this is a no." });
   }
   return out;
+}
+
+/** After a person writes up a meeting: Meeting, if the opportunity is still in an earlier stage. Never backward. */
+export function suggestAfterMeeting(stages: StageLite[], currentStageId: string | null): MoveSuggestion[] {
+  const current = stages.find((s) => s.id === currentStageId) ?? null;
+  if (!current || !isAgentStage(current)) return [];
+  const meeting = stages.find((s) => isMeetingName(s.name));
+  if (!meeting || meeting.sort_order <= current.sort_order) return [];
+  return [{ toStageId: meeting.id, source: "meeting_notes", reason: "You wrote up a meeting, and the opportunity is still before Meeting." }];
 }

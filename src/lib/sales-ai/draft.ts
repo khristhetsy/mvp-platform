@@ -32,7 +32,7 @@ const VALUE: Record<Objection, string> = {
   unknown: BASE_VALUE,
 };
 
-const BRIDGE: Record<Objection, string> = {
+export const BRIDGE: Record<Objection, string> = {
   value: "Here is what it does for a company at your stage.",
   money: "That is a fair concern.",
   timing: "Timing depends on where your rating starts, so I would rather show you than guess.",
@@ -68,6 +68,27 @@ export function buildParts(f: DraftFacts): DraftParts {
 /** Same draft with the refund offer switched on or off. */
 export function withRefund(p: DraftParts, include: boolean): DraftParts {
   return { ...p, refund: include ? REFUND_OFFER : null };
+}
+
+export type FollowUpFacts = { firstName: string | null; objection: Objection; chatUrl: string | null; includeRefundOffer: boolean };
+
+/**
+ * The email after a meeting. It thanks them, answers what the person's notes say
+ * was raised, and ends with the same closing question and chat link. The meeting
+ * notes are the person's own words, so nothing from them is quoted to the prospect.
+ */
+export function buildFollowUpParts(f: FollowUpFacts): DraftParts {
+  return {
+    greeting: f.firstName ? `Hi ${f.firstName},` : "Hello,",
+    intro: [
+      { text: "Thank you for the time today.", quote: false },
+      { text: BRIDGE[f.objection], quote: false },
+    ],
+    value: VALUE[f.objection],
+    refund: f.includeRefundOffer ? REFUND_OFFER : null,
+    question: `${CLOSING_QUESTION[f.objection]}${f.chatUrl ? LINK_PROMPT : ""}`,
+    link: f.chatUrl ? `Click here to respond: ${f.chatUrl}` : null,
+  };
 }
 
 /** Plain text body. The sender's saved signature is added by the send route. */
