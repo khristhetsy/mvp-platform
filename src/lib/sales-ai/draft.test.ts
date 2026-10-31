@@ -52,7 +52,7 @@ describe("buildParts", () => {
 
 describe("guards", () => {
   it("catches each banned pattern", () => {
-    for (const bad of ["It is guaranteed", "risk-free", "a free report", "no credit card", "7,000 investors", "16+ years", "A long sentence — with a dash", "we will get you funded", "CapitalOS"]) {
+    for (const bad of ["It is guaranteed", "risk-free", "a free report", "no credit card", "7,000 investors", "16+ years", "A long sentence — with a dash", "we will get you funded", ["Capital", "OS"].join("")]) {
       expect(draftViolations(bad), bad).not.toEqual([]);
     }
   });

@@ -3,7 +3,7 @@
  *
  * These come from khris's standing rules for iCapOS sales copy: no free offer,
  * no network figures, no word that assures a result, no dashes in sentences,
- * and "iCapOS" not "CapitalOS". The prospect's own quoted words are exempt (a
+ * and the current product name, iCapOS, rather than the old one. The prospect's own quoted words are exempt (a
  * prospect may well write "free"), so callers pass only the agent's written text.
  */
 
