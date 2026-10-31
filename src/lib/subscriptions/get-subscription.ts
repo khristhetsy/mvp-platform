@@ -3,6 +3,7 @@ import { isTrialExpired } from "@/lib/subscriptions/access";
 import { pastDueState } from "@/lib/billing/past-due";
 import {
   PLAN_PRICES,
+  parseRequestedPlan,
   type PlanType,
   type SubscriptionRecord,
   type SubscriptionStatus,
@@ -122,6 +123,25 @@ export async function refreshSubscriptionState(subscription: SubscriptionRecord)
   return data as SubscriptionRecord;
 }
 
+/**
+ * The plan the person picked on the signup form, as saved on their auth user
+ * (`user_metadata.requested_plan`). Most callers of ensureSubscriptionForProfile
+ * (the founder shell, billing, upgrade) do not pass a plan, so whichever of them
+ * runs first for a new founder used to create the row as Basic awaiting payment
+ * and lose their choice. Reading it here makes every caller honour it.
+ * Best-effort: any failure returns null and the normal default applies.
+ */
+async function savedSignupPlan(profileId: string): Promise<PlanType | null> {
+  try {
+    const admin = createServiceRoleClient();
+    const { data, error } = await admin.auth.admin.getUserById(profileId);
+    if (error || !data?.user) return null;
+    return parseRequestedPlan(data.user.user_metadata?.requested_plan);
+  } catch {
+    return null;
+  }
+}
+
 export async function ensureSubscriptionForProfile(input: {
   profileId: string;
   role: UserRole;
@@ -133,7 +153,10 @@ export async function ensureSubscriptionForProfile(input: {
     return refreshSubscriptionState(existing);
   }
 
-  const defaults = defaultPlanForRole(input.role, input.requestedPlan);
+  // Only founders have a choice of plan, so only look the saved one up for them.
+  const requestedPlan =
+    input.requestedPlan ?? (input.role === "founder" ? await savedSignupPlan(input.profileId) : null);
+  const defaults = defaultPlanForRole(input.role, requestedPlan);
   const now = new Date().toISOString();
   const admin = createServiceRoleClient();
 
