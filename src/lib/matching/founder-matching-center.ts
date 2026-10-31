@@ -95,7 +95,9 @@ export async function loadFounderMatchingCenter(company: Company, limit = 25): P
   ]);
 
   const investors = [...members, ...prospects.profiles];
-  const ranked = rankInvestorsForCompany(profile, investors, limit, cfg.engineWeights);
+  // Rank everyone once so the totals are real; only the cards are capped at `limit`.
+  const allRanked = rankInvestorsForCompany(profile, investors, investors.length, cfg.engineWeights);
+  const ranked = allRanked.slice(0, limit);
 
   // Resolve real names + firms for the ranked investors. Members come from their
   // profile + investor_profile; prospects carry a name from the CRM import.
@@ -168,5 +170,9 @@ export async function loadFounderMatchingCenter(company: Company, limit = 25): P
     };
   });
 
-  return { cards, total: cards.length, strong: cards.filter((c) => c.matchScore >= 70).length };
+  return {
+    cards,
+    total: allRanked.length,
+    strong: allRanked.filter((r) => r.match.matchScore >= 70).length,
+  };
 }
