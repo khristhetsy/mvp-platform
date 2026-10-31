@@ -8,18 +8,20 @@
  * person confirms it.
  */
 import { isClaudeConfigured } from "@/lib/claude";
+import { createNote } from "@/lib/sales/chatter";
 import { getOpportunity, updateOpportunity } from "@/lib/sales/opportunities";
 import { loadTimeline } from "@/lib/sales/chatter";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { buildAudit, extractQuotes, threadText } from "./audit";
-import { buildParts, renderBody, subjectFor, withRefund, writtenText } from "./draft";
+import { buildMeetingBrief, suggestTasks } from "./brief";
+import { buildFollowUpParts, buildParts, renderBody, subjectFor, withRefund, writtenText } from "./draft";
 import { draftViolations } from "./guards";
-import { isAgentStage, stagePatchFor, suggestMoves, type StageLite } from "./stages";
+import { isAgentStage, stagePatchFor, suggestAfterMeeting, suggestMoves, type StageLite } from "./stages";
 import {
   addSuggestionOnce, chatUrlFor, decideSuggestion, getAssignment, getDraft, getSuggestion, insertDraft, latestOpenDraft,
   listAgentRows, listPendingSuggestions, loadChats, patchDraft, saveAssignment, toAgentOption,
 } from "./store";
-import type { DraftParts, SalesAiDraft, SalesAiState } from "./types";
+import type { DraftParts, MeetingBrief, SalesAiDraft, SalesAiState, SuggestedTask } from "./types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const rawDb = (): any => createServiceRoleClient();
@@ -63,7 +65,8 @@ export async function assignAgent(opportunityId: string, agentId: string | null,
   await saveAssignment(opportunityId, agentId, userId);
 }
 
-export async function createAuditDraft(opportunityId: string, userId: string, includeRefundOffer: boolean): Promise<SalesAiDraft> {
+/** Reads the opportunity and everything said on it, and writes the audit. Used by the draft and the meeting cycle. */
+async function readForAgent(opportunityId: string, meetingNotes?: string) {
   const opp = await getOpportunity(opportunityId);
   if (!opp) throw new SalesAiError("Opportunity not found.");
   const stages = await stagesFor(opportunityId);
@@ -80,22 +83,64 @@ export async function createAuditDraft(opportunityId: string, userId: string, in
   const { activity } = await loadTimeline({ opportunityId, contactCrmId: opp.contact_crm_id });
   const thread = threadText(activity, chats);
   const { quotes, aiRead } = await extractQuotes(thread);
-  const audit = buildAudit({ opportunity: opp, stageName: current.name, items: activity, chats, quotes, aiRead });
-
-  const parts = buildParts({
-    firstName: opp.contact_name?.trim().split(/\s+/)[0] || null,
-    asked: audit.asked, concern: audit.concern, objection: audit.objection, chatUrl, includeRefundOffer,
-  });
-  const violations = draftViolations(writtenText(parts));
-  if (violations.length) throw new SalesAiError(`The draft broke a copy rule (${violations.join(", ")}). Nothing was saved.`);
+  const audit = buildAudit({ opportunity: opp, stageName: current.name, items: activity, chats, quotes, aiRead, meetingNotes });
 
   const lastSent = [...activity].sort((a, b) => b.created_at.localeCompare(a.created_at)).find((i) => /^Email sent: /.test(i.summary));
   const lastSubject = lastSent ? lastSent.summary.replace(/^Email sent: /, "") : null;
+  const firstName = opp.contact_name?.trim().split(/\s+/)[0] || null;
+  return { opp, stages, current, agent, chatUrl, audit, lastSubject, firstName };
+}
 
+function assertClean(parts: DraftParts): void {
+  const violations = draftViolations(writtenText(parts));
+  if (violations.length) throw new SalesAiError(`The draft broke a copy rule (${violations.join(", ")}). Nothing was saved.`);
+}
+
+export async function createAuditDraft(opportunityId: string, userId: string, includeRefundOffer: boolean): Promise<SalesAiDraft> {
+  const r = await readForAgent(opportunityId);
+  const parts = buildParts({ firstName: r.firstName, asked: r.audit.asked, concern: r.audit.concern, objection: r.audit.objection, chatUrl: r.chatUrl, includeRefundOffer });
+  assertClean(parts);
   return insertDraft({
-    opportunityId, agentId: agent?.id ?? null, stageId: current.id, objection: audit.objection, technique: audit.technique, audit,
-    subject: subjectFor(opp.title, lastSubject), body: renderBody(parts), bodyParts: parts, includeRefundOffer, chatUrl, userId,
+    opportunityId, agentId: r.agent?.id ?? null, stageId: r.current.id, objection: r.audit.objection, technique: r.audit.technique, audit: r.audit,
+    subject: subjectFor(r.opp.title, r.lastSubject), body: renderBody(parts), bodyParts: parts, includeRefundOffer, chatUrl: r.chatUrl, userId,
   });
+}
+
+/** The brief before a meeting, from the same reading the email uses. Read only. */
+export async function getMeetingBrief(opportunityId: string): Promise<MeetingBrief> {
+  const r = await readForAgent(opportunityId);
+  return buildMeetingBrief({ title: r.opp.title, contactName: r.opp.contact_name, stageName: r.current.name, audit: r.audit });
+}
+
+export const MEETING_NOTES_MIN = 10;
+export const MEETING_NOTES_MAX = 2000;
+
+/**
+ * After a meeting. The person's own notes become: an optional Notes log entry (their text,
+ * saved only when they ticked the box), a follow up draft, suggested tasks, and a suggested
+ * stage move. The draft and the move still wait for a click.
+ */
+export async function createFollowUpDraft(
+  opportunityId: string, userId: string, input: { notes: string; saveNote: boolean; includeRefundOffer: boolean },
+): Promise<{ draft: SalesAiDraft; tasks: SuggestedTask[] }> {
+  const notes = input.notes.trim();
+  if (notes.length < MEETING_NOTES_MIN) throw new SalesAiError("Write a line or two about the meeting first.");
+  if (notes.length > MEETING_NOTES_MAX) throw new SalesAiError("Keep the meeting notes under 2,000 characters.");
+
+  const r = await readForAgent(opportunityId, notes);
+  const parts = buildFollowUpParts({ firstName: r.firstName, objection: r.audit.objection, chatUrl: r.chatUrl, includeRefundOffer: input.includeRefundOffer });
+  assertClean(parts);
+
+  if (input.saveNote) await createNote(`Meeting notes: ${notes}`, { opportunityId }, userId, false);
+
+  const draft = await insertDraft({
+    opportunityId, agentId: r.agent?.id ?? null, stageId: r.current.id, objection: r.audit.objection, technique: r.audit.technique, audit: r.audit,
+    subject: subjectFor(r.opp.title, null), body: renderBody(parts), bodyParts: parts, includeRefundOffer: input.includeRefundOffer, chatUrl: r.chatUrl, userId,
+  });
+  for (const m of suggestAfterMeeting(r.stages, r.opp.stage_id)) {
+    await addSuggestionOnce({ opportunityId, fromStageId: r.opp.stage_id, toStageId: m.toStageId, reason: m.reason, source: m.source });
+  }
+  return { draft, tasks: suggestTasks({ contactName: r.opp.contact_name, objection: r.audit.objection }) };
 }
 
 export type DraftEdit = { subject?: string; body?: string; includeRefundOffer?: boolean; status?: "sent" | "discarded" };

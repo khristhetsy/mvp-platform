@@ -98,3 +98,16 @@ export type SalesAiState = {
   suggestions: StageSuggestion[];
   aiConfigured: boolean;
 };
+
+/** The brief for a meeting: what the record holds, what to ask. Built from the audit, no extra reading. */
+export type MeetingBrief = {
+  who: string;
+  stageName: string | null;
+  said: Array<{ text: string; source: string; quote: boolean }>;
+  likelyObjection: string;
+  questions: string[];
+  notOnFile: string[];
+};
+
+/** A task the agent suggests after a meeting. A person adds it with one click. */
+export type SuggestedTask = { title: string; taskType: "Email" | "Call" | "Follow-up"; dueInDays: number; summary: string };

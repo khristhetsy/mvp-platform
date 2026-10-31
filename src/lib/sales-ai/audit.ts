@@ -59,8 +59,10 @@ export function buildAudit(input: {
   chats: ChatConv[];
   quotes: Extraction;
   aiRead: boolean;
+  /** What the person wrote after a meeting. Their words, so never shown as the prospect's quote. */
+  meetingNotes?: string;
 }): Audit {
-  const { opportunity, stageName, items, chats, quotes, aiRead } = input;
+  const { opportunity, stageName, items, chats, quotes, aiRead, meetingNotes } = input;
   const points: AuditPoint[] = [];
 
   points.push({ label: "Stage", text: stageName ?? "No stage set", sources: ["Opportunity record"] });
@@ -86,7 +88,9 @@ export function buildAudit(input: {
     points.push({ label: "Agent chat", text: `${bits.join(", ")}.`, sources: ["Agent chat"] });
   }
 
-  const prospectWords = [quotes.asked, quotes.concern, ...chatUserMessages(chats)];
+  if (meetingNotes?.trim()) points.push({ label: "Your meeting notes", text: meetingNotes.trim().replace(/\s+/g, " ").slice(0, 400), sources: ["Your notes"] });
+
+  const prospectWords = [quotes.asked, quotes.concern, ...chatUserMessages(chats), meetingNotes];
   const objection = classifyObjection(prospectWords);
   points.push({ label: "Objection type", text: `${objection === "unknown" ? "Not clear from the thread" : objection}. Playbook: ${TECHNIQUE[objection]}`, sources: ["Sales training"] });
 
