@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FounderProfileMirror, type MirrorContact } from "./FounderProfileMirror";
 import { SalesChatter } from "@/components/sales/SalesChatter";
+import { AiAgentPanel } from "@/components/sales/AiAgentPanel";
 
 type Stage = { id: string; name: string; sort_order: number; is_won: boolean };
 type Opp = {
@@ -424,7 +425,8 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
           {/* Chatter — send message / log note / tasks / internal */}
           <div style={{ margin: "16px 0" }}>
             <SalesChatter opportunityId={o.id} contactCrmId={o.contact_crm_id} contactName={o.contact_name} contactEmail={o.contact_email} staff={staff}
-              underlineTabs fullTasks notesLog internalPanel={internalPanel} />
+              underlineTabs fullTasks notesLog internalPanel={internalPanel}
+              aiPanel={<AiAgentPanel opportunityId={o.id} contactEmail={o.contact_email} contactName={o.contact_name} />} />
           </div>
         </div>
       </div>
