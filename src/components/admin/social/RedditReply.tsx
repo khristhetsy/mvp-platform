@@ -11,14 +11,17 @@ const field = "rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:bo
  * template, get a tracked link, copy the finished reply to Reddit, then mark it posted.
  * No Reddit API: nothing is posted on anyone's behalf.
  */
-export function RedditReply() {
+export function RedditReply({ prefill = null, onPrefillUsed }: { prefill?: { threadUrl: string; templateKey: string; hitId: string } | null; onPrefillUsed?: () => void } = {}) {
+  const startTemplate = REDDIT_TEMPLATES.find((x) => x.key === prefill?.templateKey) ?? REDDIT_TEMPLATES[0];
   const [campaigns, setCampaigns] = useState<RedditCampaign[]>([]);
   const [replies, setReplies] = useState<Reply[]>([]);
   const [campaignId, setCampaignId] = useState("");
   const [newName, setNewName] = useState<string | null>(null);
-  const [threadUrl, setThreadUrl] = useState("");
-  const [templateKey, setTemplateKey] = useState(REDDIT_TEMPLATES[0].key);
-  const [body, setBody] = useState(REDDIT_TEMPLATES[0].body);
+  const [threadUrl, setThreadUrl] = useState(prefill?.threadUrl ?? "");
+  const [templateKey, setTemplateKey] = useState(startTemplate.key);
+  const [body, setBody] = useState(startTemplate.body);
+  // Hand-off from the Finder tab: the conversation this reply answers, marked replied once posted.
+  const [finderHitId, setFinderHitId] = useState<string | null>(prefill?.hitId ?? null);
   const [postId, setPostId] = useState<string | null>(null);
   const [trackedUrl, setTrackedUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -85,7 +88,7 @@ export function RedditReply() {
   }
 
   function reset() {
-    setPostId(null); setTrackedUrl(null); setThreadUrl(""); pickTemplate(REDDIT_TEMPLATES[0].key);
+    setPostId(null); setTrackedUrl(null); setThreadUrl(""); setFinderHitId(null); pickTemplate(REDDIT_TEMPLATES[0].key); onPrefillUsed?.();
   }
 
   async function markPosted() {
@@ -93,6 +96,10 @@ export function RedditReply() {
     setBusy(true); setMsg(null);
     try {
       await post({ action: "posted", postId, body: finalText });
+      if (finderHitId) {
+        await fetch("/api/admin/social/finder", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "hit_status", id: finderHitId, status: "replied" }) }).catch(() => null);
+        setFinderHitId(null);
+      }
       reset(); setMsg({ tone: "ok", text: "Marked as posted. Clicks and bookings from this link now count to Reddit." });
       void load();
     } catch (e) { setMsg({ tone: "warn", text: (e as Error).message }); }

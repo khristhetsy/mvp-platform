@@ -15,6 +15,8 @@ import { AttributionPeriods } from "./AttributionPeriods";
 import { AiCmo } from "./AiCmo";
 import { Accounts } from "./Accounts";
 import { RedditReply } from "./RedditReply";
+import { Finder, type RedditPrefill } from "./Finder";
+import { SiteAuditCard } from "./SiteAuditCard";
 import { fromPlatformInput, toPlatformInput } from "@/lib/time/platform-input";
 
 const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -40,10 +42,10 @@ function StepHead({ n, title, hint }: { n: number; title: string; hint?: string 
   );
 }
 
-type Tab = "overview" | "goals" | "composer" | "schedule" | "library" | "attribution" | "settings";
-const TAB_ORDER: Tab[] = ["overview", "goals", "composer", "schedule", "library", "attribution", "settings"];
+type Tab = "overview" | "goals" | "finder" | "composer" | "schedule" | "library" | "attribution" | "settings";
+const TAB_ORDER: Tab[] = ["overview", "goals", "finder", "composer", "schedule", "library", "attribution", "settings"];
 const TAB_LABELS: Record<Tab, string> = {
-  overview: "Overview", goals: "Campaigns & Goals", composer: "Compose", schedule: "Schedule",
+  overview: "Overview", goals: "Campaigns & Goals", finder: "Finder", composer: "Compose", schedule: "Schedule",
   library: "Library", attribution: "Attribution", settings: "Settings",
 };
 
@@ -73,6 +75,8 @@ export function SocialHubClient({ accounts, queue, settings: settings0, slots: s
   initialTab?: string; libraryCampaign?: string | null; librarySince?: string | null;
 }) {
   const [composeMode, setComposeMode] = useState<"post" | "reddit">("post");
+  const [redditPrefill, setRedditPrefill] = useState<RedditPrefill | null>(null);
+  const [redditKey, setRedditKey] = useState(0);
   const [tab, setTab] = useState<Tab>(() => (TAB_ORDER as string[]).includes(initialTab ?? "") ? (initialTab as Tab) : "overview");
   const [goalsFocus, setGoalsFocus] = useState<{ campaignId?: string; stage?: string } | null>(null);
   const failed24 = queue.filter((q) => q.status === "failed").length;
@@ -90,8 +94,14 @@ export function SocialHubClient({ accounts, queue, settings: settings0, slots: s
       </div>
 
       <div className="mt-5">
-        {tab === "overview" ? <Overview failedCount={failed24} topPostBody={topPostBody} onNavigate={navigate} /> : null}
+        {tab === "overview" ? (
+          <div className="space-y-5">
+            <Overview failedCount={failed24} topPostBody={topPostBody} onNavigate={navigate} />
+            <SiteAuditCard />
+          </div>
+        ) : null}
         {tab === "goals" ? <CampaignsGoals focus={goalsFocus} /> : null}
+        {tab === "finder" ? <Finder onOpenReddit={(p) => { setRedditPrefill(p); setRedditKey((k) => k + 1); setComposeMode("reddit"); setTab("composer"); }} /> : null}
         {tab === "composer" ? (
           <div>
             <div className="mb-4 inline-flex rounded-lg border border-slate-200 p-0.5">
@@ -101,7 +111,7 @@ export function SocialHubClient({ accounts, queue, settings: settings0, slots: s
                 </button>
               ))}
             </div>
-            {composeMode === "reddit" ? <RedditReply /> : <Composer accounts={accounts} googleReady={googleReady} />}
+            {composeMode === "reddit" ? <RedditReply key={redditKey} prefill={redditPrefill} onPrefillUsed={() => setRedditPrefill(null)} /> : <Composer accounts={accounts} googleReady={googleReady} />}
           </div>
         ) : null}
         {tab === "schedule" ? <Schedule queue={queue} accounts={accounts} slots={slots0} googleReady={googleReady} onAddPost={() => setTab("composer")} /> : null}
