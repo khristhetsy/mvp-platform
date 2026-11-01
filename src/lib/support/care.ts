@@ -323,6 +323,8 @@ export async function onStaffReply(requestId: string, staffId: string, body: str
 
   const people = await loadPeople([staffId]);
   const staffName = people.get(staffId)?.name ?? "Staff";
+  // The reply comes from the assignee. Whoever clicked send only stands in when it's unassigned.
+  const senderName = c.owner?.name ?? staffName;
   const draftUse = aiDraft ? (aiDraft.trim() === body.trim() ? "unedited" : "edited") : null;
   await logSupportEvent({
     requestId,
@@ -341,7 +343,7 @@ export async function onStaffReply(requestId: string, staffId: string, body: str
   });
 
   if (c.founder) {
-    const ctx = { ...founderCtx(c), ownerName: staffName };
+    const ctx = { ...founderCtx(c), ownerName: senderName };
     const sent = await deliverSupportEmail({
       to: c.founder.email,
       userId: c.founder.id,
@@ -349,6 +351,7 @@ export async function onStaffReply(requestId: string, staffId: string, body: str
       deepLink: founderSupportLink(requestId),
       requestId,
       email: staffReplyEmail(ctx, body, attachmentNames),
+      senderName,
     });
     await logSupportEvent({
       requestId,

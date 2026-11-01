@@ -72,6 +72,8 @@ export function SupportTicketView({
   const [messages, setMessages] = useState<Message[]>([]);
   const [events, setEvents] = useState<SupportEventRow[]>([]);
   const [context, setContext] = useState<TicketContext | null>(null);
+  const senderName =
+    (row.assignedTo ? staff.find((s) => s.id === row.assignedTo)?.name : null) ?? staff.find((s) => s.id === currentStaffId)?.name ?? "you";
   const [loading, setLoading] = useState(true);
   const [showActivity, setShowActivity] = useState(false);
 
@@ -442,6 +444,12 @@ export function SupportTicketView({
                 </button>
               ) : null}
             </div>
+            {mode === "reply" ? (
+              <p className="mb-1.5 text-[11px] text-slate-500">
+                <i className="ti ti-send" aria-hidden="true" /> Sends as <span className="font-medium text-slate-700">{senderName}</span>
+                {row.assignedTo ? "" : " (unassigned, so you)"}. Replies come back to {senderName}.
+              </p>
+            ) : null}
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}

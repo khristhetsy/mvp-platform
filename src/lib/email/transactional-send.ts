@@ -24,9 +24,11 @@ export async function sendTransactionalEmail(input: {
   /** Where replies should land. Staff outreach sets this to the sender, so a
    *  founder replying to a platform-addressed email reaches a person. */
   replyTo?: string | null;
+  /** Display name on the From header (the address stays the verified one). */
+  fromName?: string | null;
 }) {
   const apiKey = process.env.RESEND_API_KEY?.trim();
-  const from = resolveFrom({ envKeys: TRANSACTIONAL_FROM_ENV });
+  const from = resolveFrom({ envKeys: TRANSACTIONAL_FROM_ENV, displayName: input.fromName });
 
   if (apiKey && input.to.includes("@")) {
     const response = await fetch(RESEND_API_URL, {

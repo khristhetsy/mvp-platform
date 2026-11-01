@@ -31,6 +31,19 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const tone = opts.tone === "shorter" || opts.tone === "friendlier" ? opts.tone : null;
   const base = typeof opts.base === "string" ? opts.base.slice(0, 4000) : "";
 
+  // The reply goes out as the assignee, so the draft is signed by them.
+  let signer = profile.full_name?.trim() || "";
+  if (thread.request.assigned_to) {
+    const { data: owner } = await (createServiceRoleClient() as unknown as SupabaseClient)
+      .from("profiles")
+      .select("full_name")
+      .eq("id", thread.request.assigned_to)
+      .maybeSingle();
+    signer = ((owner as { full_name: string | null } | null)?.full_name ?? "").trim() || signer;
+  }
+  const signFirst = signer.split(/\s+/)[0] ?? "";
+  const signed = (t: string) => (signFirst && !t.trimEnd().endsWith(signFirst) ? `${t.trimEnd()}\n\n${signFirst}` : t);
+
   // The suggestion made when a ticket opens is reused until a new message arrives,
   // so opening the same ticket again doesn't spend another AI call.
   if (opts.auto && !tone) {
@@ -44,7 +57,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       .order("created_at", { ascending: false })
       .limit(5);
     const cached = ((prev ?? []) as Array<{ meta: { suggestion?: string } | null }>).find((e) => e.meta?.suggestion)?.meta?.suggestion;
-    if (cached) return NextResponse.json({ draft: cached, cached: true });
+    if (cached) return NextResponse.json({ draft: signed(cached), cached: true });
   }
 
   const transcript = thread.messages
@@ -65,7 +78,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         {
           role: "user",
           content: tone && base
-            ? `Rewrite this support reply to a founder so it is ${tone === "shorter" ? "shorter and more direct, keeping every fact" : "warmer and friendlier, keeping every fact"}. Plain text only.\n\nReply:\n${base}`
+            ? `Rewrite this support reply to a founder so it is ${tone === "shorter" ? "shorter and more direct, keeping every fact" : "warmer and friendlier, keeping every fact"}. Plain text only. Keep the sign-off name at the end unchanged.\n\nReply:\n${base}`
             : `A founder on the iCapOS fundraising platform opened a support request titled "${thread.request.subject}". ${context}\n\nConversation so far:\n${transcript || "(no messages yet)"}\n\nDraft a concise, warm, practical reply to the founder that moves them forward. Only state facts that appear in the conversation; never invent numbers, cells or figures from their documents. Plain text, no salutation line beyond a short greeting, no sign-off block.`,
         },
       ],
@@ -88,7 +101,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       meta: opts.auto && !tone ? { suggestion: draft } : null,
       ai: cost,
     });
-    return NextResponse.json({ draft });
+    return NextResponse.json({ draft: signed(draft) });
   } catch {
     return NextResponse.json({ draft: "", unavailable: true });
   }
