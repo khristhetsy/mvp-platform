@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { loadInvestorContacts } from "@/lib/investors/load-investor-matches";
+import { loadInvestorContacts, type ScoredInvestorContact } from "@/lib/investors/load-investor-matches";
+import { loadPrefilteredInvestors } from "@/lib/matching/candidate-investors";
 import { sendEmail } from "@/lib/email/send-email";
 import { renderIntroEmail } from "@/lib/outreach/intro-template";
 import { buildUnsubscribeUrl, filterUnsubscribed } from "@/lib/outreach/unsubscribe";
@@ -117,21 +118,41 @@ async function rankOutreachAudience(
   limit: number,
   exclude: { refs: Set<string>; emails: Set<string> } = { refs: new Set(), emails: new Set() },
 ) {
-  // Admin match/qualification thresholds.
-  const config = await getInvestorMatchConfig();
-
-  // Load the full investor-contact network, then score each with the SAME additive
-  // engine the founder board uses, so who gets emailed matches what the founder
-  // sees. Industry is a scoring signal (via the engine), NOT a hard exclude — this
-  // must stay aligned with loadFounderInvestorBoard. See memory:
-  // automated-outreach-board-populated.
-  const scored = await loadInvestorContacts({
-    scoreAgainst: { fundingAmount: c.funding_amount, revenue: null, revenueStage: c.revenue_stage, useOfFunds: c.use_of_funds, industry: c.industry },
+  const scoreAgainst = { fundingAmount: c.funding_amount, revenue: null, revenueStage: c.revenue_stage, useOfFunds: c.use_of_funds, industry: c.industry };
+  // Short list from the match index when the prefilter setting is on. If the short list
+  // cannot fill the audience after the minimums and exclusions, read the full network as before.
+  const short = await loadPrefilteredInvestors({ industry: c.industry, scoreAgainst, want: limit });
+  if (short) {
+    const result = await rankOutreachFrom(db, companyId, c, limit, exclude, short);
+    if (result.ranked.length >= limit) return result;
+  }
+  const full = await loadInvestorContacts({
+    scoreAgainst,
     investorsOnly: true,
     requireIndustryMatch: false,
     score: false,
     limit: 3000,
   });
+  return rankOutreachFrom(db, companyId, c, limit, exclude, full);
+}
+
+async function rankOutreachFrom(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  db: any,
+  companyId: string,
+  c: OutreachCompany,
+  limit: number,
+  exclude: { refs: Set<string>; emails: Set<string> },
+  scored: ScoredInvestorContact[],
+) {
+  // Admin match/qualification thresholds.
+  const config = await getInvestorMatchConfig();
+
+  // Score the loaded investor contacts (a short list, or the full network as the
+  // fallback) with the SAME additive engine the founder board uses, so who gets emailed matches what the founder
+  // sees. Industry is a scoring signal (via the engine), NOT a hard exclude — this
+  // must stay aligned with loadFounderInvestorBoard. See memory:
+  // automated-outreach-board-populated.
   const companyProfile = buildCompanyMatchProfile({ id: companyId, ...c });
   const matchOf = new Map<string, number>();
   for (const s of scored) matchOf.set(s.id, scoreContactAgainstCompany(s, companyProfile, config.engineWeights).matchScore);

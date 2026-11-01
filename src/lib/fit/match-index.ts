@@ -203,6 +203,53 @@ export async function scorablesForIndustries(industries: string[]): Promise<Scor
   }));
 }
 
+/**
+ * Contact ids to consider for one founder, read from the index instead of scanning the
+ * whole investor network. Tier 1: investors whose sectors overlap the founder's, the most
+ * complete profiles first (more fields to match on), then most recently verified, then id,
+ * so the same founder always gets the same candidates. Tier 2 tops up from the rest of the
+ * index when the sector pool is smaller than `cap`. Returns [] on any error so the caller
+ * falls back to the full read.
+ *
+ * Needs the `completeness` column (migration 20261101100000). Until it exists the read
+ * retries without it, so nothing breaks, the order is just less informed.
+ */
+export async function candidateIdsForFounder(industries: string[], cap: number): Promise<string[]> {
+  const limit = Math.max(1, Math.min(Math.floor(cap), 1000)); // PostgREST db-max-rows is 1000
+  const ids: string[] = [];
+  const seen = new Set<string>();
+  const take = (rows: Array<{ contact_id: string }> | null) => {
+    for (const r of rows ?? []) {
+      if (ids.length >= limit) break;
+      if (!seen.has(r.contact_id)) { seen.add(r.contact_id); ids.push(r.contact_id); }
+    }
+  };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const read = async (build: (withCompleteness: boolean) => PromiseLike<{ data: any; error: any }>) => {
+    let res = await build(true);
+    if (res.error?.code === "42703") res = await build(false); // completeness column not added yet
+    return res;
+  };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const ordered = (q: any, withCompleteness: boolean) => {
+    if (withCompleteness) q = q.order("completeness", { ascending: false });
+    return q.order("inv_verified_at", { ascending: false, nullsFirst: false }).order("contact_id", { ascending: true });
+  };
+  if (industries.length > 0) {
+    const { data, error } = await read((w) =>
+      ordered(db().from("investor_match_index").select("contact_id").overlaps("industries", industries), w).limit(limit));
+    if (reportDbError("candidateIdsForFounder: sector tier", error)) return [];
+    take(data as Array<{ contact_id: string }> | null);
+  }
+  if (ids.length < limit) {
+    const { data, error } = await read((w) =>
+      ordered(db().from("investor_match_index").select("contact_id"), w).limit(Math.min(1000, limit + ids.length)));
+    if (reportDbError("candidateIdsForFounder: top up", error)) return [];
+    take(data as Array<{ contact_id: string }> | null);
+  }
+  return ids;
+}
+
 /** Distinct sectors present in the index — the Q3 option list, without a wide scan. */
 export async function indexedSectors(): Promise<string[] | null> {
   const rows = await readAllRows<{ industries: string[] }>((from, to) => db()
