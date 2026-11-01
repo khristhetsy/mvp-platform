@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
 import { Analytics } from "@vercel/analytics/react";
@@ -14,16 +14,18 @@ import { PlatformTimeZoneInit } from "@/components/PlatformTimeZoneInit";
 import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 import "./globals.css";
 
-const geistSans = Geist({
+const geistSans = localFont({
+  src: "../fonts/Geist-Variable.woff2",
   variable: "--font-geist-sans",
-  subsets: ["latin"],
   display: "swap",
+  weight: "100 900",
 });
 
-const geistMono = Geist_Mono({
+const geistMono = localFont({
+  src: "../fonts/GeistMono-Variable.woff2",
   variable: "--font-geist-mono",
-  subsets: ["latin"],
   display: "swap",
+  weight: "100 900",
 });
 
 export const metadata: Metadata = {
