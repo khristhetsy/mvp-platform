@@ -75,8 +75,8 @@ export function InvestorSubmittedNextSteps({
             <div className="h-full rounded-full bg-[#1A6CE4]" style={{ width: `${pct}%` }} />
           </div>
           <p className="mt-2.5 text-[13px] leading-5 text-[#185FA5]">
-            It's the only field left. It's worth {checkSizePoints} matching points and helps us show you rounds that fit your check range.
-            Your profile is locked while we review it, so you can add it from Settings once you're approved.
+            It&apos;s the only field left. It&apos;s worth {checkSizePoints} matching points and helps us show you rounds that fit your check range.
+            Your profile is locked while we review it, so you can add it from Settings once you&apos;re approved.
           </p>
         </div>
       ) : null}
