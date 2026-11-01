@@ -275,6 +275,7 @@ export default async function FounderDeployPage({
             website: company.website ?? null,
             country: company.country ?? null,
             state: company.state ?? null,
+            funding_amount: company.funding_amount != null ? String(company.funding_amount) : null,
             business_description: company.business_description ?? null,
             key_highlights: (company as unknown as Record<string, string | null>).key_highlights ?? null,
             team_summary: company.team_summary ?? null,
