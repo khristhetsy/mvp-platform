@@ -229,6 +229,9 @@ export async function loadInvestorContacts(opts?: {
   /** Read exactly these contacts (in small chunks) instead of scanning the investor
    *  network. Used by the match prefilter; `limit` is ignored when set. */
   ids?: string[];
+  /** Read the whole network, 1,000 rows per page in id order, instead of one capped request.
+   *  Only the daily match precompute uses this. Returns [] if any page fails, never a partial list. */
+  all?: boolean;
 }): Promise<ScoredInvestorContact[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = createServiceRoleClient() as any;
@@ -239,7 +242,18 @@ export async function loadInvestorContacts(opts?: {
   // this loader pulls up to 800 rows per page view, and only ever read raw.__profile.
   let data: unknown;
   let error: unknown = null;
-  if (opts?.ids) {
+  if (opts?.all) {
+    const pages: unknown[] = [];
+    for (let from = 0; ; from += 1000) {
+      let q = db.from("crm_contacts").select(columns).order("id", { ascending: true }).range(from, from + 999);
+      if (opts?.investorsOnly) q = q.eq("module", "investor");
+      const res = await q;
+      if (res.error || !Array.isArray(res.data)) return [];
+      pages.push(...res.data);
+      if (res.data.length < 1000) break;
+    }
+    data = pages;
+  } else if (opts?.ids) {
     // Explicit ids: chunked so each request URL stays short, chunks read in parallel.
     const chunks: string[][] = [];
     for (let i = 0; i < opts.ids.length; i += 150) chunks.push(opts.ids.slice(i, i + 150));

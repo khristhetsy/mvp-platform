@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { loadInvestorContacts, type ScoredInvestorContact } from "@/lib/investors/load-investor-matches";
-import { loadPrefilteredInvestors } from "@/lib/matching/candidate-investors";
+import { loadShortList } from "@/lib/matching/candidate-investors";
 import { sendEmail } from "@/lib/email/send-email";
 import { renderIntroEmail } from "@/lib/outreach/intro-template";
 import { buildUnsubscribeUrl, filterUnsubscribed } from "@/lib/outreach/unsubscribe";
@@ -119,9 +119,9 @@ async function rankOutreachAudience(
   exclude: { refs: Set<string>; emails: Set<string> } = { refs: new Set(), emails: new Set() },
 ) {
   const scoreAgainst = { fundingAmount: c.funding_amount, revenue: null, revenueStage: c.revenue_stage, useOfFunds: c.use_of_funds, industry: c.industry };
-  // Short list from the match index when the prefilter setting is on. If the short list
+  // Short list from the daily precompute or the match index when their settings are on. If the short list
   // cannot fill the audience after the minimums and exclusions, read the full network as before.
-  const short = await loadPrefilteredInvestors({ industry: c.industry, scoreAgainst, want: limit });
+  const short = await loadShortList({ company: { ...c, id: companyId }, scoreAgainst, want: limit, take: 200 });
   if (short) {
     const result = await rankOutreachFrom(db, companyId, c, limit, exclude, short);
     if (result.ranked.length >= limit) return result;

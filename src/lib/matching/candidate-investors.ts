@@ -15,6 +15,7 @@ import { candidateIdsForFounder } from "@/lib/fit/match-index";
 import { canonicalizeIndustries } from "@/lib/industries/canonical";
 import { loadInvestorContacts, type ScoredInvestorContact } from "@/lib/investors/load-investor-matches";
 import { getBoolSetting } from "@/lib/settings/platform-settings";
+import { loadStoredInvestors } from "@/lib/matching/founder-match-store";
 
 export const MATCH_PREFILTER_KEY = "match_prefilter";
 /** Candidates read per founder before scoring. */
@@ -51,4 +52,21 @@ export async function loadPrefilteredInvestors(args: {
   } catch {
     return null;
   }
+}
+
+/**
+ * The short list a founder's ranking should start from, best source first:
+ * the daily precompute (true top matches from the whole network), then the index
+ * prefilter, then null so the caller does the full read it always did.
+ */
+export async function loadShortList(args: {
+  company: { id: string } & Record<string, unknown>;
+  scoreAgainst: ScoreAgainst;
+  want: number;
+  /** How many stored matches to load; outreach asks for more than the board shows. */
+  take?: number;
+}): Promise<ScoredInvestorContact[] | null> {
+  const stored = await loadStoredInvestors({ company: args.company, scoreAgainst: args.scoreAgainst, want: args.want, take: args.take ?? args.want });
+  if (stored) return stored;
+  return loadPrefilteredInvestors({ industry: (args.company.industry as string | null | undefined) ?? null, scoreAgainst: args.scoreAgainst, want: args.want });
 }
