@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { AlertCircle, ArrowRight, Check, CheckCircle2, CircleDashed, Pencil, Sparkles } from "lucide-react";
 
 import type { StageGuide, StageGuideStep } from "@/lib/founder/stage-guides";
@@ -49,6 +50,26 @@ function pctLabel(p: StepProgress | undefined): string | null {
   if (p.percent === null) return null;
   if (p.state === "not_started") return "Not started";
   return `${p.percent}%`;
+}
+
+/** One-time offer on the Outreach card until the founder posts. Dismissed for the rest of the visit. */
+function SocialOffer() {
+  const [hidden, setHidden] = useState(false);
+  if (hidden) return null;
+  return (
+    <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2">
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-[var(--text-primary)]">
+          <Sparkles className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />AI agent
+        </p>
+        <p className="text-xs text-[var(--text-muted)]">Drafts emails and posts for your review. Optional.</p>
+      </div>
+      <div className="flex flex-none items-center gap-2">
+        <Link href="/founder/deploy/social?tab=compose" className={AI_BTN}>Draft my first post</Link>
+        <button type="button" onClick={() => setHidden(true)} aria-label="Dismiss" className="text-xs text-slate-400 hover:text-slate-600">Not now</button>
+      </div>
+    </div>
+  );
 }
 
 const AI_BTN =
@@ -187,7 +208,9 @@ export function StageGuideView({
                             part.chip ? (
                               <span
                                 key={part.key}
-                                className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700"
+                                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
+                                  part.optional && !part.done ? "border border-slate-200 bg-slate-50 text-slate-600" : "bg-emerald-50 text-emerald-700"
+                                }`}
                               >
                                 <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
                                 {part.chip}
@@ -205,6 +228,7 @@ export function StageGuideView({
                           ) : null}
                         </div>
                       ) : null}
+                      {sp?.socialOffer ? <SocialOffer /> : null}
                     </div>
                     <Link
                       href={openHref}
@@ -263,20 +287,20 @@ export function StageGuideView({
                           <div
                             key={part.key}
                             className={`flex items-center gap-3 rounded-lg px-3 py-2.5 ${
-                              part.done ? "border border-slate-200" : "border border-amber-300"
+                              part.done || part.optional ? "border border-slate-200" : "border border-amber-300"
                             }`}
                           >
                             {part.done ? (
                               <CheckCircle2 className="h-5 w-5 flex-none text-emerald-600" aria-hidden="true" />
                             ) : (
-                              <CircleDashed className="h-5 w-5 flex-none text-amber-600" aria-hidden="true" />
+                              <CircleDashed className={`h-5 w-5 flex-none ${part.optional ? "text-slate-400" : "text-amber-600"}`} aria-hidden="true" />
                             )}
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-medium text-[var(--text-primary)]">{part.label}</p>
                               <p className="text-xs text-[var(--text-muted)]">
                                 {part.desc}
                                 {part.status ? (
-                                  <span className={part.done ? "text-slate-600" : "text-amber-700"}> {part.status}</span>
+                                  <span className={part.done || part.optional ? "text-slate-600" : "text-amber-700"}> {part.status}</span>
                                 ) : null}
                               </p>
                               {!part.done && part.howItWorks?.length ? (
@@ -323,6 +347,10 @@ export function StageGuideView({
                         </button>
                       )}
                     </div>
+                    {step.ai.kind === "tool" && step.ai.hint ? (
+                      <p className="mt-1.5 text-xs text-slate-400">{step.ai.hint}</p>
+                    ) : null}
+                    {sp?.socialOffer ? <SocialOffer /> : null}
                     {step.doneOnVisit && sp?.state !== "done" && sp?.percent === null ? (
                       <p className="mt-2 text-xs text-slate-400">Marked done once you open it</p>
                     ) : null}
