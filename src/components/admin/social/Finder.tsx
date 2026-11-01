@@ -7,6 +7,7 @@ import {
 } from "@/lib/social/finder";
 import { matchRows, type SearchField } from "@/lib/ui/live-search";
 import { Highlight, NoSearchMatches, SearchCount } from "@/components/ui/SearchStatus";
+import { FinderGuide } from "./FinderGuide";
 
 const card = "rounded-xl border border-slate-200 bg-white";
 const field = "rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-indigo-400 focus:outline-none";
@@ -39,6 +40,7 @@ export function Finder({ onOpenReddit }: { onOpenReddit: (p: RedditPrefill) => v
   const [filter, setFilter] = useState<"all" | FinderAudience>("all");
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
   const [msg, setMsg] = useState<{ tone: "ok" | "warn"; text: string } | null>(null);
 
   async function call(payload: object): Promise<Record<string, unknown>> {
@@ -96,6 +98,9 @@ export function Finder({ onOpenReddit }: { onOpenReddit: (p: RedditPrefill) => v
 
   return (
     <div className="space-y-5">
+      <div className="flex">
+        <button type="button" onClick={() => setGuideOpen(true)} className="ml-auto rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50">? How to use</button>
+      </div>
       <div className={`${card} p-5`}>
         <div className="flex items-center gap-2">
           <h2 className="text-[15px] font-semibold text-slate-900">Signals</h2>
@@ -186,6 +191,7 @@ export function Finder({ onOpenReddit }: { onOpenReddit: (p: RedditPrefill) => v
           })}
         </div>
       </div>
+      {guideOpen && <FinderGuide onClose={() => setGuideOpen(false)} />}
     </div>
   );
 }
