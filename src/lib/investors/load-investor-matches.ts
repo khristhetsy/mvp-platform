@@ -245,10 +245,17 @@ export async function loadInvestorContacts(opts?: {
   if (opts?.all) {
     const pages: unknown[] = [];
     for (let from = 0; ; from += 1000) {
-      let q = db.from("crm_contacts").select(columns).order("id", { ascending: true }).range(from, from + 999);
-      if (opts?.investorsOnly) q = q.eq("module", "investor");
-      const res = await q;
-      if (res.error || !Array.isArray(res.data)) return [];
+      // A page is retried (after 1s, then 2s) so one transient failure does not discard a read
+      // that takes ~20s. If it still fails the whole read returns [], never a partial list.
+      let res: { error?: unknown; data?: unknown } | null = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
+        let q = db.from("crm_contacts").select(columns).order("id", { ascending: true }).range(from, from + 999);
+        if (opts?.investorsOnly) q = q.eq("module", "investor");
+        res = await q;
+        if (!res?.error && Array.isArray(res?.data)) break;
+      }
+      if (!res || res.error || !Array.isArray(res.data)) return [];
       pages.push(...res.data);
       if (res.data.length < 1000) break;
     }
