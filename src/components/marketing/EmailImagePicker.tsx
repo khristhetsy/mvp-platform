@@ -48,6 +48,14 @@ async function copyText(text: string): Promise<boolean> {
 const field: React.CSSProperties = { fontSize: 12.5, padding: "7px 9px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)", boxSizing: "border-box" };
 const ghost: React.CSSProperties = { fontSize: 11.5, padding: "4px 9px", borderRadius: 7, border: "0.5px solid #cdd9ec", background: "transparent", color: "#185FA5", cursor: "pointer" };
 
+/** The library's images; throws with the API's message when the request fails. */
+async function fetchEmailImages(): Promise<EmailImage[]> {
+  const r = await fetch("/api/admin/email-images", { cache: "no-store" });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error ?? "Could not load the images.");
+  return d.images ?? [];
+}
+
 /**
  * The email images library: upload by drag and drop or click, then copy a public link
  * or pick an image to insert. `library` mode manages images (copy link, edit, archive);
@@ -87,7 +95,15 @@ export function EmailImageLibrary({ mode, selectedId, onSelect }: {
       setLoading(false);
     }
   }, []);
-  useEffect(() => { void load(); }, [load]);
+  // First load: state starts as loading with no error, so only the result is set (in callbacks).
+  useEffect(() => {
+    let live = true;
+    fetchEmailImages()
+      .then((imgs) => { if (live) setImages(imgs); })
+      .catch((e: unknown) => { if (live) setLoadError(e instanceof Error ? e.message : "Could not load the images."); })
+      .finally(() => { if (live) setLoading(false); });
+    return () => { live = false; };
+  }, []);
 
   async function upload(list: FileList | File[]) {
     const files = Array.from(list);
@@ -282,7 +298,9 @@ export function EmailImagePickerModal({ onInsert, onClose }: {
 
   function pick(img: EmailImage) {
     setSelected(img);
-    setAlt(img.alt_text ?? "");
+    // Prefill from the saved alt text, or a readable guess from the file name, so Insert works at once.
+    const guess = img.name.replace(/\.[a-z0-9]+$/i, "").replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+    setAlt(img.alt_text?.trim() || guess);
   }
 
   return (
