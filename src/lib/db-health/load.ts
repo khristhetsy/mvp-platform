@@ -6,6 +6,7 @@ import { cronJobName } from "@/lib/cron/jobs";
 import { loadPausedCrons } from "@/lib/cron/gate";
 import { loadHealthSettings } from "@/lib/db-health/run";
 import type { HealthSettings, HealthState, IncidentCause } from "@/lib/db-health/evaluate";
+import type { FixResultRow } from "@/lib/db-health/fix-results";
 
 export type SampleRow = {
   taken_at: string;
@@ -111,4 +112,17 @@ export async function loadDbHealth(): Promise<DbHealthData> {
     queryStats: queryStats && typeof queryStats === "object" ? queryStats : null,
     pausedPaths: Object.keys(paused),
   };
+}
+
+/** Before and after results for the load fixes. Empty when the table does not exist yet. */
+export async function loadFixResults(): Promise<FixResultRow[]> {
+  try {
+    const { data, error } = await db()
+      .from("db_health_fix_results")
+      .select("area, label, step, sort_order, fixed_at, before_per_day, projected_per_day, after_per_day, measured_at, source, note")
+      .order("sort_order", { ascending: true });
+    return error ? [] : ((data ?? []) as FixResultRow[]);
+  } catch {
+    return [];
+  }
 }

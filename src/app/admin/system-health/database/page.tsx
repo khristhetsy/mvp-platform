@@ -7,11 +7,12 @@ import { WorkspaceSection } from "@/components/admin/company-workspace/Workspace
 import { DbHealthAlertRules } from "@/components/admin/db-health/DbHealthAlertRules";
 import { DbHealthAskAi } from "@/components/admin/db-health/DbHealthAskAi";
 import { DbHealthFixes } from "@/components/admin/db-health/DbHealthFixes";
+import { DbHealthFixResults } from "@/components/admin/db-health/DbHealthFixResults";
 import { requirePermissionPage } from "@/lib/api/permissions";
 import { formatWhen } from "@/lib/cron/schedule";
 import { listCronJobs } from "@/lib/cron/jobs";
 import { findPatterns } from "@/lib/db-health/patterns";
-import { loadDbHealth, type IncidentRow } from "@/lib/db-health/load";
+import { loadDbHealth, loadFixResults, type IncidentRow } from "@/lib/db-health/load";
 import { buildTiles, fmtMs } from "@/lib/db-health/tiles";
 import { VERDICT_LABEL, labelQuery, queryVerdict, type Verdict } from "@/lib/db-health/baseline";
 import { CAUSE_LABEL, classifyCause, type IncidentCause } from "@/lib/db-health/evaluate";
@@ -67,7 +68,7 @@ const GUIDE = [
 
 export default async function AdminDatabaseHealthPage() {
   const { profile } = await requirePermissionPage("view_system_health");
-  const data = await loadDbHealth();
+  const [data, fixResults] = await Promise.all([loadDbHealth(), loadFixResults()]);
   const { now, settings, samples, incidents, jobs, longQueries, queryStats } = data;
 
   const tiles = buildTiles({ now, settings, samples, jobs });
@@ -153,6 +154,10 @@ export default async function AdminDatabaseHealthPage() {
           />
         </WorkspaceSection>
         </div>
+
+        <WorkspaceSection icon="ti-arrows-diff" tone="green" title="Before and after fixes" subtitle="Requests per day before each load fix and after it. Measured results are added a full day after the fix.">
+          <DbHealthFixResults rows={fixResults} now={now} />
+        </WorkspaceSection>
 
         <WorkspaceSection icon="ti-sparkles" tone="purple" title="Ask AI to fix this" subtitle="Explains the readings in plain words. You confirm every action under Fix it.">
           <DbHealthAskAi />
