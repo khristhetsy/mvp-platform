@@ -7,6 +7,8 @@
  * prospect may well write "free"), so callers pass only the agent's written text.
  */
 
+import { phraseRegex } from "./skip";
+
 const RULES: Array<{ name: string; pattern: RegExp }> = [
   { name: "guarantee", pattern: /guarantee/i },
   { name: "risk free", pattern: /risk[\s-]?free/i },
@@ -18,6 +20,15 @@ const RULES: Array<{ name: string; pattern: RegExp }> = [
   { name: "old product name", pattern: /capitalos/i },
 ];
 
-export function draftViolations(text: string): string[] {
-  return RULES.filter((r) => r.pattern.test(text)).map((r) => r.name);
+/**
+ * `extraBlocked` are words staff added in the training settings. They are checked as whole
+ * words, ignoring case, on top of the built-in rules, which are always on.
+ */
+export function draftViolations(text: string, extraBlocked: string[] = []): string[] {
+  const found = RULES.filter((r) => r.pattern.test(text)).map((r) => r.name);
+  for (const word of extraBlocked) {
+    const re = phraseRegex(word);
+    if (re && re.test(text)) found.push(`banned word "${word.trim()}"`);
+  }
+  return found;
 }

@@ -47,6 +47,33 @@ export function threadText(items: TimelineItem[], chats: ChatConv[]): string {
   return lines.join("\n");
 }
 
+/**
+ * Only what the prospect wrote: their chat messages and messages from them in the timeline.
+ * Notes are the team's own words, and sent emails and drafts are ours, so none of those can
+ * be quoted back to the prospect as theirs. A message counts as theirs when its author shares
+ * a name with the contact. With no contact name, no timeline message counts.
+ */
+export function prospectThread(items: TimelineItem[], chats: ChatConv[], contactName: string | null): string {
+  const tokens = (contactName ?? "").toLowerCase().split(/[^\p{L}]+/u).filter((t) => t.length >= 3);
+  const theirs = (i: TimelineItem) =>
+    i.group === "message" &&
+    i.kind !== "email_draft" &&
+    !/^Email sent: /.test(i.summary) &&
+    tokens.length > 0 &&
+    tokens.some((t) => (i.actor_name ?? "").toLowerCase().includes(t));
+  const lines = [...items]
+    .filter(theirs)
+    .sort((a, b) => a.created_at.localeCompare(b.created_at))
+    .slice(-40)
+    .map((i) => `[${shortDate(i.created_at)}] ${i.kind}${i.actor_name ? ` (${i.actor_name})` : ""}: ${i.summary.replace(/\s+/g, " ").slice(0, 500)}`);
+  for (const c of chats) {
+    for (const m of c.transcript) {
+      if (m.role === "user") lines.push(`[chat] prospect: ${m.content.replace(/\s+/g, " ").slice(0, 300)}`);
+    }
+  }
+  return lines.join("\n");
+}
+
 /** What the prospect typed in the agent chat, for objection reading. */
 export function chatUserMessages(chats: ChatConv[]): string[] {
   return chats.flatMap((c) => c.transcript.filter((m) => m.role === "user").map((m) => m.content));

@@ -147,6 +147,17 @@ export function AiAgentPanel({ opportunityId, contactEmail, contactName }: { opp
     );
   }
 
+  if (state.skip) {
+    return (
+      <div style={{ ...box, borderLeft: "4px solid #B45309" }}>
+        <p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>{state.skip.notice}</p>
+        <p style={{ margin: "6px 0 0", fontSize: 12, color: "var(--muted-foreground)" }}>
+          It matched {state.skip.matched.join(", ")}. The AI agent drafts nothing here. Change the rules in <Link href="/admin/sales/training" style={{ color: "#2E78F5" }}>AI training</Link>.
+        </p>
+      </div>
+    );
+  }
+
   const draft = state.draft;
   const agent = state.agents.find((a) => a.id === state.agentId) ?? null;
 

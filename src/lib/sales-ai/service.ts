@@ -12,22 +12,33 @@ import { createNote } from "@/lib/sales/chatter";
 import { getOpportunity, updateOpportunity } from "@/lib/sales/opportunities";
 import { loadTimeline } from "@/lib/sales/chatter";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { buildAudit, extractQuotes, threadText } from "./audit";
+import { buildAudit, extractQuotes, prospectThread, threadText } from "./audit";
 import { buildMeetingBrief, suggestTasks } from "./brief";
 import { buildFollowUpParts, buildParts, renderBody, subjectFor, withRefund, writtenText } from "./draft";
 import { draftViolations } from "./guards";
+import { detectSkip, SKIP_NOTICE } from "./skip";
+import { listDocuments, listExamples, loadSettings } from "./training-store";
+import type { TrainingSettings, WordingUsed } from "./training-types";
+import { guideParts } from "./wording";
 import { isAgentStage, stagePatchFor, suggestAfterMeeting, suggestMoves, type StageLite } from "./stages";
 import {
   addSuggestionOnce, chatUrlFor, decideSuggestion, getAssignment, getDraft, getSuggestion, insertDraft, latestOpenDraft,
   listAgentRows, listPendingSuggestions, loadChats, patchDraft, saveAssignment, toAgentOption,
 } from "./store";
-import type { DraftParts, MeetingBrief, SalesAiDraft, SalesAiState, SuggestedTask } from "./types";
+import type { Audit, DraftParts, MeetingBrief, SalesAiDraft, SalesAiState, SuggestedTask } from "./types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const rawDb = (): any => createServiceRoleClient();
 
 /** A message safe to show a person. */
 export class SalesAiError extends Error {}
+
+/** The opportunity matches a skip rule: a deal conversation, not a subscription sale. */
+export class SalesAiSkip extends SalesAiError {
+  constructor(public matched: string[]) {
+    super(`${SKIP_NOTICE} It matched ${matched.join(", ")}.`);
+  }
+}
 
 async function stagesFor(opportunityId: string): Promise<StageLite[]> {
   const { data: o } = await rawDb().from("sales_opportunities").select("pipeline_id").eq("id", opportunityId).maybeSingle();
@@ -44,8 +55,19 @@ export async function getSalesAiState(opportunityId: string): Promise<SalesAiSta
   const current = stages.find((s) => s.id === opp.stage_id) ?? null;
   const agent = assignment?.agentId ? agentRows.find((a) => a.id === assignment.agentId) ?? null : null;
   const names = new Map(stages.map((s) => [s.id, s.name]));
+  const stageActive = Boolean(current && isAgentStage(current) && opp.status === "open");
+  let skip: SalesAiState["skip"] = null;
+  if (stageActive) {
+    const settings = await loadSettings();
+    if (settings.skipPhrases.length || settings.skipTags.length) {
+      const chats = agent && assignment ? await loadChats(agent.id, assignment.chatTag) : [];
+      const { activity } = await loadTimeline({ opportunityId, contactCrmId: opp.contact_crm_id });
+      const hit = detectSkip({ title: opp.title, tags: opp.tags, texts: [opp.notes ?? "", threadText(activity, chats)] }, settings);
+      if (hit) skip = { matched: hit.matched, notice: SKIP_NOTICE };
+    }
+  }
   return {
-    stageActive: Boolean(current && isAgentStage(current) && opp.status === "open"),
+    stageActive,
     stageName: current?.name ?? opp.stage_name,
     agentId: assignment?.agentId ?? null,
     chatTag: assignment?.chatTag ?? null,
@@ -54,6 +76,7 @@ export async function getSalesAiState(opportunityId: string): Promise<SalesAiSta
     draft,
     suggestions: await listPendingSuggestions(opportunityId, names),
     aiConfigured: isClaudeConfigured(),
+    skip,
   };
 }
 
@@ -81,25 +104,59 @@ async function readForAgent(opportunityId: string, meetingNotes?: string) {
   const chats = agent && assignment ? await loadChats(agent.id, assignment.chatTag) : [];
 
   const { activity } = await loadTimeline({ opportunityId, contactCrmId: opp.contact_crm_id });
-  const thread = threadText(activity, chats);
-  const { quotes, aiRead } = await extractQuotes(thread);
+  const settings = await loadSettings();
+  const skipHit = detectSkip({ title: opp.title, tags: opp.tags, texts: [opp.notes ?? "", threadText(activity, chats)] }, settings);
+  if (skipHit) throw new SalesAiSkip(skipHit.matched);
+  // Quotes come only from what the prospect wrote, never from the team's notes or sent mail.
+  const { quotes, aiRead } = await extractQuotes(prospectThread(activity, chats, opp.contact_name));
   const audit = buildAudit({ opportunity: opp, stageName: current.name, items: activity, chats, quotes, aiRead, meetingNotes });
 
   const lastSent = [...activity].sort((a, b) => b.created_at.localeCompare(a.created_at)).find((i) => /^Email sent: /.test(i.summary));
   const lastSubject = lastSent ? lastSent.summary.replace(/^Email sent: /, "") : null;
   const firstName = opp.contact_name?.trim().split(/\s+/)[0] || null;
-  return { opp, stages, current, agent, chatUrl, audit, lastSubject, firstName };
+  return { opp, stages, current, agent, chatUrl, audit, lastSubject, firstName, settings };
 }
 
-function assertClean(parts: DraftParts): void {
-  const violations = draftViolations(writtenText(parts));
+function assertClean(parts: DraftParts, blockedWords: string[]): void {
+  const violations = draftViolations(writtenText(parts), blockedWords);
   if (violations.length) throw new SalesAiError(`The draft broke a copy rule (${violations.join(", ")}). Nothing was saved.`);
+}
+
+type Read = Awaited<ReturnType<typeof readForAgent>>;
+
+/**
+ * The parts of an email from one reading: fixed text first, the refund line from the settings,
+ * then the bridge and value lines written from the training when there is any. Checked before use.
+ */
+async function composeParts(r: Read, includeRefundOffer: boolean, kind: "audit" | "followup"): Promise<{ parts: DraftParts; wording: WordingUsed }> {
+  const base =
+    kind === "audit"
+      ? buildParts({ firstName: r.firstName, asked: r.audit.asked, concern: r.audit.concern, objection: r.audit.objection, chatUrl: r.chatUrl, includeRefundOffer })
+      : buildFollowUpParts({ firstName: r.firstName, objection: r.audit.objection, chatUrl: r.chatUrl, includeRefundOffer });
+  const fixed = withRefund(base, includeRefundOffer, r.settings.refundLine);
+  const [documents, examples] = await Promise.all([listDocuments(true), listExamples()]);
+  const guided = await guideParts({
+    parts: fixed, objection: r.audit.objection, technique: r.audit.technique, stageName: r.current.name,
+    asked: r.audit.asked, concern: r.audit.concern, documents, examples, blockedWords: r.settings.blockedWords,
+  });
+  assertClean(guided.parts, r.settings.blockedWords);
+  return guided;
+}
+
+function wordingPoint(w: WordingUsed): Audit["points"][number] | null {
+  if (w.mode === "guided") {
+    const bits = [`${w.documents.length} document${w.documents.length === 1 ? "" : "s"}`, `${w.examplesSend + w.examplesNever} example${w.examplesSend + w.examplesNever === 1 ? "" : "s"}`];
+    return { label: "Wording", text: `Written from the training: ${bits.join(" and ")}.`, sources: ["Training library"] };
+  }
+  if (w.fallbackReason) return { label: "Wording", text: `Built-in text. ${w.fallbackReason}.`, sources: ["Training library"] };
+  return null;
 }
 
 export async function createAuditDraft(opportunityId: string, userId: string, includeRefundOffer: boolean): Promise<SalesAiDraft> {
   const r = await readForAgent(opportunityId);
-  const parts = buildParts({ firstName: r.firstName, asked: r.audit.asked, concern: r.audit.concern, objection: r.audit.objection, chatUrl: r.chatUrl, includeRefundOffer });
-  assertClean(parts);
+  const { parts, wording } = await composeParts(r, includeRefundOffer, "audit");
+  const wp = wordingPoint(wording);
+  if (wp) r.audit.points.push(wp);
   return insertDraft({
     opportunityId, agentId: r.agent?.id ?? null, stageId: r.current.id, objection: r.audit.objection, technique: r.audit.technique, audit: r.audit,
     subject: subjectFor(r.opp.title, r.lastSubject), body: renderBody(parts), bodyParts: parts, includeRefundOffer, chatUrl: r.chatUrl, userId,
@@ -128,8 +185,9 @@ export async function createFollowUpDraft(
   if (notes.length > MEETING_NOTES_MAX) throw new SalesAiError("Keep the meeting notes under 2,000 characters.");
 
   const r = await readForAgent(opportunityId, notes);
-  const parts = buildFollowUpParts({ firstName: r.firstName, objection: r.audit.objection, chatUrl: r.chatUrl, includeRefundOffer: input.includeRefundOffer });
-  assertClean(parts);
+  const { parts, wording } = await composeParts(r, input.includeRefundOffer, "followup");
+  const wp = wordingPoint(wording);
+  if (wp) r.audit.points.push(wp);
 
   if (input.saveNote) await createNote(`Meeting notes: ${notes}`, { opportunityId }, userId, false);
 
@@ -157,7 +215,7 @@ export async function editDraft(draftId: string, edit: DraftEdit, userId: string
     body = edit.body;
     bodyParts = null;
   } else if (edit.includeRefundOffer !== undefined && draft.bodyParts) {
-    bodyParts = withRefund(draft.bodyParts, edit.includeRefundOffer);
+    bodyParts = withRefund(draft.bodyParts, edit.includeRefundOffer, (await loadSettings()).refundLine);
     body = renderBody(bodyParts);
   } else if (edit.includeRefundOffer !== undefined) {
     throw new SalesAiError("This draft was edited by hand, so the refund line cannot be switched. Edit the text, or make a new draft.");
@@ -193,4 +251,32 @@ export async function resolveSuggestion(suggestionId: string, action: "apply" | 
   if (!target) throw new SalesAiError("That stage no longer exists.");
   await updateOpportunity(s.opportunity_id, stagePatchFor(target), userId);
   await decideSuggestion(suggestionId, "applied", userId);
+}
+
+export type TestDraft =
+  | { skipped: { matched: string[]; notice: string } }
+  | { skipped: null; subject: string; body: string; wording: WordingUsed; quotesFound: number; objection: string };
+
+/**
+ * Makes a draft exactly as the AI agent tab would, but saves and sends nothing. Shows what the
+ * drafting used, and says so when a skip rule stops it.
+ */
+export async function testDraft(opportunityId: string, settingsOverride?: TrainingSettings): Promise<TestDraft> {
+  let r: Read;
+  try {
+    r = await readForAgent(opportunityId);
+  } catch (err) {
+    if (err instanceof SalesAiSkip) return { skipped: { matched: err.matched, notice: SKIP_NOTICE } };
+    throw err;
+  }
+  if (settingsOverride) r.settings = settingsOverride;
+  const { parts, wording } = await composeParts(r, true, "audit");
+  return {
+    skipped: null,
+    subject: subjectFor(r.opp.title, r.lastSubject),
+    body: renderBody(parts),
+    wording,
+    quotesFound: [r.audit.asked, r.audit.concern].filter(Boolean).length,
+    objection: r.audit.objection,
+  };
 }
