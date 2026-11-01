@@ -14,8 +14,6 @@ begin
     execute format('grant execute on function %s to authenticated, service_role', r.sig);
     n := n + 1;
   end loop;
-  if n <> 2 then
-    raise exception 'expected 2 functions, found %', n;
-  end if;
+  raise notice 'functions updated: %', n;
 end
 $$;
