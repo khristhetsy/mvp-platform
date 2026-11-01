@@ -18,6 +18,7 @@ import { RedditReply } from "./RedditReply";
 import { Finder, type RedditPrefill } from "./Finder";
 import { SiteAuditCard } from "./SiteAuditCard";
 import { fromPlatformInput, toPlatformInput } from "@/lib/time/platform-input";
+import { OdooPager } from "@/components/admin/OdooPager";
 
 const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -463,6 +464,8 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
   // Calendar account filter: "all" or one account id.
   const [acctFilter, setAcctFilter] = useState<string>("all");
   const [acctMsg, setAcctMsg] = useState<string | null>(null);
+  // Phone month view: the tapped day, whose posts list under the grid.
+  const [selDay, setSelDay] = useState<string>(() => ptYmd(new Date()));
   // Google-style "delete recurring post" scope dialog.
   const [recDelete, setRecDelete] = useState<QueueItem | null>(null);
   const [recDeleteScope, setRecDeleteScope] = useState<"this" | "following" | "all">("this");
@@ -507,6 +510,22 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
     for (const list of m.values()) list.sort((a, b) => (itemISO(a)! < itemISO(b)! ? -1 : 1));
     return m;
   }, [dated]);
+
+  // Weekdays in the next 14 days with no scheduled or published post (respects the account filter).
+  const gapDays = useMemo(() => {
+    const out: { key: string; label: string }[] = [];
+    const base = new Date();
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(base); d.setDate(base.getDate() + i);
+      const key = ptYmd(d);
+      const wd = new Date(`${key}T12:00:00`).getDay();
+      if (wd === 0 || wd === 6) continue;
+      const has = (byDay.get(key) ?? []).some((q) => q.status === "queued" || q.status === "published" || q.status === "publishing");
+      if (!has) out.push({ key, label: `${WD[wd]} ${Number(key.slice(8, 10))}` });
+    }
+    return out;
+  }, [byDay]);
+  const gapSet = useMemo(() => new Set(gapDays.map((g) => g.key)), [gapDays]);
 
   async function reload() {
     try { const r = await fetch("/api/admin/social/queue"); if (r.ok) { const nq: QueueItem[] = (await r.json()).queue ?? []; setQueue(nq); setSelected((s) => (s ? nq.find((x) => x.id === s.id) ?? null : null)); } } catch { /* keep */ }
@@ -682,7 +701,7 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
     <div>
       {/* toolbar */}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {view !== "list" ? (
             <>
               <span className="text-[15px] font-semibold text-slate-800">{label}</span>
@@ -697,7 +716,7 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
             ))}
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] ${googleReady ? "border-emerald-200 text-emerald-700" : "border-slate-200 text-slate-400"}`}>
             <span className={`h-1.5 w-1.5 rounded-full ${googleReady ? "bg-emerald-500" : "bg-slate-300"}`} />{googleReady ? "Google Calendar synced" : "Calendar not connected"}
           </span>
@@ -705,9 +724,25 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
         </div>
       </div>
 
-      {/* account filter */}
+      {/* gap banner: weekdays coming up with nothing planned */}
+      {view !== "list" ? (
+        gapDays.length > 0 ? (
+          <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-800">
+            <span><b>{gapDays.length} weekday{gapDays.length === 1 ? "" : "s"} with no posts</b> in the next 14 days ({gapDays.map((g) => g.label).join(", ")}).</span>
+            <button type="button" onClick={onAddPost} className="font-semibold text-indigo-600 hover:underline">Add post</button>
+          </div>
+        ) : <p className="mb-3 text-[11.5px] text-emerald-700">Every weekday in the next 14 days has a post.</p>
+      ) : null}
+
+      {/* account filter: dropdown on phones, chips from md up */}
       {accounts.length > 1 ? (
-        <div className="mb-3 flex flex-wrap items-center gap-1.5" role="group" aria-label="Show posts for">
+        <select value={acctFilter} onChange={(e) => setAcctFilter(e.target.value)} aria-label="Show posts for" className="mb-3 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] md:hidden">
+          <option value="all">All accounts · {publishedOn(null)}</option>
+          {accounts.map((a) => <option key={a.id} value={a.id}>{accountName(a)} · {publishedOn(a.id)}</option>)}
+        </select>
+      ) : null}
+      {accounts.length > 1 ? (
+        <div className="mb-3 hidden flex-wrap items-center gap-1.5 md:flex" role="group" aria-label="Show posts for">
           {[{ id: "all", name: "All accounts", platform: null as string | null, n: publishedOn(null) },
             ...accounts.map((a) => ({ id: a.id, name: accountName(a), platform: a.platform as string | null, n: publishedOn(a.id) }))].map((c) => (
             <button key={c.id} type="button" aria-pressed={acctFilter === c.id} onClick={() => setAcctFilter(c.id)}
@@ -741,6 +776,7 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
 
         {/* calendar / week / list */}
         {view === "month" ? (
+          <div className="min-w-0">
           <div className={`${card} overflow-hidden`}>
             <div className="grid grid-cols-7 bg-slate-50 text-center text-[10px] text-slate-400">
               {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map((d) => <div key={d} className="py-1.5">{d}</div>)}
@@ -754,13 +790,18 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
                 const items = inMonth ? (byDay.get(key) ?? []) : [];
                 const over = overKey === key && dragId;
                 return (
-                  <div key={i} {...(inMonth ? dropProps(key) : {})} className={`min-h-[76px] border-b border-l border-slate-100 p-1 ${i % 7 === 0 ? "border-l-0" : ""} ${!inMonth ? "bg-slate-50/60" : ""} ${over ? "bg-emerald-50 ring-1 ring-inset ring-emerald-400" : ""}`}>
-                    <div className={`text-[9.5px] ${key === todayKey ? "font-semibold text-indigo-600" : "text-slate-400"}`}>{inMonth ? dayNum : ""}</div>
+                  <div key={i} {...(inMonth ? dropProps(key) : {})} onClick={inMonth ? () => setSelDay(key) : undefined} className={`min-h-[56px] border-b border-l border-slate-100 p-1 md:min-h-[76px] ${i % 7 === 0 ? "border-l-0" : ""} ${!inMonth ? "bg-slate-50/60" : ""} ${inMonth && gapSet.has(key) && !over ? "bg-[repeating-linear-gradient(45deg,rgba(251,191,36,0.10)_0_8px,transparent_8px_16px)]" : ""} ${over ? "bg-emerald-50 ring-1 ring-inset ring-emerald-400" : ""}`}>
+                    <div className={`text-[9.5px] ${key === todayKey ? "font-semibold text-indigo-600" : "text-slate-400"} ${inMonth && key === selDay ? "underline decoration-indigo-400 underline-offset-2 md:no-underline" : ""}`}>{inMonth ? dayNum : ""}</div>
+                    {items.length > 0 ? (
+                      <div className="mt-0.5 flex flex-wrap gap-0.5 md:hidden" aria-hidden="true">
+                        {items.slice(0, 4).map((q) => <span key={q.id} className="h-1.5 w-1.5 rounded-full" style={{ background: q.event_color ?? statusMeta(q.status).dot }} />)}
+                      </div>
+                    ) : null}
                     {items.map((q) => {
                       const sm = statusMeta(q.status);
                       const iso = itemISO(q)!;
                       return (
-                        <div key={q.id} {...dragProps(q)} onClick={() => { setSelected(q); setEditing(false); }} className={`mt-0.5 block w-full cursor-pointer rounded border-l-2 px-1 py-0.5 text-left text-[9px] leading-tight ${dragId === q.id ? "opacity-40" : ""}`} style={{ borderColor: q.event_color ?? sm.dot, background: `${q.event_color ?? sm.dot}14` }}>
+                        <div key={q.id} {...dragProps(q)} onClick={() => { setSelected(q); setEditing(false); }} className={`mt-0.5 hidden w-full cursor-pointer rounded border-l-2 px-1 py-0.5 text-left text-[9px] leading-tight md:block ${dragId === q.id ? "opacity-40" : ""}`} style={{ borderColor: q.event_color ?? sm.dot, background: `${q.event_color ?? sm.dot}14` }}>
                           <span className="font-medium text-slate-700">{hhmm(iso)} {q.recurrence_id ? "↻ " : ""}{titleOf(q).slice(0, 16)}</span><br />
                           <span style={{ color: q.event_color ?? sm.dot }}>{q.busy ? "●" : "○"} {sm.label}{!q.busy ? " · free" : ""}</span>
                         </div>
@@ -770,6 +811,29 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
                 );
               })}
             </div>
+          </div>
+          {(() => {
+            const dayItems = byDay.get(selDay) ?? [];
+            const dayLabel = new Date(`${selDay}T12:00:00`).toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
+            return (
+              <div className={`${card} mt-3 p-3 md:hidden`}>
+                <p className="text-[12.5px] font-semibold text-slate-800">{dayLabel} <span className="font-normal text-slate-400">· {dayItems.length} post{dayItems.length === 1 ? "" : "s"}</span></p>
+                {dayItems.length === 0 ? (
+                  <p className="mt-1 text-[11.5px] text-slate-400">No posts planned. <button type="button" onClick={onAddPost} className="font-medium text-indigo-600">Add post</button></p>
+                ) : dayItems.map((q) => {
+                  const sm = statusMeta(q.status);
+                  return (
+                    <button key={q.id} type="button" onClick={() => { setSelected(q); setEditing(false); }} className="mt-2 flex w-full items-start gap-2 rounded-lg border border-slate-200 px-2.5 py-2 text-left" style={{ borderLeft: `3px solid ${q.event_color ?? sm.dot}` }}>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[12px] font-medium text-slate-800">{titleOf(q)}</span>
+                        <span className="mt-0.5 block text-[10.5px] text-slate-500">{hhmm(itemISO(q)!)} · {q.account_name ?? q.platform ?? "—"} · {sm.label}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })()}
           </div>
         ) : view === "week" ? (
           <div className={`${card} grid grid-cols-2 overflow-hidden sm:grid-cols-4 lg:grid-cols-7`}>
@@ -830,6 +894,10 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
       {/* selected detail */}
       {selected ? (() => {
         const q = selected; const sm = statusMeta(q.status); const iso = itemISO(q); const live = q.status === "published"; const onCal = Boolean(iso);
+        // Record pager (Odoo style): dated posts oldest to newest, then the unscheduled ones; wraps around.
+        const order = [...dated].sort((a, b) => (itemISO(a)! < itemISO(b)! ? -1 : 1)).concat(rail);
+        const pos = order.findIndex((x) => x.id === q.id);
+        const go = (d: number) => { if (order.length < 2 || pos < 0) return; setSelected(order[(pos + d + order.length) % order.length]); setEditing(false); };
         return (
           <div className={`${card} mt-4 p-4`}>
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -837,10 +905,13 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
                 <div className="flex items-center gap-2">
                   <span className="text-[13px] font-semibold text-slate-800">{titleOf(q)}</span>
                   <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${sm.cls}`}>● {sm.label}</span>
+                  {pos >= 0 && order.length > 1 ? <OdooPager className="ml-2" label={`${pos + 1} / ${order.length}`} prev={{ onClick: () => go(-1) }} next={{ onClick: () => go(1) }} /> : null}
                 </div>
                 <p className="mt-1 text-[11.5px] text-slate-500">{q.account_name ?? q.platform ?? "—"}{iso ? ` · ${new Date(iso).toLocaleString([], { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}` : " · no date"}</p>
                 {q.error ? <p className={`mt-1 text-[11px] ${live ? "text-amber-700" : "text-rose-600"}`}>{live ? publishedNote(q.error) : q.error}</p> : null}
-                <div className="mt-2 flex flex-wrap items-center gap-2">
+                <details className="mt-2">
+                  <summary className="cursor-pointer text-[10.5px] text-slate-400 hover:text-slate-600">Calendar options (event color, busy or free)</summary>
+                <div className="mt-1.5 flex flex-wrap items-center gap-2">
                   <span className="text-[10.5px] text-slate-400">Event color</span>
                   {["#1A6CE4", "#185FA5", "#0F6E56", "#CA8A04", "#A32D2D"].map((c) => (
                     <button key={c} type="button" aria-label={`Set color ${c}`} onClick={() => void setStyle(q.id, { color: c })}
@@ -851,6 +922,7 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
                   <button type="button" onClick={() => void setStyle(q.id, { busy: true })} className={`rounded px-2 py-0.5 text-[10px] ${q.busy ? "bg-rose-50 text-rose-700" : "text-slate-500"}`}>● Busy</button>
                   <button type="button" onClick={() => void setStyle(q.id, { busy: false })} className={`rounded px-2 py-0.5 text-[10px] ${!q.busy ? "bg-emerald-50 text-emerald-700" : "text-slate-500"}`}>○ Free</button>
                 </div>
+                </details>
                 {q.recurrence_id && recSummary ? (
                   <div className="mt-2 rounded-lg border border-indigo-200 bg-indigo-50/50 px-2.5 py-2">
                     <div className="text-[11.5px] text-indigo-700"><i className="ti ti-repeat" aria-hidden="true" /> <b className="font-semibold">{recSummary.label}</b> {recSummary.status !== "active" ? <span className="text-slate-500">· {recSummary.status}</span> : null}</div>
@@ -965,7 +1037,7 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
                     return (
                       <div key={a.id} className="flex flex-wrap items-center gap-2 border-t border-slate-100 px-3 py-2 first-of-type:border-t-0">
                         <i className={`ti ti-brand-${a.platform} text-[15px] text-slate-500`} aria-hidden="true" />
-                        <span className="min-w-0 flex-1 truncate text-[12px] text-slate-800">{accountName(a)} <span className="text-slate-400">· {net(a.platform)}</span></span>
+                        <span className="min-w-0 flex-1 text-[12px] text-slate-800 md:truncate">{accountName(a)} <span className="text-slate-400">· {net(a.platform)}</span></span>
                         {v && vm ? <span className={`rounded px-2 py-0.5 text-[10.5px] ${vm.cls}`}>{vm.label}{v.status === "published" ? when : ""}</span> : <span className="rounded bg-slate-100 px-2 py-0.5 text-[10.5px] text-slate-500">Not in this post</span>}
                         {v?.url
                           ? <a href={v.url} target="_blank" rel="noopener noreferrer" className="text-[11.5px] text-blue-600 hover:underline">View on {net(a.platform)} <i className="ti ti-external-link" aria-hidden="true" /></a>
