@@ -88,8 +88,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (!c || !c.assignee_ids.includes(scope.ownerId ?? "")) return NextResponse.json({ error: "Not found." }, { status: 404 });
   }
   try {
-    await appendContactNote(id, parsed.data.note, profile.id);
-    return NextResponse.json({ ok: true });
+    const notes = await appendContactNote(id, parsed.data.note, profile.id);
+    return NextResponse.json({ ok: true, notes });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Save failed." }, { status: 500 });
   }

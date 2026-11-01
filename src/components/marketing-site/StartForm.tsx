@@ -10,7 +10,7 @@ import { start } from "@/content/start";
  * auth. Keyboard-operable; the whole thing degrades to a normal form.
  */
 /** Monthly price labels per plan, from the live pricing set (e.g. "$49"). */
-export type StartPlanPrices = { founder_free: string; founder_basic: string; founder_professional: string };
+export type StartPlanPrices = { founder_free: string; founder_basic: string; founder_professional: string; founder_premium: string };
 
 export function StartForm({ prices }: Readonly<{ prices: StartPlanPrices }>) {
   const f = start.fields;
@@ -34,7 +34,7 @@ export function StartForm({ prices }: Readonly<{ prices: StartPlanPrices }>) {
       raise_target: String(fd.get("raise_target") ?? "") || undefined,
       capital_structure: (String(fd.get("capital_structure") ?? "") || undefined) as
         | "reg_d" | "reg_cf" | "reg_a_plus" | "not_sure" | undefined,
-      start_choice: choice as "founder_free" | "founder_basic" | "founder_professional",
+      start_choice: choice as "founder_free" | "founder_basic" | "founder_professional" | "founder_premium",
       source_page: "/start",
     };
     try {
@@ -75,7 +75,7 @@ export function StartForm({ prices }: Readonly<{ prices: StartPlanPrices }>) {
 
       <fieldset className="mt-5">
         <legend className="text-[13px] font-medium text-site-navy">{f.plan.label}</legend>
-        <div className="mt-2 grid gap-3 sm:grid-cols-3">
+        <div className="mt-2 grid gap-3 sm:grid-cols-2">
           {f.plan.options.map((o) => (
             <label key={o.value} className={`cursor-pointer rounded-xl border p-4 transition-colors ${choice === o.value ? "border-2 border-site-blue-hi bg-site-blue-pale/40" : "border-site-line bg-white"}`}>
               <input type="radio" name="start_choice" value={o.value} checked={choice === o.value} onChange={() => setChoice(o.value)} className="sr-only" />

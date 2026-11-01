@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 /**
@@ -60,7 +61,7 @@ export function OutreachAutomationToggle() {
             When on, qualified founders&rsquo; Founder-Preview one-pagers are emailed automatically to matched investors on
             the weekly pass. Suppression list, unsubscribe, and each founder&rsquo;s do-not-contact list are always honored.
             Detailed match rules, caps, and message live on{" "}
-            <a href="/admin/outreach-qualification" className="font-medium text-indigo-600 hover:text-indigo-700">Outreach Qualification</a>.
+            <Link href="/admin/outreach-qualification" className="font-medium text-indigo-600 hover:text-indigo-700">Outreach Qualification</Link>.
           </p>
           {error ? <p className="mt-1 text-[11px] text-red-600">{error}</p> : null}
         </div>

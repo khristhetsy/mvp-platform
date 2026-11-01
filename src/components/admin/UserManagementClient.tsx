@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Users, Trash2, UserMinus, AlertTriangle, X } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -279,12 +280,12 @@ export function UserManagementClient() {
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-slate-600">{t("desc")}</p>
         </div>
-        <a
+        <Link
           href="/admin/users/permissions"
           className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
         >
           {t("permissionsLink")}
-        </a>
+        </Link>
       </div>
 
       {statusMsg ? (

@@ -73,11 +73,12 @@ export default async function BillingPage({
   const wire = await loadFounderWireState(profile.id);
   const params = (await searchParams) ?? {};
   const premiumActive = subscription.plan_type === "founder_premium" && subscription.subscription_status === "active";
-  const premiumFirst =
-    params.plan === "founder_premium" ||
-    (subscription.plan_type === "founder_premium" && subscription.subscription_status !== "active") ||
-    Boolean(wire.openInvoice);
-  const premiumSection = (
+  // Premium is now a card plan. The wire panel only shows for founders who already
+  // have a wire invoice, so existing wire customers keep their history.
+  const hasWireHistory = Boolean(wire.openInvoice) || wire.invoices.length > 0;
+  void params;
+  const premiumFirst = Boolean(wire.openInvoice);
+  const premiumSection = !hasWireHistory ? null : (
     <div className="mt-8 space-y-4" id="premium">
       {premiumActive && !wire.openInvoice ? (
         <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
@@ -106,7 +107,7 @@ export default async function BillingPage({
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">{t("billing")}</p>
         <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">{t("billing_overview")}</h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-          Basic and Professional are billed by card through Lemon Squeezy. Premium is paid by bank wire, monthly or quarterly.
+          Basic, Professional and Premium are billed by card through Lemon Squeezy.
         </p>
 
         <dl className="mt-8 grid gap-4 text-sm text-slate-700 md:grid-cols-2 lg:grid-cols-3">
@@ -158,13 +159,14 @@ export default async function BillingPage({
 
         {premiumFirst ? premiumSection : null}
 
-        {isPaymentsEnabled() && !hasLsCustomer && !premiumActive ? (
+        {isPaymentsEnabled() && !hasLsCustomer && !(premiumActive && wire.openInvoice) ? (
           <div className="mt-8">
             <h2 className="text-base font-semibold text-slate-950">{t("choose_a_plan")}</h2>
             <p className="mt-1 text-sm text-slate-600">{t("select_a_plan_to_activate_your_subscription")}</p>
             <div className="mt-4 flex flex-wrap gap-3">
               <CheckoutButton planType="founder_basic" label={`Founder Basic, ${priceShort(pricing, "founder_basic")}`} pricing={pricing} />
               <CheckoutButton planType="founder_professional" label={`Founder Professional, ${priceShort(pricing, "founder_professional")}`} pricing={pricing} recommended />
+              <CheckoutButton planType="founder_premium" label={`Founder Premium, ${priceShort(pricing, "founder_premium")}`} pricing={pricing} />
             </div>
           </div>
         ) : null}

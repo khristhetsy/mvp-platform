@@ -90,27 +90,27 @@ export default async function FounderAnalyticsPage() {
                   Charts and metrics populate as you upload documents, add investors, and build your Preparation completeness. Here&apos;s what to do first:
                 </p>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                  <a href="/founder/documents" style={{
+                  <Link href="/founder/documents" style={{
                     fontSize: 12, fontWeight: 600, color: "white",
                     background: "#2E78F5", borderRadius: 8, padding: "6px 14px",
                     textDecoration: "none",
                   }}>
                     Upload documents
-                  </a>
-                  <a href="/founder/investors/outreach" style={{
+                  </Link>
+                  <Link href="/founder/investors/outreach" style={{
                     fontSize: 12, fontWeight: 600, color: "#2E78F5",
                     background: "white", border: "1px solid #c4b5fd", borderRadius: 8,
                     padding: "6px 14px", textDecoration: "none",
                   }}>
                     Add investors to CRM
-                  </a>
-                  <a href="/founder/readiness" style={{
+                  </Link>
+                  <Link href="/founder/readiness" style={{
                     fontSize: 12, fontWeight: 600, color: "#2E78F5",
                     background: "white", border: "1px solid #c4b5fd", borderRadius: 8,
                     padding: "6px 14px", textDecoration: "none",
                   }}>
                     Check completion
-                  </a>
+                  </Link>
                 </div>
               </div>
             </div>

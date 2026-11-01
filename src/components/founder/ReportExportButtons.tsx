@@ -9,7 +9,7 @@ export function ReportExportButtons() {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <a
-        href="/api/founder/report/pdf?download=1"
+        download href="/api/founder/report/pdf?download=1"
         className="inline-flex items-center gap-1.5 rounded-lg bg-[#2E78F5] px-3.5 py-2 text-sm font-semibold text-white hover:bg-[#1A6CE4]"
       >
         <i className="ti ti-download" aria-hidden="true" /> Download PDF

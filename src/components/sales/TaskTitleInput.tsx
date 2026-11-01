@@ -6,6 +6,17 @@ import { useEffect, useState } from "react";
 
 type TitleOpt = { id: string; title: string; task_type: string };
 
+/** Shared title options, or null on a network error (keep whatever is already loaded). */
+async function fetchTitleOptions(): Promise<TitleOpt[] | null> {
+  try {
+    const res = await fetch("/api/sales/task-titles");
+    const data = res.ok ? await res.json() : { options: [] };
+    return data.options ?? [];
+  } catch {
+    return null;
+  }
+}
+
 export function TaskTitleInput({ value, placeholder, inputStyle, allowedTypes, taskType, autoFocus, onChange }: {
   value: string;
   placeholder: string;
@@ -22,13 +33,14 @@ export function TaskTitleInput({ value, placeholder, inputStyle, allowedTypes, t
   const [msg, setMsg] = useState("");
 
   async function load() {
-    try {
-      const res = await fetch("/api/sales/task-titles");
-      const data = res.ok ? await res.json() : { options: [] };
-      setOpts(data.options ?? []);
-    } catch { /* keep whatever is already loaded */ }
+    const next = await fetchTitleOptions();
+    if (next) setOpts(next);
   }
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    let live = true;
+    void fetchTitleOptions().then((next) => { if (live && next) setOpts(next); });
+    return () => { live = false; };
+  }, []);
 
   async function saveNew() {
     const title = value.trim();

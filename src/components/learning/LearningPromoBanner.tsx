@@ -1,11 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import type { PromoSlide } from "@/lib/learning/overview-programs";
 
 const THEMES = ["#0A1A40", "#185FA5", "#2D2A6E"];
 const INTERVAL_MS = 6000;
+const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
+
+function subscribeReducedMotion(onChange: () => void) {
+  const query = window.matchMedia(REDUCED_MOTION);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
+function readReducedMotion() {
+  return window.matchMedia(REDUCED_MOTION).matches;
+}
 
 /**
  * Sliding promo banner for the Learning overview. One slide per program, driven by the list built in
@@ -17,15 +28,7 @@ export function LearningPromoBanner({ slides }: Readonly<{ slides: PromoSlide[] 
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const [userMoved, setUserMoved] = useState(false);
-  const [reduced, setReduced] = useState(false);
-
-  useEffect(() => {
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReduced(query.matches);
-    const onChange = () => setReduced(query.matches);
-    query.addEventListener("change", onChange);
-    return () => query.removeEventListener("change", onChange);
-  }, []);
+  const reduced = useSyncExternalStore(subscribeReducedMotion, readReducedMotion, () => false);
 
   useEffect(() => {
     if (count < 2 || paused || userMoved || reduced) return;

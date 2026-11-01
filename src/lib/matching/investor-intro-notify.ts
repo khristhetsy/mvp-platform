@@ -65,7 +65,9 @@ export async function emailInvestorIntroMade(input: {
 
     // Only state an alignment the investor's own saved preferences show.
     const alignedOn: string[] = [];
-    if (company?.industry && (prefsRow?.preferred_sectors ?? []).some((s) => norm(s) === norm(company.industry!))) alignedOn.push("industry");
+    // companies.industry can hold several, as one comma list ("Fintech, AI/ML").
+    const industries = (company?.industry ?? "").split(",").map(norm).filter(Boolean);
+    if (industries.length && (prefsRow?.preferred_sectors ?? []).some((s) => industries.includes(norm(s)))) alignedOn.push("industry");
     if (company?.funding_stage && (prefsRow?.preferred_stages ?? []).some((s) => norm(s) === norm(company.funding_stage!))) alignedOn.push("stage");
 
     const fullName = (person?.full_name ?? "").trim();

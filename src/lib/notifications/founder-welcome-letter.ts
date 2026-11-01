@@ -49,11 +49,10 @@ export type WelcomeLetterData = {
   crrScore: number | null;
 };
 
-const STEP_ORDER = ["company_profile", "investor_readiness_review", "documents_uploaded", "funding_information"] as const;
+const STEP_ORDER = ["company_profile", "documents_uploaded", "funding_information"] as const;
 
 const STEP_COPY: Record<string, { html: string; text: string }> = {
   company_profile: { html: "<b>Complete your company profile.</b>", text: "Complete your company profile." },
-  investor_readiness_review: { html: "<b>Finish your investor readiness review.</b>", text: "Finish your investor readiness review." },
   documents_uploaded: {
     html: "<b>Upload your documents</b> to the data room (pitch deck, financials, cap table).",
     text: "Upload your documents to the data room (pitch deck, financials, cap table).",

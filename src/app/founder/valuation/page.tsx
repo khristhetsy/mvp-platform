@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderJourneyGate } from "@/components/founder/FounderJourneyGate";
@@ -91,7 +92,7 @@ export default async function FounderValuationPage() {
           <div className="rounded-2xl border border-[#E3E8F2] bg-white p-8 text-center">
             <p className="text-sm text-[#5A6782]">
               The Valuation Studio is available on the Basic and Professional plans.{" "}
-              <a href="/founder/settings/billing" className="font-medium text-indigo-700">Upgrade to unlock it.</a>
+              <Link href="/founder/settings/billing" className="font-medium text-indigo-700">Upgrade to unlock it.</Link>
             </p>
           </div>
         )}

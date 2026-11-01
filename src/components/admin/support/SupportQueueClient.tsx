@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { SupportCareSettings } from "@/lib/support/settings";
@@ -216,9 +217,9 @@ export function SupportQueueClient({
             />
           ))}
           <div className="mt-3 border-t border-slate-100 pt-2">
-            <a href="/admin/support/log" className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-slate-600 hover:bg-slate-50">
+            <Link href="/admin/support/log" className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-slate-600 hover:bg-slate-50">
               <i className="ti ti-list-details" aria-hidden="true" /> Support log
-            </a>
+            </Link>
           </div>
         </nav>
 
@@ -261,9 +262,9 @@ export function SupportQueueClient({
                   <button type="button" onClick={() => { setSettingsOpen(true); setGearOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-slate-700 hover:bg-slate-50">
                     <i className="ti ti-bell" aria-hidden="true" /> Notifications and AI
                   </button>
-                  <a href="/admin/support/log" className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-slate-700 hover:bg-slate-50">
+                  <Link href="/admin/support/log" className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-slate-700 hover:bg-slate-50">
                     <i className="ti ti-list-details" aria-hidden="true" /> Support log
-                  </a>
+                  </Link>
                 </div>
               ) : null}
             </div>

@@ -388,13 +388,13 @@ export function ExportDeliveriesSection({ isStaff }: Readonly<{ isStaff: boolean
       <p className="mb-2 text-xs text-slate-500">{t("staff_only_export_of_delivery_metadata_no_se")}</p>
       <div className="flex gap-2">
         <a
-          href="/api/admin/integrations/export?format=csv"
+          download href="/api/admin/integrations/export?format=csv"
           className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-800"
         >
           Download CSV
         </a>
         <a
-          href="/api/admin/integrations/export?format=json"
+          download href="/api/admin/integrations/export?format=json"
           className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-800"
         >
           Download JSON

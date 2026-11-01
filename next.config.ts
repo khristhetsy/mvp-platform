@@ -5,6 +5,8 @@ import type { NextConfig } from "next";
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
+  // Dev only: lets a phone on the same Wi-Fi open the dev server (Next blocks other origins in dev). Ignored in production builds.
+  allowedDevOrigins: ["192.168.1.78"],
   // Type checking is enforced in CI (.github/workflows/typecheck.yml), not in the
   // Vercel build — this keeps deploys fast and unblocks shipping when a type error
   // is unrelated to the change being deployed.

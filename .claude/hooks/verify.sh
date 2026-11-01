@@ -18,7 +18,9 @@ if [ -z "$CHANGED" ] && [ -z "$UNTRACKED" ]; then
   exit 0
 fi
 
-TSC_OUT=$(npx tsc --noEmit 2>&1); TSC_RC=$?
+# The project outgrew Node's default ~2 GB heap; without this tsc dies with
+# "JavaScript heap out of memory" before reporting any type errors.
+TSC_OUT=$(NODE_OPTIONS=--max-old-space-size=8192 npx tsc --noEmit 2>&1); TSC_RC=$?
 LINT_OUT=$(npm run lint --silent 2>&1); LINT_RC=$?
 
 # Tests that import the changed files (directly or through other modules).

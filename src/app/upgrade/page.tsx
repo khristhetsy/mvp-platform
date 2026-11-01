@@ -1,8 +1,10 @@
+import { headers } from "next/headers";
 import Link from "next/link";
 import { Suspense } from "react";
 import { getTranslations } from "next-intl/server";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
+import { siteFontVariables } from "@/lib/marketing-site/fonts";
 import { PlanComparisonSection } from "@/components/PlanComparisonSection";
 import { UpgradeRequestActions } from "@/components/UpgradeRequestActions";
 import { CheckoutButton } from "@/components/billing/CheckoutButton";
@@ -25,8 +27,6 @@ import { ensureSubscriptionForProfile, getSubscriptionForProfile } from "@/lib/s
 import { subscriptionStatusLabel } from "@/lib/subscriptions/access";
 import { priceShort } from "@/lib/subscriptions/pricing-catalog";
 import { loadPricing } from "@/lib/subscriptions/pricing-server";
-import { loadFounderWireState, type FounderWireState } from "@/lib/billing/wire";
-import { PremiumWireButton } from "@/components/billing/WireCheckoutPanel";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -56,19 +56,6 @@ async function UpgradePageContent({ searchParams }: Readonly<{ searchParams: Sea
   const featureLock = featureKey ? getFeatureLockCopy(featureKey) : null;
   const paymentsEnabled = isPaymentsEnabled();
   const founderCanCheckout = paymentsEnabled && profile?.role === "founder";
-  // Premium is paid by bank wire only, so founders can choose it whether or not
-  // card checkout is enabled.
-  const wire: FounderWireState | null = profile?.role === "founder" ? await loadFounderWireState(profile.id) : null;
-  const premiumButton = wire ? (
-    <PremiumWireButton
-      label={`Founder Premium, ${wire.monthlyLabel}/mo by wire`}
-      monthlyLabel={wire.monthlyLabel}
-      quarterlyLabel={wire.quarterlyLabel}
-      instructions={wire.instructions}
-      openInvoice={wire.openInvoice}
-    />
-  ) : null;
-
   return (
     <>
       <section className="mx-auto max-w-7xl px-6 py-16">
@@ -143,12 +130,12 @@ async function UpgradePageContent({ searchParams }: Readonly<{ searchParams: Sea
           <div className="mt-10 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-slate-950">{t("upgrade_your_plan")}</h2>
             <p className="mt-2 text-sm text-slate-600">
-              Basic and Professional check out securely with Lemon Squeezy and update immediately after payment. Premium is paid by bank wire and activates as soon as your wire is received.
+              Basic, Professional and Premium check out securely with Lemon Squeezy and update immediately after payment.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <CheckoutButton planType="founder_basic" label={`Founder Basic, ${priceShort(pricing, "founder_basic")}`} pricing={pricing} />
               <CheckoutButton planType="founder_professional" label={`Founder Professional, ${priceShort(pricing, "founder_professional")}`} pricing={pricing} recommended />
-              {premiumButton}
+              <CheckoutButton planType="founder_premium" label={`Founder Premium, ${priceShort(pricing, "founder_premium")}`} pricing={pricing} />
             </div>
           </div>
         ) : profile ? (
@@ -163,12 +150,6 @@ async function UpgradePageContent({ searchParams }: Readonly<{ searchParams: Sea
                 featureKey={featureKey}
               />
             </div>
-            {premiumButton ? (
-              <div className="mt-6 border-t border-slate-100 pt-5">
-                <p className="text-sm text-slate-600">Premium is paid by bank wire and is available now.</p>
-                <div className="mt-3">{premiumButton}</div>
-              </div>
-            ) : null}
           </div>
         ) : null}
 
@@ -202,6 +183,19 @@ async function UpgradePageContent({ searchParams }: Readonly<{ searchParams: Sea
 
 export default async function UpgradePage({ searchParams }: Readonly<{ searchParams: SearchParams }>) {
   const t = await getTranslations("appPages");
+  // Inside the phone app the plans show without the website menu and footer.
+  const embedded = ((await headers()).get("user-agent") ?? "").includes("iCapOSApp");
+  if (embedded) {
+    return (
+      <div className={`${siteFontVariables} cap-marketing-surface flex min-h-screen flex-col text-[var(--navy)]`}>
+        <main className="flex-1">
+          <Suspense fallback={<p className="px-6 py-16 text-sm text-slate-500">{t("loading_upgrade_options")}</p>}>
+            <UpgradePageContent searchParams={searchParams} />
+          </Suspense>
+        </main>
+      </div>
+    );
+  }
   return (
     <MarketingShell>
       <Suspense fallback={<p className="px-6 py-16 text-sm text-slate-500">{t("loading_upgrade_options")}</p>}>

@@ -27,6 +27,7 @@ export function AppShell({
   profileEmail,
   planBadge,
   accountSwitcher,
+  embedded = false,
 }: Readonly<{
   children: React.ReactNode;
   role?: Role;
@@ -36,6 +37,8 @@ export function AppShell({
   profileEmail?: string;
   planBadge?: React.ReactNode;
   accountSwitcher?: React.ReactNode;
+  /** Inside the phone app: page content only, no sidebar or top bar. */
+  embedded?: boolean;
 }>) {
   const insideAppShell = useContext(AppShellContext);
   const pathname = usePathname();
@@ -57,6 +60,7 @@ export function AppShell({
           profileEmail={profileEmail}
           planBadge={planBadge}
           accountSwitcher={accountSwitcher}
+          embedded={embedded}
         >
           {children}
         </WorkspaceShell>

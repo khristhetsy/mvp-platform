@@ -30,7 +30,6 @@ const TED: WelcomeLetterData = {
   onboardingPercent: 50,
   steps: [
     { key: "company_profile", done: true },
-    { key: "investor_readiness_review", done: true },
     { key: "documents_uploaded", done: false },
     { key: "funding_information", done: false },
   ],

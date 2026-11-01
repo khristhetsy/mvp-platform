@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { getTranslations } from "next-intl/server";
@@ -29,8 +30,12 @@ export default async function NotificationsPage() {
     redirect(dashboardForRole(profile.role));
   }
 
+  // Inside the phone app the page shows without the website sidebar and top bar.
+  const embedded = ((await headers()).get("user-agent") ?? "").includes("iCapOSApp");
+
   return (
     <AppShell
+      embedded={embedded}
       workspace={workspace}
       profileName={profile.full_name ?? profile.email ?? "User"}
       profileSubtitle={t("notifications")}

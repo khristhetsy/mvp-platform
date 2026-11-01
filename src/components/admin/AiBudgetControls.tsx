@@ -255,7 +255,7 @@ export function AiBudgetControls() {
               <Mail className="h-3.5 w-3.5" aria-hidden />
               Email at 80% and 100% of any category, and of the total{alertEmail ? `, to ${alertEmail}` : ""}
             </div>
-            <a href="/api/admin/ai-budget?export=csv" className="flex items-center gap-1.5 text-indigo-700 hover:text-indigo-600">
+            <a download href="/api/admin/ai-budget?export=csv" className="flex items-center gap-1.5 text-indigo-700 hover:text-indigo-600">
               <Download className="h-3.5 w-3.5" aria-hidden />
               Export this month as CSV, one row per call
             </a>

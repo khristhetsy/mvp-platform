@@ -36,7 +36,6 @@ const SOS: PaymentAlertDetails = {
   onboardingPercent: 50,
   steps: [
     { label: "Company profile", done: true },
-    { label: "Investor readiness review", done: true },
     { label: "Documents uploaded", done: false },
     { label: "Funding information", done: false },
   ],

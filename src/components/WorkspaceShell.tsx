@@ -20,6 +20,7 @@ export function WorkspaceShell({
   profileEmail,
   planBadge,
   accountSwitcher,
+  embedded: _embedded = false,
   children,
 }: Readonly<{
   workspace: WorkspaceId;
@@ -28,6 +29,8 @@ export function WorkspaceShell({
   profileEmail?: string;
   planBadge?: ReactNode;
   accountSwitcher?: ReactNode;
+  /** Inside the phone app: page content only, no sidebar, top bar, assistant or search. */
+  embedded?: boolean;
   children: ReactNode;
 }>) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);

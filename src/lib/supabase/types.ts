@@ -26,6 +26,8 @@ export type Company = {
   website?: string | null;
   logo_url?: string | null;
   funding_amount: number | null;
+  /** Amount of capital band (migration 20260924002). The onboarding funding step is complete when this is set. */
+  funding_amount_band?: string | null;
   use_of_funds: string | null;
   revenue_stage: string | null;
   team_summary: string | null;

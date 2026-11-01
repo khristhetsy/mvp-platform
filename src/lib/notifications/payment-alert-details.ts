@@ -37,7 +37,6 @@ export type PaymentAlertDetails = {
 
 const STEP_LABELS: Array<[string, string]> = [
   ["company_profile", "Company profile"],
-  ["investor_readiness_review", "Investor readiness review"],
   ["documents_uploaded", "Documents uploaded"],
   ["funding_information", "Funding information"],
 ];

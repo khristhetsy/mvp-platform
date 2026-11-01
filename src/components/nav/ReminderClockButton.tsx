@@ -31,6 +31,18 @@ function dayOnly(label: string): string {
   return at === -1 ? label : label.slice(0, at);
 }
 
+/** Current reminders, or null when they couldn't be fetched (the badge just won't update). */
+async function fetchReminders(): Promise<Reminder[] | null> {
+  try {
+    const r = await fetch("/api/reminders", { cache: "no-store" });
+    if (!r.ok) return null;
+    const d = (await r.json()) as { reminders?: Reminder[] };
+    return d.reminders ?? [];
+  } catch {
+    return null;
+  }
+}
+
 export function ReminderClockButton() {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Reminder[]>([]);
@@ -46,18 +58,15 @@ export function ReminderClockButton() {
   const boxRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
-    try {
-      const r = await fetch("/api/reminders", { cache: "no-store" });
-      if (!r.ok) return;
-      const d = (await r.json()) as { reminders?: Reminder[] };
-      setItems(d.reminders ?? []);
-    } catch { /* the badge just won't update */ }
+    const next = await fetchReminders();
+    if (next) setItems(next);
   }, []);
 
   useEffect(() => {
-    void load();
+    let live = true;
+    void fetchReminders().then((next) => { if (live && next) setItems(next); });
     const id = setInterval(load, 60_000);
-    return () => clearInterval(id);
+    return () => { live = false; clearInterval(id); };
   }, [load]);
 
   // Click outside or Esc closes the menu.
