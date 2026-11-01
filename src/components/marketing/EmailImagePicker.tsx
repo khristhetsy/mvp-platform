@@ -280,10 +280,14 @@ export function EmailImageLibrary({ mode, selectedId, onSelect }: {
   );
 }
 
-/** The picker opened from the email composer: choose or upload an image, confirm the alt text, insert. */
-export function EmailImagePickerModal({ onInsert, onClose }: {
+/**
+ * The picker opened from the email composer (Insert banner): choose or upload an image, confirm the
+ * alt text, then insert it as the email's banner. `replacing` is true when the email already has one.
+ */
+export function EmailImagePickerModal({ onInsert, onClose, replacing = false }: {
   onInsert: (image: EmailImage, alt: string) => void;
   onClose: () => void;
+  replacing?: boolean;
 }) {
   const [selected, setSelected] = useState<EmailImage | null>(null);
   const [alt, setAlt] = useState("");
@@ -305,18 +309,23 @@ export function EmailImagePickerModal({ onInsert, onClose }: {
 
   return (
     <div onClick={(e) => { e.stopPropagation(); onClose(); }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 90, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Insert image" style={{ background: "var(--background, #fff)", borderRadius: 12, padding: 16, width: 640, maxWidth: "100%", maxHeight: "90vh", overflow: "auto", boxShadow: "0 20px 48px rgba(0,0,0,.25)" }}>
+      <div onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Insert banner" style={{ background: "var(--background, #fff)", borderRadius: 12, padding: 16, width: 640, maxWidth: "100%", maxHeight: "90vh", overflow: "auto", boxShadow: "0 20px 48px rgba(0,0,0,.25)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <p style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>Insert image</p>
+          <p style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>Insert banner</p>
           <button type="button" onClick={onClose} aria-label="Close" style={{ border: "none", background: "none", cursor: "pointer", color: "var(--muted-foreground)" }}>✕</button>
         </div>
+        {replacing ? (
+          <p style={{ fontSize: 12, color: "#0F6E56", background: "#E1F5EE", border: "0.5px solid #B8E3D2", borderRadius: 8, padding: "8px 10px", margin: "0 0 10px" }}>
+            <b>Replaces your current banner.</b> The banner already in this email is swapped, not added to.
+          </p>
+        ) : null}
         <EmailImageLibrary mode="insert" selectedId={selected?.id ?? null} onSelect={pick} />
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14, paddingTop: 12, borderTop: "0.5px solid var(--border)" }}>
           <label style={{ fontSize: 11.5, color: "var(--muted-foreground)", whiteSpace: "nowrap" }}>Alt text (required)</label>
           <input value={alt} onChange={(e) => setAlt(e.target.value)} disabled={!selected} placeholder={selected ? "Describe the image for people who cannot see it" : "Select an image first"} style={{ ...field, flex: 1 }} />
           <button type="button" disabled={!selected || !alt.trim()} onClick={() => selected && onInsert(selected, alt.trim())}
             style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: !selected || !alt.trim() ? "#9aa1ab" : "#2E78F5", border: "none", borderRadius: 8, padding: "8px 16px", cursor: !selected || !alt.trim() ? "default" : "pointer" }}>
-            Insert
+            {replacing ? "Replace banner" : "Insert banner"}
           </button>
         </div>
       </div>

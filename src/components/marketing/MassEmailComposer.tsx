@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { TemplatePicker } from "@/components/marketing/TemplatePicker";
 import { EmailImagePickerModal } from "@/components/marketing/EmailImagePicker";
-import { buildImgTag, insertIntoHtml } from "@/lib/email-images";
+import { applyBanner, hasBanner } from "@/lib/email-images";
 import { OdooPager } from "@/components/admin/OdooPager";
 import { ScheduleSendMenu } from "@/components/email/ScheduleSend";
 import { formatSendAt } from "@/lib/scheduled-emails/time";
@@ -72,7 +72,7 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
   brandedProjectId?: string;
   /** "company:<id>": a new branded template is filled from this company (the Companies list). */
   brandedFounderRef?: string;
-  /** Shows the Insert image button next to the body (the email images library). On unless false. */
+  /** Shows the Insert banner button next to the body (the email images library). On unless false. */
   showImagePicker?: boolean;
 }) {
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -96,13 +96,9 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
   const [fileErr, setFileErr] = useState<string | null>(null);
   const [sharePicked, setSharePicked] = useState<Set<string>>(new Set());
   const [pickingImage, setPickingImage] = useState(false);
-  /** Where the cursor last was in the body, so an inserted image lands there. */
-  const caretRef = useRef<number | null>(null);
-
-  function insertImage(url: string, alt: string) {
-    const tag = buildImgTag(url, alt);
-    setHtml((cur) => insertIntoHtml(cur, tag, caretRef.current));
-    caretRef.current = null;
+  /** Puts the banner at the top of the email, or swaps the one already there. Never added at the cursor, never twice. */
+  function insertBanner(url: string, alt: string) {
+    setHtml((cur) => applyBanner(cur, url, alt));
     setPickingImage(false);
   }
 
@@ -113,7 +109,6 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
 
   function pickTemplate(id: string, list: Template[] = templates) {
     setTemplateId(id);
-    caretRef.current = null;
     const t = list.find((x) => x.id === id);
     if (t) { setSubject(t.subject); setHtml(t.html_body); }
   }
@@ -207,7 +202,7 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
 
   const imageButton = showImagePicker ? (
     <button type="button" onClick={() => setPickingImage(true)} style={{ fontSize: 11.5, padding: "3px 10px", border: "1px solid #B5D4F4", borderRadius: 7, background: "#EEF4FE", cursor: "pointer", color: "#185FA5", fontWeight: 600 }}>
-      <i className="ti ti-photo" aria-hidden="true" /> Insert image
+      <i className="ti ti-photo" aria-hidden="true" /> Insert banner
     </button>
   ) : null;
 
@@ -294,7 +289,7 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
                       : <div style={{ border: "0.5px dashed var(--border)", borderRadius: 8, padding: "28px 12px", textAlign: "center", fontSize: 12, color: "var(--muted-foreground)", marginBottom: 4 }}>Pick a template, or <button type="button" onClick={() => setView("html")} style={{ border: "none", background: "none", color: "#185FA5", cursor: "pointer", padding: 0, fontSize: 12 }}>write the HTML</button>.</div>}
                   </>
                 ) : (
-                  <textarea value={html} onChange={(e) => setHtml(e.target.value)} onSelect={(e) => { caretRef.current = e.currentTarget.selectionStart; }} rows={previewAs?.length ? 10 : 6} placeholder="<p>Hi {{first_name}},</p>…" style={{ ...inp, width: "100%", boxSizing: "border-box", fontFamily: "var(--font-mono)", resize: "vertical", marginBottom: previewAs?.length ? 4 : 10 }} />
+                  <textarea value={html} onChange={(e) => setHtml(e.target.value)} rows={previewAs?.length ? 10 : 6} placeholder="<p>Hi {{first_name}},</p>…" style={{ ...inp, width: "100%", boxSizing: "border-box", fontFamily: "var(--font-mono)", resize: "vertical", marginBottom: previewAs?.length ? 4 : 10 }} />
                 )}
                 {previewAs?.length ? <p style={{ fontSize: 10.5, color: "var(--muted-foreground)", margin: "0 0 10px" }}>Merge: {["first_name", "company", ...Object.keys(extraMerge ?? {})].map((k) => `{{${k}}}`).join(" ")}</p> : null}
 
@@ -387,7 +382,7 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
           </>
         )}
       </div>
-      {pickingImage ? <EmailImagePickerModal onInsert={(img, alt) => insertImage(img.public_url, alt)} onClose={() => setPickingImage(false)} /> : null}
+      {pickingImage ? <EmailImagePickerModal replacing={hasBanner(html)} onInsert={(img, alt) => insertBanner(img.public_url, alt)} onClose={() => setPickingImage(false)} /> : null}
       {fullView && who ? (
         <FullView doc={previewDoc} title={templates.find((t) => t.id === templateId)?.name ?? (subject || "Email")} who={who.label}
           idx={Math.min(previewIdx, (previewAs?.length ?? 1) - 1)} total={previewAs?.length ?? 1} files={files.map((f) => f.name)}

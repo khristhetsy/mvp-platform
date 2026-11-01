@@ -84,6 +84,52 @@ export function buildImgTag(url: string, alt: string, width = 600): string {
   return `<img src="${esc(url)}" alt="${esc(alt)}" width="${width}" style="display:block;max-width:100%;height:auto;border:0;">`;
 }
 
+/** Hidden markers around the banner row. Insert banner only ever touches what sits between them. */
+export const BANNER_START = "<!--ICAPOS_BANNER_START-->";
+export const BANNER_END = "<!--ICAPOS_BANNER_END-->";
+
+/** The banner tag: the full width of the 600 px email card, so it fits the card edge to edge. */
+export function buildBannerTag(url: string, alt: string): string {
+  return `<img src="${esc(url)}" alt="${esc(alt)}" width="600" style="display:block;width:100%;max-width:600px;height:auto;border:0;">`;
+}
+
+/** True when the body already holds a banner block (both markers, start before end). */
+export function hasBanner(html: string): boolean {
+  const s = html.indexOf(BANNER_START);
+  return s >= 0 && html.indexOf(BANNER_END, s + BANNER_START.length) >= 0;
+}
+
+function bannerBlock(url: string, alt: string, asRow: boolean): string {
+  const img = buildBannerTag(url, alt);
+  return `${BANNER_START}\n${asRow ? `<tr><td>${img}</td></tr>` : img}\n${BANNER_END}`;
+}
+
+/**
+ * Puts the banner in the email body and never adds a second one.
+ * - A banner block exists: only what sits between the markers is replaced.
+ * - None yet: the block becomes the first row of the outer 600 px table, or, when the body
+ *   has no such table, the very first thing in the body. The cursor position is never used.
+ */
+export function applyBanner(html: string, url: string, alt: string): string {
+  const s = html.indexOf(BANNER_START);
+  if (s >= 0) {
+    const e = html.indexOf(BANNER_END, s + BANNER_START.length);
+    if (e >= 0) {
+      const inner = html.slice(s + BANNER_START.length, e);
+      const asRow = /^\s*<tr[\s>]/i.test(inner);
+      return html.slice(0, s) + bannerBlock(url, alt, asRow) + html.slice(e + BANNER_END.length);
+    }
+  }
+  const table = /<table\b[^>]*(?:\bwidth\s*=\s*["']?600\b|max-width\s*:\s*600px)[^>]*>/i.exec(html);
+  if (table) {
+    const at = table.index + table[0].length;
+    return `${html.slice(0, at)}\n${bannerBlock(url, alt, true)}\n${html.slice(at)}`;
+  }
+  const body = /<body\b[^>]*>/i.exec(html);
+  const at = body ? body.index + body[0].length : 0;
+  return `${html.slice(0, at)}${bannerBlock(url, alt, false)}\n${html.slice(at)}`;
+}
+
 /** Puts `tag` at `caret`. With no caret it goes before </body> when the body is a full document, else at the end. */
 export function insertIntoHtml(html: string, tag: string, caret: number | null): string {
   if (caret !== null && caret >= 0 && caret <= html.length) return html.slice(0, caret) + tag + html.slice(caret);
