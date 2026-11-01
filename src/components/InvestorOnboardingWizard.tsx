@@ -16,6 +16,7 @@ import {
   type EngineWeights,
 } from "@/lib/matching/investor-company-matching";
 import { investorMeter } from "@/lib/matching/matchable-points";
+import { InvestorSubmittedNextSteps } from "@/components/investor/InvestorSubmittedNextSteps";
 import { MatchablePointsMeter, ReadByPersonBadge } from "@/components/matching/MatchablePointsMeter";
 import { ListMultiSelect } from "@/components/ui/ListMultiSelect";
 
@@ -273,10 +274,25 @@ export function InvestorOnboardingWizard({
     setMessage({
       type: "success",
       text: submit
-        ? "Profile submitted for admin approval. You will be notified when reviewed."
+        ? "Profile submitted. We'll email you once the review is done."
         : "Draft saved.",
     });
     router.refresh();
+  }
+
+  if (isPending) {
+    const checkRow = meter.rows.find((r) => r.label === "Typical check size");
+    return (
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
+        <InvestorSubmittedNextSteps
+          checkSizeMissing={Boolean(checkRow && !checkRow.answered)}
+          answeredPoints={meter.answeredPoints}
+          totalPoints={meter.totalPoints}
+          checkSizePoints={checkRow?.weight ?? 0}
+        />
+        <MatchablePointsMeter meter={meter} className="lg:sticky lg:top-6" />
+      </div>
+    );
   }
 
   return (
