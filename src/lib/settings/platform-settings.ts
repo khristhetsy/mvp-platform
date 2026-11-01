@@ -92,17 +92,36 @@ export async function setFounderStageMenuHidden(hidden: string[], updatedBy: str
   }
 }
 
+/**
+ * Boolean settings are kept in memory for a short time on each server instance,
+ * so a page or job that checks the same switch many times makes one database
+ * read, not one per check. A change made on this instance shows at once; on
+ * another instance it shows within BOOL_CACHE_MS. Failed reads are never kept.
+ */
+export const BOOL_CACHE_MS = 60_000;
+const boolCache = new Map<string, { at: number; enabled: boolean | undefined }>();
+
+/** Forget cached boolean settings (all, or one key). Used after a write and in tests. */
+export function clearBoolSettingCache(key?: string): void {
+  if (key === undefined) boolCache.clear();
+  else boolCache.delete(key);
+}
+
 /** Read a boolean setting; returns `fallback` if unset or unreadable. */
 export async function getBoolSetting(key: string, fallback = false): Promise<boolean> {
+  const hit = boolCache.get(key);
+  if (hit && Date.now() - hit.at < BOOL_CACHE_MS) return hit.enabled ?? fallback;
   try {
-    const { data } = await db()
+    const { data, error } = await db()
       .from("platform_settings")
       .select("value")
       .eq("key", key)
       .maybeSingle();
+    if (error) return fallback;
     const value = (data as { value?: { enabled?: boolean } } | null)?.value;
-    if (value && typeof value.enabled === "boolean") return value.enabled;
-    return fallback;
+    const enabled = value && typeof value.enabled === "boolean" ? value.enabled : undefined;
+    boolCache.set(key, { at: Date.now(), enabled });
+    return enabled ?? fallback;
   } catch {
     return fallback;
   }
@@ -117,6 +136,7 @@ export async function setBoolSetting(key: string, enabled: boolean, updatedBy: s
         { key, value: { enabled }, updated_by: updatedBy, updated_at: new Date().toISOString() },
         { onConflict: "key" },
       );
+    clearBoolSettingCache(key);
     return !error;
   } catch {
     return false;

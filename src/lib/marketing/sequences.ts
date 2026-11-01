@@ -4,7 +4,7 @@ import { logActivity } from "@/lib/sales/activity";
 import { buildPreview } from "@/lib/notes-log-preview";
 import { emailLogIdsByProvider } from "@/lib/notes-log";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { isUnsubscribed } from "./contacts";
+import { isUnsubscribed, loadUnsubscribedSet, normalizeEmail } from "./contacts";
 import type { MarketingSequence, MarketingSequenceStep } from "./types";
 import { needsEmailReview } from "./recipient";
 
@@ -311,6 +311,24 @@ export async function sequenceMembershipByEmail(emails: string[]): Promise<Map<s
 
 const CONDITION_EVENT: Record<string, string> = { no_open: "opened", no_click: "clicked", no_reply: "replied" };
 
+/** Contact ids that already have the given event for a sequence, read in chunks. */
+export async function contactsWithEvent(
+  db: Awaited<ReturnType<typeof marketingDb>>,
+  sequenceId: string,
+  eventType: string,
+  contactIds: string[],
+): Promise<Set<string>> {
+  const out = new Set<string>();
+  const ids = [...new Set(contactIds)];
+  for (let i = 0; i < ids.length; i += 150) {
+    const { data, error } = await db.from("marketing_events").select("contact_id")
+      .eq("sequence_id", sequenceId).eq("event_type", eventType).in("contact_id", ids.slice(i, i + 150));
+    if (error) throw error;
+    for (const r of data ?? []) if (r.contact_id) out.add(r.contact_id);
+  }
+  return out;
+}
+
 /**
  * GATED: when steps come due, collect eligible contacts into PENDING BATCHES for
  * a human to review & release — no auto-send. Suppressed/condition-skipped
@@ -327,6 +345,9 @@ export async function collectDueSequenceBatches(): Promise<{ batches: number; qu
     .limit(500);
 
   if (!due || due.length === 0) return { batches: 0, queued: 0 };
+
+  // Read the suppression list once for the whole run instead of once per contact.
+  const unsubscribed = await loadUnsubscribedSet();
 
   // group due enrollments by sequence + current step
   const groups = new Map<string, typeof due>();
@@ -354,20 +375,21 @@ export async function collectDueSequenceBatches(): Promise<{ batches: number; qu
     const willSend: string[] = [];
     let suppressed = 0, skipped = 0;
 
+    // Condition check (e.g. "only if not opened"): one read per group, not per contact.
+    const req = step.condition !== "always" ? CONDITION_EVENT[step.condition] : null;
+    const alreadyDid = req
+      ? await contactsWithEvent(db, first.sequence_id, req, group.map((e) => e.contact_id).filter(Boolean))
+      : new Set<string>();
+
     for (const e of group) {
       const contact = e.contact;
       if (!contact) { skipped++; continue; }
-      if (await isUnsubscribed(contact.email)) {
+      if (unsubscribed.has(normalizeEmail(contact.email ?? ""))) {
         await db.from("marketing_sequence_enrollments").update({ status: "unsubscribed" }).eq("id", e.id);
         suppressed++; continue;
       }
       // condition (e.g. "only if not opened") — if the required absence is violated, skip + advance
-      const req = step.condition !== "always" ? CONDITION_EVENT[step.condition] : null;
-      if (req) {
-        const { data: prior } = await db.from("marketing_events").select("id")
-          .eq("contact_id", contact.id).eq("sequence_id", e.sequence_id).eq("event_type", req).maybeSingle();
-        if (prior) { await advanceEnrollment(db, e, step); skipped++; continue; }
-      }
+      if (req && alreadyDid.has(contact.id)) { await advanceEnrollment(db, e, step); skipped++; continue; }
       if (!step.template) { await advanceEnrollment(db, e, step); skipped++; continue; }
       willSend.push(e.id);
     }
