@@ -53,7 +53,7 @@ type Props = {
   onClear: () => void;
   /** Refetch the list after a write. */
   onChanged: () => void;
-  can: { assign: boolean; list: boolean; edit: boolean; export: boolean; merge?: boolean };
+  can: { assign: boolean; list: boolean; edit: boolean; export: boolean; merge?: boolean; email?: boolean };
   /** Open the Merge dialog for the ticked contacts (2–10, ticked rows only). */
   onMerge?: (ids: string[]) => void;
 };
@@ -167,7 +167,7 @@ export function ContactsBulkActions({ target, count, selectAllMatching, matching
   }
 
   const actions = ([
-    can.list ? { key: "email", icon: "ti-mail", label: "Email", run: () => { closePanels(); setEmailOpen(true); } } : null,
+    (can.email ?? can.list) ? { key: "email", icon: "ti-mail", label: "Email", run: () => { closePanels(); setEmailOpen(true); } } : null,
     can.assign ? { key: "assign", icon: "ti-user-plus", label: "Lead assign", run: () => { closePanels(); setAssignOpen(true); setAssignMsg(null); } } : null,
     can.edit ? { key: "source", icon: "ti-tag", label: "Set lead source", run: () => { closePanels(); setSourceOpen(true); setSourceMsg(null); } } : null,
     can.list ? { key: "list", icon: "ti-list-details", label: "Create list", run: () => { closePanels(); openListPanel(); } } : null,
