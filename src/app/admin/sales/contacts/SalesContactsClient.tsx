@@ -108,7 +108,7 @@ type ImportFile = { source: MappingSource; fileName: string; columns: string[]; 
 type MappingReview = { matches: ColumnMatch[]; targets: TargetOption[]; customFields: CustomField[] };
 
 
-export function SalesContactsClient({ canBulkAssign = false, canCreateList = false, canBulkEdit = false, canExport = false, canMerge = false, odooSearch = false, basePath = "/admin/sales/contacts" }: { canBulkAssign?: boolean; canCreateList?: boolean; canBulkEdit?: boolean; canExport?: boolean; canMerge?: boolean; odooSearch?: boolean; basePath?: string }) {
+export function SalesContactsClient({ canBulkAssign = false, canCreateList = false, canBulkEdit = false, canExport = false, canMerge = false, canEmail = false, odooSearch = false, basePath = "/admin/sales/contacts" }: { canBulkAssign?: boolean; canCreateList?: boolean; canEmail?: boolean; canBulkEdit?: boolean; canExport?: boolean; canMerge?: boolean; odooSearch?: boolean; basePath?: string }) {
   // Duplicates view (gear → Find duplicates) and the Merge dialog / undo strip it shares with Actions → Merge.
   const [dupMode, setDupMode] = useState(false);
   const [mergeIds, setMergeIds] = useState<string[] | null>(null);
@@ -195,7 +195,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
   const [err, setErr] = useState<string | null>(null);
 
   // Selection (Lead assign is super-admin-only; Create list is enabled per-page).
-  const canSelect = canBulkAssign || canCreateList || canBulkEdit || canExport;
+  const canSelect = canBulkAssign || canCreateList || canBulkEdit || canExport || canEmail;
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [selectAllMatching, setSelectAllMatching] = useState(false);
   // Odoo-style search bar (Marketing) — edits the same spec.
@@ -814,7 +814,7 @@ export function SalesContactsClient({ canBulkAssign = false, canCreateList = fal
         <ContactsBulkActions
           target={bulkTarget} count={selectionCount} selectAllMatching={selectAllMatching} matchingTotal={matchingTotal}
           onSelectAll={() => setSelectAllMatching(true)} onClear={clearSelection} onChanged={reload}
-          can={{ assign: canBulkAssign, list: canCreateList, edit: canBulkEdit, export: canExport, merge: canMerge }}
+          can={{ assign: canBulkAssign, list: canCreateList, edit: canBulkEdit, export: canExport, merge: canMerge, email: canEmail || canCreateList }}
           onMerge={setMergeIds}
         />
       )}
