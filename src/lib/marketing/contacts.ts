@@ -196,6 +196,34 @@ export async function isUnsubscribed(email: string): Promise<boolean> {
   return !!data;
 }
 
+/** Normalized form used to compare addresses against the suppression list. */
+export function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+/**
+ * Whole suppression list as a lowercase set, read once. Lets a batch job check
+ * many recipients in memory instead of one database call per contact. Same
+ * case-insensitive rule as isUnsubscribed. Throws if a page fails, so a partial
+ * list can never let an unsubscribed person through.
+ */
+export async function loadUnsubscribedSet(): Promise<Set<string>> {
+  const db = await marketingDb();
+  const out = new Set<string>();
+  const PAGE = 1000;
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await db
+      .from("marketing_unsubscribes")
+      .select("email")
+      .order("email")
+      .range(from, from + PAGE - 1);
+    if (error) throw error;
+    for (const r of data ?? []) if (r.email) out.add(normalizeEmail(r.email));
+    if (!data || data.length < PAGE) break;
+  }
+  return out;
+}
+
 export async function addUnsubscribe(email: string, reason = "user_request"): Promise<void> {
   const db = await marketingDb();
   // Store normalized so suppression is consistent regardless of source casing.

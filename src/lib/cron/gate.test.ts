@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // A tiny in-memory stand-in for the two tables the gate touches.
-const state: { paused: Record<string, unknown>; runs: Array<Record<string, unknown>>; customCron: string | null } = { paused: {}, runs: [], customCron: null };
+const state: { paused: Record<string, unknown>; runs: Array<Record<string, unknown>>; customCron: string | null; deletes: number } = { paused: {}, runs: [], customCron: null, deletes: 0 };
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/admin", () => ({
@@ -35,13 +35,13 @@ vi.mock("@/lib/supabase/admin", () => ({
             return { error: null };
           },
         }),
-        delete: () => ({ eq: () => ({ lt: async () => ({ error: null }) }) }),
+        delete: () => ({ lt: async () => { state.deletes++; return { error: null }; } }),
       };
     },
   }),
 }));
 
-import { setCronsPaused, withCronGate } from "@/lib/cron/gate";
+import { resetPruneClock, setCronsPaused, withCronGate } from "@/lib/cron/gate";
 
 const JOB = "/api/cron/founder-nudges";
 const authed = () => new Request("https://icapos.com" + JOB, { headers: { authorization: "Bearer s3cret" } });
@@ -51,9 +51,20 @@ beforeEach(() => {
   state.paused = {};
   state.runs = [];
   state.customCron = null;
+  state.deletes = 0;
+  resetPruneClock();
 });
 afterEach(() => {
   delete process.env.CRON_SECRET;
+});
+
+describe("log cleanup", () => {
+  it("trims old run rows once for many runs, not after every run", async () => {
+    const handler = vi.fn(async () => new Response("ok", { status: 200 }));
+    for (let i = 0; i < 5; i++) await withCronGate(JOB, handler)(authed());
+    expect(state.runs).toHaveLength(5);
+    expect(state.deletes).toBe(1);
+  });
 });
 
 describe("withCronGate", () => {

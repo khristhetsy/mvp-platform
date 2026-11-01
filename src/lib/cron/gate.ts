@@ -73,7 +73,27 @@ async function logStart(job: string, status: "running" | "skipped"): Promise<num
   }
 }
 
-async function logFinish(id: number | null, job: string, startedMs: number, httpStatus: number | null, detail: string | null) {
+/** How often one server instance trims old log rows. Retention is days, so hourly-plus is plenty. */
+export const PRUNE_EVERY_MS = 6 * 3_600_000;
+let lastPruneMs = 0;
+
+/** Test hook: forget when the log was last trimmed. */
+export function resetPruneClock(): void {
+  lastPruneMs = 0;
+}
+
+/** Delete run rows older than the retention window, at most once per PRUNE_EVERY_MS per instance. */
+async function pruneOldRuns(client: SupabaseClient): Promise<void> {
+  const now = Date.now();
+  if (now - lastPruneMs < PRUNE_EVERY_MS) return;
+  lastPruneMs = now;
+  await client
+    .from("cron_runs")
+    .delete()
+    .lt("started_at", new Date(now - LOG_RETENTION_DAYS * 86_400_000).toISOString());
+}
+
+async function logFinish(id: number | null, startedMs: number, httpStatus: number | null, detail: string | null) {
   if (id === null) return;
   try {
     const client = db();
@@ -87,11 +107,7 @@ async function logFinish(id: number | null, job: string, startedMs: number, http
         detail,
       })
       .eq("id", id);
-    await client
-      .from("cron_runs")
-      .delete()
-      .eq("job", job)
-      .lt("started_at", new Date(Date.now() - LOG_RETENTION_DAYS * 86_400_000).toISOString());
+    await pruneOldRuns(client);
   } catch {
     /* log only */
   }
@@ -126,10 +142,10 @@ export function withCronGate<R extends Request, Res extends Response>(
       // A job may describe what it did in a short "x-cron-summary" header
       // (e.g. "0 matches: no company at CRR 60 or above"); it is kept on the run.
       const summary = res.headers.get(CRON_SUMMARY_HEADER);
-      await logFinish(runId, path, startedMs, res.status, summary ? summary.slice(0, 200) : null);
+      await logFinish(runId, startedMs, res.status, summary ? summary.slice(0, 200) : null);
       return res;
     } catch (err) {
-      await logFinish(runId, path, startedMs, null, err instanceof Error ? err.message.slice(0, 300) : "threw");
+      await logFinish(runId, startedMs, null, err instanceof Error ? err.message.slice(0, 300) : "threw");
       throw err;
     }
   };

@@ -316,7 +316,28 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  const { data: profile } = await supabase.from("profiles").select("role, is_super_admin").eq("id", user.id).single();
+  // One read gets the role, super admin flag and deletion date together. If the
+  // deletion column doesn't exist yet (migration not applied), fall back to the
+  // original role read plus a separate deletion read, so nobody is locked out.
+  type ProfileRow = { role?: string | null; is_super_admin?: boolean; deletion_scheduled_for?: string | null };
+  let profile: ProfileRow | null = null;
+  let deletionKnown = false;
+  {
+    const merged = await supabase
+      .from("profiles")
+      .select("role, is_super_admin, deletion_scheduled_for")
+      .eq("id", user.id)
+      .single();
+    if (!merged.error) {
+      profile = merged.data as ProfileRow | null;
+      deletionKnown = true;
+    } else if ((merged.error as { code?: string }).code === "42703") {
+      const { data } = await supabase.from("profiles").select("role, is_super_admin").eq("id", user.id).single();
+      profile = data as ProfileRow | null;
+    } else {
+      profile = merged.data as ProfileRow | null;
+    }
+  }
   const role = profile?.role?.toLowerCase();
   // Super admins have unrestricted access — never department-scoped or feature-gated.
   const isSuperAdmin = (profile as { is_super_admin?: boolean } | null)?.is_super_admin === true;
@@ -336,12 +357,14 @@ export async function proxy(request: NextRequest) {
   // only reach the restore page. Separate query so a missing column (migration
   // not applied yet) never locks anyone out.
   if (pathname !== "/founder/account-restore") {
-    const { data: deletion } = await supabase
-      .from("profiles")
-      .select("deletion_scheduled_for")
-      .eq("id", user.id)
-      .maybeSingle();
-    if ((deletion as { deletion_scheduled_for?: string | null } | null)?.deletion_scheduled_for) {
+    const deletionDate = deletionKnown
+      ? (profile?.deletion_scheduled_for ?? null)
+      : (
+          (
+            await supabase.from("profiles").select("deletion_scheduled_for").eq("id", user.id).maybeSingle()
+          ).data as { deletion_scheduled_for?: string | null } | null
+        )?.deletion_scheduled_for ?? null;
+    if (deletionDate) {
       if (apiRequest) return jsonError(403, "This account is scheduled for deletion.");
       const url = request.nextUrl.clone();
       url.pathname = "/founder/account-restore";
