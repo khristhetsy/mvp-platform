@@ -125,14 +125,14 @@ export async function POST(req: NextRequest): Promise<Response> {
   // ── RESUME: continue a send that paused after its time budget ───────────────
   if (d.action === "resume") {
     if (!d.campaignId) return NextResponse.json({ error: "No campaign to resume." }, { status: 400 });
-    const { data: camp } = await (await marketingDb()).from("marketing_campaigns").select("name, subject_override").eq("id", d.campaignId).maybeSingle();
+    const { data: camp } = await (await marketingDb()).from("marketing_campaigns").select("name, subject_override, body_override").eq("id", d.campaignId).maybeSingle();
     // Only the campaigns this dialog creates ("Email · subject · date") can be resumed from here.
     if (!camp || !String(camp.name ?? "").startsWith("Email · ")) return NextResponse.json({ error: "Campaign not found." }, { status: 404 });
     try {
       const result = await sendCampaign(d.campaignId, { attachments: resendFiles, skipNotesLog: true, resume: true, timeBudgetMs: SEND_BUDGET_MS });
       const { sentEmails, ...summary } = result;
       const sentNow = sentEmails ?? [];
-      after(() => logOutboundEmailActivity(sentNow, (camp.subject_override as string | null) || "(no subject)", profile.id, 1000));
+      after(() => logOutboundEmailActivity(sentNow, (camp.subject_override as string | null) || "(no subject)", profile.id, 1000, "icapos", { body: (camp.body_override as string | null) ?? null }));
       return NextResponse.json({ ok: true, channel: "icapos", campaignId: d.campaignId, ...summary, partial: (result.remaining ?? 0) > 0 });
     } catch (e) {
       return NextResponse.json({ error: e instanceof Error ? e.message : "Resume failed." }, { status: 400 });
@@ -233,7 +233,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     }
     // Log to the sales timeline so the send shows on each contact + their open opps.
     const gmailEmails = recipients.map((rc) => rc.email);
-    after(() => logOutboundEmailActivity(gmailEmails, subject || "(no subject)", profile.id, 1000));
+    after(() => logOutboundEmailActivity(gmailEmails, subject || "(no subject)", profile.id, 1000, "gmail", { body: html }));
     return NextResponse.json({ ok: true, channel: "gmail", sent, skipped, failed, skippedNoEmail, skippedGuess });
   }
 
@@ -257,7 +257,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     // that actually went out are logged (not unsubscribed or skipped ones, and not the unsent rest).
     const { sentEmails, ...summary } = result;
     const icaposEmails = sentEmails ?? recipients.map((r) => r.email);
-    after(() => logOutboundEmailActivity(icaposEmails, subject || "(no subject)", profile.id, 1000));
+    after(() => logOutboundEmailActivity(icaposEmails, subject || "(no subject)", profile.id, 1000, "icapos", { body: html }));
     return NextResponse.json({ ok: true, channel: "icapos", campaignId: campaign.id, ...summary, partial: (result.remaining ?? 0) > 0, skippedNoEmail, skippedGuess });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "Send failed." }, { status: 400 });
@@ -342,6 +342,6 @@ async function sendToFounders(x: FounderSend): Promise<Response> {
     await db.from("marketing_campaigns").update({ status: sent === 0 && failed > 0 ? "paused" : "sent", sent_at: sent > 0 ? new Date().toISOString() : null, stat_sent: sent }).eq("id", campaignId);
   }
   const emails = recipients.map((r) => r.email);
-  after(() => logOutboundEmailActivity(emails, subject || "(no subject)", profile.id, 1000));
+  after(() => logOutboundEmailActivity(emails, subject || "(no subject)", profile.id, 1000, channel === "gmail" ? "gmail" : "icapos", { body: html }));
   return NextResponse.json({ ok: true, channel, campaignId, sent, skipped, failed, skippedNoEmail, skippedInternal });
 }
