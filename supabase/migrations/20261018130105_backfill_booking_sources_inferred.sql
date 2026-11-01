@@ -1,11 +1,11 @@
-create table public._bookings_source_backup_20261018 as
+create table if not exists public._bookings_source_backup_20261018 as
   select id, source_tag, source_confidence, source_set_by, source_set_at
   from public.scheduling_bookings;
 alter table public._bookings_source_backup_20261018 enable row level security;
 revoke all on table public._bookings_source_backup_20261018 from anon, authenticated;
 
 alter table public.scheduling_bookings
-  drop constraint scheduling_bookings_source_confidence_check;
+  drop constraint if exists scheduling_bookings_source_confidence_check;
 alter table public.scheduling_bookings
   add constraint scheduling_bookings_source_confidence_check
   check (source_confidence is null or source_confidence = any (array['fit','link','cookie','self_reported','manual','inferred']));

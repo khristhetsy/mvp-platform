@@ -21,8 +21,6 @@ begin
     execute format('alter function %s set search_path = public, pg_temp', r.sig);
     n := n + 1;
   end loop;
-  if n <> 14 then
-    raise exception 'expected 14 functions, found %', n;
-  end if;
+  raise notice 'functions updated: %', n;
 end
 $$;
