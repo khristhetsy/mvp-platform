@@ -403,13 +403,16 @@ export function IcapOSAssistant() {
         aria-expanded={open}
         aria-controls="capitalos-assistant-dialog"
         onClick={() => setOpen((value) => !value)}
-        className="fixed bottom-4 right-4 z-[100] flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:ring-offset-2"
-        style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}
+        className={`fixed bottom-4 right-4 z-[100] flex h-12 items-center justify-center gap-2 rounded-full shadow-lg transition ${open ? "w-12" : "w-12 sm:w-auto sm:px-5"} hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:ring-offset-2`}
+        style={{ background: "linear-gradient(135deg, #4f46e5, #7c3aed)" }}
       >
         {open ? (
           <X className="h-5 w-5 text-white" />
         ) : (
-          <Sparkles className="h-5 w-5 text-white" strokeWidth={1.75} aria-hidden />
+          <>
+            <Sparkles className="h-5 w-5 text-white" strokeWidth={1.75} aria-hidden />
+            <span className="hidden text-sm font-semibold text-white sm:inline">Ask iCapOS</span>
+          </>
         )}
       </button>
     </>

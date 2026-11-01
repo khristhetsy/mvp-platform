@@ -10,6 +10,7 @@ import { FounderSupportClient, type FounderRequestRow } from "@/components/found
 import { FounderSupportAssistant } from "@/components/founder/FounderSupportAssistant";
 import { RequestHelpButton } from "@/components/founder/RequestHelpButton";
 import { supportInboundEnabled } from "@/lib/support/inbound";
+import { formatSupportTime } from "@/lib/support/business-hours";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 
@@ -56,6 +57,11 @@ export default async function FounderSupportPage() {
     closedAt: r.closed_at ?? null,
   }));
 
+  const openRequest = [...rows]
+    .filter((r) => r.status !== "resolved")
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] ?? null;
+  const openCount = rows.filter((r) => r.status !== "resolved").length;
+
   const founderName = profile.full_name ?? profile.email ?? "Founder";
 
   return (
@@ -66,10 +72,37 @@ export default async function FounderSupportPage() {
           title="Support"
           description="Ask the iCapOS assistant, browse a guide, or reach the team."
         />
-        <RequestHelpButton contextItem="Support" />
+        <RequestHelpButton contextItem="Support" variant="primary" />
       </div>
 
-      <div className="mt-2">
+      {openRequest ? (
+        <section aria-label="Open request" className="mt-2 flex flex-wrap items-center gap-4 rounded-2xl border-2 border-indigo-600 bg-white p-5">
+          <div className="min-w-0 flex-1 basis-72">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-700">
+                {openCount > 1 ? `${openCount} open requests, latest` : "Open request"}
+                {openRequest.refNo ? ` #${openRequest.refNo}` : ""}
+              </span>
+              <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${openRequest.status === "pending_founder" ? "bg-blue-50 text-blue-800" : "bg-amber-50 text-amber-800"}`}>
+                {openRequest.status === "pending_founder" ? "Waiting on you" : "In progress"}
+              </span>
+            </div>
+            <p className="mt-1 truncate text-base font-semibold text-slate-900">{openRequest.subject}</p>
+            <p className="mt-0.5 text-sm text-slate-600">
+              {openRequest.ownerName ? `Assigned to ${openRequest.ownerName}. ` : "Waiting to be assigned. "}
+              {openRequest.dueAt ? `Reply expected by ${formatSupportTime(openRequest.dueAt)}.` : "The team usually replies within 1 business day."}
+            </p>
+          </div>
+          <Link
+            href={`/founder/support?request=${openRequest.id}`}
+            className="inline-flex min-h-[44px] items-center rounded-xl border-2 border-indigo-600 px-5 text-sm font-semibold text-indigo-700 hover:bg-indigo-50"
+          >
+            View conversation
+          </Link>
+        </section>
+      ) : null}
+
+      <div className="mt-4">
         <FounderSupportAssistant founderName={founderName} stageSlug={journey?.currentSlug ?? null} />
       </div>
 
