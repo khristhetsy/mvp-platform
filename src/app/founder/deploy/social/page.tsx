@@ -6,6 +6,7 @@ import { FounderJourneyGate } from "@/components/founder/FounderJourneyGate";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getFounderSocialUsage } from "@/lib/social/founder-limits";
 import { FounderSocialClient } from "@/components/founder/social/FounderSocialClient";
+import { autoDraft } from "@/lib/social/templates";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Social media" };
@@ -23,7 +24,13 @@ export default async function FounderSocialPage({ searchParams }: { searchParams
           <Link href="/founder/deploy" className="text-xs font-medium text-slate-500 transition-colors hover:text-slate-700">← Outreach</Link>
         </div>
         {usage?.enabled ? (
-          <FounderSocialClient initialUsage={usage} companyName={company?.company_name ?? null} initialTab={sp.tab ?? null} />
+          <FounderSocialClient
+            initialUsage={usage}
+            companyName={company?.company_name ?? null}
+            founderName={profile.full_name ?? profile.email ?? "You"}
+            initialDraft={autoDraft({ company: company?.company_name, description: company?.business_description, industry: company?.industry, raiseBand: company?.funding_amount_band })}
+            initialTab={sp.tab ?? null}
+          />
         ) : (
           <>
             <PageHeader eyebrow="Stage 3 Marketing" title="Social media" description="Post to your own LinkedIn, Facebook, Instagram and Reddit accounts from one place." />

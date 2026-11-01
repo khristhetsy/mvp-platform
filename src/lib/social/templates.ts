@@ -64,6 +64,41 @@ export function draftFromTemplate(key: TemplateKey, input: DraftInput): string {
   }
 }
 
+export type AutoDraftInput = {
+  company?: string | null;
+  description?: string | null;
+  industry?: string | null;
+  /** Amount of capital band the founder picked, shown as is ("$1M to $5M"). */
+  raiseBand?: string | null;
+};
+
+/** First sentence of free text, trimmed to a short line. */
+function firstSentence(text: string | null | undefined, max = 140): string {
+  const t = (text ?? "").replace(/\s+/g, " ").trim();
+  if (!t) return "";
+  const m = /^(.+?[.!?])(\s|$)/.exec(t);
+  const s = (m ? m[1] : t).replace(/[.!?]+$/, "");
+  return s.length > max ? `${s.slice(0, max).trimEnd().replace(/[,;:]+$/, "")}` : s;
+}
+
+/**
+ * A short, direct starter post built only from what the founder already told us:
+ * company name, description, industry and the raise band. Nothing is invented. Returns ""
+ * when there is no company name, so the composer opens empty rather than with filler.
+ */
+export function autoDraft(input: AutoDraftInput): string {
+  const co = input.company?.trim();
+  if (!co) return "";
+  const what = firstSentence(input.description);
+  const band = input.raiseBand?.trim().replace(/\s*[-–—]\s*/g, " to ");
+  const industry = input.industry?.trim();
+  const lines: string[] = [];
+  lines.push(what ? `${co}: ${what}.` : `${co} is building in ${industry || "our market"}.`);
+  if (band) lines.push(`We are raising ${band}.`);
+  lines.push(industry ? `Open to introductions with ${industry} investors.` : "Open to introductions with investors.");
+  return plainPunctuation(lines.join("\n\n"));
+}
+
 /** Cut to a character limit on a sentence or line boundary where possible. */
 export function shorten(text: string, max: number): string {
   const t = text.trim();

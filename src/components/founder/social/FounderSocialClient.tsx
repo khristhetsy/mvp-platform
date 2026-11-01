@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { SocialUsage } from "@/lib/social/usage";
 import type { CampaignFunnel, StageKey } from "@/components/admin/social/funnel-types";
 import { fmt } from "@/components/admin/social/funnel-types";
-import { FOUNDER_SOCIAL_DISCLAIMER, TEMPLATE_KEYS, TEMPLATE_LABELS, type TemplateKey } from "@/lib/social/templates";
+import { FOUNDER_SOCIAL_DISCLAIMER, NETWORKS, TEMPLATE_KEYS, TEMPLATE_LABELS, type Network, type TemplateKey } from "@/lib/social/templates";
+import { SocialPreview } from "@/components/founder/social/SocialPreview";
 import { FounderSocialGuide } from "@/components/founder/social/FounderSocialGuide";
 import { AlertsPanel, GoalsPanel, ScheduleBoard, SeriesList } from "@/components/founder/social/FounderSocialExtras";
 
@@ -29,6 +30,7 @@ type Post = {
 
 const PLATFORM_LABEL: Record<string, string> = { linkedin: "LinkedIn", facebook: "Facebook", instagram: "Instagram", reddit: "Reddit" };
 const GUIDE_KEY = "icapos_founder_social_guide_seen";
+const DRAFT_KEY = "icapos_founder_social_compose_draft";
 
 const btn = "rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50";
 const btnPrimary = "rounded-lg bg-[#1A6CE4] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#2E78F5] disabled:opacity-50";
@@ -67,7 +69,7 @@ async function api<T>(url: string, init?: RequestInit): Promise<{ ok: boolean; s
   }
 }
 
-export function FounderSocialClient({ initialUsage, companyName, initialTab }: { initialUsage: SocialUsage; companyName: string | null; initialTab: string | null }) {
+export function FounderSocialClient({ initialUsage, companyName, founderName, initialDraft, initialTab }: { initialUsage: SocialUsage; companyName: string | null; founderName: string; initialDraft: string; initialTab: string | null }) {
   const [tab, setTab] = useState<Tab>(TABS.some((t) => t.key === initialTab) ? (initialTab as Tab) : "overview");
   const [usage, setUsage] = useState<SocialUsage>(initialUsage);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -131,7 +133,7 @@ export function FounderSocialClient({ initialUsage, companyName, initialTab }: {
             <AlertsPanel />
           </div>
         )}
-        {tab === "compose" && <Compose usage={usage} accounts={accounts} campaigns={campaigns} companyName={companyName} onSaved={reload} goSettings={() => setTab("settings")} />}
+        {tab === "compose" && <Compose usage={usage} accounts={accounts} campaigns={campaigns} companyName={companyName} founderName={founderName} initialDraft={initialDraft} onSaved={reload} goSettings={() => setTab("settings")} />}
         {tab === "schedule" && (
           <div>
             <ScheduleBoard posts={posts} onChange={reload} />
@@ -289,10 +291,17 @@ function Campaigns({ campaigns, funnels, onChange }: { campaigns: Campaign[]; fu
 
 // ───────────────────────────── Compose ─────────────────────────────
 
-function Compose({ usage, accounts, campaigns, companyName, onSaved, goSettings }: {
-  usage: SocialUsage; accounts: Account[]; campaigns: Campaign[]; companyName: string | null; onSaved: () => Promise<void>; goSettings: () => void;
+function Compose({ usage, accounts, campaigns, companyName, founderName, initialDraft, onSaved, goSettings }: {
+  usage: SocialUsage; accounts: Account[]; campaigns: Campaign[]; companyName: string | null; founderName: string; initialDraft: string; onSaved: () => Promise<void>; goSettings: () => void;
 }) {
-  const [body, setBody] = useState("");
+  // Opens with a short starter draft built from the founder's own profile. Edits are kept on this
+  // device as you type, so leaving and coming back never loses them. Nothing is posted or saved to
+  // the library until the founder presses a button.
+  const [body, setBody] = useState(initialDraft);
+  const [previewNet, setPreviewNet] = useState<Network | null>(null);
+  const [aiOpen, setAiOpen] = useState(false);
+  const aiRef = useRef<HTMLDivElement>(null);
+  const restored = useRef(false);
   const [picked, setPicked] = useState<string[]>([]);
   const [campaignId, setCampaignId] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
@@ -314,6 +323,27 @@ function Compose({ usage, accounts, campaigns, companyName, onSaved, goSettings 
 
   const reached = local.state === "reached";
   const chosen = accounts.filter((a) => picked.includes(a.id));
+  const rawNet = previewNet ?? chosen[0]?.platform ?? "linkedin";
+  const shownNet: Network = (NETWORKS as readonly string[]).includes(rawNet) ? (rawNet as Network) : "linkedin";
+
+  // Restore a kept draft once, deferred a tick so state is never set synchronously inside the effect.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try { const kept = localStorage.getItem(DRAFT_KEY); if (kept !== null) setBody(kept); } catch { /* storage unavailable */ }
+      restored.current = true;
+    }, 0);
+    return () => clearTimeout(t);
+  }, []);
+  useEffect(() => {
+    if (!restored.current) return;
+    try { if (body) localStorage.setItem(DRAFT_KEY, body); else localStorage.removeItem(DRAFT_KEY); } catch { /* storage unavailable */ }
+  }, [body]);
+  useEffect(() => {
+    if (!aiOpen) return;
+    const close = (e: MouseEvent) => { if (aiRef.current && !aiRef.current.contains(e.target as Node)) setAiOpen(false); };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [aiOpen]);
 
   async function agent(payload: Record<string, unknown>): Promise<{ text?: string; variants?: Record<string, string> } | null> {
     const r = await api<{ text?: string; variants?: Record<string, string> }>("/api/founder/social/agent", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
@@ -321,10 +351,12 @@ function Compose({ usage, accounts, campaigns, companyName, onSaved, goSettings 
     return r.data;
   }
   async function template(key: TemplateKey) {
+    setAiOpen(false);
     const out = await agent({ action: "template", template: key, notes: body, company: companyName });
     if (out?.text) { setBody(out.text); setMsg(null); }
   }
   async function transform(action: "shorten" | "hashtags") {
+    setAiOpen(false);
     const out = await agent({ action, text: body, network: chosen[0]?.platform ?? "linkedin" });
     if (out?.text) setBody(out.text);
   }
@@ -416,7 +448,7 @@ function Compose({ usage, accounts, campaigns, companyName, onSaved, goSettings 
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="mx-auto max-w-5xl">
       {local.state === "warn" && (
         <div className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
           {local.remaining} post{local.remaining === 1 ? "" : "s"} left this month. Your limit resets {pt(local.resetAt, false)}.
@@ -428,8 +460,12 @@ function Compose({ usage, accounts, campaigns, companyName, onSaved, goSettings 
         </div>
       )}
 
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:items-start">
       <div className={card}>
-        <h2 className="text-base font-semibold text-slate-900">Compose post</h2>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-base font-semibold text-slate-900">Compose post</h2>
+          <span className="text-xs text-slate-500">{body ? "Draft kept on this device" : "Draft empty"}</span>
+        </div>
         {accounts.length === 0 ? (
           <p className="mt-2 text-sm text-slate-600">No connected accounts yet. <button type="button" className="font-medium text-[#1A6CE4] hover:underline" onClick={goSettings}>Open Settings</button> to connect one.</p>
         ) : (
@@ -445,19 +481,28 @@ function Compose({ usage, accounts, campaigns, companyName, onSaved, goSettings 
             })}
           </div>
         )}
-        <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={7} placeholder="Write your post, or jot a few notes and pick a template below." className="mt-3 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+        <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={7} placeholder="Write your post, or jot a few notes and pick a template from the AI agent menu." className="mt-3 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
 
-        <div className="mt-3 rounded-lg border border-violet-200 bg-violet-50 p-3">
-          <div className="text-sm font-semibold text-violet-800">✦ AI agent</div>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {TEMPLATE_KEYS.map((k) => (
-              <button key={k} type="button" className="rounded-full border border-violet-200 bg-white px-3 py-1 text-xs text-violet-800 hover:bg-violet-100" onClick={() => void template(k)}>{TEMPLATE_LABELS[k]}</button>
-            ))}
-            <button type="button" className="rounded-full border border-violet-200 bg-white px-3 py-1 text-xs text-violet-800 hover:bg-violet-100" onClick={() => void transform("shorten")}>Shorten</button>
-            <button type="button" className="rounded-full border border-violet-200 bg-white px-3 py-1 text-xs text-violet-800 hover:bg-violet-100" onClick={() => void transform("hashtags")}>Add hashtags</button>
+        <div className="mt-2 flex items-start justify-between gap-2">
+          <div className="relative" ref={aiRef}>
+            <button type="button" aria-haspopup="menu" aria-expanded={aiOpen} onClick={() => setAiOpen((o) => !o)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 py-1.5 text-sm font-medium text-violet-800 hover:bg-violet-100">
+              <span aria-hidden="true">✦</span> AI agent
+            </button>
+            {aiOpen && (
+              <div role="menu" className="absolute left-0 z-20 mt-1 w-52 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
+                <button type="button" role="menuitem" className="block w-full px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50" onClick={() => { setBody(initialDraft); setAiOpen(false); setMsg(null); }}>Regenerate draft</button>
+                {TEMPLATE_KEYS.map((k) => (
+                  <button key={k} type="button" role="menuitem" className="block w-full border-t border-slate-100 px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50" onClick={() => void template(k)}>{TEMPLATE_LABELS[k]}</button>
+                ))}
+                <button type="button" role="menuitem" className="block w-full border-t border-slate-100 px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50" onClick={() => void transform("shorten")}>Shorten</button>
+                <button type="button" role="menuitem" className="block w-full border-t border-slate-100 px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50" onClick={() => void transform("hashtags")}>Add hashtags</button>
+              </div>
+            )}
           </div>
-          <p className="mt-2 text-xs text-slate-500">Free mode. Templates are filled from your notes, and you review every draft. Drafts never count toward your post limit.</p>
+          <span className="text-xs text-slate-500">{body.length.toLocaleString()} characters</span>
         </div>
+        <p className="mt-1 text-xs text-slate-500">Free mode. The draft is written from your profile and you review every change. Drafts never count toward your post limit.</p>
 
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
           <label className="text-xs text-slate-500">Tracked link, posts as the first comment
@@ -527,6 +572,10 @@ function Compose({ usage, accounts, campaigns, companyName, onSaved, goSettings 
         )}
         {msg && <p className={`mt-2 text-xs ${msg.ok ? "text-emerald-700" : "text-red-700"}`}>{msg.text}</p>}
         {emailed && <Link href="/founder/deploy" className="mt-1 inline-block text-xs font-medium text-[#1A6CE4] hover:underline">Open Manual outreach</Link>}
+      </div>
+      <div className="lg:sticky lg:top-4">
+        <SocialPreview body={body} network={shownNet} onNetwork={setPreviewNet} name={founderName} company={companyName} linkUrl={linkUrl} />
+      </div>
       </div>
 
       {dialog && (

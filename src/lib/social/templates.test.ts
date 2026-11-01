@@ -46,3 +46,17 @@ describe("founder social templates", () => {
     expect(nextPostTip({ weakestStage: null })).toMatch(/on pace/);
   });
 });
+
+describe("autoDraft", () => {
+  it("builds a short draft from the founder's own profile only", async () => {
+    const { autoDraft } = await import("./templates");
+    const out = autoDraft({ company: "Acme", description: "We help clinics cut billing time in half. More text here.", industry: "Healthtech", raiseBand: "$1M - $5M" });
+    expect(out).toBe("Acme: We help clinics cut billing time in half.\n\nWe are raising $1M to $5M.\n\nOpen to introductions with Healthtech investors.");
+    expect(out).not.toMatch(/[—–]| - /);
+  });
+  it("returns empty with no company and never invents a raise", async () => {
+    const { autoDraft } = await import("./templates");
+    expect(autoDraft({ company: "  " })).toBe("");
+    expect(autoDraft({ company: "Acme" })).not.toMatch(/raising/);
+  });
+});
