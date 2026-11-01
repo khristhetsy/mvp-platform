@@ -67,3 +67,35 @@ describe("threadText", () => {
     expect(chatUserMessages([chat()])).toEqual(["How long does it take?"]);
   });
 });
+
+describe("prospectThread", () => {
+  const item = (over: Partial<import("@/lib/sales/chatter-merge").TimelineItem>): import("@/lib/sales/chatter-merge").TimelineItem => ({
+    id: "1", kind: "odoo_message", summary: "hello", actor_name: "Maria Lopez", created_at: "2026-11-01T10:00:00Z", group: "message", source: "odoo", origin: null,
+    editable: false, edited_at: null, deleted_at: null, odoo_synced: false, via: null, ...over,
+  });
+  it("keeps messages written by the contact and drops notes, sent mail and drafts", async () => {
+    const { prospectThread } = await import("./audit");
+    const text = prospectThread(
+      [
+        item({ id: "a", summary: "We cannot take on another monthly cost" }),
+        item({ id: "b", kind: "odoo_note", group: "note", actor_name: "Khris Thetsy", summary: "Need terms for a bridge" }),
+        item({ id: "c", kind: "email", actor_name: "Maria Lopez", summary: "Email sent: Following up" }),
+        item({ id: "d", kind: "email_draft", summary: "A draft" }),
+        item({ id: "e", actor_name: "Khris Thetsy", summary: "Thanks for the time" }),
+      ],
+      [{ id: "c1", transcript: [{ role: "user", content: "How long does it take?" }, { role: "assistant", content: "A few days." }], booked: false, stopped: false, updatedAt: "2026-11-01" }],
+      "Maria Lopez",
+    );
+    expect(text).toContain("We cannot take on another monthly cost");
+    expect(text).toContain("How long does it take?");
+    expect(text).not.toContain("bridge");
+    expect(text).not.toContain("Following up");
+    expect(text).not.toContain("A draft");
+    expect(text).not.toContain("Thanks for the time");
+    expect(text).not.toContain("A few days");
+  });
+  it("counts no timeline message when the contact has no name", async () => {
+    const { prospectThread } = await import("./audit");
+    expect(prospectThread([item({ summary: "Anything" })], [], null)).toBe("");
+  });
+});

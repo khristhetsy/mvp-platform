@@ -9,6 +9,7 @@ export const SALES_HUB_TABS: { label: string; href: string }[] = [
   { label: "Opportunities", href: "/admin/sales/opportunities" },
   { label: "Pipeline", href: "/admin/sales/pipeline" },
   { label: "AI queue", href: "/admin/sales/queue" },
+  { label: "AI training", href: "/admin/sales/training" },
   { label: "Sequences", href: "/admin/sales/sequences" },
   { label: "Contracts", href: "/admin/sales/contracts" },
   { label: "Scheduled emails", href: "/admin/sales/scheduled-emails" },

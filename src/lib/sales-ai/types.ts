@@ -97,6 +97,8 @@ export type SalesAiState = {
   draft: SalesAiDraft | null;
   suggestions: StageSuggestion[];
   aiConfigured: boolean;
+  /** Set when the opportunity matches a skip rule: the agent drafts nothing and says why. */
+  skip: { matched: string[]; notice: string } | null;
 };
 
 /** The brief for a meeting: what the record holds, what to ask. Built from the audit, no extra reading. */

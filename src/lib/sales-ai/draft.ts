@@ -66,8 +66,8 @@ export function buildParts(f: DraftFacts): DraftParts {
 }
 
 /** Same draft with the refund offer switched on or off. */
-export function withRefund(p: DraftParts, include: boolean): DraftParts {
-  return { ...p, refund: include ? REFUND_OFFER : null };
+export function withRefund(p: DraftParts, include: boolean, line: string = REFUND_OFFER): DraftParts {
+  return { ...p, refund: include ? line : null };
 }
 
 export type FollowUpFacts = { firstName: string | null; objection: Objection; chatUrl: string | null; includeRefundOffer: boolean };
