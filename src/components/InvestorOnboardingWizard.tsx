@@ -16,7 +16,8 @@ import {
   type EngineWeights,
 } from "@/lib/matching/investor-company-matching";
 import { investorMeter } from "@/lib/matching/matchable-points";
-import { ChipMultiSelect, MatchablePointsMeter, ReadByPersonBadge } from "@/components/matching/MatchablePointsMeter";
+import { MatchablePointsMeter, ReadByPersonBadge } from "@/components/matching/MatchablePointsMeter";
+import { ListMultiSelect } from "@/components/ui/ListMultiSelect";
 
 const investorProfileSchema = z.object({
   investor_type: z.string().min(1),
@@ -68,6 +69,35 @@ function toLabels(stored: readonly string[] | null | undefined, options: Vocabul
 }
 
 /** Picker options: the offered list, plus any held value that is not on it. */
+// Check size bands. Selection is stored as check_size_min / check_size_max so
+// scoring and the API are unchanged: min is the lowest band start, max the
+// highest band end (open ended when the top band is picked).
+const CHECK_BANDS: { label: string; min: number; max: number | null }[] = [
+  { label: "Under $25k", min: 0, max: 25_000 },
+  { label: "$25k to $100k", min: 25_000, max: 100_000 },
+  { label: "$100k to $250k", min: 100_000, max: 250_000 },
+  { label: "$250k to $500k", min: 250_000, max: 500_000 },
+  { label: "$500k to $1M", min: 500_000, max: 1_000_000 },
+  { label: "$1M to $5M", min: 1_000_000, max: 5_000_000 },
+  { label: "$5M+", min: 5_000_000, max: null },
+];
+
+function bandsFromRange(min: string, max: string): string[] {
+  if (!min && !max) return [];
+  const lo = min ? Number(min) : 0;
+  const hi = max ? Number(max) : Infinity;
+  return CHECK_BANDS.filter((b) => b.min < hi && (b.max === null || b.max > lo)).map((b) => b.label);
+}
+
+function rangeFromBands(labels: string[]): { min: string; max: string } {
+  const picked = CHECK_BANDS.filter((b) => labels.includes(b.label));
+  if (picked.length === 0) return { min: "", max: "" };
+  const min = Math.min(...picked.map((b) => b.min));
+  const open = picked.some((b) => b.max === null);
+  const max = open ? "" : String(Math.max(...picked.map((b) => b.max as number)));
+  return { min: min > 0 ? String(min) : "", max };
+}
+
 function pickerOptions(options: VocabularyOption[], held: string[]) {
   const labels = options.map((o) => o.label);
   return [
@@ -98,6 +128,7 @@ export function InvestorOnboardingWizard({
   const [checkSizeMax, setCheckSizeMax] = useState(
     investorProfile.check_size_max != null ? String(investorProfile.check_size_max) : "",
   );
+  const [checkBands, setCheckBands] = useState<string[]>(() => bandsFromRange(checkSizeMin, checkSizeMax));
   // Every field the matcher reads is a selection from the shared option lists
   // (Admin, Profile and fields). The thesis stays free text, read by a person.
   const industryList = useVocabulary("industry").options;
@@ -381,7 +412,7 @@ export function InvestorOnboardingWizard({
               <p className="text-xs text-slate-500">Each answer here is scored when we match you with founders.</p>
             </div>
         <FormField label={t("preferred_sectors")} error={getError("preferred_sectors")} required hint="Pick every industry you invest in.">
-          <ChipMultiSelect
+          <ListMultiSelect
             ariaLabel={t("preferred_sectors")}
             options={pickerOptions(industryList, preferredSectors)}
             selected={preferredSectors}
@@ -390,7 +421,7 @@ export function InvestorOnboardingWizard({
           />
         </FormField>
         <FormField label={t("investment_stage_preference")} error={getError("preferred_stages")} required>
-          <ChipMultiSelect
+          <ListMultiSelect
             ariaLabel={t("investment_stage_preference")}
             options={pickerOptions(stageList, preferredStages)}
             selected={preferredStages}
@@ -399,7 +430,7 @@ export function InvestorOnboardingWizard({
           />
         </FormField>
         <FormField label={t("preferred_geographies")} error={getError("preferred_geographies")} required>
-          <ChipMultiSelect
+          <ListMultiSelect
             ariaLabel={t("preferred_geographies")}
             options={pickerOptions(geographyList, preferredGeographies)}
             selected={preferredGeographies}
@@ -408,7 +439,7 @@ export function InvestorOnboardingWizard({
           />
         </FormField>
         <FormField label="Capital type" error={getError("capital_types")} hint="What you offer. Matched against what founders are seeking.">
-          <ChipMultiSelect
+          <ListMultiSelect
             ariaLabel="Capital type"
             options={pickerOptions(capitalList, capitalTypes)}
             selected={capitalTypes}
@@ -424,29 +455,25 @@ export function InvestorOnboardingWizard({
               <p className="text-lg font-semibold text-slate-900">Check size and revenue</p>
               <p className="text-xs text-slate-500">Scored against the founder&apos;s amount of capital, ARR and MRR.</p>
             </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FormField label={t("check_size_min_usd")} error={getError("check_size_min")}>
-            <input
-              type="number"
-              min={0}
-              className={`${BASE_INPUT} ${inputCls("check_size_min")}`}
-              value={checkSizeMin}
-              onChange={(e) => { setCheckSizeMin(e.target.value); clearError("check_size_min"); }}
-            />
-          </FormField>
-          <FormField label={t("check_size_max_usd")} error={getError("check_size_max")}>
-            <input
-              type="number"
-              min={0}
-              className={`${BASE_INPUT} ${inputCls("check_size_max")}`}
-              value={checkSizeMax}
-              onChange={(e) => { setCheckSizeMax(e.target.value); clearError("check_size_max"); }}
-            />
-          </FormField>
-        </div>
+        <FormField label="Check size range (USD)" error={getError("check_size_min") ?? getError("check_size_max")} hint="Pick all that apply.">
+          <ListMultiSelect
+            ariaLabel="Check size range"
+            options={CHECK_BANDS.map((b) => ({ value: b.label, label: b.label }))}
+            selected={checkBands}
+            disabled={locked}
+            onChange={(v) => {
+              const r = rangeFromBands(v);
+              setCheckBands(v);
+              setCheckSizeMin(r.min);
+              setCheckSizeMax(r.max);
+              clearError("check_size_min");
+              clearError("check_size_max");
+            }}
+          />
+        </FormField>
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField label="Preferred ARR range" error={getError("preferred_arr_range")} hint="The same bands founders pick from. Pick all that apply.">
-            <ChipMultiSelect
+            <ListMultiSelect
               ariaLabel="Preferred ARR range"
               options={pickerOptions(arrList, preferredArrBands)}
               selected={preferredArrBands}
@@ -455,7 +482,7 @@ export function InvestorOnboardingWizard({
             />
           </FormField>
           <FormField label="Preferred MRR range" error={getError("preferred_mrr_range")} hint="The same bands founders pick from. Pick all that apply.">
-            <ChipMultiSelect
+            <ListMultiSelect
               ariaLabel="Preferred MRR range"
               options={pickerOptions(mrrList, preferredMrrBands)}
               selected={preferredMrrBands}
