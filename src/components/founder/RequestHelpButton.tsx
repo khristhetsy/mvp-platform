@@ -10,7 +10,8 @@ import { useRouter } from "next/navigation";
 export function RequestHelpButton({
   contextItem = null,
   contextStage = null,
-}: Readonly<{ contextItem?: string | null; contextStage?: string | null }>) {
+  variant = "default",
+}: Readonly<{ contextItem?: string | null; contextStage?: string | null; variant?: "default" | "primary" }>) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [sent, setSent] = useState(false);
@@ -77,7 +78,11 @@ export function RequestHelpButton({
       <button
         type="button"
         onClick={() => { setOpen(true); setError(null); }}
-        className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+        className={
+          variant === "primary"
+            ? "inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-[15px] font-semibold text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:ring-offset-2"
+            : "mt-4 inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+        }
       >
         <i className="ti ti-lifebuoy" aria-hidden="true" /> Request help
       </button>
