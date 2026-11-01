@@ -274,8 +274,8 @@ export async function getAdminCompanyWorkspace(companyId: string): Promise<Admin
       .eq("company_id", companyId)
       .order("created_at", { ascending: false })
       .limit(COMPLIANCE_LIMIT),
-    listSubscriptionsByProfileIds([founderId]),
-    getRequestedPlansByProfileIds([founderId]),
+    listSubscriptionsByProfileIds(founderId ? [founderId] : []),
+    getRequestedPlansByProfileIds(founderId ? [founderId] : []),
     getRemediationSummaryForCompanies([companyId]),
     getLearningAdminSummaryForCompanies([companyId]),
     getCompanyMatchingSummaries([companyId]),
