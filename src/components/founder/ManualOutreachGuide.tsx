@@ -136,7 +136,7 @@ const STEPS: { title: string; desc: string; screens: ReactNode }[] = [
   },
   {
     title: "Send email",
-    desc: "Pick a template or Draft with AI. Review and edit, then send.",
+    desc: "Pick a template or use the AI agent. Review and edit, then send.",
     screens: (
       <Screens
         tap={
@@ -154,7 +154,7 @@ const STEPS: { title: string; desc: string; screens: ReactNode }[] = [
               Template <ChevronDown className="inline h-3 w-3" aria-hidden="true" />
             </p>
             <p className="flex items-center gap-1 text-indigo-600">
-              <Sparkles className="h-3 w-3" aria-hidden="true" /> Draft with AI
+              <Sparkles className="h-3 w-3" aria-hidden="true" /> AI agent
             </p>
             <span className={`${PRIMARY} mt-1`}>Send</span>
           </Mini>

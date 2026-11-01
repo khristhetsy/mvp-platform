@@ -16,6 +16,8 @@ import { loadOutreachStatus } from "@/lib/founder/outreach-status";
 import { naSummaryNote } from "@/lib/documents/na-shared";
 import { businessPlanCoreProgress } from "@/lib/business-plan/completion";
 import { automatedStatusLine, manualResultsLine } from "@/lib/founder/outreach-status-lines";
+import { getFounderSocialUsage } from "@/lib/social/founder-limits";
+import { isFeatureEnabled, loadFeatureFlags } from "@/lib/feature-controls";
 
 export type StepState = "done" | "in_progress" | "not_started" | "unknown";
 export interface StepPart {
@@ -23,6 +25,8 @@ export interface StepPart {
   label: string;
   desc: string;
   done: boolean;
+  /** Optional parts never count toward completing the step (Outreach: Social). */
+  optional?: boolean;
   /** Live status line, e.g. "Running, 24 sent to your matched list". */
   status?: string;
   /** How it works, shown only while the part is not done. */
@@ -44,6 +48,8 @@ export interface StepProgress {
   badge?: string;
   /** Shown under the step, e.g. "1 item marked N/A: Customer contracts". N/A counts as done. */
   note?: string;
+  /** Show the "Draft my first post" AI agent offer: social is on for the plan, nothing posted yet. */
+  socialOffer?: boolean;
   /** Overrides the step's primary button, e.g. straight to the part still missing. */
   primary?: { label: string; href: string };
   /** Secondary link on the collapsed completed card. */
@@ -152,8 +158,10 @@ export async function computeStageProgress(
 
   if (slug === "marketing") {
     const admin = createServiceRoleClient() as unknown as SupabaseClient;
-    const [outreach, hasIntro, hasInterest, hasSaved, hasApplication] = await Promise.all([
+    const [outreach, social, flags, hasIntro, hasInterest, hasSaved, hasApplication] = await Promise.all([
       loadOutreachStatus(company.id),
+      getFounderSocialUsage(profileId).catch(() => null),
+      loadFeatureFlags(admin as never),
       hasRow(admin, "intro_requests", { company_id: company.id }),
       hasRow(admin, "investor_interests", { company_id: company.id }),
       hasRow(admin, "saved_deals", { company_id: company.id }),
@@ -166,9 +174,15 @@ export async function computeStageProgress(
     const AUTOMATED_HREF = "/founder/deploy?step=outreach&mode=automated";
     const MANUAL_HREF = "/founder/deploy?step=outreach&mode=manual";
     const automatedLine = automatedStatusLine(outreach);
+    // Social is an optional third channel: shown on the card, never needed to finish the step.
+    const socialUsed = social?.used ?? 0;
+    const socialCount = social?.limit === null || social?.limit === undefined ? `${socialUsed} posts` : `${socialUsed} of ${social.limit} posts`;
+    const SOCIAL_HREF = "/founder/deploy/social";
     const outreachStep: StepProgress = {
       ...step(outreachDone * 50),
       badge: `${outreachDone} of 2`,
+      // Two-way door: feature_flags row founder:social_offer = false turns the offer off for everyone.
+      socialOffer: isFeatureEnabled(flags, "founder", "social_offer") && Boolean(social?.enabled) && socialUsed === 0 && social?.state !== "reached",
       parts: [
         {
           key: "automated",
@@ -190,6 +204,17 @@ export async function computeStageProgress(
           done: outreach.manual.started,
           href: MANUAL_HREF,
           linkLabel: outreach.manual.started ? "Open" : "Start",
+        },
+        {
+          key: "social",
+          label: "Social media",
+          desc: "Optional. Post to your own accounts to reach investors.",
+          status: socialUsed > 0 ? socialCount : "Not started",
+          chip: socialUsed > 0 ? `Social: ${socialCount} this month` : "Social: not started",
+          done: socialUsed > 0,
+          optional: true,
+          href: SOCIAL_HREF,
+          linkLabel: socialUsed > 0 ? "Open social" : "Open",
         },
       ],
       // Send the founder straight to the half that is still missing.

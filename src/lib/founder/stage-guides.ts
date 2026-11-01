@@ -5,7 +5,7 @@
 //     (dispatched as window CustomEvent "icapos-assistant:ask").
 
 export type StageGuideAi =
-  | { kind: "tool"; href: string; label: string }
+  | { kind: "tool"; href: string; label: string; hint?: string }
   | { kind: "assistant"; prompt: string; label?: string };
 
 export type StageGuideStep = {
@@ -123,11 +123,11 @@ const GUIDES: Record<StageSlug, StageGuide> = {
       },
       {
         title: "Run your outreach",
-        desc: "Two ways to reach investors. Use both to complete this step.",
+        desc: "Two ways to reach investors. Use both to complete this step. Social media is optional.",
         href: "/founder/deploy",
         openHref: "/founder/deploy?step=outreach",
         hrefLabel: "Open outreach",
-        ai: { kind: "tool", href: "/founder/deploy?step=outreach&mode=manual", label: "Draft emails with AI" },
+        ai: { kind: "tool", href: "/founder/deploy?step=outreach&mode=manual", label: "AI agent", hint: "Drafts emails and posts for your review." },
       },
       {
         title: "Work your investor CRM",

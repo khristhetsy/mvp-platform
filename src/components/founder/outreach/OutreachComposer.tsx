@@ -227,7 +227,7 @@ export function OutreachComposer({
                 <input value={customTone} onChange={(e) => onCustomTone(e.target.value)} placeholder="punchy, founder to founder" className="w-44 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs" />
               ) : null}
               <button type="button" onClick={onDraft} disabled={drafting} className="ml-auto rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50">
-                <i className="ti ti-sparkles" aria-hidden="true" /> {drafting ? "Drafting…" : "Draft with AI"}
+                <i className="ti ti-sparkles" aria-hidden="true" /> {drafting ? "Drafting…" : "AI agent"}
               </button>
             </div>
 
