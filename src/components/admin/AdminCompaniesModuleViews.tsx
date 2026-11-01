@@ -343,6 +343,15 @@ function AdminCompaniesModuleViewsInner({
   const clearSelection = () => setSelected(new Set());
   // No selection means everyone the list shows.
   const emailIds = chosenIds.length > 0 ? chosenIds : listRows.map((c) => c.id);
+  /** The founders being emailed, so the composer can preview the email as each one will see it. */
+  const emailPreviewAs = (() => {
+    const ids = new Set(emailIds);
+    return listRows.filter((c) => ids.has(c.id)).map((c) => ({
+      label: c.founder_name ? `${c.founder_name} · ${c.company_name}` : c.company_name,
+      first_name: (c.founder_name ?? "").trim().split(/\s+/)[0] || "there",
+      company: c.company_name,
+    }));
+  })();
   const emailLabel = chosenIds.length > 0
     ? `Email ${chosenIds.length.toLocaleString()} selected founder${chosenIds.length === 1 ? "" : "s"}`
     : `Email all ${listRows.length.toLocaleString()} founder${listRows.length === 1 ? "" : "s"}`;
@@ -355,6 +364,7 @@ function AdminCompaniesModuleViewsInner({
           selection={{ mode: "ids", ids: emailIds, count: emailIds.length }}
           noun="founder"
           allowAttachments
+          previewAs={emailPreviewAs}
           brandedFounderRef={`company:${emailIds[0]}`}
           onClose={() => setEmailOpen(false)}
         />

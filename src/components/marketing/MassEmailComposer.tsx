@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { TemplatePicker } from "@/components/marketing/TemplatePicker";
 import { EmailImagePickerModal } from "@/components/marketing/EmailImagePicker";
 import { applyBanner, hasBanner } from "@/lib/email-images";
+import { buildPreviewDoc, sendNotes } from "@/lib/email-preview";
 import { OdooPager } from "@/components/admin/OdooPager";
 import { ScheduleSendMenu } from "@/components/email/ScheduleSend";
 import { formatSendAt } from "@/lib/scheduled-emails/time";
@@ -144,7 +145,9 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
     } finally { setUploading(false); }
   }
   const who = previewAs?.[Math.min(previewIdx, (previewAs?.length ?? 1) - 1)];
-  const previewDoc = who ? `<!doctype html><html><body style="margin:0;padding:12px 14px;font:13px/1.6 -apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#1f2937">${fillTags(addLinkButtons(outgoing(), html.trim() ? pickedShares.map((o) => ({ label: o.buttonLabel, url: "#" })) : []), { first_name: who.first_name, company: who.company })}</body></html>` : "";
+  const previewBody = who ? fillTags(addLinkButtons(outgoing(), html.trim() ? pickedShares.map((o) => ({ label: o.buttonLabel, url: "#" })) : []), { first_name: who.first_name, company: who.company }) : "";
+  const previewDoc = who ? buildPreviewDoc(previewBody) : "";
+  const notes = sendNotes(html, subject);
   const count = selection.count;
   const gmailOver = channel === "gmail" && mode === "once" && count > GMAIL_LIMIT;
   const base = () => ({ source, mode: selection.mode, ids: selection.ids, params: selection.params, group: selection.group });
@@ -291,7 +294,12 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
                 ) : (
                   <textarea value={html} onChange={(e) => setHtml(e.target.value)} rows={previewAs?.length ? 10 : 6} placeholder="<p>Hi {{first_name}},</p>…" style={{ ...inp, width: "100%", boxSizing: "border-box", fontFamily: "var(--font-mono)", resize: "vertical", marginBottom: previewAs?.length ? 4 : 10 }} />
                 )}
-                {previewAs?.length ? <p style={{ fontSize: 10.5, color: "var(--muted-foreground)", margin: "0 0 10px" }}>Merge: {["first_name", "company", ...Object.keys(extraMerge ?? {})].map((k) => `{{${k}}}`).join(" ")}</p> : null}
+                {previewAs?.length ? <p style={{ fontSize: 10.5, color: "var(--muted-foreground)", margin: "0 0 10px" }}>Merge: {["first_name", "company", ...Object.keys(extraMerge ?? {})].map((k) => `{{${k}}}`).join(" ")} · The iCapOS logo header (unless the email has its own logo) and the unsubscribe footer are added when it is sent. Send test shows the real thing.</p> : null}
+                {notes.length ? (
+                  <div style={{ fontSize: 11.5, color: "#8A5A00", background: "#FBF3E0", border: "0.5px solid #F0DFB0", borderRadius: 8, padding: "8px 10px", margin: "0 0 10px", lineHeight: 1.5 }}>
+                    <b>Check before sending:</b> {notes.join(" ")}
+                  </div>
+                ) : null}
 
                 {onePager !== undefined || allowAttachments || shares?.length ? (
                   <div style={{ marginBottom: 12 }}>
