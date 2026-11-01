@@ -117,6 +117,10 @@
       "schedule": "0 13 * * 1"
     },
     {
+      "path": "/api/cron/founder-match-precompute",
+      "schedule": "30 10 * * *"
+    },
+    {
       "path": "/api/cron/founder-nudges",
       "schedule": "0 9 * * *"
     },

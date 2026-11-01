@@ -18,6 +18,7 @@ const LABELS: Record<string, Label> = {
   "/api/cron/scheduled-emails": { name: "Scheduled emails", group: "Sales", description: "Sends emails staff scheduled from Contracts, Gmail, Draft email, Investor Relations, Sales chatter and Mass email" },
   "/api/cron/founder-digest": { name: "Founder digest", group: "Founders", description: "One daily or weekly email with each founder's held updates, at their own hour" },
   "/api/cron/founder-match-digest": { name: "Weekly match email", group: "Founders", description: "New investor matches for paying founders" },
+  "/api/cron/founder-match-precompute": { name: "Founder match precompute", group: "Founders", description: "Scores every founder against the whole investor network and stores their best matches for the board and outreach. Does nothing until the match_precompute setting is on" },
   "/api/cron/intro-follow-ups": { name: "Intro follow ups", group: "Founders", description: "Chases introductions in both directions" },
   "/api/cron/support-care": { name: "Support care", group: "Founders", description: "Support reminders to staff, missed reply escalations, founder follow ups and solve checks" },
   "/api/cron/intro-request-digest": { name: "Intro request digest", group: "Founders", description: "Daily email to admins with new founder intro requests and how many still wait" },

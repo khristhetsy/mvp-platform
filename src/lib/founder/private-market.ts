@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Company } from "@/lib/supabase/types";
 import { loadInvestorContacts } from "@/lib/investors/load-investor-matches";
-import { loadPrefilteredInvestors } from "@/lib/matching/candidate-investors";
+import { loadShortList } from "@/lib/matching/candidate-investors";
 import { getInvestorMatchConfig, getAutomationConfig } from "@/lib/settings/platform-settings";
 import { getFounderOverride } from "@/lib/outreach/founder-overrides";
 import { type InvestorCompanyMatchResult } from "@/lib/matching/investor-company-matching";
@@ -113,10 +113,10 @@ export async function loadFounderInvestorBoard(
   const matchConfig = await getInvestorMatchConfig();
   // Load + industry-filter only — no legacy preference scoring pass (we re-score
   // with the matching engine below, so scoring here would be wasted work).
-  // Short list from the match index when the prefilter setting is on; null falls back
-  // to the full read below, so the board is never emptier than before.
+  // Short list from the daily precompute or the match index when their settings are on;
+  // null falls back to the full read below, so the board is never emptier than before.
   const candidates =
-    (await loadPrefilteredInvestors({ industry: company.industry ?? null, scoreAgainst, want: limit })) ??
+    (await loadShortList({ company: company as unknown as { id: string } & Record<string, unknown>, scoreAgainst, want: limit, take: limit })) ??
     (await loadInvestorContacts({
     scoreAgainst,
     investorsOnly: true,
