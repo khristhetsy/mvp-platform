@@ -9,8 +9,9 @@ import { PLATFORM_TZ } from "@/lib/time/platform-tz";
  * deck builders: a section menu with the editor on the left, the live investor
  * one-pager on the right. Saves go through the same PATCH /api/companies/:id the
  * full profile form uses, so this page, the public page and investor matching
- * stay in sync. Fields with managed option lists (industry, stage, amount of
- * capital) are edited on the full profile page, linked from here.
+ * stay in sync. The amount raising is typed here as a dollar figure; the database
+ * derives the matching money band from it. Fields with managed option lists
+ * (industry, stage, logo) are edited on the full profile page, linked from here.
  */
 
 type FieldKey =
@@ -18,6 +19,7 @@ type FieldKey =
   | "website"
   | "country"
   | "state"
+  | "funding_amount"
   | "business_description"
   | "key_highlights"
   | "team_summary"
@@ -25,7 +27,17 @@ type FieldKey =
   | "use_of_funds"
   | "founder_goals";
 
-type FieldDef = { key: FieldKey; label: string; multiline?: boolean; placeholder?: string; min?: number; counter?: boolean };
+type FieldDef = {
+  key: FieldKey;
+  label: string;
+  multiline?: boolean;
+  placeholder?: string;
+  min?: number;
+  counter?: boolean;
+  /** A dollar figure: typed as 10000000, 10,000,000, $10M or 500k. */
+  money?: boolean;
+  help?: string;
+};
 
 type Section = { id: string; label: string; hint: string; fields: FieldDef[]; locked?: boolean };
 
@@ -33,12 +45,19 @@ const SECTIONS: Section[] = [
   {
     id: "header",
     label: "Company header",
-    hint: "The name, website and location investors see first.",
+    hint: "The name, website, location and raise amount investors see first.",
     fields: [
       { key: "company_name", label: "Company name", min: 2 },
       { key: "website", label: "Website", placeholder: "https://example.com" },
       { key: "country", label: "Country", placeholder: "United States", min: 2 },
       { key: "state", label: "State or province", placeholder: "California" },
+      {
+        key: "funding_amount",
+        label: "Amount raising (USD)",
+        placeholder: "$10M",
+        money: true,
+        help: "The round size shown as Raising on your one-pager. Type 10000000, $10M or 500k.",
+      },
     ],
   },
   {
@@ -85,6 +104,27 @@ const SECTIONS: Section[] = [
 
 type Values = Record<FieldKey, string>;
 
+/** "$10M", "2.5m", "500k", "10,000,000" or "10000000" to whole dollars. Null when it isn't a positive amount. */
+function parseAmount(raw: string): number | null {
+  const m = /^(\d+(?:\.\d+)?)([kmb])?$/.exec(raw.trim().toLowerCase().replace(/[$,\s]/g, ""));
+  if (!m) return null;
+  const mult = m[2] === "k" ? 1e3 : m[2] === "m" ? 1e6 : m[2] === "b" ? 1e9 : 1;
+  const n = Math.round(Number(m[1]) * mult);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/** Whole dollars with thousands separators, shown in the input. */
+function formatAmount(n: number): string {
+  return `$${n.toLocaleString("en-US")}`;
+}
+
+/** What the input shows for a stored value: a saved number is shown as dollars, anything else as is. */
+function displayValue(f: FieldDef, raw: string): string {
+  if (!f.money) return raw;
+  const n = parseAmount(raw);
+  return n ? formatAmount(n) : raw;
+}
+
 export function PublicProfileEditor({
   companyId,
   initial,
@@ -97,7 +137,7 @@ export function PublicProfileEditor({
 }>) {
   const start = useMemo(() => {
     const v = {} as Values;
-    for (const s of SECTIONS) for (const f of s.fields) v[f.key] = initial[f.key] ?? "";
+    for (const s of SECTIONS) for (const f of s.fields) v[f.key] = displayValue(f, initial[f.key] ?? "");
     return v;
   }, [initial]);
 
@@ -117,6 +157,10 @@ export function PublicProfileEditor({
   async function saveSection() {
     if (changedKeys.length === 0) return;
     for (const f of section.fields) {
+      if (f.money && changedKeys.includes(f.key) && !parseAmount(values[f.key])) {
+        setMessage({ tone: "error", text: `${f.label} needs a dollar amount greater than zero, like $10M or 500000.` });
+        return;
+      }
       const len = values[f.key].trim().length;
       if (f.min && changedKeys.includes(f.key) && len < f.min) {
         setMessage({ tone: "error", text: `${f.label} needs at least ${f.min} characters.` });
@@ -126,7 +170,10 @@ export function PublicProfileEditor({
     setSaving(true);
     setMessage(null);
     const payload: Record<string, string> = {};
-    for (const k of changedKeys) payload[k] = values[k].trim();
+    for (const k of changedKeys) {
+      const def = section.fields.find((f) => f.key === k);
+      payload[k] = def?.money ? String(parseAmount(values[k])) : values[k].trim();
+    }
     try {
       const res = await fetch(`/api/companies/${companyId}`, {
         method: "PATCH",
@@ -142,7 +189,13 @@ export function PublicProfileEditor({
         setMessage({ tone: "error", text: fieldError ?? body?.error ?? "Couldn't save. Try again." });
         return;
       }
-      setSaved((p) => ({ ...p, ...payload }));
+      const shown: Partial<Values> = {};
+      for (const k of changedKeys) {
+        const def = section.fields.find((f) => f.key === k);
+        shown[k] = def ? displayValue(def, payload[k]) : payload[k];
+      }
+      setSaved((p) => ({ ...p, ...shown }));
+      setValues((p) => ({ ...p, ...shown }));
       setSavedAt(new Date().toISOString());
       setPreviewKey((k) => k + 1);
       setMessage({ tone: "ok", text: "Saved. The preview is updated." });
@@ -225,9 +278,11 @@ export function PublicProfileEditor({
                       value={values[f.key]}
                       onChange={(e) => setValues((p) => ({ ...p, [f.key]: e.target.value }))}
                       placeholder={f.placeholder}
+                      inputMode={f.money ? "decimal" : undefined}
                       className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-indigo-400"
                     />
                   )}
+                  {f.help ? <p className="mt-1 text-[11px] text-slate-400">{f.help}</p> : null}
                   {f.counter ? (
                     <p className="mt-1 text-[11px] text-slate-400">{values[f.key].length} characters</p>
                   ) : null}
@@ -273,7 +328,7 @@ export function PublicProfileEditor({
         </div>
 
         <p className="px-1 text-[11px] leading-relaxed text-slate-400">
-          Logo, industry, stage and amount of capital use managed lists.{" "}
+          Logo, industry and stage use managed lists.{" "}
           <Link href="/founder/settings" className="font-medium text-indigo-600 hover:text-indigo-700">
             Edit them in your full profile
           </Link>
