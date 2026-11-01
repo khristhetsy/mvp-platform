@@ -39,6 +39,12 @@ export const dynamic = "force-dynamic";
 // Sends go out one recipient at a time with a short delay, so a large selection needs more
 // than the default function time.
 export const maxDuration = 300;
+/**
+ * One call sends for at most this long, then pauses the campaign and reports how many are left; the
+ * dialog calls again with action "resume". Kept well under maxDuration so the timeline logging that
+ * runs after the response also fits.
+ */
+const SEND_BUDGET_MS = 200_000;
 
 // Conservative Gmail daily cap — Workspace allows ~500 external/day (less on consumer
 // accounts). Above this we refuse and steer to iCapOS rather than risk a block.
@@ -54,7 +60,9 @@ const schema = z.object({
   ids: z.array(z.string().uuid()).max(MAX_TARGET).optional(),
   params: z.string().max(20_000).optional(),
   group: z.string().max(40).optional(),
-  action: z.enum(["send", "test", "sequence"]),
+  action: z.enum(["send", "test", "sequence", "resume"]),
+  /** The campaign to continue, for action "resume". */
+  campaignId: z.string().uuid().nullish(),
   channel: z.enum(["icapos", "gmail"]).optional(),
   templateId: z.string().uuid().nullish(),
   subject: z.string().max(300).nullish(),
@@ -113,6 +121,23 @@ export async function POST(req: NextRequest): Promise<Response> {
   const files = await loadAttachments(profile.id, d.attachments ?? []);
   if ("error" in files) return NextResponse.json({ error: files.error }, { status: 400 });
   const resendFiles = files.map((f) => ({ filename: f.name, content: f.content.toString("base64") }));
+
+  // ── RESUME: continue a send that paused after its time budget ───────────────
+  if (d.action === "resume") {
+    if (!d.campaignId) return NextResponse.json({ error: "No campaign to resume." }, { status: 400 });
+    const { data: camp } = await (await marketingDb()).from("marketing_campaigns").select("name, subject_override").eq("id", d.campaignId).maybeSingle();
+    // Only the campaigns this dialog creates ("Email · subject · date") can be resumed from here.
+    if (!camp || !String(camp.name ?? "").startsWith("Email · ")) return NextResponse.json({ error: "Campaign not found." }, { status: 404 });
+    try {
+      const result = await sendCampaign(d.campaignId, { attachments: resendFiles, skipNotesLog: true, resume: true, timeBudgetMs: SEND_BUDGET_MS });
+      const { sentEmails, ...summary } = result;
+      const sentNow = sentEmails ?? [];
+      after(() => logOutboundEmailActivity(sentNow, (camp.subject_override as string | null) || "(no subject)", profile.id, 1000));
+      return NextResponse.json({ ok: true, channel: "icapos", campaignId: d.campaignId, ...summary, partial: (result.remaining ?? 0) > 0 });
+    } catch (e) {
+      return NextResponse.json({ error: e instanceof Error ? e.message : "Resume failed." }, { status: 400 });
+    }
+  }
 
   // ── Resolve the selection to crm_contacts ids ──────────────────────────────
   let crmIds: string[] = [];
@@ -227,11 +252,13 @@ export async function POST(req: NextRequest): Promise<Response> {
   }, profile.id);
 
   try {
-    const result = await sendCampaign(campaign.id, { attachments: resendFiles, skipNotesLog: true });
-    // Log to the sales timeline so the send shows on each contact + their open opps.
-    const icaposEmails = recipients.map((r) => r.email);
+    const result = await sendCampaign(campaign.id, { attachments: resendFiles, skipNotesLog: true, timeBudgetMs: SEND_BUDGET_MS });
+    // Log to the sales timeline so the send shows on each contact + their open opps. Only the emails
+    // that actually went out are logged (not unsubscribed or skipped ones, and not the unsent rest).
+    const { sentEmails, ...summary } = result;
+    const icaposEmails = sentEmails ?? recipients.map((r) => r.email);
     after(() => logOutboundEmailActivity(icaposEmails, subject || "(no subject)", profile.id, 1000));
-    return NextResponse.json({ ok: true, channel: "icapos", campaignId: campaign.id, ...result, skippedNoEmail, skippedGuess });
+    return NextResponse.json({ ok: true, channel: "icapos", campaignId: campaign.id, ...summary, partial: (result.remaining ?? 0) > 0, skippedNoEmail, skippedGuess });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "Send failed." }, { status: 400 });
   }

@@ -45,6 +45,27 @@ export async function createCampaign(
 const SENDABLE_STATUSES: ReadonlyArray<MarketingCampaign["status"]> = ["draft", "scheduled"];
 
 /**
+ * A send that stopped partway (a function time limit, a crash) can be resumed. A campaign left
+ * "sending" counts as stopped once nothing has touched it for this long; a running send updates
+ * it every few emails.
+ */
+export const RESUME_STALE_MS = 2 * 60 * 1000;
+/** How many emails go out between "still running" updates on the campaign. */
+const HEARTBEAT_EVERY = 25;
+
+/** True once a send has used up its time budget. No budget means it never stops early. */
+export function budgetSpent(startedAt: number, now: number, budgetMs?: number): boolean {
+  return budgetMs != null && now - startedAt >= budgetMs;
+}
+
+/** Splits the list into contacts still to send and the number already sent (resume only). */
+export function splitSent<T extends { id: string }>(contacts: T[], alreadySent: ReadonlySet<string>): { todo: T[]; done: number } {
+  if (alreadySent.size === 0) return { todo: contacts, done: 0 };
+  const todo = contacts.filter((c) => !alreadySent.has(c.id));
+  return { todo, done: contacts.length - todo.length };
+}
+
+/**
  * Kill switch for all marketing sending. Defaults to ENABLED — only an explicit
  * "false" disables it, so setting it is a deliberate act and leaving it unset
  * doesn't silently stop campaigns.
@@ -145,10 +166,23 @@ export async function sendCampaign(campaignId: string, opts?: {
   attachments?: Array<{ filename: string; content: string }>;
   /** Mass email logs its sends as "email" itself, so it skips the campaign Notes log. */
   skipNotesLog?: boolean;
+  /**
+   * Stop after this many milliseconds and leave the campaign "paused" with `remaining` set, so a long
+   * list never runs into the function time limit. Without it the whole list goes out in one call.
+   */
+  timeBudgetMs?: number;
+  /** Continue a campaign that stopped partway. Contacts that already have a "sent" event are skipped. */
+  resume?: boolean;
 }): Promise<{
   sent: number;
   skipped: number;
   failed: number;
+  /** Contacts still to send when the time budget ran out (0 when the campaign finished). */
+  remaining?: number;
+  /** Emails sent by this call only, for the sales timeline. */
+  sentEmails?: string[];
+  /** Emails sent across all calls so far, this one included. */
+  sentSoFar?: number;
 }> {
   const db = await marketingDb();
 
@@ -187,7 +221,12 @@ export async function sendCampaign(campaignId: string, opts?: {
   // `draft` and `scheduled` stay sendable — sending a draft directly is the
   // normal admin flow — but terminal and in-flight states are refused.
   const status = campaign.status as MarketingCampaign["status"];
-  if (!SENDABLE_STATUSES.includes(status)) {
+  if (opts?.resume) {
+    // Quick check here; the real claim (one caller at a time) happens just before sending starts.
+    if (status !== "paused" && status !== "sending") {
+      throw new Error("This campaign can't be resumed now: it has finished, or never started.");
+    }
+  } else if (!SENDABLE_STATUSES.includes(status)) {
     throw new Error(
       status === "sending"
         ? "This campaign is already sending. Wait for it to finish before sending again."
@@ -240,11 +279,52 @@ export async function sendCampaign(campaignId: string, opts?: {
     contacts.push(...(chunk ?? []));
   }
 
-  await updateCampaignStatus(campaignId, "sending");
+  if (opts?.resume) {
+    // One caller at a time: the claim only succeeds for a paused campaign, or one that says
+    // "sending" but has not been touched for RESUME_STALE_MS (its function died).
+    const now = new Date().toISOString();
+    const stale = new Date(Date.now() - RESUME_STALE_MS).toISOString();
+    const first = await db.from("marketing_campaigns").update({ status: "sending", updated_at: now }).eq("id", campaignId).eq("status", "paused").select("id");
+    let claimed = (first.data ?? []).length > 0;
+    if (!claimed) {
+      const second = await db.from("marketing_campaigns").update({ status: "sending", updated_at: now }).eq("id", campaignId).eq("status", "sending").lt("updated_at", stale).select("id");
+      claimed = (second.data ?? []).length > 0;
+    }
+    if (!claimed) throw new Error("This campaign can't be resumed now: it has finished, or another send is still running.");
+  } else {
+    await updateCampaignStatus(campaignId, "sending");
+  }
+
+  // On a resume, contacts that already have a "sent" event are skipped, so nobody gets it twice.
+  const alreadySent = new Set<string>();
+  if (opts?.resume) {
+    for (let from = 0; ; from += 1000) {
+      const { data: page, error: pe } = await db
+        .from("marketing_events")
+        .select("contact_id")
+        .eq("campaign_id", campaignId)
+        .eq("event_type", "sent")
+        .order("id")
+        .range(from, from + 999);
+      if (pe) throw new Error(`Couldn't read what was already sent: ${pe.message}`);
+      const rows = (page ?? []) as Array<{ contact_id: string }>;
+      for (const r of rows) alreadySent.add(r.contact_id);
+      if (rows.length < 1000) break;
+    }
+  }
+  const { todo, done: sentBefore } = splitSent(contacts, alreadySent);
 
   let sent = 0, skipped = 0, failed = 0;
+  const sentEmails: string[] = [];
+  const startedAt = Date.now();
+  let remaining = 0;
 
-  for (const contact of contacts) {
+  for (let i = 0; i < todo.length; i++) {
+    const contact = todo[i];
+    if (budgetSpent(startedAt, Date.now(), opts?.timeBudgetMs)) { remaining = todo.length - i; break; }
+    if (i > 0 && i % HEARTBEAT_EVERY === 0) {
+      await db.from("marketing_campaigns").update({ updated_at: new Date().toISOString(), stat_sent: sentBefore + sent }).eq("id", campaignId);
+    }
     if (needsEmailReview(contact.tags)) { skipped++; continue; }
     const unsub = await isUnsubscribed(contact.email);
     if (unsub) { skipped++; continue; }
@@ -277,6 +357,7 @@ export async function sendCampaign(campaignId: string, opts?: {
 
     if (result.ok) {
       sent++;
+      sentEmails.push(contact.email);
     } else {
       failed++;
     }
@@ -284,12 +365,24 @@ export async function sendCampaign(campaignId: string, opts?: {
     await new Promise((r) => setTimeout(r, 200));
   }
 
+  const sentSoFar = sentBefore + sent;
+
+  // Out of time with contacts left: pause (not "sent"), so the campaign can be resumed and shows
+  // honestly how far it got. Notifications and the Notes log wait for the real finish.
+  if (remaining > 0) {
+    await db
+      .from("marketing_campaigns")
+      .update({ status: "paused", stat_sent: sentSoFar, updated_at: new Date().toISOString() })
+      .eq("id", campaignId);
+    return { sent, skipped, failed, remaining, sentEmails, sentSoFar };
+  }
+
   // If every recipient failed (e.g. sender domain not verified), don't mark it
   // "sent" — pause it so the failure is visible and can be retried after a fix.
-  const finalStatus = sent === 0 && failed > 0 ? "paused" : "sent";
+  const finalStatus = sentSoFar === 0 && failed > 0 ? "paused" : "sent";
   await db
     .from("marketing_campaigns")
-    .update({ status: finalStatus, sent_at: sent > 0 ? new Date().toISOString() : null, stat_sent: sent })
+    .update({ status: finalStatus, sent_at: sentSoFar > 0 ? new Date().toISOString() : null, stat_sent: sentSoFar })
     .eq("id", campaignId);
 
   // Notify — "batch send complete". Goes to the campaign owner, or all admins if
@@ -298,7 +391,7 @@ export async function sendCampaign(campaignId: string, opts?: {
     const owner = (campaign.created_by as string | null) ?? null;
     const admins = owner ? [owner] : await listAdminIds();
     const name = (campaign.name as string) ?? "Campaign";
-    const body = `“${name}” finished — ${sent} delivered${failed ? `, ${failed} failed` : ""}${skipped ? `, ${skipped} skipped` : ""}.`;
+    const body = `“${name}” finished — ${sentSoFar} delivered${failed ? `, ${failed} failed` : ""}${skipped ? `, ${skipped} skipped` : ""}.`;
     await Promise.all(
       admins.map((adminId) =>
         emitNotification({
@@ -316,12 +409,12 @@ export async function sendCampaign(campaignId: string, opts?: {
   }
 
   // Notes log: after every send is done, in the background, batched (src/lib/notes-log.ts).
-  if (!opts?.skipNotesLog && sent > 0) {
+  if (!opts?.skipNotesLog && sentSoFar > 0) {
     queueCampaignNotesLog({
       id: campaignId, name: (campaign.name as string) ?? "Campaign",
       subject: campaign.subject_override || template?.subject || "(no subject)",
     });
   }
 
-  return { sent, skipped, failed };
+  return { sent, skipped, failed, remaining: 0, sentEmails, sentSoFar };
 }

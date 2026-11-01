@@ -173,10 +173,31 @@ export function MassEmailComposer({ source, selection, defaultEmail, onClose, no
       const body = await finalBody();
       if (body === null) return;
       const r = await post({ action: "send", channel, templateId: templateId || null, subject: withExtra(subject) || null, html: body || null });
-      const j = await r.json();
+      let j = await r.json();
       if (!r.ok) { setMsg(j.error ?? "Send failed."); return; }
-      onSent?.(j.sent ?? 0);
-      setResult(`Sent ${j.sent ?? 0}${j.failed ? `, ${j.failed} failed` : ""}${j.skipped ? `, ${j.skipped} skipped` : ""}${j.skippedNoEmail ? `, ${j.skippedNoEmail} no-email` : ""}${j.skippedGuess ? `, ${j.skippedGuess} held back (guessed email)` : ""}.`);
+      // A long list goes out in parts: the server pauses after a few minutes and says how many are left,
+      // and this keeps asking it to continue (nobody gets it twice) until it is finished.
+      let failedTotal = j.failed ?? 0, skippedTotal = j.skipped ?? 0;
+      let rounds = 0;
+      while (j.partial && j.campaignId && rounds++ < 60) {
+        setMsg(`Sent ${(j.sentSoFar ?? 0).toLocaleString()} of ${count.toLocaleString()}. Keep this page open until it finishes.`);
+        let next: Record<string, unknown> | null = null;
+        let lastError = "Couldn't continue sending.";
+        for (let attempt = 0; attempt < 3 && !next; attempt++) {
+          try {
+            const rr = await post({ action: "resume", campaignId: j.campaignId });
+            const jj = await rr.json();
+            if (rr.ok) next = jj; else { lastError = jj.error ?? lastError; break; }
+          } catch { await new Promise((res) => setTimeout(res, 2000)); }
+        }
+        if (!next) { setMsg(`Paused at ${(j.sentSoFar ?? 0).toLocaleString()} of ${count.toLocaleString()}. ${lastError} Do not send again to the same list: the rest can be resumed.`); onSent?.(j.sentSoFar ?? 0); return; }
+        failedTotal += (next.failed as number) ?? 0; skippedTotal += (next.skipped as number) ?? 0;
+        j = { ...j, ...next };
+      }
+      const sentTotal = j.sentSoFar ?? j.sent ?? 0;
+      onSent?.(sentTotal);
+      if (j.partial) { setMsg(`Paused at ${sentTotal.toLocaleString()} of ${count.toLocaleString()}. Do not send again to the same list: the rest can be resumed.`); return; }
+      setResult(`Sent ${sentTotal}${failedTotal ? `, ${failedTotal} failed` : ""}${skippedTotal ? `, ${skippedTotal} skipped` : ""}${j.skippedNoEmail ? `, ${j.skippedNoEmail} no-email` : ""}${j.skippedGuess ? `, ${j.skippedGuess} held back (guessed email)` : ""}.`);
     } finally { setBusy(false); }
   }
   /** Schedule send: stored now; the selection and recipients resolve when it sends. */
