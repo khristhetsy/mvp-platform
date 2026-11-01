@@ -210,8 +210,12 @@ export async function deliverSupportEmail(input: {
   type: string;
   deepLink: string;
   requestId: string;
+  /** The assignee. Shown as the sender and on the Reply-To, so the founder sees a person. */
+  senderName?: string | null;
 }): Promise<boolean> {
-  const replyTo = FOUNDER_TYPES.has(input.type) ? supportReplyAddress(input.requestId) : null;
+  const addr = FOUNDER_TYPES.has(input.type) ? supportReplyAddress(input.requestId) : null;
+  const name = input.senderName?.replace(/[<>"]/g, "").trim();
+  const replyTo = addr ? (name ? `${name} <${addr}>` : addr) : null;
   if (!process.env.RESEND_API_KEY?.trim() || !input.to || !input.to.includes("@")) return false;
   try {
     await sendTransactionalEmail({
@@ -225,6 +229,7 @@ export async function deliverSupportEmail(input: {
       entityType: "support_request",
       entityId: input.requestId,
       ...(replyTo ? { replyTo } : {}),
+      ...(name ? { fromName: name } : {}),
     });
     return true;
   } catch {
