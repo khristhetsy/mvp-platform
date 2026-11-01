@@ -226,16 +226,40 @@ export async function loadInvestorContacts(opts?: {
    *  scoring + sort. Callers that re-score with the matching engine pass false to
    *  avoid a wasted scoring pass. Defaults true for the admin sales-match pages. */
   score?: boolean;
+  /** Read exactly these contacts (in small chunks) instead of scanning the investor
+   *  network. Used by the match prefilter; `limit` is ignored when set. */
+  ids?: string[];
 }): Promise<ScoredInvestorContact[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = createServiceRoleClient() as any;
   const limit = opts?.limit ?? 500;
+  const columns = "id, name, email, company, profile, overrides";
 
   // `profile` (= raw->'__profile', a few hundred bytes) instead of the whole Odoo record:
   // this loader pulls up to 800 rows per page view, and only ever read raw.__profile.
-  let query = db.from("crm_contacts").select("id, name, email, company, profile, overrides").limit(limit);
-  if (opts?.investorsOnly) query = query.eq("module", "investor");
-  const { data, error } = await query;
+  let data: unknown;
+  let error: unknown = null;
+  if (opts?.ids) {
+    // Explicit ids: chunked so each request URL stays short, chunks read in parallel.
+    const chunks: string[][] = [];
+    for (let i = 0; i < opts.ids.length; i += 150) chunks.push(opts.ids.slice(i, i + 150));
+    const results = await Promise.all(
+      chunks.map((part) => {
+        let q = db.from("crm_contacts").select(columns).in("id", part);
+        if (opts?.investorsOnly) q = q.eq("module", "investor");
+        return q;
+      }),
+    );
+    const bad = results.find((r: { error?: unknown; data?: unknown }) => r.error || !Array.isArray(r.data));
+    if (bad) return [];
+    data = results.flatMap((r: { data: unknown[] }) => r.data);
+  } else {
+    let query = db.from("crm_contacts").select(columns).limit(limit);
+    if (opts?.investorsOnly) query = query.eq("module", "investor");
+    const res = await query;
+    data = res.data;
+    error = res.error;
+  }
   if (error || !Array.isArray(data)) return [];
 
   const rows: ScoredInvestorContact[] = [];
