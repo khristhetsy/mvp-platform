@@ -306,7 +306,7 @@ export function AdminInvestorReviewCard({ row }: Readonly<{ row: Row }>) {
                       {deal.company_name}
                       <span className="text-slate-400">
                         {" "}
-                        · {[deal.stage, deal.year].filter(Boolean).join(" ") || "—"}
+                        · {[deal.stage, deal.years?.length ? deal.years.join(", ") : deal.year].filter(Boolean).join(" ") || "—"}
                         {deal.proof_document_id ? "" : " · no proof"}
                       </span>
                     </span>

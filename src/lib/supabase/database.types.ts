@@ -13499,6 +13499,7 @@ export type Database = {
       investor_prior_deals: {
         Row: {
           amount: number | null
+          amount_bands: string[] | null
           company_name: string
           created_at: string
           id: string
@@ -13509,9 +13510,11 @@ export type Database = {
           verified_at: string | null
           verified_by: string | null
           year: number | null
+          years: number[] | null
         }
         Insert: {
           amount?: number | null
+          amount_bands?: string[] | null
           company_name: string
           created_at?: string
           id?: string
@@ -13522,9 +13525,11 @@ export type Database = {
           verified_at?: string | null
           verified_by?: string | null
           year?: number | null
+          years?: number[] | null
         }
         Update: {
           amount?: number | null
+          amount_bands?: string[] | null
           company_name?: string
           created_at?: string
           id?: string
@@ -13535,6 +13540,7 @@ export type Database = {
           verified_at?: string | null
           verified_by?: string | null
           year?: number | null
+          years?: number[] | null
         }
         Relationships: [
           {

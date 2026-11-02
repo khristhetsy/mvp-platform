@@ -56,7 +56,9 @@ export type InvestorPriorDealRecord = {
   company_name: string;
   stage: string | null;
   year: number | null;
+  years?: number[] | null;
   amount: number | null;
+  amount_bands?: string[] | null;
   proof_document_id: string | null;
   verified: boolean;
   verified_at: string | null;

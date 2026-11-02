@@ -17,8 +17,8 @@ export async function addPriorDeal(input: {
   investorProfileId: string;
   companyName: string;
   stage: string | null;
-  year: number | null;
-  amount: number | null;
+  years: number[];
+  amountBands: string[];
 }): Promise<InvestorPriorDealRecord> {
   const admin = createServiceRoleClient();
   const { data, error } = await admin
@@ -27,8 +27,9 @@ export async function addPriorDeal(input: {
       investor_profile_id: input.investorProfileId,
       company_name: input.companyName.trim(),
       stage: input.stage?.trim() || null,
-      year: input.year,
-      amount: input.amount,
+      year: input.years.length ? Math.max(...input.years) : null,
+      years: input.years.length ? input.years : null,
+      amount_bands: input.amountBands.length ? input.amountBands : null,
     })
     .select("*")
     .single();

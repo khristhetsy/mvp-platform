@@ -6,12 +6,14 @@ import { useRouter } from "next/navigation";
 import { Plus, Trash2, Upload, Loader2, CheckCircle2, Clock } from "lucide-react";
 import { ListMultiSelect } from "@/components/ui/ListMultiSelect";
 import { useVocabulary } from "@/lib/vocabulary/provider";
+import { DEAL_AMOUNT_BANDS, dealYearOptions } from "@/lib/investor/deal-options";
 
 export type DealView = {
   id: string;
   companyName: string;
   stage: string | null;
-  year: number | null;
+  years: number[];
+  amountBands: string[];
   amount: number | null;
   verified: boolean;
   hasProof: boolean;
@@ -29,8 +31,10 @@ export function InvestorDealsManager({
   // Same list as the investment stage preference on the profile, so the two never drift.
   const stageList = useVocabulary("funding_stage").options;
   const [stages, setStages] = useState<string[]>([]);
-  const [year, setYear] = useState("");
-  const [amount, setAmount] = useState("");
+  const [years, setYears] = useState<string[]>([]);
+  const [bands, setBands] = useState<string[]>([]);
+  const yearOptions = dealYearOptions().map((y) => ({ value: String(y), label: String(y) }));
+  const bandOptions = DEAL_AMOUNT_BANDS.map((b) => ({ value: b, label: b }));
   const [dragId, setDragId] = useState<string | null>(null);
   const [visible, setVisible] = useState(showTrackRecord);
   const inputs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -65,8 +69,8 @@ export function InvestorDealsManager({
           body: JSON.stringify({
             companyName: company.trim(),
             stage: stages.length ? stages.join(", ") : undefined,
-            year: year ? Number(year) : undefined,
-            amount: amount ? Number(amount) : undefined,
+            years: years.map(Number),
+            amountBands: bands,
           }),
         }),
       "add",
@@ -74,8 +78,8 @@ export function InvestorDealsManager({
     if (ok) {
       setCompany("");
       setStages([]);
-      setYear("");
-      setAmount("");
+      setYears([]);
+      setBands([]);
     }
   }
 
@@ -104,7 +108,13 @@ export function InvestorDealsManager({
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-slate-900">{d.companyName}</p>
                 <p className="text-[12px] text-slate-500">
-                  {[d.stage, d.year, d.amount != null ? `$${d.amount.toLocaleString()}` : null].filter(Boolean).join(" · ") || "—"}
+                  {[
+                    d.stage,
+                    d.years.length ? d.years.join(", ") : null,
+                    d.amountBands.length ? d.amountBands.join(", ") : d.amount != null ? `$${d.amount.toLocaleString()}` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ") || "—"}
                 </p>
               </div>
               <span
@@ -171,14 +181,14 @@ export function InvestorDealsManager({
 
       {/* Add deal */}
       <div className="rounded-xl border border-dashed border-slate-300 p-3">
-        <div className="grid gap-2 sm:grid-cols-[2fr_0.8fr_1fr]">
+        <div className="grid gap-3">
           <input
             value={company}
             onChange={(e) => setCompany(e.target.value)}
             placeholder={t("company_name")}
             className="rounded-lg border border-slate-300 px-3 py-2 text-[13px]"
           />
-          <div className="sm:col-span-4">
+          <div>
             <p className="mb-1 text-[12px] text-slate-500">Stage (select all that apply)</p>
             <ListMultiSelect
               ariaLabel="Stage"
@@ -187,20 +197,14 @@ export function InvestorDealsManager({
               onChange={setStages}
             />
           </div>
-          <input
-            value={year}
-            onChange={(e) => setYear(e.target.value.replace(/[^0-9]/g, ""))}
-            placeholder={t("year")}
-            inputMode="numeric"
-            className="rounded-lg border border-slate-300 px-3 py-2 text-[13px]"
-          />
-          <input
-            value={amount}
-            onChange={(e) => setAmount(e.target.value.replace(/[^0-9]/g, ""))}
-            placeholder={t("amount")}
-            inputMode="numeric"
-            className="rounded-lg border border-slate-300 px-3 py-2 text-[13px]"
-          />
+          <div>
+            <p className="mb-1 text-[12px] text-slate-500">Year (select all that apply)</p>
+            <ListMultiSelect ariaLabel="Year" options={yearOptions} selected={years} onChange={setYears} />
+          </div>
+          <div>
+            <p className="mb-1 text-[12px] text-slate-500">Amount (select all that apply)</p>
+            <ListMultiSelect ariaLabel="Amount" options={bandOptions} selected={bands} onChange={setBands} />
+          </div>
         </div>
         <button
           type="button"
