@@ -97,6 +97,7 @@ const INV_ONB = "src/components/InvestorOnboardingWizard.tsx";
 // Investor directory (public investor data outside the iCFO network): founder search filters and the admin record editor.
 const DIR = "src/components/founder/investor-directory/InvestorDirectoryClient.tsx";
 const DIR_ADMIN = "src/components/admin/investor-directory/RecordEditor.tsx";
+const INV_DEALS = "src/components/investor/InvestorDealsManager.tsx";
 // Founder My contacts: the contact page asks these as investor preferences.
 const FCP = "src/app/founder/contacts/[id]/page.tsx";
 const ROUTES_COMPANY = ["PATCH /api/founder/onboarding", "PATCH /api/companies/[id]", "PATCH /api/admin/companies/[id]/basics"];
@@ -135,10 +136,10 @@ export const FIELD_USAGE: FieldUsage[] = [
       "Investor onboarding": { kind: "picks", note: "preferred stages" }, Matching: { kind: "scores", note: "stage" },
       Other: { kind: "none", note: "admin editor, investor pipeline filter" },
     },
-    screens: ["/founder/onboarding step 7", "/founder/settings", "/admin/sales/contacts/[id]", "/investor/onboarding preferred stages", "/founder/investor-pipeline (filter)"],
+    screens: ["/founder/onboarding step 7", "/founder/settings", "/admin/sales/contacts/[id]", "/investor/onboarding preferred stages", "/founder/investor-pipeline (filter)", "/investor/profile prior deals (stage)"],
     stored: ["companies.funding_stage", "investor_profiles.preferred_stages"],
     saved: [...ROUTES_COMPANY, "PATCH /api/investor/onboarding"], read: ["investor-company-matching.ts · stage", "contact-match.ts · stage"],
-    optionList: ["FUNDING_STAGE_OPTIONS in profile/options.ts", "funding_stage list on this page (investor onboarding)"], codeRefs: [ONB, SET, PIPE, INV_ONB, DIR, DIR_ADMIN],
+    optionList: ["FUNDING_STAGE_OPTIONS in profile/options.ts", "funding_stage list on this page (investor onboarding)"], codeRefs: [ONB, SET, PIPE, INV_ONB, DIR, DIR_ADMIN, INV_DEALS],
   },
   {
     name: "Operating stage", list: "operating_stage", summary: "companies.operating_stage",

@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { CheckCircle2, Clock, Upload, AlertTriangle, FileText, Loader2, ShieldCheck } from "lucide-react";
 import type { InvestorKycStatus } from "@/lib/investor/types";
 import { KYC_STATUS_LABELS } from "@/lib/investor/kyc";
@@ -268,7 +269,18 @@ export function InvestorKycClient({
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} aria-hidden /> : null}
               Submit for verification
             </button>
+            {!locked ? (
+              <Link
+                href="/investor/dashboard"
+                className="inline-flex items-center rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Skip for now
+              </Link>
+            ) : null}
           </div>
+          {!locked ? (
+            <p className="text-[12px] text-slate-500">You can skip and come back anytime to finish. Uploaded documents are saved.</p>
+          ) : null}
         </div>
       ) : null}
     </div>

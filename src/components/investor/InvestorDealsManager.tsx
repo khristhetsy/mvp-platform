@@ -4,6 +4,8 @@ import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2, Upload, Loader2, CheckCircle2, Clock } from "lucide-react";
+import { ListMultiSelect } from "@/components/ui/ListMultiSelect";
+import { useVocabulary } from "@/lib/vocabulary/provider";
 
 export type DealView = {
   id: string;
@@ -15,8 +17,6 @@ export type DealView = {
   hasProof: boolean;
 };
 
-const STAGES = ["Pre-seed", "Seed", "Series A", "Series B", "Growth", "Real estate", "Private credit", "Other"];
-
 export function InvestorDealsManager({
   deals,
   showTrackRecord,
@@ -26,7 +26,9 @@ export function InvestorDealsManager({
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [company, setCompany] = useState("");
-  const [stage, setStage] = useState("");
+  // Same list as the investment stage preference on the profile, so the two never drift.
+  const stageList = useVocabulary("funding_stage").options;
+  const [stages, setStages] = useState<string[]>([]);
   const [year, setYear] = useState("");
   const [amount, setAmount] = useState("");
   const [dragId, setDragId] = useState<string | null>(null);
@@ -62,7 +64,7 @@ export function InvestorDealsManager({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             companyName: company.trim(),
-            stage: stage || undefined,
+            stage: stages.length ? stages.join(", ") : undefined,
             year: year ? Number(year) : undefined,
             amount: amount ? Number(amount) : undefined,
           }),
@@ -71,7 +73,7 @@ export function InvestorDealsManager({
     );
     if (ok) {
       setCompany("");
-      setStage("");
+      setStages([]);
       setYear("");
       setAmount("");
     }
@@ -169,21 +171,22 @@ export function InvestorDealsManager({
 
       {/* Add deal */}
       <div className="rounded-xl border border-dashed border-slate-300 p-3">
-        <div className="grid gap-2 sm:grid-cols-[2fr_1.2fr_0.8fr_1fr]">
+        <div className="grid gap-2 sm:grid-cols-[2fr_0.8fr_1fr]">
           <input
             value={company}
             onChange={(e) => setCompany(e.target.value)}
             placeholder={t("company_name")}
             className="rounded-lg border border-slate-300 px-3 py-2 text-[13px]"
           />
-          <select value={stage} onChange={(e) => setStage(e.target.value)} className="rounded-lg border border-slate-300 px-3 py-2 text-[13px]">
-            <option value="">Stage</option>
-            {STAGES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
+          <div className="sm:col-span-4">
+            <p className="mb-1 text-[12px] text-slate-500">Stage (select all that apply)</p>
+            <ListMultiSelect
+              ariaLabel="Stage"
+              options={stageList.map((o) => ({ value: o.label, label: o.label }))}
+              selected={stages}
+              onChange={setStages}
+            />
+          </div>
           <input
             value={year}
             onChange={(e) => setYear(e.target.value.replace(/[^0-9]/g, ""))}
