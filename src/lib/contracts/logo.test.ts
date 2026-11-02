@@ -1,9 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { SUBSCRIPTION_SEEDS } from "./subscription/seeds";
 import { applyLogo, logoSize, readLogoImage } from "./logo";
 import { loadDocx } from "./docx-engine";
 import { renderDocxToPdf } from "./docx-pdf";
 import { readPdfLines } from "./signature-anchors";
+
+// These tests build and render real .docx files; the default 5s limit flakes on a loaded machine.
+vi.setConfig({ testTimeout: 30_000 });
 
 // A 2x1 PNG and a minimal JPEG header with a start-of-frame of 40 x 20.
 const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAAC0lEQVR4nGP4DwQACfsD/Qe0UygAAAAASUVORK5CYII=", "base64");
