@@ -436,8 +436,10 @@ export function DeployWorkflow({
                 title={t.title}
                 onClick={() => {
                   if (t.mode) chooseMode(t.mode);
-                  else if (t.step === "social" && !social) router.push("/founder/deploy?step=social");
-                  else setStep(t.step);
+                  else if (t.step === "social" && !social) {
+                    setStep("social");
+                    router.push("/founder/deploy?step=social");
+                  } else setStep(t.step);
                 }}
                 className={`relative flex items-center gap-2 whitespace-nowrap px-3.5 py-3 text-sm font-semibold transition ${
                   active ? "text-indigo-600" : "text-slate-500 hover:text-slate-800"
@@ -521,7 +523,7 @@ export function DeployWorkflow({
       ) : null}
 
       {/* ---------- SOCIAL MEDIA ---------- */}
-      {step === "social" ? <div className="space-y-4">{social}</div> : null}
+      {step === "social" ? <div className="space-y-4">{social ?? <p className="py-10 text-center text-sm text-slate-500">Loading Social Media…</p>}</div> : null}
 
       {/* ---------- STEP 3 · ANALYTICS ---------- */}
       {step === "analytics" ? (
