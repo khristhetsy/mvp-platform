@@ -1,4 +1,8 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
+import { getFounderSocialUsage } from "@/lib/social/founder-limits";
+import { FounderSocialClient } from "@/components/founder/social/FounderSocialClient";
+import { autoDraft } from "@/lib/social/templates";
 import { requireRole } from "@/lib/supabase/auth";
 import { getTranslations } from "next-intl/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -131,13 +135,13 @@ function buildDeployInsights(input: {
   return insights;
 }
 
-const DEPLOY_STEPS: DeployStep[] = ["profile", "outreach", "analytics", "settings"];
+const DEPLOY_STEPS: DeployStep[] = ["profile", "outreach", "social", "analytics", "settings"];
 const asMode = (v: unknown): OutreachTab | null => (v === "automated" || v === "manual" ? v : null);
 
 export default async function FounderDeployPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ step?: string; mode?: string }>;
+  searchParams?: Promise<{ step?: string; mode?: string; tab?: string }>;
 }) {
   const sp = (await searchParams) ?? {};
   const initialStep = DEPLOY_STEPS.includes(sp.step as DeployStep) ? (sp.step as DeployStep) : null;
@@ -233,6 +237,27 @@ export default async function FounderDeployPage({
   // ---- Step 1 · Public Profile (embedded live preview + publish state + links) ----
   const isPublished = company?.is_published ?? false;
   const publicHref = company?.slug ? `/f/${company.slug}` : null;
+
+  // Social Media tab: loaded only when that tab is open, so the other tabs add no extra queries.
+  let socialNode: ReactNode = null;
+  if (initialStep === "social") {
+    const socialUsage = await getFounderSocialUsage(profile.id).catch(() => null);
+    socialNode = socialUsage?.enabled ? (
+      <FounderSocialClient
+        initialUsage={socialUsage}
+        companyName={company?.company_name ?? null}
+        founderName={profile.full_name ?? profile.email ?? "You"}
+        initialDraft={autoDraft({ company: company?.company_name, description: company?.business_description, industry: company?.industry, raiseBand: company?.funding_amount_band })}
+        initialTab={sp.tab ?? null}
+      />
+    ) : (
+      <div className="rounded-xl border border-slate-200 bg-white px-5 py-6">
+        <p className="text-sm font-semibold text-slate-900">Social media is included with Basic and Professional.</p>
+        <p className="mt-1 text-sm text-slate-600">Upgrade to write with the AI agent, schedule posts and see which post led to a meeting.</p>
+        <Link href="/pricing" className="mt-4 inline-block rounded-full bg-[#1A6CE4] px-4 py-2 text-xs font-semibold text-white hover:bg-[#2E78F5]">See plans</Link>
+      </div>
+    );
+  }
 
   const publicProfileNode = (
     <>
@@ -366,6 +391,7 @@ export default async function FounderDeployPage({
               investableScore={investableScore}
               outreachThreshold={OUTREACH_THRESHOLD}
               publicProfile={publicProfileNode}
+              social={socialNode}
               automated={automatedNode}
               manual={manualNode}
               analytics={analytics}
