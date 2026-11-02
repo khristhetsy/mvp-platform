@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { AlertCircle, BarChart3, Bot, IdCard, Mail, Send, Settings, type LucideIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { AlertCircle, BarChart3, Bot, IdCard, Mail, Send, Settings, Share2, type LucideIcon } from "lucide-react";
 import { ManualOutreachGuide } from "@/components/founder/ManualOutreachGuide";
 import { HowToByKey } from "@/components/founder/how-to/HowToByKey";
 import {
@@ -26,7 +27,7 @@ import {
  * Score — see the gate note in the Automated tab.
  */
 
-export type Step = "profile" | "outreach" | "analytics" | "settings";
+export type Step = "profile" | "outreach" | "social" | "analytics" | "settings";
 export type OutreachTab = "automated" | "manual";
 type Tone = "good" | "warn" | "info";
 
@@ -57,6 +58,7 @@ function rememberOutreachMode(mode: OutreachTab) {
 const STEPS: { key: Step; Icon: LucideIcon; label: string }[] = [
   { key: "profile", Icon: IdCard, label: "Public Profile" },
   { key: "outreach", Icon: Send, label: "Outreach" },
+  { key: "social", Icon: Share2, label: "Social Media" },
   { key: "analytics", Icon: BarChart3, label: "Analytics" },
   { key: "settings", Icon: Settings, label: "Settings" },
 ];
@@ -66,6 +68,8 @@ const STEP_TIPS: Record<Step, string> = {
     "Investors see this one-pager before anything else. A complete, published profile is what unlocks every downstream step — keep the description tight and the raise amount current.",
   outreach:
     "Automated outreach runs itself once your CRR clears the threshold. Manual outreach is for the investors you want to touch personally — use the tools to build sequences and updates.",
+  social:
+    "Post to your own LinkedIn, Facebook, Instagram and Reddit accounts, schedule posts and see which post led to a meeting.",
   analytics:
     "Compare automated vs. manual performance. Click any insight card to see what I'd change next — reply rate and unanswered opens are usually the fastest wins.",
   settings:
@@ -358,6 +362,7 @@ export function DeployWorkflow({
   manual,
   analytics,
   outreachAnalytics,
+  social,
   outreachStatus = EMPTY_OUTREACH_STATUS,
   initialStep,
   initialMode,
@@ -372,6 +377,8 @@ export function DeployWorkflow({
   analytics: DeployAnalytics;
   /** The full analytics view — funnel, segments, follow-up debt, messages. */
   outreachAnalytics?: ReactNode;
+  /** The Social Media tab content. Loaded by the server only when ?step=social is open. */
+  social?: ReactNode;
   /** Automated and manual status: drives the Outreach dropdown and the manual nudge. */
   outreachStatus?: OutreachStatus;
   /** From ?step= on the URL. */
@@ -389,6 +396,7 @@ export function DeployWorkflow({
     initialMode ?? (!manualStarted ? "manual" : rememberedMode ?? "automated"),
   );
   const [aiOpen, setAiOpen] = useState(false);
+  const router = useRouter();
 
   // Automated and Manual are two separate Outreach tabs, each opening its own page.
   const chooseMode = (mode: OutreachTab) => {
@@ -428,6 +436,7 @@ export function DeployWorkflow({
                 title={t.title}
                 onClick={() => {
                   if (t.mode) chooseMode(t.mode);
+                  else if (t.step === "social" && !social) router.push("/founder/deploy?step=social");
                   else setStep(t.step);
                 }}
                 className={`relative flex items-center gap-2 whitespace-nowrap px-3.5 py-3 text-sm font-semibold transition ${
@@ -510,6 +519,9 @@ export function DeployWorkflow({
           )}
         </div>
       ) : null}
+
+      {/* ---------- SOCIAL MEDIA ---------- */}
+      {step === "social" ? <div className="space-y-4">{social}</div> : null}
 
       {/* ---------- STEP 3 · ANALYTICS ---------- */}
       {step === "analytics" ? (
