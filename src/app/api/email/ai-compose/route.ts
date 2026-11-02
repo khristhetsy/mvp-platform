@@ -65,7 +65,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     const how = action && REWRITE[action] ? REWRITE[action] : REWRITE.polish;
     if (!currentText?.trim()) return NextResponse.json({ error: "Write something first, then rewrite it." }, { status: 400 });
     const out = await claudeComplete(
-      [{ role: "user", content: `Rewrite the email below to be ${how}. Preserve the intent. Output ONLY the rewritten email body as plain text — no subject, no signature, no preamble.\n\n---\n${currentText}` }],
+      [{ role: "user", content: `Rewrite the email below to be ${how}. Preserve the intent, and keep every price, figure, name, date, and link exactly as written. Output ONLY the rewritten email body as plain text — no subject, no signature, no preamble.\n\n---\n${currentText}` }],
       { usage: { category: "internal", feature: "email_compose" }, system: SYSTEM, model: CLAUDE_SONNET, maxTokens: 1100, temperature: 0.5 },
     );
     return NextResponse.json({ body: out.trim() });

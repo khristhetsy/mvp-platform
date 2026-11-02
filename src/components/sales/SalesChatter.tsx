@@ -18,6 +18,7 @@ import { TaskEditRow } from "./TaskEditRow";
 import { TaskTitleInput } from "./TaskTitleInput";
 import { ptDayDiff } from "@/lib/time/pt-day-diff";
 import { NotesLog } from "./NotesLog";
+import { AiComposeBar } from "./AiComposeBar";
 
 type Activity = {
   id: string; kind: string; summary: string; actor_name: string | null; created_at: string;
@@ -435,6 +436,7 @@ export function SalesChatter({ opportunityId, contactCrmId, contactName, contact
               </div>
             )}
             <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Subject" style={field} />
+            <AiComposeBar body={body} subject={subject} to={contactEmail} contactName={contactName} onUseBody={setBody} onUseSubject={setSubject} />
             <textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="Write a message to the contact…" rows={4} style={field} />
             {via === "gmail" && senders && !senders.gmail.canSend && (
               <div style={{ fontSize: 12, color: "#854F0B", background: "#FAEEDA", borderRadius: 8, padding: "8px 10px" }}>
