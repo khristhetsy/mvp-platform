@@ -51,8 +51,14 @@ describe("autoDraft", () => {
   it("builds a short draft from the founder's own profile only", async () => {
     const { autoDraft } = await import("./templates");
     const out = autoDraft({ company: "Acme", description: "We help clinics cut billing time in half. More text here.", industry: "Healthtech", raiseBand: "$1M - $5M" });
-    expect(out).toBe("Acme: We help clinics cut billing time in half.\n\nWe are raising $1M to $5M.\n\nOpen to introductions with Healthtech investors.");
+    expect(out).toBe("Meet Acme.\n\nWe help clinics cut billing time in half.\n\nWe are meeting Healthtech investors. Curious? Message me.");
+    expect(out).not.toMatch(/raising|\$/);
     expect(out).not.toMatch(/[—–]| - /);
+  });
+  it("keeps a long first sentence short by cutting at a comma", async () => {
+    const { autoDraft } = await import("./templates");
+    const out = autoDraft({ company: "Cogs", description: "Cogs has developed a new approach to Artificial Intelligence which is superior to Deep Learning, the dominant technology today.", industry: "SaaS" });
+    expect(out).toContain("\n\nCogs has developed a new approach to Artificial Intelligence which is superior to Deep Learning.\n\n");
   });
   it("returns empty with no company and never invents a raise", async () => {
     const { autoDraft } = await import("./templates");

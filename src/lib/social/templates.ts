@@ -81,21 +81,36 @@ function firstSentence(text: string | null | undefined, max = 140): string {
   return s.length > max ? `${s.slice(0, max).trimEnd().replace(/[,;:]+$/, "")}` : s;
 }
 
+/** A first sentence short enough for a social post: cut at a comma when it runs long, else at a word. */
+function shortLead(text: string | null | undefined, max = 120): string {
+  const s = firstSentence(text, 400);
+  if (s.length <= max) return s;
+  const head = s.slice(0, max);
+  const comma = Math.max(head.lastIndexOf(","), head.lastIndexOf(";"));
+  if (comma >= 60) return head.slice(0, comma).trimEnd();
+  const space = head.lastIndexOf(" ");
+  return (space > 0 ? head.slice(0, space) : head).trimEnd().replace(/[,;:]+$/, "");
+}
+
 /**
- * A short, direct starter post built only from what the founder already told us:
- * company name, description, industry and the raise band. Nothing is invented. Returns ""
- * when there is no company name, so the composer opens empty rather than with filler.
+ * A short starter post for social: a hook, one line on what the company does, and a call to action.
+ * Built only from what the founder already told us (company name, description, industry). Nothing is
+ * invented and no figures are listed, so the raise amount is left out. Returns "" when there is no
+ * company name, so the composer opens empty rather than with filler.
  */
 export function autoDraft(input: AutoDraftInput): string {
   const co = input.company?.trim();
   if (!co) return "";
-  const what = firstSentence(input.description);
-  const band = input.raiseBand?.trim().replace(/\s*[-–—]\s*/g, " to ");
+  const what = shortLead(input.description);
   const industry = input.industry?.trim();
   const lines: string[] = [];
-  lines.push(what ? `${co}: ${what}.` : `${co} is building in ${industry || "our market"}.`);
-  if (band) lines.push(`We are raising ${band}.`);
-  lines.push(industry ? `Open to introductions with ${industry} investors.` : "Open to introductions with investors.");
+  if (what) {
+    lines.push(`Meet ${co}.`);
+    lines.push(`${what}.`);
+  } else {
+    lines.push(`${co} is building in ${industry || "our market"}.`);
+  }
+  lines.push(industry ? `We are meeting ${industry} investors. Curious? Message me.` : "We are meeting investors. Curious? Message me.");
   return plainPunctuation(lines.join("\n\n"));
 }
 
