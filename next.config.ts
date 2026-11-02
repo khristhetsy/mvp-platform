@@ -1,4 +1,5 @@
-import { withSentryConfig, type SentryBuildOptions } from "@sentry/nextjs";
+import type { SentryBuildOptions } from "@sentry/nextjs";
+import { withSentryConfig } from "@sentry/nextjs/config";
 import createNextIntlPlugin from "next-intl/plugin";
 import type { NextConfig } from "next";
 
@@ -62,5 +63,4 @@ const nextConfig: NextConfig = {
 export default withSentryConfig(withNextIntl(nextConfig), {
   silent: true,
   hideSourceMaps: true,
-  disableLogger: true,
 } as SentryBuildOptions);
