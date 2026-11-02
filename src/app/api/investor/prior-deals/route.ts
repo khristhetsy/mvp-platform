@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireInvestorApi } from "@/lib/api/investor";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { addPriorDeal } from "@/lib/investor/prior-deals";
+import { isDealAmountBand } from "@/lib/investor/deal-options";
 
 export const dynamic = "force-dynamic";
 
@@ -18,22 +19,26 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const body = (await request.json().catch(() => null)) as
-    | { companyName?: string; stage?: string; year?: number; amount?: number }
+    | { companyName?: string; stage?: string; years?: number[]; amountBands?: string[] }
     | null;
   const companyName = body?.companyName?.trim() ?? "";
   if (companyName.length < 2) {
     return NextResponse.json({ error: "Enter the company name." }, { status: 400 });
   }
-  const year = typeof body?.year === "number" && body.year >= 1980 && body.year <= 2100 ? body.year : null;
-  const amount = typeof body?.amount === "number" && body.amount >= 0 ? body.amount : null;
+  const rawYears = body?.years;
+  const rawBands = body?.amountBands;
+  const years = Array.isArray(rawYears)
+    ? Array.from(new Set(rawYears.filter((y): y is number => Number.isInteger(y) && y >= 1980 && y <= 2100))).sort((a, b) => b - a)
+    : [];
+  const amountBands = Array.isArray(rawBands) ? Array.from(new Set(rawBands.filter(isDealAmountBand))) : [];
 
   try {
     const deal = await addPriorDeal({
       investorProfileId: auth.investorProfile.id,
       companyName,
       stage: body?.stage ?? null,
-      year,
-      amount,
+      years,
+      amountBands,
     });
     return NextResponse.json({ deal });
   } catch (e) {

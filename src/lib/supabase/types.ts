@@ -1455,6 +1455,8 @@ export type Database = {
           stage: string | null;
           year: number | null;
           amount: number | null;
+          amount_bands: string[] | null;
+          years: number[] | null;
           proof_document_id: string | null;
           verified: boolean;
           verified_at: string | null;
@@ -1468,6 +1470,8 @@ export type Database = {
           stage?: string | null;
           year?: number | null;
           amount?: number | null;
+          amount_bands?: string[] | null;
+          years?: number[] | null;
           proof_document_id?: string | null;
           verified?: boolean;
           verified_at?: string | null;
@@ -1479,6 +1483,8 @@ export type Database = {
           stage?: string | null;
           year?: number | null;
           amount?: number | null;
+          amount_bands?: string[] | null;
+          years?: number[] | null;
           proof_document_id?: string | null;
           verified?: boolean;
           verified_at?: string | null;
