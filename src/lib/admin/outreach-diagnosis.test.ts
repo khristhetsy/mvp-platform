@@ -20,11 +20,11 @@ function status(over: Partial<AdminOutreachSummary> = {}): AdminOutreachSummary 
 }
 
 describe("Outreach drawer covers automated and manual", () => {
-  it("automated running, manual not started: 1 of 2 and blocking", () => {
+  it("automated running, manual not started: 1 of 3 and blocking", () => {
     const d = outreachDiagnosis(status(), cleared);
-    expect(d.headline).toBe("Automated running, 19 sent · Manual not started · 1 of 2");
+    expect(d.headline).toBe("Automated running, 19 sent · Manual not started · Social media not started · 1 of 3");
     expect(d.problem[0]).toMatch(/No manual email has gone out/);
-    expect(d.missing.map((m) => m.note)).toEqual(["19 sent", "0 sent"]);
+    expect(d.missing.map((m) => m.note)).toEqual(["19 sent", "0 sent", "Not started"]);
     expect(d.fixes[0].who).toBe("Founder · Outreach › Manual");
   });
 
@@ -33,7 +33,7 @@ describe("Outreach drawer covers automated and manual", () => {
       status({ manual: { sent: 4, started: true, opened: 2, replied: 1 }, complete: true }),
       cleared,
     );
-    expect(d.headline).toBe("Automated running, 19 sent · Manual 4 sent, 2 opened, 1 replied");
+    expect(d.headline).toBe("Automated running, 19 sent · Manual 4 sent, 2 opened, 1 replied · Social media not started");
     expect(d.problem[0]).toMatch(/not blocking/);
   });
 
@@ -42,8 +42,17 @@ describe("Outreach drawer covers automated and manual", () => {
       status({ automated: { state: "not_started", sent: 0, launched: false } }),
       { unlocked: false, short: 12, score: 53, gate: 65 },
     );
-    expect(d.headline).toBe("Automated held, 12 points to the gate · Manual not started · 0 of 2");
+    expect(d.headline).toBe("Automated held, 12 points to the gate · Manual not started · Social media not started · 0 of 3");
     expect(d.problem.join(" ")).toMatch(/manual goes to the founder's own contacts and can start now/);
+  });
+
+  it("social media posting counts as a third channel but never completes Outreach alone", () => {
+    const d = outreachDiagnosis(
+      status({ social: { state: "posting", accounts: 2, published: 5 } }),
+      cleared,
+    );
+    expect(d.headline).toBe("Automated running, 19 sent · Manual not started · Social media 5 posts published · 2 of 3");
+    expect(d.problem[0]).toMatch(/No manual email has gone out/);
   });
 
   it("shows the reminder cadence dates in PT", () => {

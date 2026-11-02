@@ -21,7 +21,7 @@ import type { StoredFactor } from "@/lib/crr/weight-sets";
 import type { FactorKey } from "@/lib/ai/readiness-scoring";
 import type { FounderJourneyState, JourneyStage } from "@/lib/founder-journey/types";
 import type { AdminOutreachSummary } from "@/lib/admin/company-workspace-types";
-import { automatedStatusLine, manualResultsLine } from "@/lib/founder/outreach-status-lines";
+import { automatedStatusLine, manualResultsLine, outreachChannelsDone, socialStatusLine } from "@/lib/founder/outreach-status-lines";
 
 /** One line in "what's missing" — a label and the size of the gap. */
 export type MissingRow = {
@@ -222,7 +222,7 @@ export function outreachDiagnosis(
 ): ItemDiagnosis {
   const a = outreach.automated;
   const m = outreach.manual;
-  const done = (a.launched ? 1 : 0) + (m.started ? 1 : 0);
+  const done = outreachChannelsDone(outreach);
 
   const autoLine = a.launched
     ? `Automated ${automatedStatusLine(outreach).toLowerCase()}`
@@ -230,13 +230,14 @@ export function outreachDiagnosis(
       ? "Automated not launched"
       : `Automated held, ${crr.short} points to the gate`;
   const manualLine = m.started ? `Manual ${manualResultsLine(outreach)}` : "Manual not started";
+  const socialLine = `Social media ${socialStatusLine(outreach).toLowerCase()}`;
 
   const source =
     "investor_outreach_campaigns + founder_manual_outreach_recipients, the same status the founder's Outreach page reads";
 
   if (outreach.complete) {
     return {
-      headline: `${autoLine} · ${manualLine}`,
+      headline: `${autoLine} · ${manualLine} · ${socialLine}`,
       measured: true,
       problem: ["Outreach is complete: automated is launched and manual has started, so this item is not blocking."],
       missing: [],
@@ -269,6 +270,7 @@ export function outreachDiagnosis(
       note: a.launched ? `${a.sent} sent` : crr.unlocked ? "not launched" : `held · ${crr.short} to the gate`,
     },
     { label: m.started ? "Manual · done" : "Manual", note: m.started ? manualResultsLine(outreach) : "0 sent" },
+    { label: "Social media · optional", note: socialStatusLine(outreach) },
   ];
 
   const fixes: FixStep[] = [];
@@ -276,7 +278,7 @@ export function outreachDiagnosis(
     fixes.push({
       text: "Founder adds recipients (My contacts or investors they already know) and sends the first manual email.",
       who: "Founder · Outreach › Manual",
-      impact: "1 of 2",
+      impact: "1 of 3",
     });
     const r = outreach.manualReminder;
     if (r?.paused) {
@@ -301,7 +303,7 @@ export function outreachDiagnosis(
         ? {
             text: "Automated is unlocked but no approved campaign exists yet. It is created when the founder opens their Outreach page.",
             who: "Founder · Outreach",
-            impact: "1 of 2",
+            impact: "1 of 3",
           }
         : {
             text: "Automated opens on its own when the CRR crosses the gate. Work the Preparation list.",
@@ -311,7 +313,7 @@ export function outreachDiagnosis(
   }
 
   return {
-    headline: `${autoLine} · ${manualLine} · ${done} of 2`,
+    headline: `${autoLine} · ${manualLine} · ${socialLine} · ${done} of 3`,
     measured: true,
     problem,
     missing,
@@ -493,7 +495,6 @@ export async function diagnoseStage(
     });
     byHref["/founder/matches"] = browseOnly("Investor matches");
     byHref["/founder/matching"] = browseOnly("The Matching Center");
-    byHref["/founder/deploy/social"] = unmeasured("accounts connected? posts published?", "Read the founder's connected social accounts and published posts.");
     byHref["/founder/ir-agent"] = unmeasured("agent set up? drafts awaiting confirmation?", "Read the founder's IR agent setup and its pending drafts.");
     byHref["/founder/events/present"] = unmeasured("applied? presented?", "Read event applications for this company.");
     byHref["/founder/private-market"] = unmeasured("campaign published?", "Read the marketplace campaign's published flag.");

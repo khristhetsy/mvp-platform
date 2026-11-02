@@ -19,22 +19,55 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
 export type { AutomatedOutreachState, OutreachStatus } from "@/lib/founder/outreach-status-lines";
-import { EMPTY_OUTREACH_STATUS, type AutomatedOutreachState, type OutreachStatus } from "@/lib/founder/outreach-status-lines";
+import {
+  EMPTY_OUTREACH_STATUS,
+  type AutomatedOutreachState,
+  type OutreachStatus,
+  type SocialOutreach,
+} from "@/lib/founder/outreach-status-lines";
 export { EMPTY_OUTREACH_STATUS };
 
 type Row = Record<string, unknown>;
+
+/** Connected social accounts and published posts for the company's founder. Never throws. */
+async function loadSocialOutreach(db: SupabaseClient, companyId: string): Promise<SocialOutreach> {
+  try {
+    const { data: company } = await db.from("companies").select("founder_id").eq("id", companyId).maybeSingle();
+    const founderId = (company as Row | null)?.founder_id ? String((company as Row).founder_id) : null;
+    if (!founderId) return { state: "not_started", accounts: 0, published: 0 };
+    const [accountsRes, postsRes] = await Promise.all([
+      db
+        .from("social_accounts")
+        .select("id", { count: "exact", head: true })
+        .eq("owner_profile_id", founderId)
+        .neq("status", "disconnected")
+        .is("disconnected_at", null),
+      db
+        .from("social_posts")
+        .select("id", { count: "exact", head: true })
+        .eq("owner_profile_id", founderId)
+        .eq("status", "published"),
+    ]);
+    const accounts = accountsRes.count ?? 0;
+    const published = postsRes.count ?? 0;
+    return { state: published > 0 ? "posting" : accounts > 0 ? "connected" : "not_started", accounts, published };
+  } catch {
+    return { state: "not_started", accounts: 0, published: 0 };
+  }
+}
 
 export async function loadOutreachStatus(companyId: string | null | undefined): Promise<OutreachStatus> {
   if (!companyId) return EMPTY_OUTREACH_STATUS;
   try {
     const db = createServiceRoleClient() as unknown as SupabaseClient;
-    const [campaignRes, manualRes] = await Promise.all([
+    const [campaignRes, manualRes, social] = await Promise.all([
       db.from("investor_outreach_campaigns").select("id, status, paused").eq("company_id", companyId),
       db
         .from("founder_manual_outreach_recipients")
         .select("id", { count: "exact", head: true })
         .eq("company_id", companyId)
         .not("last_sent_at", "is", null),
+      loadSocialOutreach(db, companyId),
     ]);
 
     const campaigns = (campaignRes.data ?? []) as Row[];
@@ -77,6 +110,7 @@ export async function loadOutreachStatus(companyId: string | null | undefined): 
     return {
       automated: { state, sent: automatedSent, launched },
       manual: { sent: manualSent, started: manualSent > 0, opened: manualOpened, replied: manualReplied },
+      social,
       complete: launched && manualSent > 0,
     };
   } catch {

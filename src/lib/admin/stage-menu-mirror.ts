@@ -103,9 +103,8 @@ const STAGE_MENU: Record<JourneyStage, MenuDef[]> = {
     // Outreach covers automated AND manual: done only when automated is launched
     // and the first manual email has gone out (the founder's Stage 3 rule).
     { label: "Outreach", href: "/founder/deploy", condition: "outreachComplete" },
-    // The founder's other two outreach channels. Nothing reads their state yet, so
-    // they render as "Open" and count as not tracked rather than showing a fake status.
-    { label: "Social media", href: "/founder/deploy/social" },
+    // Social media is the third Outreach channel. It renders under the Outreach row
+    // (StageMenuMirror), not as its own row.
     { label: "AI agent", href: "/founder/ir-agent" },
     { label: "Investor CRM", href: "/founder/investor-pipeline", condition: "hasInvestorInterest" },
     { label: "Present at event", href: "/founder/events/present" },
