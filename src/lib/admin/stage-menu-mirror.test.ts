@@ -66,18 +66,18 @@ describe("Marketing menu — the CRR gate", () => {
 
   it("counts browse-only rows as measured — they have a wired signal", () => {
     const m = getStageMirror(journey("deploy"), "deploy");
-    // CRR, matches, Matching Center, outreach, Investor CRM = 5 of 10
-    // (My contacts, Social media, AI agent, Present at event and Marketplace have no signal).
+    // CRR, matches, Matching Center, outreach, Investor CRM = 5 of 9
+    // (My contacts, AI agent, Present at event and Marketplace have no signal).
+    // Social media is no longer its own row: it is the third channel under Outreach.
     expect(m.measuredCount).toBe(5);
-    expect(m.total).toBe(10);
+    expect(m.total).toBe(9);
   });
 
-  it("lists Social media and AI agent as open, untracked rows after Outreach", () => {
+  it("keeps Social media under Outreach, not as its own row, and lists AI agent next as open", () => {
     const m = getStageMirror(journey("deploy"), "deploy");
     const labels = m.items.map((i) => i.label);
-    expect(labels.indexOf("Social media")).toBe(labels.indexOf("Outreach") + 1);
-    expect(labels.indexOf("AI agent")).toBe(labels.indexOf("Outreach") + 2);
-    expect(item(m, "Social media")?.status).toBe("todo");
+    expect(labels).not.toContain("Social media");
+    expect(labels.indexOf("AI agent")).toBe(labels.indexOf("Outreach") + 1);
     expect(item(m, "AI agent")?.status).toBe("todo");
   });
 

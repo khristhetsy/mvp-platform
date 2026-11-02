@@ -7,7 +7,7 @@ import type { FounderJourneyState, JourneyStage } from "@/lib/founder-journey/ty
 import { JOURNEY_STAGES } from "@/lib/founder-journey/types";
 import { OUTREACH_GATE } from "@/lib/crr/weight-sets";
 import { buildCompanyFilteredHref, type AdminOutreachSummary } from "@/lib/admin/company-workspace-types";
-import { automatedStatusLine, manualResultsLine } from "@/lib/founder/outreach-status-lines";
+import { automatedStatusLine, manualResultsLine, outreachChannelsDone, socialStatusLine } from "@/lib/founder/outreach-status-lines";
 
 const STAGE_META: Record<JourneyStage, { label: string; blurb: string }> = {
   initialize: { label: "Onboarding", blurb: "Company profile & onboarding" },
@@ -51,17 +51,21 @@ function ptDay(iso: string | null | undefined): string {
  * manual email has gone out. Shown once the founder has reached Marketing.
  */
 function outreachGate(o: AdminOutreachSummary, companyId: string): Gate {
-  const done = (o.automated.launched ? 1 : 0) + (o.manual.started ? 1 : 0);
+  const done = outreachChannelsDone(o);
+  const social = `Social media ${socialStatusLine(o).toLowerCase()}`;
   const auto = `Automated ${automatedStatusLine(o).toLowerCase()}`;
   const manual = o.manual.started ? `Manual ${manualResultsLine(o)}` : "Manual not started";
   const points: string[] = [];
   if (o.complete) {
-    points.push(`Automated: ${automatedStatusLine(o)}`, `Manual: ${manualResultsLine(o)}`);
+    points.push(`Automated: ${automatedStatusLine(o)}`, `Manual: ${manualResultsLine(o)}`, `Social media: ${socialStatusLine(o)}`);
   } else {
     if (!o.manual.started) {
       points.push("The founder adds recipients from My contacts, or investors they already know, under Outreach › Manual");
       points.push("They pick a template or draft with AI and send the first manual email");
       points.push("Manual outreach reminders run on their own (day 3, day 7, then weekly) and stop at the first manual send");
+    }
+    if (o.social?.state !== "posting") {
+      points.push("Social media: the founder connects an account and publishes a post under Outreach › Social media. Optional, it does not hold completion");
     }
     if (!o.automated.launched) {
       points.push(
@@ -73,13 +77,13 @@ function outreachGate(o: AdminOutreachSummary, companyId: string): Gate {
   }
   return {
     key: "outreach",
-    label: o.complete ? "Outreach run" : `Outreach run · ${done} of 2`,
-    detail: `${auto} · ${manual}`,
+    label: o.complete ? "Outreach run" : `Outreach run · ${done} of 3`,
+    detail: `${auto} · ${manual} · ${social}`,
     met: o.complete,
     completion: true,
     why: o.complete
       ? "Both outreach modes have run: automated is launched and the founder has sent manual emails."
-      : "Outreach completes only when automated is launched AND the first manual email has gone out. This is a completion item for Marketing; it does not hold advancement to Closing.",
+      : "Outreach completes only when automated is launched AND the first manual email has gone out. Social media is the third channel and is shown with them, but does not gate completion. This is a completion item for Marketing; it does not hold advancement to Closing.",
     points,
     action: { label: "Open Marketing menu", href: `/admin/companies/${companyId}#deploy` },
   };

@@ -4,7 +4,7 @@ import { ReachOutPanel } from "@/components/admin/company-workspace/ReachOutPane
 import { StageItemDrawer } from "@/components/admin/company-workspace/StageItemDrawer";
 import type { StageDiagnosis } from "@/lib/admin/stage-diagnosis";
 import type { AdminOutreachSummary } from "@/lib/admin/company-workspace-types";
-import { automatedStatusLine, manualResultsLine } from "@/lib/founder/outreach-status-lines";
+import { automatedStatusLine, manualResultsLine, socialStatusLine, EMPTY_SOCIAL_OUTREACH } from "@/lib/founder/outreach-status-lines";
 
 const STATUS_META: Record<MirrorItemStatus, { label: string; chip: string; icon: string; iconColor: string }> = {
   done: { label: "Done", chip: "bg-emerald-50 text-emerald-700", icon: "ti-circle-check", iconColor: "text-emerald-600" },
@@ -15,11 +15,12 @@ const STATUS_META: Record<MirrorItemStatus, { label: string; chip: string; icon:
   locked: { label: "Not started", chip: "bg-slate-100 text-slate-400", icon: "ti-lock", iconColor: "text-slate-300" },
 };
 
-/** The two channels Outreach is made of, one line each. Both must be under way for
- *  Outreach to be done, so a channel that has not started reads as needing attention. */
+/** The three channels Outreach is made of, one line each. Automated and manual must both be
+ *  under way for Outreach to be done; Social media is shown with them but does not gate it. */
 function OutreachChannels({ outreach }: Readonly<{ outreach: AdminOutreachSummary }>) {
   const auto = outreach.automated;
   const manualStarted = outreach.manual.started;
+  const social = outreach.social ?? EMPTY_SOCIAL_OUTREACH;
   const channels = [
     {
       key: "automated",
@@ -36,6 +37,14 @@ function OutreachChannels({ outreach }: Readonly<{ outreach: AdminOutreachSummar
       detail: manualStarted ? manualResultsLine(outreach) : "No email sent yet",
       chip: manualStarted ? "Started" : "Not started",
       tone: manualStarted ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700",
+    },
+    {
+      key: "social",
+      icon: "ti-share",
+      label: "Social media",
+      detail: socialStatusLine(outreach),
+      chip: social.state === "posting" ? "Posting" : social.state === "connected" ? "Connected" : "Not started",
+      tone: social.state === "posting" ? "bg-emerald-50 text-emerald-700" : social.state === "connected" ? "bg-slate-100 text-slate-600" : "bg-amber-50 text-amber-700",
     },
   ];
   return (
