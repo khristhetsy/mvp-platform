@@ -35,6 +35,7 @@ const DRAFT_KEY = "icapos_founder_social_compose_draft";
 const btn = "rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50";
 const btnPrimary = "rounded-lg bg-[#1A6CE4] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#2E78F5] disabled:opacity-50";
 const card = "rounded-xl border border-slate-200 bg-white p-4";
+const AGENT_COMMENT = "Chat with our IR agent:";
 
 /** "Oct 22, 12:00 AM PT" style label for any stored instant. */
 function pt(iso: string | null, withTime = true): string {
@@ -305,6 +306,9 @@ function Compose({ usage, accounts, campaigns, companyName, founderName, initial
   const [picked, setPicked] = useState<string[]>([]);
   const [campaignId, setCampaignId] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
+  // Agent link: the founder's live IR agent, posted as the first comment with its tracked link.
+  const [agentLinks, setAgentLinks] = useState<Record<string, string> | null | undefined>(undefined);
+  const [agentOn, setAgentOn] = useState(true);
   const [when, setWhen] = useState("");
   const [repeat, setRepeat] = useState<"none" | "daily" | "weekly" | "monthly">("none");
   const [repeatCount, setRepeatCount] = useState("8");
@@ -325,6 +329,10 @@ function Compose({ usage, accounts, campaigns, companyName, founderName, initial
   const chosen = accounts.filter((a) => picked.includes(a.id));
   const rawNet = previewNet ?? chosen[0]?.platform ?? "linkedin";
   const shownNet: Network = (NETWORKS as readonly string[]).includes(rawNet) ? (rawNet as Network) : "linkedin";
+  const agentUrl = agentLinks ? (agentLinks[chosen[0]?.platform ?? "linkedin"] ?? agentLinks.linkedin ?? null) : null;
+  const useAgent = agentOn && Boolean(agentUrl);
+  const effectiveLink = useAgent ? (agentUrl as string) : linkUrl;
+  const effectiveComment = useAgent ? AGENT_COMMENT : null;
 
   // Restore a kept draft once, deferred a tick so state is never set synchronously inside the effect.
   useEffect(() => {
@@ -338,6 +346,13 @@ function Compose({ usage, accounts, campaigns, companyName, founderName, initial
     if (!restored.current) return;
     try { if (body) localStorage.setItem(DRAFT_KEY, body); else localStorage.removeItem(DRAFT_KEY); } catch { /* storage unavailable */ }
   }, [body]);
+  useEffect(() => {
+    let live = true;
+    void api<{ agent: { links: Record<string, string> } | null }>("/api/founder/social/agent-link").then((r) => {
+      if (live) setAgentLinks(r.ok ? (r.data.agent?.links ?? null) : null);
+    });
+    return () => { live = false; };
+  }, []);
   useEffect(() => {
     if (!aiOpen) return;
     const close = (e: MouseEvent) => { if (aiRef.current && !aiRef.current.contains(e.target as Node)) setAiOpen(false); };
@@ -386,7 +401,7 @@ function Compose({ usage, accounts, campaigns, companyName, founderName, initial
         body: JSON.stringify({
           freq: repeat, interval: 1, weekdays: repeat === "weekly" ? [weekday] : [], timeLocal: timePart, startDate: datePart,
           endType: "after", endCount: Math.max(2, Math.min(52, Number(repeatCount) || 8)),
-          campaignId: campaignId || null, linkUrl: linkUrl || null, body, variants,
+          campaignId: campaignId || null, linkUrl: effectiveLink || null, comment: effectiveComment, body, variants,
         }),
       });
       setBusy(false);
@@ -398,7 +413,7 @@ function Compose({ usage, accounts, campaigns, companyName, founderName, initial
     }
     const r = await api<{ usage?: SocialUsage }>("/api/founder/social/posts", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mode, scheduledAt, campaignId: campaignId || null, linkUrl: linkUrl || null, variants }),
+      body: JSON.stringify({ mode, scheduledAt, campaignId: campaignId || null, linkUrl: effectiveLink || null, comment: effectiveComment, variants }),
     });
     setBusy(false);
     if (r.status === 403 && r.data.code === "limit_reached") { if (r.data.usage) setLocal(r.data.usage); setDialog(true); return; }
@@ -504,9 +519,25 @@ function Compose({ usage, accounts, campaigns, companyName, founderName, initial
         </div>
         <p className="mt-1 text-xs text-slate-500">Free mode. The draft is written from your profile and you review every change. Drafts never count toward your post limit.</p>
 
+        <div className="mt-3">
+          <div className="text-xs text-slate-500">Attachments</div>
+          <button type="button" aria-pressed={useAgent} disabled={!agentUrl} onClick={() => setAgentOn((v) => !v)}
+            className={`mt-1.5 flex w-full items-center justify-between gap-3 rounded-xl border p-3 text-left disabled:cursor-not-allowed disabled:opacity-60 ${useAgent ? "border-2 border-[#1A6CE4] bg-blue-50" : "border-slate-200 bg-white"}`}>
+            <span className="flex items-start gap-3">
+              <i className="ti ti-message-chatbot mt-0.5 text-lg text-[#1A6CE4]" aria-hidden="true" />
+              <span className="min-w-0">
+                <span className="block text-[13px] font-medium text-slate-900">Agent link</span>
+                <span className="block text-[11px] text-slate-500">{agentLinks === undefined ? "Checking your IR agent" : agentUrl ? "Your IR agent, tracks the social channel" : "Go live in My IR Agent first"}</span>
+              </span>
+            </span>
+            {useAgent && <i className="ti ti-check rounded-full bg-[#1A6CE4] p-0.5 text-sm text-white" aria-hidden="true" />}
+          </button>
+          {useAgent && <p className="mt-1 text-xs text-slate-500">Posts as the first comment, tracked to this network. Clicks and chats count toward this post in Attribution.</p>}
+        </div>
+
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
           <label className="text-xs text-slate-500">Tracked link, posts as the first comment
-            <input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://" className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-900" />
+            <input value={useAgent ? effectiveLink : linkUrl} onChange={(e) => setLinkUrl(e.target.value)} disabled={useAgent} placeholder="https://" className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-900 disabled:bg-slate-50 disabled:text-slate-500" />
           </label>
           <label className="text-xs text-slate-500">Campaign
             <select value={campaignId} onChange={(e) => setCampaignId(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-900">
@@ -574,7 +605,7 @@ function Compose({ usage, accounts, campaigns, companyName, founderName, initial
         {emailed && <Link href="/founder/deploy" className="mt-1 inline-block text-xs font-medium text-[#1A6CE4] hover:underline">Open Manual outreach</Link>}
       </div>
       <div className="lg:sticky lg:top-4">
-        <SocialPreview body={body} network={shownNet} onNetwork={setPreviewNet} name={founderName} company={companyName} linkUrl={linkUrl} />
+        <SocialPreview body={body} network={shownNet} onNetwork={setPreviewNet} name={founderName} company={companyName} linkUrl={effectiveLink} firstComment={useAgent && shownNet !== "reddit" ? `${AGENT_COMMENT} ${effectiveLink}` : null} />
       </div>
       </div>
 

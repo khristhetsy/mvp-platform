@@ -18,3 +18,20 @@ export async function liveAgentEmailUrlForCompany(db: SupabaseClient, companyId:
     return null;
   }
 }
+
+/**
+ * The slug and ending of the live IR agent that belongs to a company's organization,
+ * or null when there is none. Callers build the tracked link for the channel they need
+ * (email, linkedin, facebook, instagram) with trackedUrl.
+ */
+export async function liveAgentForCompany(db: SupabaseClient, companyId: string): Promise<{ company_slug: string; ending: string } | null> {
+  try {
+    const { data: company } = await db.from("companies").select("org_id").eq("id", companyId).maybeSingle();
+    const orgId = (company as { org_id?: string | null } | null)?.org_id;
+    if (!orgId) return null;
+    const { data: agent } = await db.from("ir_agents").select("company_slug, ending").eq("organization_id", orgId).eq("status", "live").maybeSingle();
+    return (agent as { company_slug: string; ending: string } | null) ?? null;
+  } catch {
+    return null;
+  }
+}

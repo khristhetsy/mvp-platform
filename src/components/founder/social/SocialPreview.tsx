@@ -21,8 +21,8 @@ const FOOTERS: Record<Network, string[]> = {
  * Live preview of the post as each network shows it. Approximate by design: it never
  * claims to match a network's exact rendering. Works with no connected account.
  */
-export function SocialPreview({ body, network, onNetwork, name, company, linkUrl }: {
-  body: string; network: Network; onNetwork: (n: Network) => void; name: string; company: string | null; linkUrl: string;
+export function SocialPreview({ body, network, onNetwork, name, company, linkUrl, firstComment = null }: {
+  body: string; network: Network; onNetwork: (n: Network) => void; name: string; company: string | null; linkUrl: string; firstComment?: string | null;
 }) {
   const { title, text, limit, note } = previewParts(network, body, Boolean(linkUrl.trim()));
   const shown = network === "linkedin" && text.length > MORE_AFTER ? `${text.slice(0, MORE_AFTER).trimEnd()}... more` : text;
@@ -64,6 +64,12 @@ export function SocialPreview({ body, network, onNetwork, name, company, linkUrl
         </div>
       </div>
 
+      {firstComment && (
+        <div className="mt-2">
+          <div className="text-xs text-slate-500">First comment</div>
+          <div className="mt-1 break-words rounded-lg bg-slate-50 px-3 py-2 text-[13px] text-slate-800">{firstComment}</div>
+        </div>
+      )}
       <p className="mt-2 text-xs text-slate-500">{note}</p>
       {over && <p className="mt-1 text-xs text-red-700">This is over the {PLATFORM_LABEL_SHARED[network]} limit. Use Shorten in the AI agent menu.</p>}
       <p className="mt-1 text-xs text-slate-400">Previews are approximate. Each network may render slightly differently.</p>
