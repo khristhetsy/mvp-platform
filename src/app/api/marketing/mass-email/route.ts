@@ -223,16 +223,17 @@ export async function POST(req: NextRequest): Promise<Response> {
       return NextResponse.json({ error: `${recipients.length.toLocaleString()} recipients exceeds the Gmail daily limit (~${GMAIL_DAILY_LIMIT}). Use iCapOS Email for a send this size, or reduce the selection.` }, { status: 400 });
     }
     let sent = 0, skipped = 0, failed = 0;
+    const sentGmailEmails: string[] = [];
     for (const rcpt of recipients) {
       if (await isUnsubscribed(rcpt.email)) { skipped++; continue; }
       const vars = { first_name: rcpt.first_name ?? "there", company: rcpt.company ?? "", email: rcpt.email, sender_name: fromName };
       const htmlOut = interpolate(html, vars);
       const r = await sendViaGmail({ userId: profile.id, to: rcpt.email, subject: interpolate(subject, vars), body: htmlToText(htmlOut), html: htmlOut, attachments: files });
-      if ("error" in r) failed++; else sent++;
+      if ("error" in r) failed++; else { sent++; sentGmailEmails.push(rcpt.email); }
       await new Promise((res) => setTimeout(res, 120));
     }
     // Log to the sales timeline so the send shows on each contact + their open opps.
-    const gmailEmails = recipients.map((rc) => rc.email);
+    const gmailEmails = sentGmailEmails;
     after(() => logOutboundEmailActivity(gmailEmails, subject || "(no subject)", profile.id, 1000, "gmail", { body: html }));
     return NextResponse.json({ ok: true, channel: "gmail", sent, skipped, failed, skippedNoEmail, skippedGuess });
   }
@@ -308,6 +309,7 @@ async function sendToFounders(x: FounderSend): Promise<Response> {
   const db = await marketingDb();
 
   let sent = 0, skipped = 0, failed = 0;
+  const sentEmailsList: string[] = [];
   for (const rcpt of recipients) {
     if (await isUnsubscribed(rcpt.email)) { skipped++; continue; }
     const fm = await founderVars(rcpt.companyId, { first_name: rcpt.first_name ?? "there", last_name: rcpt.last_name ?? "", company: rcpt.companyName, email: rcpt.email, sender_name: fromName });
@@ -317,7 +319,7 @@ async function sendToFounders(x: FounderSend): Promise<Response> {
     const htmlOut = interpolate(fillGlance(html, fm.vars), fm.vars);
     if (channel === "gmail") {
       const r = await sendViaGmail({ userId: profile.id, to: rcpt.email, subject: subjOut, body: htmlToText(htmlOut), html: htmlOut, attachments: files });
-      if ("error" in r) failed++; else sent++;
+      if ("error" in r) failed++; else { sent++; sentEmailsList.push(rcpt.email); }
       await new Promise((res) => setTimeout(res, 120));
       continue;
     }
@@ -333,7 +335,7 @@ async function sendToFounders(x: FounderSend): Promise<Response> {
         event_type: r.ok ? "sent" : "failed", metadata: r.error ? { error: r.error } : {},
       });
     }
-    if (r.ok) sent++; else failed++;
+    if (r.ok) { sent++; sentEmailsList.push(rcpt.email); } else failed++;
     await new Promise((res) => setTimeout(res, 200));
   }
 
@@ -341,7 +343,7 @@ async function sendToFounders(x: FounderSend): Promise<Response> {
     // Every send failed (for example the sender domain isn't verified): pause it so it shows and can be retried.
     await db.from("marketing_campaigns").update({ status: sent === 0 && failed > 0 ? "paused" : "sent", sent_at: sent > 0 ? new Date().toISOString() : null, stat_sent: sent }).eq("id", campaignId);
   }
-  const emails = recipients.map((r) => r.email);
+  const emails = sentEmailsList;
   after(() => logOutboundEmailActivity(emails, subject || "(no subject)", profile.id, 1000, channel === "gmail" ? "gmail" : "icapos", { body: html }));
   return NextResponse.json({ ok: true, channel, campaignId, sent, skipped, failed, skippedNoEmail, skippedInternal });
 }
