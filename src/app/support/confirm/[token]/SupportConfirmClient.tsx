@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 type Phase = "saving" | "yes" | "no" | "error" | "thanks" | "inProgress";
@@ -77,9 +78,9 @@ export function SupportConfirmClient({ token, answer }: Readonly<{ token: string
           <>
             <i className="ti ti-alert-circle text-4xl text-amber-600" aria-hidden="true" />
             <p className="mt-3 text-sm text-slate-700">{error}</p>
-            <a href="/founder/support" className="mt-5 inline-block rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+            <Link href="/founder/support" className="mt-5 inline-block rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
               Open my requests
-            </a>
+            </Link>
           </>
         ) : null}
 
@@ -88,9 +89,9 @@ export function SupportConfirmClient({ token, answer }: Readonly<{ token: string
             <i className="ti ti-loader-2 text-5xl text-indigo-600" aria-hidden="true" />
             <h1 className="mt-2 text-lg font-semibold text-slate-900">This request is already in progress</h1>
             <p className="mt-1 text-sm text-slate-500">{owner} is working on it. You can follow it and reply in iCapOS.</p>
-            <a href="/founder/support" className="mt-5 inline-block rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+            <Link href="/founder/support" className="mt-5 inline-block rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
               Open my requests
-            </a>
+            </Link>
           </>
         ) : null}
 
@@ -152,9 +153,9 @@ export function SupportConfirmClient({ token, answer }: Readonly<{ token: string
             <i className="ti ti-heart-handshake text-5xl text-indigo-600" aria-hidden="true" />
             <h1 className="mt-2 text-lg font-semibold text-slate-900">Thank you</h1>
             <p className="mt-1 text-sm text-slate-500">We&apos;ve got it. You can follow your request any time in iCapOS.</p>
-            <a href="/founder/support" className="mt-5 inline-block rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+            <Link href="/founder/support" className="mt-5 inline-block rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
               Open my requests
-            </a>
+            </Link>
           </>
         ) : null}
       </div>

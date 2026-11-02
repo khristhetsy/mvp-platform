@@ -13,7 +13,7 @@ async function networkTotal(): Promise<number | null> {
   if (totalCache && Date.now() - totalCache.at < TOTAL_TTL_MS) return totalCache.n;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = createServiceRoleClient() as any;
-  const { count, error } = await db.from("crm_contacts").select("id", { count: "exact", head: true }).or("contact_type.eq.investor,module.eq.investor");
+  const { count, error } = await db.from("crm_contacts").select("id", { count: "exact", head: true }).eq("module", "investor");
   if (error || typeof count !== "number") return totalCache?.n ?? null;
   totalCache = { at: Date.now(), n: count };
   return count;

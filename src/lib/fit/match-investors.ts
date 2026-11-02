@@ -439,7 +439,7 @@ export async function matchInvestors(answers: FitAnswers, opts: MatchOptions = {
   // One weight table: /fit scores with the same engineWeights the platform matcher uses.
   const [scorables, { count }, cfg] = await Promise.all([
     scorablesForIndustries(answers.industry).catch(() => null),
-    db.from("crm_contacts").select("id", { count: "exact", head: true }).or("contact_type.eq.investor,module.eq.investor"),
+    db.from("crm_contacts").select("id", { count: "exact", head: true }).eq("module", "investor"),
     getInvestorMatchConfig().catch(() => null),
   ]);
   const networkTotal = count ?? 0;

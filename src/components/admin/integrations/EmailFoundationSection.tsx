@@ -19,12 +19,16 @@ export function EmailFoundationSection({ status }: Readonly<{ status: GmailFound
           <StatusBadge label={t("google_not_connected")} status="neutral" />
         )}
         {!status.googleConnected ? (
-          <a
-            href="/api/integrations/google/connect?returnTo=/admin/integrations"
-            className="ml-auto inline-flex items-center rounded-md bg-[#2E78F5] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#1A6CE4]"
-          >
-            Connect Google
-          </a>
+          // GET form: the route redirects to Google's consent screen (full-page nav).
+          <form action="/api/integrations/google/connect" method="get" className="contents">
+            <input type="hidden" name="returnTo" value="/admin/integrations" />
+            <button
+              type="submit"
+              className="ml-auto inline-flex items-center rounded-md bg-[#2E78F5] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#1A6CE4]"
+            >
+              Connect Google
+            </button>
+          </form>
         ) : null}
       </div>
       <p className="mt-3 text-xs text-slate-600">{status.message}</p>

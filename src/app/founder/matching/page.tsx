@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
@@ -116,9 +117,9 @@ export default async function FounderMatchingPage() {
           <div className="mt-4 rounded-xl border border-indigo-200 bg-indigo-50/60 px-4 py-3 text-sm text-slate-700">
             <span className="font-semibold text-slate-900">Free plan:</span> you can see that matches exist — count,
             sector, and fit tier — but investor identities and outreach unlock on{" "}
-            <a href="/billing" className="font-medium text-indigo-700 underline">
+            <Link href="/billing" className="font-medium text-indigo-700 underline">
               Basic
-            </a>
+            </Link>
             .
           </div>
         )}

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { headers } from "next/headers";
 import { AppShell } from "@/components/AppShell";
 import { SubscriptionPlanBadge } from "@/components/SubscriptionPanel";
 import { getCurrentUserProfile } from "@/lib/supabase/auth";
@@ -20,6 +21,8 @@ type FounderAppShellProps = Readonly<{
 
 export async function FounderAppShell({ children, profileName, profileSubtitle }: FounderAppShellProps) {
   const profile = await getCurrentUserProfile();
+  // The iCapOS phone app adds "iCapOSApp" to its browser name. In the app the page shows without the website sidebar and top bar.
+  const embedded = ((await headers()).get("user-agent") ?? "").includes("iCapOSApp");
   let planBadge = null;
   let pastDue: ReturnType<typeof pastDueState> = null;
   let pastDueEndsAt: string | null = null;
@@ -62,6 +65,7 @@ export async function FounderAppShell({ children, profileName, profileSubtitle }
       profileEmail={profile?.email ?? undefined}
       planBadge={planBadge}
       accountSwitcher={<AccountSwitcherServer />}
+      embedded={embedded}
     >
       {/* Always first: the shell is the one place every founder screen passes
           through, so a staff member can never be acting on a founder's behalf
