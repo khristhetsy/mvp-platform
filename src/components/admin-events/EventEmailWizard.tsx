@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { TemplateVisualEditor } from "@/components/marketing/TemplateVisualEditor";
 import { buildEventEmailBlocks, finalizeEventEmailHtml, eventEmailTheme } from "@/lib/event-email/blocks";
@@ -424,7 +425,7 @@ export function EventEmailWizard({
                   <p className="mt-1">It&apos;s in Marketing with the rendered email, audience, and event linkage — ready to review and send.</p>
                 </>
               )}
-              <a href="/admin/marketing/campaigns" className="mt-3 inline-block font-semibold underline">Open in Marketing →</a>
+              <Link href="/admin/marketing/campaigns" className="mt-3 inline-block font-semibold underline">Open in Marketing →</Link>
             </div>
           ) : (
             <div className="mt-4 space-y-4">

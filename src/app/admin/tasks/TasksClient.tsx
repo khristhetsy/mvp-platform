@@ -1088,17 +1088,22 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId, google
           </div>
         </div>
         {!googleConnected && (
-          <a
-            href="/api/integrations/google/connect?returnTo=/admin/tasks"
-            style={{
-              fontSize: 12, padding: "6px 14px", borderRadius: 8,
-              border: `0.5px solid ${GCAL_PURPLE}`, background: GCAL_LIGHT,
-              color: GCAL_PURPLE, textDecoration: "none", flexShrink: 0,
-              fontWeight: 500,
-            }}
-          >
-            Connect Google Calendar
-          </a>
+          // A GET form, not a link: this route redirects to Google's consent
+          // screen, so it needs a full-page navigation rather than <Link>.
+          <form action="/api/integrations/google/connect" method="get" style={{ display: "contents" }}>
+            <input type="hidden" name="returnTo" value="/admin/tasks" />
+            <button
+              type="submit"
+              style={{
+                fontSize: 12, padding: "6px 14px", borderRadius: 8,
+                border: `0.5px solid ${GCAL_PURPLE}`, background: GCAL_LIGHT,
+                color: GCAL_PURPLE, textDecoration: "none", flexShrink: 0,
+                fontWeight: 500, cursor: "pointer",
+              }}
+            >
+              Connect Google Calendar
+            </button>
+          </form>
         )}
         {googleConnected && (
           <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 6, background: "#E1F5EE", color: "#0F6E56", fontWeight: 500, flexShrink: 0 }}>
