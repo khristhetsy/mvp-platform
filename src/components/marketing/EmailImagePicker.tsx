@@ -61,14 +61,6 @@ async function fetchEmailImages(): Promise<EmailImage[]> {
  * or pick an image to insert. `library` mode manages images (copy link, edit, archive);
  * `insert` mode selects one image for the composer.
  */
-/** The library's images; throws with the API's message when the request fails. */
-async function fetchEmailImages(): Promise<EmailImage[]> {
-  const r = await fetch("/api/admin/email-images", { cache: "no-store" });
-  const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(d.error ?? "Could not load the images.");
-  return d.images ?? [];
-}
-
 export function EmailImageLibrary({ mode, selectedId, onSelect }: {
   mode: "library" | "insert";
   selectedId?: string | null;
@@ -93,7 +85,10 @@ export function EmailImageLibrary({ mode, selectedId, onSelect }: {
     setLoading(true);
     setLoadError(null);
     try {
-      setImages(await fetchEmailImages());
+      const r = await fetch("/api/admin/email-images", { cache: "no-store" });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error ?? "Could not load the images.");
+      setImages(d.images ?? []);
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : "Could not load the images.");
     } finally {
