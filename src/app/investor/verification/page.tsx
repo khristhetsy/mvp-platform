@@ -8,6 +8,8 @@ import { InvestorDealsManager, type DealView } from "@/components/investor/Inves
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
 import { getInvestorProfileByProfileId } from "@/lib/investor/profile";
 import { computeKycChecklistState, createKycSignedUrl, listKycDocuments } from "@/lib/investor/kyc";
+import { InvestorStageGatePanel } from "@/components/investor/InvestorStageGatePanel";
+import { loadInvestorGates } from "@/lib/investor-journey/load";
 import { listPriorDeals } from "@/lib/investor/prior-deals";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +24,7 @@ export default async function InvestorVerificationPage() {
     redirect("/investor/dashboard");
   }
 
+  const verifyGate = (await loadInvestorGates(investorProfile)).find((g) => g.key === "verify")!;
   const documents = await listKycDocuments(investorProfile.id);
   const state = computeKycChecklistState(investorProfile.investor_type, documents);
 
@@ -30,7 +33,6 @@ export default async function InvestorVerificationPage() {
     id: d.id,
     companyName: d.company_name,
     stage: d.stage,
-    years: d.years?.length ? d.years : d.year != null ? [d.year] : [],
     amountBands: d.amount_bands ?? [],
     amount: d.amount,
     verified: d.verified,
@@ -70,6 +72,9 @@ export default async function InvestorVerificationPage() {
           description={t("verify_who_you_are_and_that_you_qualify_to_inv")}
         />
         <div className="max-w-2xl">
+          <div className="mb-4">
+            <InvestorStageGatePanel gate={verifyGate} />
+          </div>
           <InvestorKycClient
             kycStatus={investorProfile.kyc_status}
             kycFeedback={investorProfile.kyc_feedback}

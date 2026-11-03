@@ -7,6 +7,9 @@ import { computeInvestorOnboardingProgress, ensureInvestorProfileForUser } from 
 import { requireRole } from "@/lib/supabase/auth";
 import { VocabularyProvider } from "@/lib/vocabulary/provider";
 import { loadVocabularies } from "@/lib/vocabulary/store";
+import { InvestorStageGatePanel } from "@/components/investor/InvestorStageGatePanel";
+import { currentInvestorGate } from "@/lib/investor-journey/gate";
+import { loadInvestorGates } from "@/lib/investor-journey/load";
 import { getInvestorMatchConfig } from "@/lib/settings/platform-settings";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +19,7 @@ export default async function InvestorOnboardingPage() {
   const t = await getTranslations("appPages");
   const investorProfile = await ensureInvestorProfileForUser(profile.id);
   const progress = computeInvestorOnboardingProgress(investorProfile);
+  const currentGate = currentInvestorGate(await loadInvestorGates(investorProfile));
   // Option lists for the pickers, and the engine weights for the points meter.
   const [vocabularies, { engineWeights }] = await Promise.all([loadVocabularies(), getInvestorMatchConfig()]);
 
@@ -40,6 +44,13 @@ export default async function InvestorOnboardingPage() {
       </div>
 
       <InvestorOnboardingProgressCard progress={progress} inPage />
+
+      {/* Stage 1 is done: show the Stage 2 requirements in the same panel the founder journey uses. */}
+      {currentGate.key !== "onboard" ? (
+        <div className="mb-5">
+          <InvestorStageGatePanel gate={currentGate} />
+        </div>
+      ) : null}
 
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
         <VocabularyProvider value={vocabularies}>

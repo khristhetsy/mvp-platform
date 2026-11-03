@@ -1,9 +1,13 @@
 import type { ReactNode } from "react";
-import { InvestorPendingApprovalPanel } from "@/components/InvestorPendingApprovalPanel";
+import { InvestorStageGatePanel } from "@/components/investor/InvestorStageGatePanel";
+import { InvestorStageLockCard } from "@/components/investor/InvestorStageLockCard";
 import { canInvestorPerformSensitiveActions } from "@/lib/investor/access";
 import { loadInvestorWorkspaceContext } from "@/lib/investor/load-investor-workspace";
+import { buildInvestorStageGates, currentInvestorGate, investorLockCopy } from "@/lib/investor-journey/gate";
+import { loadInvestorGates } from "@/lib/investor-journey/load";
 import { requireRole } from "@/lib/supabase/auth";
 
+/** Gates a page behind Stage 3 (approved and verified). Same lock card and requirements panel as the founder gate. */
 export async function InvestorFeatureGate({ children }: Readonly<{ children: ReactNode }>) {
   const profile = await requireRole(["investor"]);
   const { investorProfile } = await loadInvestorWorkspaceContext(profile);
@@ -12,11 +16,15 @@ export async function InvestorFeatureGate({ children }: Readonly<{ children: Rea
     return children;
   }
 
+  const gates = investorProfile
+    ? await loadInvestorGates(investorProfile)
+    : buildInvestorStageGates({ approvalStatus: "draft", kycStatus: "not_started", kycMissingCount: 0, hasCommitment: false });
+  const copy = investorLockCopy({ approvalStatus: investorProfile?.approval_status, kycStatus: investorProfile?.kyc_status });
+
   return (
-    <InvestorPendingApprovalPanel
-      approvalStatus={investorProfile?.approval_status ?? "draft"}
-      adminFeedback={investorProfile?.admin_feedback}
-      kycStatus={investorProfile?.kyc_status ?? "not_started"}
-    />
+    <div className="space-y-5">
+      <InvestorStageLockCard title={copy.title} description={copy.description} />
+      <InvestorStageGatePanel gate={currentInvestorGate(gates)} />
+    </div>
   );
 }
