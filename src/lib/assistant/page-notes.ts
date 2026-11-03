@@ -94,6 +94,11 @@ export const PAGE_NOTES: Record<string, string> = {
   "/investor/learning": "Learning: investor courses.",
   "/investor/analytics": "Analytics: the investor's activity metrics.",
   "/investor/settings": "Settings: account and notification settings.",
+  "/investor/stages/onboarding": "Stage guide for Stage 1 Onboarding: step by step how to complete the investor profile and get approved.",
+  "/investor/stages/verification": "Stage guide for Stage 2 Verification: step by step how to verify identity and accreditation to unlock deal flow.",
+  "/investor/stages/access": "Stage guide for Stage 3 Deals access: step by step how to review matches, save deals, express interest and commit through an SPV.",
+  "/investor/stages/manage": "Stage guide for Stage 4 Manage deals: step by step how to track the portfolio, SPVs and closings, and recent activity.",
+  "/investor/help": "Help and guides: the four stage guides in one place, plus the AI assistant.",
 
   // ── Shared ───────────────────────────────────────────────────────────────
   "/events": "Events: iCFO investor event schedule.",
