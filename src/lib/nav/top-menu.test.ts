@@ -164,10 +164,10 @@ describe("toApps: investor", () => {
   it("gathers stage leaves into section apps", () => {
     expect(apps.map((a) => a.label)).toEqual([
       "Dashboard",
-      "Profile",
-      "Identity & accreditation",
-      "Private Market",
+      "Stage 1 · Onboarding",
+      "Stage 2 · Verification",
       "Stage 3 · Deals access",
+      "Private Market",
       "Stage 4 · Manage deals",
       "Workspace",
       "Communications",

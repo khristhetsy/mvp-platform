@@ -128,6 +128,8 @@ export const NAV_ES: Record<string, string> = {
   "Score wizard": "Asistente de puntuación",
   "Sequences": "Secuencias",
   "Settings": "Configuración",
+  "Stage guide": "Guía de la etapa",
+  "Help & guides": "Ayuda y guías",
   "Sponsors": "Patrocinadores",
   "Stage 0 — Foundation": "Etapa 0 — Fundación",
   "Stage 1 — Seed Round": "Etapa 1 — Ronda semilla",
