@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Check, Lock, Sparkles, ArrowRight } from "lucide-react";
-import type { InvestorStageView } from "@/lib/investor-journey/stages";
+import { lockedStageHint, type InvestorStageView } from "@/lib/investor-journey/stages";
 import type { InvestorStageCoach } from "@/lib/investor-journey/coach";
 
 const DOT = {
@@ -15,6 +15,7 @@ export function InvestorJourneyTracker({
   coach,
 }: Readonly<{ stageView: InvestorStageView; coach: InvestorStageCoach }>) {
   const t = useTranslations("investorCmp");
+  const nextLocked = stageView.stages.find((s) => s.status === "locked");
   return (
     <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex items-center justify-between gap-3">
@@ -45,11 +46,21 @@ export function InvestorJourneyTracker({
               {stage.label}
             </p>
             <p className="mt-0.5 text-[11px] text-slate-400">
-              {stage.status === "current" ? "You're here" : stage.status === "complete" ? "Done" : `Stage ${stage.number}`}
+              {stage.status === "current" ? "You're here" : stage.status === "complete" ? "Done" : `Locked, stage ${stage.number}`}
             </p>
           </li>
         ))}
       </ol>
+
+      {/* Why the locked stages are locked */}
+      {nextLocked ? (
+        <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-[12px] text-slate-500">
+          <Lock className="h-3 w-3 shrink-0" strokeWidth={2} aria-hidden />
+          <span>
+            {nextLocked.label} is locked. {lockedStageHint(nextLocked.key)}
+          </span>
+        </p>
+      ) : null}
 
       {/* Contextual coach — the one next step */}
       <div className="mt-5 flex flex-col gap-3 rounded-xl bg-indigo-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">

@@ -6,13 +6,12 @@ import { useRouter } from "next/navigation";
 import { Plus, Trash2, Upload, Loader2, CheckCircle2, Clock } from "lucide-react";
 import { ListMultiSelect } from "@/components/ui/ListMultiSelect";
 import { useVocabulary } from "@/lib/vocabulary/provider";
-import { DEAL_AMOUNT_BANDS, dealYearOptions } from "@/lib/investor/deal-options";
+import { DEAL_AMOUNT_BANDS } from "@/lib/investor/deal-options";
 
 export type DealView = {
   id: string;
   companyName: string;
   stage: string | null;
-  years: number[];
   amountBands: string[];
   amount: number | null;
   verified: boolean;
@@ -31,9 +30,7 @@ export function InvestorDealsManager({
   // Same list as the investment stage preference on the profile, so the two never drift.
   const stageList = useVocabulary("funding_stage").options;
   const [stages, setStages] = useState<string[]>([]);
-  const [years, setYears] = useState<string[]>([]);
   const [bands, setBands] = useState<string[]>([]);
-  const yearOptions = dealYearOptions().map((y) => ({ value: String(y), label: String(y) }));
   const bandOptions = DEAL_AMOUNT_BANDS.map((b) => ({ value: b, label: b }));
   const [dragId, setDragId] = useState<string | null>(null);
   const [visible, setVisible] = useState(showTrackRecord);
@@ -69,7 +66,6 @@ export function InvestorDealsManager({
           body: JSON.stringify({
             companyName: company.trim(),
             stage: stages.length ? stages.join(", ") : undefined,
-            years: years.map(Number),
             amountBands: bands,
           }),
         }),
@@ -78,7 +74,6 @@ export function InvestorDealsManager({
     if (ok) {
       setCompany("");
       setStages([]);
-      setYears([]);
       setBands([]);
     }
   }
@@ -110,7 +105,6 @@ export function InvestorDealsManager({
                 <p className="text-[12px] text-slate-500">
                   {[
                     d.stage,
-                    d.years.length ? d.years.join(", ") : null,
                     d.amountBands.length ? d.amountBands.join(", ") : d.amount != null ? `$${d.amount.toLocaleString()}` : null,
                   ]
                     .filter(Boolean)
@@ -196,10 +190,6 @@ export function InvestorDealsManager({
               selected={stages}
               onChange={setStages}
             />
-          </div>
-          <div>
-            <p className="mb-1 text-[12px] text-slate-500">Year (select all that apply)</p>
-            <ListMultiSelect ariaLabel="Year" options={yearOptions} selected={years} onChange={setYears} />
           </div>
           <div>
             <p className="mb-1 text-[12px] text-slate-500">Amount (select all that apply)</p>

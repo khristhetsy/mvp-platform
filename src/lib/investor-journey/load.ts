@@ -2,6 +2,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import type { InvestorProfileRecord } from "@/lib/investor/types";
 import { computeKycChecklistState, listKycDocuments } from "@/lib/investor/kyc";
 import { buildInvestorStageView, type InvestorStageView } from "./stages";
+import { buildInvestorStageGates, type InvestorStageGate } from "./gate";
 import { buildInvestorStageCoach, type InvestorStageCoach } from "./coach";
 
 /** True once the investor has any soft-committed or completed SPV participation. */
@@ -52,4 +53,22 @@ export async function loadInvestorJourney(
   });
 
   return { stageView, coach };
+}
+
+/** The per stage gates (checklist for the current stage), built from real account state. */
+export async function loadInvestorGates(profile: InvestorProfileRecord): Promise<InvestorStageGate[]> {
+  const stageView = await loadInvestorStageView(profile);
+  let kycMissingCount = 0;
+  if (stageView.current.key === "verify") {
+    const docs = await listKycDocuments(profile.id);
+    kycMissingCount = computeKycChecklistState(profile.investor_type, docs).missingRequired.length;
+  }
+  return buildInvestorStageGates({
+    approvalStatus: profile.approval_status,
+    kycStatus: profile.kyc_status,
+    kycMissingCount,
+    hasCommitment: stageView.current.key === "manage",
+    adminFeedback: profile.admin_feedback,
+    kycFeedback: profile.kyc_feedback,
+  });
 }

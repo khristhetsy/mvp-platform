@@ -69,6 +69,18 @@ export function deriveInvestorStageKey(input: InvestorStageInput): InvestorStage
   return "access";
 }
 
+/**
+ * Why a locked stage is locked, in one sentence. Mirrors the founder gate
+ * copy: the investor is told what unlocks the stage, not just shown a lock.
+ */
+export function lockedStageHint(stage: InvestorStageKey): string {
+  const prev = INVESTOR_STAGES[investorStageIndex(stage) - 1];
+  if (!prev) return "";
+  const prevLabel = INVESTOR_STAGE_META[prev].label;
+  if (stage === "manage") return `Opens after your first commitment in ${INVESTOR_STAGE_META.access.label}.`;
+  return `Opens after you finish Stage ${INVESTOR_STAGE_META[prev].number}, ${prevLabel}.`;
+}
+
 export type InvestorStageView = {
   current: InvestorStageMeta;
   currentIndex: number;
