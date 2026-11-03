@@ -144,7 +144,10 @@ export function findHeader(cells: string[][]): { columns: string[]; rows: string
 export type DuplicateMode = "fill" | "skip";
 
 /** A row that did not import cleanly, with the file's own cells so it can be downloaded. */
-export type AttentionRow = { reason: "No name" | "Duplicate email" | "No email"; cells: string[] };
+export type AttentionRow = {
+  reason: "No name" | "Not a name" | "No contact details" | "Duplicate email" | "No email";
+  cells: string[];
+};
 
 export type MappedImport = {
   /** Rows ready to import (have a name; email optional). */
@@ -155,6 +158,10 @@ export type MappedImport = {
   attention: AttentionRow[];
   /** Rows with no name at all; they can't be imported. */
   missingName: number;
+  /** Rows whose "name" is a sentence or note, not a person or firm; skipped. */
+  notAName: number;
+  /** Rows with no email, phone or link, so nobody could ever be reached; skipped. */
+  noContact: number;
   /** Ready rows without an email (they import, but can't be emailed). */
   noEmail: number;
   /** Rows dropped because their email is already a contact or repeats in the file. */
@@ -164,6 +171,17 @@ export type MappedImport = {
 };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * True when a cell reads as a sentence or a note, not a person or firm name.
+ * A pitch screening sheet (label in one column, description in the next) was once
+ * imported as 25 contacts this way, so these rows are held back for review.
+ */
+export function looksLikeText(name: string): boolean {
+  const words = name.trim().split(/\s+/).filter(Boolean).length;
+  if (name.length > 80 || words > 7) return true;
+  return words > 3 && /[.?!;]$/.test(name.trim());
+}
 
 export function applyImportMapping(
   rows: string[][],
@@ -178,6 +196,8 @@ export function applyImportMapping(
   const updateRows: CsvImportRow[] = [];
   const attention: AttentionRow[] = [];
   let missingName = 0;
+  let notAName = 0;
+  let noContact = 0;
   let noEmail = 0;
   let duplicates = 0;
   let existing = 0;
@@ -194,6 +214,12 @@ export function applyImportMapping(
     if (!name) {
       missingName += 1;
       attention.push({ reason: "No name", cells: r });
+      continue;
+    }
+
+    if (looksLikeText(name)) {
+      notAName += 1;
+      attention.push({ reason: "Not a name", cells: r });
       continue;
     }
 
@@ -217,6 +243,12 @@ export function applyImportMapping(
       }
       seen.add(email);
     } else {
+      const reachable = [v.phone, v.website, v.linkedin_url, v.twitter_url, v.crunchbase_url].some(Boolean);
+      if (!reachable) {
+        noContact += 1;
+        attention.push({ reason: "No contact details", cells: r });
+        continue;
+      }
       noEmail += 1;
       attention.push({ reason: "No email", cells: r });
     }
@@ -246,7 +278,7 @@ export function applyImportMapping(
     if (isExisting) updateRows.push(row);
   }
 
-  return { rows: out, updateRows, attention, missingName, noEmail, duplicates, existing };
+  return { rows: out, updateRows, attention, missingName, notAName, noContact, noEmail, duplicates, existing };
 }
 
 /** The template founders can download and fill in. */

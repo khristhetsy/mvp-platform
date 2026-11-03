@@ -9,6 +9,7 @@ import { AdminActionHealthProvider } from "@/components/AdminActionHealthProvide
 import { AdminCompanyWorkspace } from "@/components/admin/company-workspace/AdminCompanyWorkspace";
 import { OpenAsFounderControl } from "@/components/admin/OpenAsFounderControl";
 import { AccountManagerControl } from "@/components/admin/AccountManagerControl";
+import { InvestorUploadsPanel } from "@/components/admin/InvestorUploadsPanel";
 import { AppShell } from "@/components/AppShell";
 import { WorkspaceLoadingSkeleton } from "@/components/admin/company-workspace/WorkspaceLoadingSkeleton";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
@@ -138,6 +139,7 @@ async function WorkspaceBody({ companyId, profile }: Readonly<BodyProps>) {
       <FieldDisplayProvider value={surfaceDisplay as Awaited<ReturnType<typeof loadSurfaceDisplay>>}>
         <AccountManagerControl companyId={companyId} canEdit={adminRole === "admin"} />
         <OpenAsFounderControl founderId={workspace.founder?.id ?? null} founderName={workspace.founder?.full_name ?? null} />
+        {serviceRoleConfigured ? <InvestorUploadsPanel companyId={companyId} /> : null}
         <AdminCompanyWorkspace
           data={workspace}
           nextBestActions={companyActions?.actions ?? []}

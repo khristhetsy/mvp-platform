@@ -274,6 +274,31 @@ export function ContactImportDialog({
     } finally {
       setImporting(false);
     }
+    // Keep a staff-visible record of this upload (file, columns, mapping, held back rows).
+    // Best effort: the contacts are already saved, so a failed log never blocks the founder.
+    const cut = (cells: string[]) => cells.map((c) => (c ?? "").slice(0, 300));
+    void fetch("/api/founder/investor-contacts/import-log", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fileName: parsed.fileName,
+        source: parsed.linkedin ? "linkedin" : "csv_import",
+        columns: parsed.columns,
+        mapping,
+        rows: parsed.rows.slice(0, 2000).map(cut),
+        rowsTotal: parsed.rows.length,
+        attention: result.attention
+          .filter((a) => a.reason !== "No email")
+          .slice(0, 2000)
+          .map((a) => ({ reason: a.reason, cells: cut(a.cells) })),
+        counts: {
+          imported: total.imported,
+          updated: total.updated,
+          skipped: result.attention.filter((a) => a.reason !== "No email").length,
+          failed: total.failed,
+        },
+      }),
+    }).catch(() => undefined);
     // Show what was saved. If nothing was saved and the import stopped, stay here with the error.
     if (!stopped || total.imported + total.updated > 0) {
       const fields = [...new Set(mapping.map((t) => SAVED_FIELD[t]).filter((f): f is string => Boolean(f)))];
@@ -458,7 +483,7 @@ export function ContactImportDialog({
               </fieldset>
 
               {result ? (
-                <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
                   {[
                     { n: newRows.length, label: "New contacts", tone: "text-emerald-700" },
                     duplicateMode === "fill"
@@ -466,6 +491,11 @@ export function ContactImportDialog({
                       : { n: result.duplicates, label: "Duplicates, skipped", tone: "text-slate-600" },
                     { n: result.noEmail, label: "No email, saved but cannot be emailed", tone: "text-amber-700" },
                     { n: result.missingName, label: "No name, cannot import", tone: "text-red-700" },
+                    {
+                      n: result.notAName + result.noContact,
+                      label: "Notes, or no way to reach, skipped",
+                      tone: "text-red-700",
+                    },
                   ].map((c) => (
                     <div key={c.label} className="rounded-lg border border-slate-200 px-3 py-2">
                       <div className={`text-xl font-bold ${c.tone}`}>{n(c.n)}</div>

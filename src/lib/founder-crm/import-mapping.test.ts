@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyImportMapping, autoMap, findHeader } from "./import-mapping";
+import { applyImportMapping, autoMap, findHeader, looksLikeText } from "./import-mapping";
 import { parseCsvCells } from "@/lib/contacts/field-mapping";
 
 describe("founder contact import mapping", () => {
@@ -89,13 +89,39 @@ describe("founder contact import mapping", () => {
 
   it("lists the rows that need a look with the file's own cells", () => {
     const rows = [
-      ["Ada Lovelace", ""],
-      ["", "nobody@x.com"],
-      ["Grace Hopper", "grace@navy.mil"],
-      ["Grace H", "grace@navy.mil"],
+      ["Ada Lovelace", "", "+1 415 555 0142"],
+      ["", "nobody@x.com", ""],
+      ["Grace Hopper", "grace@navy.mil", ""],
+      ["Grace H", "grace@navy.mil", ""],
     ];
-    const out = applyImportMapping(rows, ["full_name", "email"]);
+    const out = applyImportMapping(rows, ["full_name", "email", "phone"]);
     expect(out.attention.map((a) => a.reason)).toEqual(["No email", "No name", "Duplicate email"]);
-    expect(out.attention[1].cells).toEqual(["", "nobody@x.com"]);
+    expect(out.attention[1].cells).toEqual(["", "nobody@x.com", ""]);
+  });
+
+  it("holds back sentences and notes that a label and value sheet puts in the name column", () => {
+    const mapping = ["full_name", "firm_name", "email"] as const;
+    const rows = [
+      ["Ed Sim", "Boldstart Ventures", "ed@boldstart.vc"],
+      ["Does OVT present as a venture-scale software company with repeatable IP?", "Critical Investor Question", ""],
+      ["Enterprise AI Workflow Execution Assurance", "Core Category", ""],
+      ["Jane Roe", "Roe Capital", ""],
+    ];
+    const out = applyImportMapping(rows, [...mapping]);
+    expect(looksLikeText("Does OVT present as a venture-scale software company with repeatable IP?")).toBe(true);
+    expect(looksLikeText("Ed Sim")).toBe(false);
+    expect(out.notAName).toBe(1);
+    // Looks like a name but nobody can be reached: held back too.
+    expect(out.noContact).toBe(2);
+    expect(out.rows.map((r) => r.investor_name)).toEqual(["Ed Sim"]);
+    expect(out.attention.map((a) => a.reason)).toEqual(["Not a name", "No contact details", "No contact details"]);
+  });
+
+  it("still saves a no-email row when it has a link to reach the person", () => {
+    const rows = [["Alan Turing", "Bletchley Capital", "", "https://www.linkedin.com/in/alan"]];
+    const out = applyImportMapping(rows, ["full_name", "firm_name", "email", "linkedin_url"]);
+    expect(out.rows).toHaveLength(1);
+    expect(out.noEmail).toBe(1);
+    expect(out.noContact).toBe(0);
   });
 });
