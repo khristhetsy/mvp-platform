@@ -1,6 +1,6 @@
 // GET /auth/mobile-callback?token_hash=...&next=/founder/...
 // Exchanges the one time token from /api/mobile/handoff for a normal website
-// cookie session, then sends the founder to `next`.
+// cookie session, then sends the founder or investor to `next`.
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -15,7 +15,7 @@ export async function GET(req: Request) {
   const origin = host ? `${proto}://${host}` : url.origin;
   const tokenHash = searchParams.get("token_hash");
   const next = searchParams.get("next") ?? "/founder";
-  const allowed = ["/founder", "/upgrade", "/credits", "/billing", "/notifications"].some(
+  const allowed = ["/founder", "/investor", "/upgrade", "/credits", "/billing", "/notifications"].some(
     (pre) => next === pre || next.startsWith(`${pre}/`) || next.startsWith(`${pre}?`),
   );
   const safeNext = allowed && !next.startsWith("//") && !next.includes("\\") ? next : "/founder";
