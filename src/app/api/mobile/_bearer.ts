@@ -11,7 +11,7 @@ import type { Profile } from "@/lib/supabase/types";
 
 // The website's own handlers call supabase.auth.getUser() and getSession() with no argument, which needs a
 // stored session. The phone sends only an access token, so answer those two calls from the token.
-function withTokenAuth<C extends SupabaseClient>(client: C, token: string, user: unknown): C {
+export function withTokenAuth<C extends SupabaseClient>(client: C, token: string, user: unknown): C {
   const auth = new Proxy(client.auth, {
     get(target, prop) {
       if (prop === "getUser") return (jwt?: string) => target.getUser(jwt ?? token);
