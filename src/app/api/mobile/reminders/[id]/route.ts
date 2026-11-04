@@ -3,13 +3,13 @@
 import { NextResponse } from "next/server";
 import { DELETE as siteDelete, PATCH as sitePatch } from "@/app/api/reminders/[id]/route";
 import { ptWallToIso } from "@/lib/reminders/pt";
-import { asFounder, withJson } from "../../_proxy";
+import { asMember, withJson } from "../../_proxy";
 
 export const dynamic = "force-dynamic";
 type Ctx = { params: Promise<{ id: string }> };
 
 export function PATCH(req: Request, ctx: Ctx) {
-  return asFounder(req, async () => {
+  return asMember(req, async () => {
     const b = (await req.json().catch(() => null)) as Record<string, unknown> | null;
     if (!b) return NextResponse.json({ error: "Send done as true or false." }, { status: 400 });
     const out: Record<string, unknown> = {};
@@ -26,5 +26,5 @@ export function PATCH(req: Request, ctx: Ctx) {
 }
 
 export function DELETE(req: Request, ctx: Ctx) {
-  return asFounder(req, () => siteDelete(req, ctx));
+  return asMember(req, () => siteDelete(req, ctx));
 }

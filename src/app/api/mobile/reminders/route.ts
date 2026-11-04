@@ -1,11 +1,11 @@
-// GET  /api/mobile/reminders           the founder's reminders, grouped Late / Today / Future, with the PT label
+// GET  /api/mobile/reminders           the signed in person's reminders, grouped Late / Today / Future, with the PT label
 // POST /api/mobile/reminders           { title, kind, date: "YYYY-MM-DD", time: "HH:MM" } (PT wall time)
 // Same handlers as the website clock icon (/api/reminders). Authorization: Bearer <supabase access token>.
 import { NextResponse } from "next/server";
 import { GET as siteGet, POST as sitePost } from "@/app/api/reminders/route";
 import { formatReminderDue, ptTimeOf, ptToday, ptWallToIso, reminderGroup } from "@/lib/reminders/pt";
 import type { Reminder } from "@/lib/reminders/types";
-import { asFounder, withJson } from "../_proxy";
+import { asMember, withJson } from "../_proxy";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +27,7 @@ function enrich(r: Reminder, now = new Date()) {
 }
 
 export function GET(req: Request) {
-  return asFounder(req, async () => {
+  return asMember(req, async () => {
     const res = await siteGet();
     if (!res.ok) return res;
     const data = (await res.json()) as { reminders?: Reminder[] };
@@ -37,7 +37,7 @@ export function GET(req: Request) {
 }
 
 export function POST(req: Request) {
-  return asFounder(req, async () => {
+  return asMember(req, async () => {
     const b = (await req.json().catch(() => null)) as { title?: unknown; kind?: unknown; date?: unknown; time?: unknown } | null;
     const dueAt = ptWallToIso(typeof b?.date === "string" && b.date ? b.date : ptToday(), typeof b?.time === "string" && b.time ? b.time : "09:00");
     if (!dueAt) return NextResponse.json({ error: "Pick a date and time." }, { status: 400 });

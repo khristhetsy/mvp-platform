@@ -4,9 +4,18 @@
 import "server-only";
 import { NextResponse } from "next/server";
 import { withBearerFounder } from "./_bearer";
+import { withBearerInvestor } from "./_bearer-investor";
 
 export async function asFounder(req: Request, run: () => Promise<Response>): Promise<Response> {
   const r = await withBearerFounder(req, run);
+  if (!r.ok) return NextResponse.json({ error: "unauthorized" }, { status: r.status });
+  return r.value;
+}
+
+/** Same, for routes both app sides use (reminders, notifications): a founder token runs as founder, an investor token as investor. */
+export async function asMember(req: Request, run: () => Promise<Response>): Promise<Response> {
+  let r = await withBearerFounder(req, run);
+  if (!r.ok && r.status === 403) r = await withBearerInvestor(req, run);
   if (!r.ok) return NextResponse.json({ error: "unauthorized" }, { status: r.status });
   return r.value;
 }
