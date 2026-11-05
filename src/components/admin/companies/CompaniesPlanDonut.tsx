@@ -6,28 +6,38 @@
  */
 export type PlanSliceKey = "paying" | "free" | "pending" | "other";
 
-export type PlanSlice = { key: PlanSliceKey; label: string; count: number; color: string };
+export type PlanSlice<K extends string = PlanSliceKey> = { key: K; label: string; count: number; color: string };
 
 const R = 40;
 const C = 2 * Math.PI * R;
 
-export function CompaniesPlanDonut({
+export function CompaniesPlanDonut<K extends string = PlanSliceKey>({
   slices,
   mrr,
   active,
   onSelect,
+  centerLabel = "MRR",
+  totalLabel = "Founder accounts",
+  noun = "companies",
+  alwaysShowKeys = ["paying", "free", "pending"],
 }: {
-  slices: PlanSlice[];
+  slices: PlanSlice<K>[];
   mrr: string;
-  active: PlanSliceKey | null;
-  onSelect: (key: PlanSliceKey | null) => void;
+  active: K | null;
+  onSelect: (key: K | null) => void;
+  /** Small caption under the centre value. Investors pass "INVESTORS". */
+  centerLabel?: string;
+  totalLabel?: string;
+  noun?: string;
+  /** Slices listed even at zero; the rest only when they have a count. */
+  alwaysShowKeys?: string[];
 }) {
   const total = slices.reduce((s, x) => s + x.count, 0);
-  const shown = slices.filter((s) => s.count > 0 || s.key !== "other");
+  const shown = slices.filter((s) => s.count > 0 || alwaysShowKeys.includes(s.key));
   let offset = 0;
   return (
     <div className="mb-4 flex flex-wrap items-center gap-7 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
-      <svg className="max-sm:mx-auto" width="150" height="150" viewBox="0 0 100 100" role="img" aria-label={`Founder accounts by plan: ${shown.map((s) => `${s.label} ${s.count}`).join(", ")}. MRR ${mrr}.`}>
+      <svg className="max-sm:mx-auto" width="150" height="150" viewBox="0 0 100 100" role="img" aria-label={`${totalLabel}: ${shown.map((s) => `${s.label} ${s.count}`).join(", ")}. ${centerLabel} ${mrr}.`}>
         <circle cx="50" cy="50" r={R} fill="none" stroke="#E2E8F0" strokeWidth="12" />
         {total > 0 &&
           slices.map((s) => {
@@ -55,7 +65,7 @@ export function CompaniesPlanDonut({
             return el;
           })}
         <text x="50" y="49" textAnchor="middle" style={{ fontSize: 14, fontWeight: 600, fill: "#0f172a" }}>{mrr}</text>
-        <text x="50" y="61" textAnchor="middle" style={{ fontSize: 7, fill: "#64748b" }}>MRR</text>
+        <text x="50" y="61" textAnchor="middle" style={{ fontSize: 7, fill: "#64748b" }}>{centerLabel}</text>
       </svg>
 
       <div className="flex min-w-[220px] flex-col gap-1 text-sm max-sm:w-full max-sm:min-w-0">
@@ -80,7 +90,7 @@ export function CompaniesPlanDonut({
         })}
         <div className="mt-1 grid grid-cols-[10px_1fr_auto] items-center gap-x-3 border-t border-slate-100 px-2 pt-1.5">
           <span />
-          <span className="text-slate-500">Founder accounts</span>
+          <span className="text-slate-500">{totalLabel}</span>
           <span className="text-right font-semibold tabular-nums text-slate-900">{total}</span>
         </div>
       </div>
@@ -93,8 +103,8 @@ export function CompaniesPlanDonut({
           </>
         ) : (
           <>
-            <span className="max-sm:hidden">Hover a slice to see its count. Click a slice to filter the table to those companies.</span>
-            <span className="hidden max-sm:inline">Tap a slice to filter the table to those companies.</span>
+            <span className="max-sm:hidden">Hover a slice to see its count. Click a slice to filter the table to those {noun}.</span>
+            <span className="hidden max-sm:inline">Tap a slice to filter the table to those {noun}.</span>
           </>
         )}
       </p>
