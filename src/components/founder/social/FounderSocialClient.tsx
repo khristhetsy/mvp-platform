@@ -9,6 +9,7 @@ import { FOUNDER_SOCIAL_DISCLAIMER, NETWORKS, TEMPLATE_KEYS, TEMPLATE_LABELS, ty
 import { SocialPreview } from "@/components/founder/social/SocialPreview";
 import { FounderSocialGuide } from "@/components/founder/social/FounderSocialGuide";
 import { AlertsPanel, GoalsPanel, ScheduleBoard, SeriesList } from "@/components/founder/social/FounderSocialExtras";
+import { MultiDatePicker } from "@/components/founder/social/MultiDatePicker";
 
 type Tab = "overview" | "campaigns" | "compose" | "schedule" | "library" | "attribution" | "settings";
 const TABS: { key: Tab; label: string }[] = [
@@ -78,6 +79,8 @@ export function FounderSocialClient({ initialUsage, companyName, founderName, in
   const [funnels, setFunnels] = useState<CampaignFunnel[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [guideOpen, setGuideOpen] = useState(false);
+  // Set when Compose schedules posts: the ids that existed before, so Schedule can mark the new ones.
+  const [justScheduled, setJustScheduled] = useState<{ count: number; before: string[] } | null>(null);
   const [intros, setIntros] = useState(0);
   const [introsOther, setIntrosOther] = useState(0);
   const [introsByTag, setIntrosByTag] = useState<Record<string, number>>({});
@@ -134,10 +137,10 @@ export function FounderSocialClient({ initialUsage, companyName, founderName, in
             <AlertsPanel />
           </div>
         )}
-        {tab === "compose" && <Compose usage={usage} accounts={accounts} campaigns={campaigns} companyName={companyName} founderName={founderName} initialDraft={initialDraft} onSaved={reload} goSettings={() => setTab("settings")} />}
+        {tab === "compose" && <Compose usage={usage} accounts={accounts} campaigns={campaigns} companyName={companyName} founderName={founderName} initialDraft={initialDraft} onSaved={reload} goSettings={() => setTab("settings")} onScheduled={(count) => { setJustScheduled({ count, before: posts.map((p) => p.id) }); setTab("schedule"); }} />}
         {tab === "schedule" && (
           <div>
-            <ScheduleBoard posts={posts} onChange={reload} />
+            <ScheduleBoard posts={posts} onChange={reload} notice={justScheduled} onDismissNotice={() => setJustScheduled(null)} />
             <SeriesList />
           </div>
         )}
@@ -292,8 +295,8 @@ function Campaigns({ campaigns, funnels, onChange }: { campaigns: Campaign[]; fu
 
 // ───────────────────────────── Compose ─────────────────────────────
 
-function Compose({ usage, accounts, campaigns, companyName, founderName, initialDraft, onSaved, goSettings }: {
-  usage: SocialUsage; accounts: Account[]; campaigns: Campaign[]; companyName: string | null; founderName: string; initialDraft: string; onSaved: () => Promise<void>; goSettings: () => void;
+function Compose({ usage, accounts, campaigns, companyName, founderName, initialDraft, onSaved, goSettings, onScheduled }: {
+  usage: SocialUsage; accounts: Account[]; campaigns: Campaign[]; companyName: string | null; founderName: string; initialDraft: string; onSaved: () => Promise<void>; goSettings: () => void; onScheduled: (count: number) => void;
 }) {
   // Opens with a short starter draft built from the founder's own profile. Edits are kept on this
   // device as you type, so leaving and coming back never loses them. Nothing is posted or saved to
@@ -309,7 +312,10 @@ function Compose({ usage, accounts, campaigns, companyName, founderName, initial
   // Agent link: the founder's live IR agent, posted as the first comment with its tracked link.
   const [agentLinks, setAgentLinks] = useState<Record<string, string> | null | undefined>(undefined);
   const [agentOn, setAgentOn] = useState(true);
-  const [when, setWhen] = useState("");
+  // One or more days (PT) and one time of day. A single repeating post uses the first day.
+  const [dates, setDates] = useState<string[]>([]);
+  const [time, setTime] = useState("08:15");
+  const when = dates[0] ? `${dates[0]}T${time || "08:15"}` : "";
   const [repeat, setRepeat] = useState<"none" | "daily" | "weekly" | "monthly">("none");
   const [repeatCount, setRepeatCount] = useState("8");
   const [emailed, setEmailed] = useState(false);
@@ -380,10 +386,13 @@ function Compose({ usage, accounts, campaigns, companyName, founderName, initial
     setMsg(null);
     if (!body.trim()) { setMsg({ ok: false, text: "Write something first." }); return; }
     if (chosen.length === 0) { setMsg({ ok: false, text: "Pick at least one connected account. Connect one in Settings." }); return; }
-    let scheduledAt: string | null = null;
+    const scheduledAts: string[] = [];
     if (mode === "schedule") {
-      scheduledAt = ptLocalToIso(when);
-      if (!scheduledAt) { setMsg({ ok: false, text: "Pick a date and time (Pacific time)." }); return; }
+      for (const d of dates) {
+        const at = ptLocalToIso(`${d}T${time || "08:15"}`);
+        if (at) scheduledAts.push(at);
+      }
+      if (scheduledAts.length === 0 || scheduledAts.length !== dates.length) { setMsg({ ok: false, text: "Pick at least one date and a time (Pacific time)." }); return; }
     }
     setBusy(true);
     // Per network rewrite (never identical copy across accounts), then one post that counts once.
@@ -408,19 +417,36 @@ function Compose({ usage, accounts, campaigns, companyName, founderName, initial
       if (!rr.ok) { setMsg({ ok: false, text: rr.data.error ?? "Could not create the repeating post." }); return; }
       setMsg({ ok: true, text: "Repeating post created. Each post counts toward your monthly limit when it is added, and any past the limit wait as drafts until it resets." });
       setBody("");
+      setDates([]);
+      onScheduled(Math.max(2, Math.min(52, Number(repeatCount) || 8)));
       await onSaved();
       return;
     }
-    const r = await api<{ usage?: SocialUsage }>("/api/founder/social/posts", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mode, scheduledAt, campaignId: campaignId || null, linkUrl: effectiveLink || null, comment: effectiveComment, variants }),
-    });
+    // One post per picked day. Anything else saves a single post.
+    const targets: (string | null)[] = mode === "schedule" ? scheduledAts : [null];
+    let made = 0;
+    for (const scheduledAt of targets) {
+      const r = await api<{ usage?: SocialUsage }>("/api/founder/social/posts", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode, scheduledAt, campaignId: campaignId || null, linkUrl: effectiveLink || null, comment: effectiveComment, variants }),
+      });
+      if (!r.ok) {
+        setBusy(false);
+        const limit = r.status === 403 && r.data.code === "limit_reached";
+        if (limit) { if (r.data.usage) setLocal(r.data.usage); setDialog(true); }
+        if (made > 0) {
+          setMsg({ ok: true, text: `Scheduled ${made} of ${targets.length}. ${limit ? "You reached your monthly limit." : r.data.error ?? "The rest could not be saved."}` });
+          setBody(""); setDates([]); onScheduled(made); await onSaved();
+        } else if (!limit) setMsg({ ok: false, text: r.data.error ?? "Could not save." });
+        return;
+      }
+      made += 1;
+    }
     setBusy(false);
-    if (r.status === 403 && r.data.code === "limit_reached") { if (r.data.usage) setLocal(r.data.usage); setDialog(true); return; }
-    if (!r.ok) { setMsg({ ok: false, text: r.data.error ?? "Could not save." }); return; }
     setMsg({ ok: true, text: mode === "draft" ? "Draft saved." : mode === "hold" ? `Saved. We will remind you on ${pt(local.resetAt, false)}.` : mode === "now" ? "Queued. It publishes within 5 minutes." : "Scheduled." });
     setDialog(false);
     if (mode !== "draft") setBody("");
+    if (mode === "schedule") { setDates([]); onScheduled(made); }
     await onSaved();
   }
 
@@ -545,9 +571,10 @@ function Compose({ usage, accounts, campaigns, companyName, founderName, initial
               {campaigns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </label>
-          <label className="text-xs text-slate-500 sm:col-span-2">Date and time (PT)
-            <input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-900" />
-          </label>
+          <div className="text-xs text-slate-500 sm:col-span-2">Dates and time (PT)
+            <MultiDatePicker dates={dates} onDates={setDates} time={time} onTime={setTime} />
+            {repeat !== "none" && dates.length > 1 && <p className="mt-1">A repeating post starts on the first date you picked, {dates[0]}.</p>}
+          </div>
           <label className="text-xs text-slate-500">Repeat
             <select value={repeat} onChange={(e) => setRepeat(e.target.value as typeof repeat)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-900">
               <option value="none">Does not repeat</option>

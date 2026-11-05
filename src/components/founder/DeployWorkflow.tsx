@@ -447,9 +447,6 @@ export function DeployWorkflow({
               >
                 <t.Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden="true" />
                 {t.label}
-                {t.going !== undefined ? (
-                  <span className={`h-2 w-2 rounded-full ${t.going ? "bg-emerald-500" : "bg-amber-500"}`} aria-hidden="true" />
-                ) : null}
                 {active ? <span className="absolute inset-x-2 bottom-0 h-0.5 rounded bg-indigo-600" /> : null}
               </button>
             );
