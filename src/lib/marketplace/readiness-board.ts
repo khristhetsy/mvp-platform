@@ -35,6 +35,11 @@ const BAND_DEFS: ReadonlyArray<{
   { key: "building", label: "Building", range: "Under 40", test: (s) => s < 40 },
 ];
 
+/** Band for one score, using the same cut points as the board. */
+export function bandKeyForScore(score: number): ReadinessBandKey {
+  return BAND_DEFS.find((d) => d.test(score))?.key ?? "building";
+}
+
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
 export function buildReadinessBoard(scores: ReadonlyArray<number>): ReadinessBoard {

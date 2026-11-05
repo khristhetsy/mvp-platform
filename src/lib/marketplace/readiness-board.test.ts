@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildReadinessBoard, latestScorePerCompany } from "./readiness-board";
+import { bandKeyForScore, buildReadinessBoard, latestScorePerCompany } from "./readiness-board";
 
 describe("buildReadinessBoard", () => {
   it("returns an empty board for no scores", () => {
@@ -39,5 +39,15 @@ describe("latestScorePerCompany", () => {
 
   it("drops companies whose newest score is null", () => {
     expect(latestScorePerCompany([{ company_id: "a", created_at: "2026-01-01", score: null }])).toEqual([]);
+  });
+});
+
+describe("bandKeyForScore", () => {
+  it("uses the board cut points", () => {
+    expect(bandKeyForScore(84)).toBe("strong");
+    expect(bandKeyForScore(70)).toBe("strong");
+    expect(bandKeyForScore(69.9)).toBe("moderate");
+    expect(bandKeyForScore(40)).toBe("moderate");
+    expect(bandKeyForScore(39.9)).toBe("building");
   });
 });
