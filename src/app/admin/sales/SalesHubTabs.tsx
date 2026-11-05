@@ -15,6 +15,7 @@ export const SALES_HUB_TABS: { label: string; href: string }[] = [
   { label: "Scheduled emails", href: "/admin/sales/scheduled-emails" },
   { label: "Forecast", href: "/admin/sales/forecast" },
   { label: "Analytics", href: "/admin/sales/analytics" },
+  { label: "Task report", href: "/admin/sales/task-report" },
   { label: "Settings", href: "/admin/sales/settings" },
 ];
 
