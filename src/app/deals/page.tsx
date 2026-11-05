@@ -1,16 +1,15 @@
 import Link from "next/link";
-import { Gauge, Star, LayoutGrid, ArrowRight, TrendingUp, Coins } from "lucide-react";
+import { Gauge, Star, LayoutGrid, ArrowRight } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { ComplianceBlock } from "@/components/ComplianceBlock";
 import { MarketingFooter } from "@/components/MarketingFooter";
-import type { TickerItem } from "@/components/marketing/MarketingLiveTicker";
-import { MarketingMarketPreview } from "@/components/marketing/MarketingMarketPreview";
 import { MarketingMarketplacePlaceholder } from "@/components/marketing/MarketingMarketplacePlaceholder";
-import { DealsMarketBoard } from "@/components/marketing/DealsMarketBoard";
+import { FounderReadinessBoard, FounderStatsCard } from "@/components/marketing/FounderReadinessBoard";
 import { MarketClocks } from "@/components/marketing/MarketClocks";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { LiveDealsBoard } from "@/components/marketing/LiveDealsBoard";
 import { listMarketplaceListings } from "@/lib/data/marketplace";
+import { getReadinessBoard } from "@/lib/data/readiness-board";
 import { toLiveBoardRow } from "@/lib/marketplace/live-board";
 import { filterPublicMarketplaceListings } from "@/lib/marketplace/public-listings";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -35,31 +34,10 @@ const TWO_SIDED = [
   { icon: LayoutGrid, title: "Activity in the open", copy: "Indicated interest, reviews, and score moves are visible — so both sides see a market that's genuinely alive.", color: "bg-[var(--blue-muted)] text-[var(--blue)]" },
 ];
 
-const DEAL_TICKER: TickerItem[] = [
-  { Icon: Coins, tone: "teal", label: "AI vision deal", detail: "+$500K indicated", when: "2d" },
-  { Icon: TrendingUp, tone: "teal", label: "Healthtech deal", detail: "84 readiness", when: "3d" },
-  { Icon: Star, tone: "indigo", label: "Top-quartile investor", detail: "reviewed a deal", when: "4d" },
-  { Icon: TrendingUp, tone: "amber", label: "AI deal", detail: "72% indicated", when: "5d" },
-  { Icon: Coins, tone: "teal", label: "Climate deal", detail: "+$300K indicated", when: "6d" },
-];
-
-const TICKER_TONE: Record<string, string> = {
-  teal: "bg-[var(--teal-muted)] text-[var(--teal)]",
-  indigo: "bg-[var(--indigo-soft)] text-[var(--indigo)]",
-  blue: "bg-[var(--blue-muted)] text-[var(--blue)]",
-  amber: "bg-amber-50 text-amber-600",
-};
-
-const MARKET_STATS = [
-  { v: "$4.2M", l: "indicated · 30d", tone: "text-[var(--teal)]" },
-  { v: "42", l: "active investors", tone: "text-[var(--navy)]" },
-  { v: "23", l: "diligence-ready", tone: "text-[var(--navy)]" },
-  { v: "76.8", l: "avg readiness", tone: "text-[var(--indigo)]" },
-];
-
 export default async function DealsPage() {
   const t = await getTranslations("appPages");
   const supabase = createServiceRoleClient();
+  const board = await getReadinessBoard();
   let listings: Awaited<ReturnType<typeof listMarketplaceListings>> = [];
 
   try {
@@ -99,69 +77,17 @@ export default async function DealsPage() {
               </Link>
             </div>
           </div>
-          <MarketingMarketPreview />
+          {board ? <FounderStatsCard board={board} /> : null}
         </div>
       </section>
 
-      {/* Illustrative deal activity + market preview */}
+      {/* Founder readiness (real data) */}
       <section className="border-t border-slate-200/80 bg-slate-50/60 px-4 py-12 lg:px-8">
         <div className="mx-auto max-w-5xl">
           <div className="mb-5">
             <MarketClocks />
           </div>
-          {/* Ticker + stats + board — one connected card */}
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[var(--shadow-card)]">
-            {/* ticker = connected top strip */}
-            <div className="cap-marquee-host relative flex h-11 items-center overflow-hidden border-b border-slate-200" role="group" aria-label="Sample marketplace activity">
-              <ul className="sr-only">
-                {DEAL_TICKER.map((e, i) => (
-                  <li key={`sr-${e.label}-${i}`}>
-                    {e.label}{e.detail ? `, ${e.detail}` : ""} — {e.when}
-                  </li>
-                ))}
-              </ul>
-              <span className="z-10 flex h-full items-center gap-2 border-r border-slate-200 bg-white px-4 font-mono text-[10.5px] uppercase tracking-[0.1em] text-[var(--teal)]">
-                <span className="cap-ping inline-block h-1.5 w-1.5 rounded-full bg-[var(--teal)] text-[var(--teal)]" />
-                Sample
-              </span>
-              <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-white to-transparent" aria-hidden />
-              <div className="cap-marquee flex w-max items-center whitespace-nowrap" aria-hidden="true">
-                {[...DEAL_TICKER, ...DEAL_TICKER].map((e, i) => {
-                  const Icon = e.Icon;
-                  return (
-                    <span key={`${e.label}-${i}`} className="flex h-5 items-center gap-2 border-r border-slate-200 px-5 text-[12.5px] text-slate-600">
-                      <span className={`flex h-[18px] w-[18px] items-center justify-center rounded-md ${TICKER_TONE[e.tone]}`}>
-                        <Icon className="h-3 w-3" strokeWidth={2} />
-                      </span>
-                      <span className="font-mono text-[12px] font-semibold text-[var(--navy)]">{e.label}</span>
-                      {e.detail ? <span className="font-mono text-[11px] text-slate-500">{e.detail}</span> : null}
-                      <span className="font-mono text-[10px] text-slate-400">{e.when}</span>
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* stats */}
-            <div className="grid grid-cols-2 border-b border-slate-200 sm:grid-cols-4">
-              {MARKET_STATS.map((s, i) => (
-                <div
-                  key={s.l}
-                  className={`border-slate-200 px-5 py-5 text-center ${i < MARKET_STATS.length - 1 ? "sm:border-r" : ""} ${i % 2 === 0 ? "border-r" : ""} ${i < 2 ? "border-b sm:border-b-0" : ""}`}
-                >
-                  <div className={`font-mono text-[23px] font-semibold ${s.tone}`}>{s.v}</div>
-                  <div className="mt-1.5 font-mono text-[10px] text-slate-400">{s.l}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* board */}
-            <DealsMarketBoard title={t("diligence_ready_deals")} />
-          </div>
-
-          <p className="mt-3 text-center font-mono text-[10px] text-slate-400">
-            Illustrative preview — sample figures, not live platform data.
-          </p>
+          {board && board.scoredFounders > 0 ? <FounderReadinessBoard board={board} /> : null}
         </div>
       </section>
 
