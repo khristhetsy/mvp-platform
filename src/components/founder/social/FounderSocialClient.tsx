@@ -13,14 +13,17 @@ import { MultiDatePicker } from "@/components/founder/social/MultiDatePicker";
 
 type Tab = "overview" | "campaigns" | "compose" | "schedule" | "library" | "attribution" | "settings";
 const TABS: { key: Tab; label: string }[] = [
-  { key: "overview", label: "Overview" },
-  { key: "campaigns", label: "Campaigns and goals" },
   { key: "compose", label: "Compose" },
   { key: "schedule", label: "Schedule" },
+  { key: "overview", label: "Overview" },
+  { key: "campaigns", label: "Campaigns and goals" },
   { key: "library", label: "Library" },
   { key: "attribution", label: "Attribution" },
   { key: "settings", label: "Settings" },
 ];
+// The first three stay on the bar. The rest sit under More to keep the page simple.
+const PRIMARY_TABS = TABS.slice(0, 3);
+const MORE_TABS = TABS.slice(3);
 
 type Account = { id: string; platform: string; displayName: string | null; status: string };
 type Campaign = { id: string; name: string; source_tag: string };
@@ -72,13 +75,15 @@ async function api<T>(url: string, init?: RequestInit): Promise<{ ok: boolean; s
 }
 
 export function FounderSocialClient({ initialUsage, companyName, founderName, initialDraft, initialTab }: { initialUsage: SocialUsage; companyName: string | null; founderName: string; initialDraft: string; initialTab: string | null }) {
-  const [tab, setTab] = useState<Tab>(TABS.some((t) => t.key === initialTab) ? (initialTab as Tab) : "overview");
+  const [tab, setTab] = useState<Tab>(TABS.some((t) => t.key === initialTab) ? (initialTab as Tab) : "compose");
   const [usage, setUsage] = useState<SocialUsage>(initialUsage);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [funnels, setFunnels] = useState<CampaignFunnel[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [guideOpen, setGuideOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
   // Set when Compose schedules posts: the ids that existed before, so Schedule can mark the new ones.
   const [justScheduled, setJustScheduled] = useState<{ count: number; before: string[] } | null>(null);
   const [intros, setIntros] = useState(0);
@@ -100,6 +105,15 @@ export function FounderSocialClient({ initialUsage, companyName, founderName, in
 
   // Deferred a tick so state is never set synchronously inside the effect.
   useEffect(() => { const t = setTimeout(() => void reload(), 0); return () => clearTimeout(t); }, [reload]);
+  // Close the More menu on an outside click or Escape.
+  useEffect(() => {
+    if (!moreOpen) return;
+    const onDown = (e: MouseEvent) => { if (moreRef.current && !moreRef.current.contains(e.target as Node)) setMoreOpen(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setMoreOpen(false); };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
+  }, [moreOpen]);
   // The guide opens once on the first visit, then only from the How to use button.
   useEffect(() => {
     const t = setTimeout(() => {
@@ -119,13 +133,29 @@ export function FounderSocialClient({ initialUsage, companyName, founderName, in
         Compose, schedule and publish to your own connected accounts. The queue runs every 5 minutes, and your tracked link posts as the first comment. All times are Pacific (PT).
       </p>
 
-      <div className="mt-4 flex flex-wrap gap-1 border-b border-slate-200" role="tablist">
-        {TABS.map((t) => (
-          <button key={t.key} type="button" role="tab" aria-selected={tab === t.key} onClick={() => setTab(t.key)}
+      <div className="mt-4 flex flex-wrap items-center gap-1 border-b border-slate-200" role="tablist">
+        {PRIMARY_TABS.map((t) => (
+          <button key={t.key} type="button" role="tab" aria-selected={tab === t.key} onClick={() => { setTab(t.key); setMoreOpen(false); }}
             className={`-mb-px border-b-2 px-3 py-2 text-sm ${tab === t.key ? "border-[#1A6CE4] font-medium text-[#1A6CE4]" : "border-transparent text-slate-500 hover:text-slate-800"}`}>
             {t.label}
           </button>
         ))}
+        <div className="relative" ref={moreRef}>
+          <button type="button" aria-haspopup="menu" aria-expanded={moreOpen} onClick={() => setMoreOpen((o) => !o)}
+            className={`-mb-px border-b-2 px-3 py-2 text-sm ${MORE_TABS.some((t) => t.key === tab) ? "border-[#1A6CE4] font-medium text-[#1A6CE4]" : "border-transparent text-slate-500 hover:text-slate-800"}`}>
+            {MORE_TABS.find((t) => t.key === tab)?.label ?? "More"} <span aria-hidden="true">▾</span>
+          </button>
+          {moreOpen && (
+            <div role="menu" className="absolute left-0 top-full z-20 mt-1 min-w-[12rem] rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+              {MORE_TABS.map((t) => (
+                <button key={t.key} type="button" role="menuitem" onClick={() => { setTab(t.key); setMoreOpen(false); }}
+                  className={`block w-full px-3 py-2 text-left text-sm hover:bg-slate-50 ${tab === t.key ? "font-medium text-[#1A6CE4]" : "text-slate-700"}`}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="mt-4">

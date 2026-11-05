@@ -1229,10 +1229,10 @@ export const HOW_TO_GUIDES: HowToGuideData[] = [
     "steps": [
       {
         "title": "Connect your accounts",
-        "desc": "Open Settings and connect the social accounts you want to post from.",
+        "desc": "Open More, then Settings, and connect the social accounts you want to post from.",
         "tap": {
           "kind": "button",
-          "label": "Settings"
+          "label": "More"
         },
         "then": "Connected accounts list"
       },
@@ -1256,10 +1256,10 @@ export const HOW_TO_GUIDES: HowToGuideData[] = [
       },
       {
         "title": "Track what worked",
-        "desc": "Check Attribution to see which campaigns led to clicks and meetings.",
+        "desc": "Open More, then Attribution, to see which campaigns led to clicks and meetings.",
         "tap": {
           "kind": "button",
-          "label": "Attribution"
+          "label": "More"
         },
         "then": "Campaign results table"
       }
