@@ -233,14 +233,77 @@ export function AlertsPanel() {
 
 export type BoardPost = {
   id: string; title: string | null; body: string; status: string; scheduled_at: string | null; held_until: string | null; archived_at: string | null;
-  variants: { status: string; account: { platform: string } | null }[];
+  variants: { status: string; url?: string | null; published_at?: string | null; account: { platform: string; label?: string | null; display_name?: string | null } | null }[];
 };
 const PLATFORM_LABEL: Record<string, string> = { linkedin: "LinkedIn", facebook: "Facebook", instagram: "Instagram", reddit: "Reddit" };
+const VARIANT_STATUS: Record<string, { label: string; cls: string }> = {
+  queued: { label: "Scheduled", cls: "bg-emerald-50 text-emerald-800" },
+  publishing: { label: "Publishing", cls: "bg-blue-50 text-blue-800" },
+  published: { label: "Published", cls: "bg-blue-50 text-blue-800" },
+  failed: { label: "Failed", cls: "bg-red-50 text-red-800" },
+  skipped: { label: "Skipped", cls: "bg-slate-100 text-slate-600" },
+};
+const GUIDE_HIDDEN_KEY = "founder-social-schedule-guide-hidden";
+const GUIDE_STEPS: { title: string; body: string }[] = [
+  { title: "Pick your dates", body: "In Compose, choose one or more days and a time in PT, then tap Schedule. You land here with a post on every day you chose." },
+  { title: "Check the board", body: "Each post sits on the day it goes out. Drag a post to another day to move it. It keeps its time of day." },
+  { title: "Open a post", body: "Tap a post title to see Posted to: every account, its status, and a link to the live post once it is published." },
+  { title: "Manage repeating posts", body: "Pause, resume or end a repeating series from the list under the board." },
+];
+
+/** What happened to one scheduled post on each account it goes to. */
+function PostedToPopup({ post, onClose }: { post: BoardPost; onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  const title = post.title?.trim() || post.body.split("\n")[0];
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/50 p-4 pt-24" onClick={onClose}>
+      <div role="dialog" aria-modal="true" aria-label="Post details" onClick={(e) => e.stopPropagation()} className="w-full max-w-xl rounded-xl bg-white p-5 shadow-2xl">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="text-base font-semibold text-slate-900">{title}</h3>
+            <p className="mt-0.5 text-xs text-slate-500">{post.scheduled_at ? `Goes out ${ptLabel(post.scheduled_at)} PT` : "Not scheduled"}</p>
+          </div>
+          <button type="button" aria-label="Close" className="text-slate-400 hover:text-slate-700" onClick={onClose}>✕</button>
+        </div>
+        <div className="mt-3 rounded-lg border border-slate-200">
+          <p className="border-b border-slate-100 bg-slate-50 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Posted to</p>
+          {post.variants.length === 0 ? <p className="px-3 py-2 text-sm text-slate-600">No accounts on this post.</p> : post.variants.map((v, i) => {
+            const meta = VARIANT_STATUS[v.status] ?? { label: v.status, cls: "bg-slate-100 text-slate-600" };
+            const net = v.account ? (PLATFORM_LABEL[v.account.platform] ?? v.account.platform) : "";
+            const name = v.account ? (v.account.label || v.account.display_name || net) : "Account";
+            return (
+              <div key={i} className="flex flex-wrap items-center gap-2 border-t border-slate-100 px-3 py-2 first:border-t-0">
+                <span className="min-w-0 flex-1 text-sm text-slate-900">{name}{net && name !== net ? <span className="text-slate-400"> · {net}</span> : null}</span>
+                <span className={`rounded px-2 py-0.5 text-xs font-medium ${meta.cls}`}>{meta.label}{v.status === "published" && v.published_at ? ` ${ptLabel(v.published_at)}` : v.status === "queued" && post.scheduled_at ? ` ${ptLabel(post.scheduled_at)}` : ""}</span>
+                {v.url ? <a href={v.url} target="_blank" rel="noopener noreferrer" className="text-xs text-[#1A6CE4] hover:underline">View on {net}</a> : <span className="text-xs text-slate-500">{v.status === "published" ? "" : "Link after publish"}</span>}
+              </div>
+            );
+          })}
+        </div>
+        <p className="mt-3 whitespace-pre-line text-sm text-slate-700">{post.body}</p>
+        <button type="button" onClick={onClose} className="mt-4 w-full rounded-lg bg-[#1A6CE4] px-3 py-2 text-sm font-medium text-white hover:bg-[#2E78F5]">Close</button>
+      </div>
+    </div>
+  );
+}
+
 function networksOf(p: BoardPost): string {
   return [...new Set(p.variants.map((v) => v.account?.platform).filter((x): x is string => Boolean(x)))].map((x) => PLATFORM_LABEL[x] ?? x).join(", ");
 }
 
-export function ScheduleBoard({ posts, onChange }: { posts: BoardPost[]; onChange: () => Promise<void> }) {
+export function ScheduleBoard({ posts, onChange, notice = null, onDismissNotice }: { posts: BoardPost[]; onChange: () => Promise<void>; notice?: { count: number; before: string[] } | null; onDismissNotice?: () => void }) {
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [guideHidden, setGuideHidden] = useState(false);
+  // The guide stays open until the founder hides it. Read after mount so the first render matches the server.
+  useEffect(() => {
+    const t = setTimeout(() => { try { setGuideHidden(localStorage.getItem(GUIDE_HIDDEN_KEY) === "1"); } catch { /* storage unavailable */ } }, 0);
+    return () => clearTimeout(t);
+  }, []);
+  const toggleGuide = () => setGuideHidden((h) => { try { localStorage.setItem(GUIDE_HIDDEN_KEY, h ? "0" : "1"); } catch { /* storage unavailable */ } return !h; });
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
   const [overDay, setOverDay] = useState<string | null>(null);
@@ -251,6 +314,8 @@ export function ScheduleBoard({ posts, onChange }: { posts: BoardPost[]; onChang
     .filter((p) => !p.archived_at && p.status === "scheduled" && !p.held_until && p.scheduled_at)
     .sort((a, b) => (a.scheduled_at ?? "").localeCompare(b.scheduled_at ?? "")), [posts]);
   const held = useMemo(() => posts.filter((p) => !p.archived_at && p.held_until), [posts]);
+  const newIds = useMemo(() => (notice ? scheduled.filter((p) => !notice.before.includes(p.id)).map((p) => p.id) : []), [notice, scheduled]);
+  const openPost = openId ? posts.find((p) => p.id === openId) ?? null : null;
 
   // Fourteen days starting today, in Pacific time. The clock is read after mount so the first
   // render never depends on the time it happens to run.
@@ -289,7 +354,9 @@ export function ScheduleBoard({ posts, onChange }: { posts: BoardPost[]; onChang
   const item = (p: BoardPost) => (
     <div key={p.id} draggable onDragStart={() => setDragId(p.id)} onDragEnd={() => { setDragId(null); setOverDay(null); }}
       className={`cursor-grab rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs ${dragId === p.id ? "opacity-50" : ""}`}>
-      <div className="truncate font-medium text-slate-900">{label(p)}</div>
+      <button type="button" onClick={() => setOpenId(p.id)} className="block w-full truncate text-left font-medium text-slate-900 hover:text-[#1A6CE4] hover:underline">
+        {newIds.includes(p.id) ? <span className="mr-1 rounded bg-amber-100 px-1 py-0.5 text-[10px] font-semibold text-amber-800">New</span> : null}{label(p)}
+      </button>
       <div className="text-slate-500">{ptLabel(p.scheduled_at)}{networksOf(p) ? ` · ${networksOf(p)}` : ""}</div>
       {moveId === p.id ? (
         <div className="mt-1 flex flex-wrap items-center gap-1">
@@ -305,8 +372,34 @@ export function ScheduleBoard({ posts, onChange }: { posts: BoardPost[]; onChang
 
   return (
     <div className={card}>
-      <h2 className="text-base font-semibold text-slate-900">Schedule</h2>
-      <p className="mt-1 text-xs text-slate-500">Drag a post to another day to reschedule it. It keeps its time of day. All times are Pacific (PT).</p>
+      {notice && (
+        <div role="status" className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2.5">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-emerald-900">Done! {notice.count === 1 ? "Your post is scheduled." : `Your ${notice.count} posts are scheduled.`}</p>
+            <p className="text-xs text-emerald-800">New posts are marked New on the board. Tap one to see where it posts.</p>
+          </div>
+          {newIds.length > 0 && <button type="button" className="rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-800" onClick={() => setOpenId(newIds[0])}>See your posting here</button>}
+          <button type="button" aria-label="Dismiss message" className="text-emerald-800 hover:text-emerald-950" onClick={onDismissNotice}>✕</button>
+        </div>
+      )}
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="text-base font-semibold text-slate-900">Schedule</h2>
+        <button type="button" className={`${btn} ml-auto`} aria-expanded={!guideHidden} onClick={toggleGuide}>{guideHidden ? "Show how to use Schedule" : "Hide how to use Schedule"}</button>
+      </div>
+      {!guideHidden && (
+        <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50/40 p-3">
+          <h3 className="text-sm font-semibold text-blue-900">How to use Schedule</h3>
+          <ol className="mt-2 grid gap-3 sm:grid-cols-2">
+            {GUIDE_STEPS.map((g, i) => (
+              <li key={g.title} className="flex gap-2.5">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#1A6CE4] text-xs font-semibold text-white">{i + 1}</span>
+                <div><div className="text-sm font-semibold text-slate-900">{g.title}</div><p className="text-xs text-slate-600">{g.body}</p></div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+      <p className="mt-3 text-xs text-slate-500">Drag a post to another day to reschedule it. It keeps its time of day. All times are Pacific (PT).</p>
       {scheduled.length === 0 && held.length === 0 ? (
         <p className="mt-3 text-sm text-slate-600">Nothing scheduled. Write a post in Compose and pick a date and time.</p>
       ) : (
@@ -340,6 +433,7 @@ export function ScheduleBoard({ posts, onChange }: { posts: BoardPost[]; onChang
         </div>
       )}
       {msg && <p className={`mt-2 text-xs ${msg.ok ? "text-emerald-700" : "text-red-700"}`}>{msg.text}</p>}
+      {openPost && <PostedToPopup post={openPost} onClose={() => setOpenId(null)} />}
     </div>
   );
 }
