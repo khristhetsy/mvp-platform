@@ -2,12 +2,12 @@
 
 const STEPS: { title: string; body: string }[] = [
   { title: "Open Social media", body: "Open Stage 3 Marketing, then Outreach, then the Social media tab." },
-  { title: "Connect an account", body: "Open Settings and tap Connect next to LinkedIn, Facebook, Instagram or Reddit." },
+  { title: "Connect an account", body: "Open More, then Settings, and tap Connect next to LinkedIn, Facebook, Instagram or Reddit." },
   { title: "Approve access", body: "Sign in on the network, tap Allow, and you come back connected." },
-  { title: "Create a campaign", body: "Open Campaigns and goals, tap New campaign, name it and save." },
+  { title: "Create a campaign", body: "Open More, then Campaigns and goals, tap New campaign, name it and save." },
   { title: "Write with the AI agent", body: "Open Compose, jot a few notes, tap a template, then edit the draft in your own words." },
   { title: "Schedule the post", body: "Pick a date and time in PT, choose the campaign, tap Schedule. The counter shows how many posts you have left." },
-  { title: "Check your results", body: "Overview shows your funnel. Attribution shows which post led to a click and a meeting." },
+  { title: "Check your results", body: "Overview shows your funnel. Under More, Attribution shows which post led to a click and a meeting." },
 ];
 
 export function FounderSocialGuide({ onClose }: { onClose: () => void }) {
