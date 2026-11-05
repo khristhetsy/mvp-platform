@@ -410,6 +410,7 @@ export const workspaceNavIconByHref: Record<string, LucideIcon> = {
   "/admin/profile-fields": TextCursorInput,
   "/admin/scheduled-jobs": Clock,
   "/admin/sales/scheduled-emails": AlarmClock,
+  "/admin/sales/task-report": ListChecks,
   "/admin/ai-usage": Cpu,
 };
 
