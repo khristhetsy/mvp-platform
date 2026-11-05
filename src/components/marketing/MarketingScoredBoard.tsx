@@ -54,6 +54,7 @@ export function MarketingScoredBoard({
   note = "Illustrative",
   bare = false,
   showTrend = false,
+  onSelectRow,
 }: Readonly<{
   title: string;
   meta: string;
@@ -63,6 +64,8 @@ export function MarketingScoredBoard({
   note?: string;
   bare?: boolean;
   showTrend?: boolean;
+  /** When set, each row is a button that calls this with the row (opens a one pager, for example). */
+  onSelectRow?: (row: ScoredBoardRow) => void;
 }>) {
   const t = useTranslations("sharedCmp");
   const cols = showTrend
@@ -93,11 +96,10 @@ export function MarketingScoredBoard({
       </div>
 
       <div>
-        {rows.map((r) => (
-          <div
-            key={r.symbol}
-            className={`grid grid-cols-[1fr_auto] items-center gap-3 border-b border-slate-100 px-5 py-4 transition-colors last:border-b-0 hover:bg-[var(--blue-muted)] sm:grid ${cols}`}
-          >
+        {rows.map((r) => {
+          const rowClass = `grid w-full grid-cols-[1fr_auto] items-center gap-3 border-b border-slate-100 px-5 py-4 text-left transition-colors last:border-b-0 hover:bg-[var(--blue-muted)] sm:grid ${cols}`;
+          const content = (
+          <>
             <div className="flex min-w-0 items-center gap-3">
               <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg font-mono text-[12px] font-semibold ${SIGIL[r.band]}`}>
                 {r.symbol.slice(0, 3)}
@@ -135,8 +137,24 @@ export function MarketingScoredBoard({
                 </span>
               ))}
             </div>
-          </div>
-        ))}
+          </>
+          );
+          return onSelectRow ? (
+            <button
+              key={r.symbol}
+              type="button"
+              className={`${rowClass} focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--blue)]`}
+              aria-label={`Open one pager for ${r.name}`}
+              onClick={() => onSelectRow(r)}
+            >
+              {content}
+            </button>
+          ) : (
+            <div key={r.symbol} className={rowClass}>
+              {content}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
