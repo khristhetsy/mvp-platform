@@ -9,9 +9,9 @@ import { MarketingMarketplacePlaceholder } from "@/components/marketing/Marketin
 import { DealsMarketBoard } from "@/components/marketing/DealsMarketBoard";
 import { MarketClocks } from "@/components/marketing/MarketClocks";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
-import { OpportunityCard } from "@/components/OpportunityCard";
-import { getCompanyPledgeSummaries, emptyCompanyPledgeSummary } from "@/lib/data/investor-pledges";
+import { LiveDealsBoard } from "@/components/marketing/LiveDealsBoard";
 import { listMarketplaceListings } from "@/lib/data/marketplace";
+import { toLiveBoardRow } from "@/lib/marketplace/live-board";
 import { filterPublicMarketplaceListings } from "@/lib/marketplace/public-listings";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
@@ -68,14 +68,6 @@ export default async function DealsPage() {
   } catch {
     listings = [];
   }
-
-  const pledgeSummaries =
-    listings.length > 0
-      ? await getCompanyPledgeSummaries(
-          supabase,
-          listings.map((deal) => deal.id),
-        )
-      : {};
 
   return (
     <MarketingShell>
@@ -185,17 +177,11 @@ export default async function DealsPage() {
               {listings.length} {listings.length === 1 ? "listing" : "listings"} live · admin-approved
             </p>
           </div>
-          <div className="mt-7 grid gap-5 lg:grid-cols-3">
+          <div className="mt-7">
             {listings.length === 0 ? (
               <MarketingMarketplacePlaceholder />
             ) : (
-              listings.map((deal) => (
-                <OpportunityCard
-                  key={deal.id}
-                  deal={deal}
-                  pledgeSummary={pledgeSummaries[deal.id] ?? emptyCompanyPledgeSummary()}
-                />
-              ))
+              <LiveDealsBoard rows={listings.map(toLiveBoardRow)} />
             )}
           </div>
         </div>
