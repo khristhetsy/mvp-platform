@@ -10,7 +10,7 @@ export async function GET(): Promise<Response> {
   const auth = await requireFounderSocial();
   if ("error" in auth) return auth.error;
   const { data, error } = await socialDb().from("social_posts")
-    .select("id, title, body, status, scheduled_at, held_until, archived_at, created_at, campaign:social_campaigns(name), variants:social_variants(status, account:social_accounts(platform))")
+    .select("id, title, body, status, scheduled_at, held_until, archived_at, created_at, campaign:social_campaigns(name), variants:social_variants(status, url, published_at, account:social_accounts(platform, label, display_name))")
     .eq("owner_profile_id", auth.founderId).is("deleted_at", null)
     .order("created_at", { ascending: false }).limit(200);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

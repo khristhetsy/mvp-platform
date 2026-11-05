@@ -19,6 +19,7 @@ import { Finder, type RedditPrefill } from "./Finder";
 import { SiteAuditCard } from "./SiteAuditCard";
 import { fromPlatformInput, toPlatformInput } from "@/lib/time/platform-input";
 import { OdooPager } from "@/components/admin/OdooPager";
+import { MultiDatePicker } from "@/components/founder/social/MultiDatePicker";
 
 const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -59,6 +60,14 @@ function publishedNote(error: string): string {
   return `Note: ${error.replace(/^Published — /, "")}`;
 }
 
+const GUIDE_HIDDEN_KEY = "admin-social-schedule-guide-hidden";
+const GUIDE_STEPS: { title: string; body: string }[] = [
+  { title: "Pick your dates", body: "In Compose, choose one or more days and a time, then tap Schedule. You land here with a post on every day you chose." },
+  { title: "Check the calendar", body: "Switch between Month, Week and List. Days with no posts are flagged in the amber banner, so they are easy to fill." },
+  { title: "Click a post", body: "A popup shows Posted to: every account, its status, and a link to the live post once it is published." },
+  { title: "Manage it", body: "Drag a post to another day, or drag a draft from Unscheduled onto a day. Use the popup to edit, reschedule or preview." },
+];
+
 function statusMeta(status: string): { label: string; cls: string; dot: string } {
   switch (status) {
     case "published": return { label: "Published", cls: "bg-blue-50 text-blue-700", dot: "#2563EB" };
@@ -80,6 +89,8 @@ export function SocialHubClient({ accounts, queue, settings: settings0, slots: s
   const [redditKey, setRedditKey] = useState(0);
   const [tab, setTab] = useState<Tab>(() => (TAB_ORDER as string[]).includes(initialTab ?? "") ? (initialTab as Tab) : "overview");
   const [goalsFocus, setGoalsFocus] = useState<{ campaignId?: string; stage?: string } | null>(null);
+  // Set when Compose schedules posts: the queue ids that existed before, so Schedule can mark the new ones.
+  const [justScheduled, setJustScheduled] = useState<{ count: number; before: string[] } | null>(null);
   const failed24 = queue.filter((q) => q.status === "failed").length;
   const topPostBody = queue.find((q) => q.status === "published" && q.body)?.body ?? null;
   const navigate = (t: string, focus?: { campaignId?: string; stage?: string }) => { if (t === "goals") setGoalsFocus(focus ?? null); setTab(t as Tab); };
@@ -112,10 +123,10 @@ export function SocialHubClient({ accounts, queue, settings: settings0, slots: s
                 </button>
               ))}
             </div>
-            {composeMode === "reddit" ? <RedditReply key={redditKey} prefill={redditPrefill} onPrefillUsed={() => setRedditPrefill(null)} /> : <Composer accounts={accounts} googleReady={googleReady} />}
+            {composeMode === "reddit" ? <RedditReply key={redditKey} prefill={redditPrefill} onPrefillUsed={() => setRedditPrefill(null)} /> : <Composer accounts={accounts} googleReady={googleReady} onScheduled={(count) => { setJustScheduled({ count, before: queue.map((q) => q.id) }); setTab("schedule"); }} />}
           </div>
         ) : null}
-        {tab === "schedule" ? <Schedule queue={queue} accounts={accounts} slots={slots0} googleReady={googleReady} onAddPost={() => setTab("composer")} /> : null}
+        {tab === "schedule" ? <Schedule queue={queue} accounts={accounts} slots={slots0} googleReady={googleReady} onAddPost={() => setTab("composer")} notice={justScheduled} onDismissNotice={() => setJustScheduled(null)} /> : null}
         {tab === "library" ? <Library campaignId={libraryCampaign} publishedSince={librarySince} /> : null}
         {tab === "attribution" ? (
           <div className="space-y-5">
@@ -138,7 +149,7 @@ export function SocialHubClient({ accounts, queue, settings: settings0, slots: s
   );
 }
 
-function Composer({ accounts, googleReady }: { accounts: SocialAccount[]; googleReady: boolean }) {
+function Composer({ accounts, googleReady, onScheduled }: { accounts: SocialAccount[]; googleReady: boolean; onScheduled: (count: number) => void }) {
   const [brief, setBrief] = useState("");
   const [archetype, setArchetype] = useState<Archetype>("proof_case");
   const [department, setDepartment] = useState<string>("Marketing");
@@ -152,7 +163,7 @@ function Composer({ accounts, googleReady }: { accounts: SocialAccount[]; google
   const [imageUrl, setImageUrl] = useState("");
   const [comment, setComment] = useState("");
   const [schedOn, setSchedOn] = useState(true);
-  const [schedDate, setSchedDate] = useState("");
+  const [schedDates, setSchedDates] = useState<string[]>([]);   // one or more days, one post per day
   const [schedTime, setSchedTime] = useState("08:15");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -203,19 +214,27 @@ function Composer({ accounts, googleReady }: { accounts: SocialAccount[]; google
     setMsg(null);
   }
 
-  const scheduledISO = () => (schedOn && schedDate ? (fromPlatformInput(`${schedDate}T${schedTime || "08:15"}`) ?? new Date(`${schedDate}T${schedTime || "08:15"}`)).toISOString() : null);
+  const isoFor = (d: string) => (fromPlatformInput(`${d}T${schedTime || "08:15"}`) ?? new Date(`${d}T${schedTime || "08:15"}`)).toISOString();
 
   async function save(mode: "draft" | "park" | "schedule") {
     if (variants.length === 0) return;
-    const scheduledAt = mode === "schedule" ? scheduledISO() : null;
-    if (mode === "schedule" && !scheduledAt) { setMsg("Pick a date and time to schedule."); return; }
+    // One post per picked day. Anything else saves a single post.
+    const targets: (string | null)[] = mode === "schedule" ? schedDates.map(isoFor) : [null];
+    if (mode === "schedule" && targets.length === 0) { setMsg("Pick at least one date and a time to schedule."); return; }
     setBusy(true); setMsg(null);
+    let made = 0;
+    let last: { queued?: number; parked?: number } = {};
     try {
-      const res = await fetch("/api/admin/social/posts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ brief, archetype, department, campaignId: campaignId || null, linkUrl: linkUrl || null, imageUrl: imageUrl || null, comment: comment || null, approve: mode !== "draft", scheduledAt, variants }) });
-      const j = await res.json();
-      if (!res.ok) { setMsg(j.error ?? "Save failed."); return; }
-      setMsg(mode === "schedule" ? `Scheduled ${j.queued} post(s) — check the Schedule tab.` : mode === "park" ? `Parked ${j.parked} post(s) in the queue.` : "Saved as draft.");
+      for (const scheduledAt of targets) {
+        const res = await fetch("/api/admin/social/posts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ brief, archetype, department, campaignId: campaignId || null, linkUrl: linkUrl || null, imageUrl: imageUrl || null, comment: comment || null, approve: mode !== "draft", scheduledAt, variants }) });
+        const j = await res.json();
+        if (!res.ok) { setMsg(made > 0 ? `Scheduled ${made} of ${targets.length}. ${j.error ?? "The rest could not be saved."}` : j.error ?? "Save failed."); break; }
+        last = j; made += 1;
+      }
+      if (made === 0) return;
+      if (made === targets.length) setMsg(mode === "schedule" ? `Scheduled ${made} post${made === 1 ? "" : "s"}.` : mode === "park" ? `Parked ${last.parked ?? made} post(s) in the queue.` : "Saved as draft.");
       setVariants([]); setBrief("");
+      if (mode === "schedule") { setSchedDates([]); onScheduled(made); }
     } finally { setBusy(false); }
   }
 
@@ -384,10 +403,9 @@ function Composer({ accounts, googleReady }: { accounts: SocialAccount[]; google
                 </span>
                 Schedule
               </button>
-              <input type="date" value={schedDate} disabled={!schedOn} onChange={(e) => setSchedDate(e.target.value)} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-[12.5px] disabled:opacity-40" />
-              <input type="time" value={schedTime} disabled={!schedOn} onChange={(e) => setSchedTime(e.target.value)} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-[12.5px] disabled:opacity-40" />
               {googleReady ? <span className="inline-flex items-center gap-1 text-[11px] text-slate-400"><i className="ti ti-brand-google" aria-hidden="true" /> mirrors to Google Calendar</span> : null}
             </div>
+            {schedOn ? <div className="mt-2"><MultiDatePicker dates={schedDates} onDates={setSchedDates} time={schedTime} onTime={setSchedTime} /></div> : null}
             <p className="mt-1.5 text-[11px] text-slate-400">Toggle off to park the post in the queue without a date — you can schedule it later from the Schedule tab.</p>
           </div>
           </div>
@@ -396,7 +414,7 @@ function Composer({ accounts, googleReady }: { accounts: SocialAccount[]; google
             <button type="button" onClick={() => setShowPreview(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600"><i className="ti ti-eye" aria-hidden="true" /> Preview</button>
             <button type="button" onClick={() => save("draft")} disabled={busy} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 disabled:opacity-50">Save draft</button>
             <button type="button" onClick={() => save("park")} disabled={busy} className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 disabled:opacity-50">Park in Queue</button>
-            <button type="button" onClick={() => save("schedule")} disabled={busy || !schedOn || !schedDate} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">Schedule post</button>
+            <button type="button" onClick={() => save("schedule")} disabled={busy || !schedOn || schedDates.length === 0} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">{schedDates.length > 1 ? `Schedule ${schedDates.length} posts` : "Schedule post"}</button>
           </div>
         </div>
       ) : null}
@@ -443,8 +461,12 @@ const ptYmd = (d: Date) => toPlatformInput(d).slice(0, 10);
 const ptHm = (d: Date) => toPlatformInput(d).slice(11, 16);
 const hhmm = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: { queue: QueueItem[]; accounts: SocialAccount[]; slots: SocialSlot[]; googleReady: boolean; onAddPost: () => void }) {
+function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost, notice = null, onDismissNotice }: { queue: QueueItem[]; accounts: SocialAccount[]; slots: SocialSlot[]; googleReady: boolean; onAddPost: () => void; notice?: { count: number; before: string[] } | null; onDismissNotice?: () => void }) {
   const [queue, setQueue] = useState<QueueItem[]>(initial);
+  const [guideHidden, setGuideHidden] = useState(false);
+  // The guide stays open until it is hidden. Read after mount so the first render matches the server.
+  useEffect(() => { const t = setTimeout(() => { try { setGuideHidden(localStorage.getItem(GUIDE_HIDDEN_KEY) === "1"); } catch { /* storage unavailable */ } }, 0); return () => clearTimeout(t); }, []);
+  const toggleGuide = () => setGuideHidden((h) => { try { localStorage.setItem(GUIDE_HIDDEN_KEY, h ? "0" : "1"); } catch { /* storage unavailable */ } return !h; });
   const [view, setView] = useState<"month" | "week" | "list">("month");
   const [anchor, setAnchor] = useState(() => new Date());
   const [selected, setSelected] = useState<QueueItem | null>(null);
@@ -502,6 +524,7 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
   const shown = acctFilter === "all" ? queue : queue.filter((q) => q.account_id === acctFilter);
   const rail = shown.filter((q) => !itemISO(q));
   const dated = shown.filter((q) => itemISO(q));
+  const newIds = notice ? queue.filter((q) => itemISO(q) && !notice.before.includes(q.id)).map((q) => q.id) : [];
   const publishedOn = (id: string | null) => queue.filter((q) => q.status === "published" && (id === null || q.account_id === id)).length;
 
   const byDay = useMemo(() => {
@@ -530,6 +553,9 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
   async function reload() {
     try { const r = await fetch("/api/admin/social/queue"); if (r.ok) { const nq: QueueItem[] = (await r.json()).queue ?? []; setQueue(nq); setSelected((s) => (s ? nq.find((x) => x.id === s.id) ?? null : null)); } } catch { /* keep */ }
   }
+  // Arriving from Compose: the queue prop is from before the new posts, so fetch it again.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (notice) { const t = setTimeout(() => void reload(), 0); return () => clearTimeout(t); } }, []);
   async function act(id: string, action: string, extra?: Record<string, unknown>) {
     setBusy(true);
     try {
@@ -699,6 +725,36 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
 
   return (
     <div>
+      {notice ? (
+        <div role="status" className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-emerald-300 bg-emerald-50 px-3.5 py-3">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-white"><i className="ti ti-check" aria-hidden="true" /></span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[14px] font-semibold text-emerald-900">Done! {notice.count === 1 ? "Your post is scheduled." : `Your ${notice.count} posts are scheduled.`}</p>
+            <p className="text-[12px] text-emerald-800">New posts are marked NEW on the calendar. Click one to see where it posts.</p>
+          </div>
+          {newIds.length > 0 ? <button type="button" onClick={() => { const q = queue.find((x) => x.id === newIds[0]); if (q) { setSelected(q); setEditing(false); } }} className="rounded-lg bg-emerald-700 px-3.5 py-2 text-[13px] font-medium text-white hover:bg-emerald-800">See your posting here</button> : null}
+          <button type="button" aria-label="Dismiss message" onClick={onDismissNotice} className="px-2 py-1 text-emerald-800 hover:text-emerald-950"><i className="ti ti-x" aria-hidden="true" /></button>
+        </div>
+      ) : null}
+
+      {/* how to use */}
+      <div className="mb-4 rounded-xl border border-indigo-100 bg-indigo-50/40 px-4 py-3">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[13px] font-semibold text-indigo-900">How to use Schedule</p>
+          <button type="button" aria-expanded={!guideHidden} onClick={toggleGuide} className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-[12px] text-slate-600 hover:bg-slate-50">{guideHidden ? "Show guide" : "Hide guide"}</button>
+        </div>
+        {!guideHidden ? (
+          <ol className="mt-3 grid gap-3 md:grid-cols-2">
+            {GUIDE_STEPS.map((g, i) => (
+              <li key={g.title} className="flex gap-2.5">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-[11px] font-semibold text-white">{i + 1}</span>
+                <div><p className="text-[12.5px] font-semibold text-slate-800">{g.title}</p><p className="text-[11.5px] text-slate-600">{g.body}</p></div>
+              </li>
+            ))}
+          </ol>
+        ) : null}
+      </div>
+
       {/* toolbar */}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
@@ -802,7 +858,7 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
                       const iso = itemISO(q)!;
                       return (
                         <div key={q.id} {...dragProps(q)} onClick={() => { setSelected(q); setEditing(false); }} className={`mt-0.5 hidden w-full cursor-pointer rounded border-l-2 px-1 py-0.5 text-left text-[9px] leading-tight md:block ${dragId === q.id ? "opacity-40" : ""}`} style={{ borderColor: q.event_color ?? sm.dot, background: `${q.event_color ?? sm.dot}14` }}>
-                          <span className="font-medium text-slate-700">{hhmm(iso)} {q.recurrence_id ? "↻ " : ""}{titleOf(q).slice(0, 16)}</span><br />
+                          <span className="font-medium text-slate-700">{hhmm(iso)} {newIds.includes(q.id) ? <b className="rounded bg-amber-100 px-0.5 text-amber-800">NEW</b> : null} {q.recurrence_id ? "↻ " : ""}{titleOf(q).slice(0, 16)}</span><br />
                           <span style={{ color: q.event_color ?? sm.dot }}>{q.busy ? "●" : "○"} {sm.label}{!q.busy ? " · free" : ""}</span>
                         </div>
                       );
@@ -847,7 +903,7 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
                       const sm = statusMeta(q.status); const iso = itemISO(q)!;
                       return (
                         <div key={q.id} {...dragProps(q)} onClick={() => { setSelected(q); setEditing(false); }} className={`cursor-pointer rounded border-l-2 px-1.5 py-1 text-[10px] leading-tight ${dragId === q.id ? "opacity-40" : ""}`} style={{ borderColor: q.event_color ?? sm.dot, background: `${q.event_color ?? sm.dot}14` }}>
-                          <span className="font-medium text-slate-700">{hhmm(iso)}</span> {q.recurrence_id ? "↻ " : ""}{titleOf(q).slice(0, 22)}<br />
+                          <span className="font-medium text-slate-700">{hhmm(iso)}</span> {newIds.includes(q.id) ? <b className="rounded bg-amber-100 px-0.5 text-amber-800">NEW</b> : null} {q.recurrence_id ? "↻ " : ""}{titleOf(q).slice(0, 22)}<br />
                           <span style={{ color: q.event_color ?? sm.dot }}>{q.busy ? "●" : "○"} {sm.label}{!q.busy ? " · free" : ""}</span>
                         </div>
                       );
@@ -899,7 +955,9 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
         const pos = order.findIndex((x) => x.id === q.id);
         const go = (d: number) => { if (order.length < 2 || pos < 0) return; setSelected(order[(pos + d + order.length) % order.length]); setEditing(false); };
         return (
-          <div className={`${card} mt-4 p-4`}>
+          <div onClick={() => { setSelected(null); setEditing(false); }} className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-black/40 p-4 pt-16">
+          <div role="dialog" aria-modal="true" aria-label="Post details" onClick={(e) => e.stopPropagation()} className={`${card} relative w-full max-w-2xl p-4 pr-12 shadow-2xl`}>
+            <button type="button" aria-label="Close" onClick={() => { setSelected(null); setEditing(false); }} className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-500 hover:bg-slate-50"><i className="ti ti-x" aria-hidden="true" /></button>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
@@ -1066,8 +1124,9 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost }: {
               </div>
             ) : <p className="mt-3 whitespace-pre-wrap text-[12.5px] leading-relaxed text-slate-600">{q.body}</p>}
           </div>
+          </div>
         );
-      })() : <p className="mt-4 text-center text-[11.5px] text-slate-400">Select a post from the rail or calendar to edit, reschedule, or preview it.</p>}
+      })() : <p className="mt-4 text-center text-[11.5px] text-slate-400">Click a post on the calendar or the rail to see where it posts, edit, reschedule, or preview it.</p>}
 
       {/* status legend */}
       <div className="mt-4 flex flex-wrap gap-4 text-[11px] text-slate-500">
