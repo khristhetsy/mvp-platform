@@ -26,7 +26,7 @@ const REVENUE_STAGES: { value: string; label: string }[] = [
 const INVESTOR_TYPE_OPTS = ["Individual angel", "Angel group / syndicate", "Family office", "Venture fund", "Corporate / strategic", "Other"];
 const CAPITAL_TYPE_OPTS = ["Equity", "SAFE", "Convertible note", "Venture debt", "Revenue-based"];
 const INVESTOR_PREF_OPTS = ["Lead investor", "Follow-on / co-invest", "Hands-on / operator", "Passive", "No preference"];
-const BUSINESS_ENTITY_OPTS = ["Delaware C-Corp", "LLC", "S-Corp", "Public benefit corp", "Not yet incorporated"];
+const BUSINESS_ENTITY_OPTS = ["C-Corp", "LLC", "S-Corp", "Public benefit corp", "Not yet incorporated"];
 const FUNDING_STAGE_OPTS = ["Pre-seed", "Seed", "Series A", "Series B", "Growth", "Other"];
 const OPERATING_STAGE_OPTS = ["Idea", "Building / MVP", "Pre-revenue", "Revenue", "Scaling"];
 

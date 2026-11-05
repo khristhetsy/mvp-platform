@@ -10,6 +10,7 @@ import { VocabularyProvider } from "@/lib/vocabulary/provider";
 import { loadVocabularies } from "@/lib/vocabulary/store";
 import { loadSurfaceDisplay } from "@/lib/profile-fields/display-store";
 import { SettingsSidebarNav } from "./SettingsSidebarNav";
+import { PublicProfileEditor } from "@/components/founder/PublicProfileEditor";
 import { OnePagerPublishCard } from "@/components/founder/OnePagerPublishCard";
 import { FounderProfileTabs } from "@/components/founder/FounderProfileTabs";
 import { TipsPreferenceToggle } from "@/components/tips/TipsPreferenceToggle";
@@ -98,19 +99,23 @@ export default async function FounderSettingsPage() {
               />
             )}
             {company ? (
-              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-                <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-2">
-                  <span className="text-xs font-medium text-slate-500">One pager — exactly what investors see</span>
-                  <Link href="/founder/preview" className="text-xs font-semibold text-indigo-600 hover:text-indigo-700">
-                    Open full page ↗
-                  </Link>
-                </div>
-                <iframe
-                  src="/founder/preview?embed=1"
-                  title="One pager preview"
-                  className="h-[640px] w-full border-0"
-                />
-              </div>
+              <PublicProfileEditor
+                companyId={company.id}
+                initial={{
+                  company_name: company.company_name,
+                  website: company.website ?? null,
+                  country: company.country ?? null,
+                  state: company.state ?? null,
+                  funding_amount: company.funding_amount != null ? String(company.funding_amount) : null,
+                  business_description: company.business_description ?? null,
+                  key_highlights: (company as unknown as Record<string, string | null>).key_highlights ?? null,
+                  team_summary: company.team_summary ?? null,
+                  management_team: (company as unknown as Record<string, string | null>).management_team ?? null,
+                  use_of_funds: company.use_of_funds ?? null,
+                  founder_goals: company.founder_goals ?? null,
+                }}
+                lastSavedAt={(company as unknown as { updated_at?: string | null }).updated_at ?? null}
+              />
             ) : null}
           </div>
         }

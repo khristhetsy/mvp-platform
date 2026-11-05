@@ -81,7 +81,7 @@ export const OPERATING_STAGE_OPTIONS = [
 
 /** 11 — Business entity / incorporation type. */
 export const BUSINESS_ENTITY_OPTIONS = [
-  "Delaware C-Corp",
+  "C-Corp",
   "LLC",
   "S-Corp",
   "Public benefit corp",

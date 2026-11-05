@@ -130,7 +130,7 @@ export const CODE_FALLBACK: Vocabularies = {
     ["global", "Global"],
   ]),
   business_entity: offer([
-    ["delaware-c-corp", "Delaware C-Corp"],
+    ["delaware-c-corp", "C-Corp"],
     ["llc", "LLC"],
     ["s-corp", "S-Corp"],
     ["public-benefit-corp", "Public benefit corp"],
