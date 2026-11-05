@@ -46,7 +46,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const scope = await getSalesScope(profile);
   // Non-admins may only edit contacts they own or are assigned to.
   const update = { ...parsed.data };
-  if (!scope.isManager) {
+  if (!scope.isManager && !scope.canViewTeam) {
     const existing = await getContactProfile(id);
     const c = existing?.contact;
     if (!c || !c.assignee_ids.includes(scope.ownerId ?? "")) return NextResponse.json({ error: "Not found." }, { status: 404 });
@@ -86,7 +86,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const parsed = noteSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "A note is required." }, { status: 400 });
   const scope = await getSalesScope(profile);
-  if (!scope.isManager) {
+  if (!scope.isManager && !scope.canViewTeam) {
     const existing = await getContactProfile(id);
     const c = existing?.contact;
     if (!c || !c.assignee_ids.includes(scope.ownerId ?? "")) return NextResponse.json({ error: "Not found." }, { status: 404 });
@@ -115,7 +115,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const parsed = replaceSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid update." }, { status: 400 });
   const scope = await getSalesScope(profile);
-  if (!scope.isManager) {
+  if (!scope.isManager && !scope.canViewTeam) {
     const existing = await getContactProfile(id);
     const c = existing?.contact;
     if (!c || !c.assignee_ids.includes(scope.ownerId ?? "")) return NextResponse.json({ error: "Not found." }, { status: 404 });
