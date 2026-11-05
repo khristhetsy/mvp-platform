@@ -6,7 +6,8 @@ import { MarketingFooter } from "@/components/MarketingFooter";
 import type { TickerItem } from "@/components/marketing/MarketingLiveTicker";
 import { MarketingMarketPreview } from "@/components/marketing/MarketingMarketPreview";
 import { MarketingMarketplacePlaceholder } from "@/components/marketing/MarketingMarketplacePlaceholder";
-import { MarketingScoredBoard, type ScoredBoardRow } from "@/components/marketing/MarketingScoredBoard";
+import { DealsMarketBoard } from "@/components/marketing/DealsMarketBoard";
+import { MarketClocks } from "@/components/marketing/MarketClocks";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { OpportunityCard } from "@/components/OpportunityCard";
 import { getCompanyPledgeSummaries, emptyCompanyPledgeSummary } from "@/lib/data/investor-pledges";
@@ -54,13 +55,6 @@ const MARKET_STATS = [
   { v: "42", l: "active investors", tone: "text-[var(--navy)]" },
   { v: "23", l: "diligence-ready", tone: "text-[var(--navy)]" },
   { v: "76.8", l: "avg readiness", tone: "text-[var(--indigo)]" },
-];
-
-const DEAL_ROWS: ScoredBoardRow[] = [
-  { symbol: "FOX·EYES", name: "FoxEyes Vision AI", score: 84.0, band: "high", metricMain: "72% indicated", metricSub: "$1.8M / $2.5M", tags: ["AI", "Vision"] },
-  { symbol: "DMND·AI", name: "Diamond AI", score: 80.5, band: "high", metricMain: "60% indicated", metricSub: "$1.2M / $2.0M", tags: ["AI", "Infra"] },
-  { symbol: "HEART·SX", name: "HeartScoreX MRI", score: 76.4, band: "mid", metricMain: "44% indicated", metricSub: "$880K / $2.0M", tags: ["Health"] },
-  { symbol: "VRDE·Ca", name: "Verde Cargo", score: 62.8, band: "low", metricMain: "18% indicated", metricSub: "$270K / $1.5M", tags: ["Climate"] },
 ];
 
 export default async function DealsPage() {
@@ -120,6 +114,9 @@ export default async function DealsPage() {
       {/* Illustrative deal activity + market preview */}
       <section className="border-t border-slate-200/80 bg-slate-50/60 px-4 py-12 lg:px-8">
         <div className="mx-auto max-w-5xl">
+          <div className="mb-5">
+            <MarketClocks />
+          </div>
           {/* Ticker + stats + board — one connected card */}
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[var(--shadow-card)]">
             {/* ticker = connected top strip */}
@@ -167,15 +164,7 @@ export default async function DealsPage() {
             </div>
 
             {/* board */}
-            <MarketingScoredBoard
-              title={t("diligence_ready_deals")}
-              meta="4 deals · ranked by readiness"
-              scoreLabel="Readiness"
-              metricLabel="Indicated"
-              rows={DEAL_ROWS}
-              note="Illustrative"
-              bare
-            />
+            <DealsMarketBoard title={t("diligence_ready_deals")} />
           </div>
 
           <p className="mt-3 text-center font-mono text-[10px] text-slate-400">
