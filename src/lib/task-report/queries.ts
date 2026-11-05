@@ -69,7 +69,7 @@ export async function loadPlanItemStats(): Promise<PlanItemStats> {
 /** Where "Open to view" goes for a task. Sales tasks go to the contact's account. */
 export function taskHref(t: ReportTask): string {
   if (t.source === "sales") {
-    if (t.contactId) return `/admin/sales/contacts/${t.contactId}`;
+    if (t.contactId) return `/admin/sales/contacts/${t.contactId}?tab=tasks`;
     if (t.opportunityId) return `/admin/sales/opportunities/${t.opportunityId}`;
     return "/admin/sales/tasks";
   }
