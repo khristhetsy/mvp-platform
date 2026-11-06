@@ -1,4 +1,5 @@
-import { IcapOSLogo } from "@/components/IcapOSLogo";
+"use client";
+
 import { NseClock } from "@/components/marketing/NseClock";
 import { toSymbol } from "@/lib/investor/private-market";
 import type { MarketBoardData } from "@/lib/data/market-board";
@@ -16,7 +17,7 @@ function Tile({ label, delta, digits = 0 }: Readonly<{ label: string; delta: Del
   return (
     <div className="flex flex-col justify-center gap-0.5 border-r border-slate-200 px-5 py-3">
       <span className="font-[family-name:var(--font-site-archivo)] text-[15px] tracking-wide text-[var(--navy)]">{label}</span>
-      <span className={`font-[family-name:var(--font-site-archivo)] text-4xl font-semibold leading-none ${TONE[dir]}`}>
+      <span className={`font-[family-name:var(--font-site-archivo)] text-3xl font-semibold leading-none sm:text-4xl ${TONE[dir]}`}>
         {delta === null ? "n/a" : digits ? delta.value.toFixed(digits) : delta.value}
       </span>
       {delta ? (
@@ -28,9 +29,9 @@ function Tile({ label, delta, digits = 0 }: Readonly<{ label: string; delta: Del
   );
 }
 
-type BoardRow = { key: string; symbol: string; crr: number | null; change: number | null; pct: number | null };
+type BoardRow = { key: string; id: string; symbol: string; crr: number | null; change: number | null; pct: number | null };
 
-function RowsPanel({ title, rows }: Readonly<{ title: string; rows: BoardRow[] }>) {
+function RowsPanel({ title, rows, onOpen }: Readonly<{ title: string; rows: BoardRow[]; onOpen: (id: string) => void }>) {
   const fill = Math.max(0, ROWS - rows.length);
   return (
     <div className="px-4 py-4">
@@ -44,15 +45,21 @@ function RowsPanel({ title, rows }: Readonly<{ title: string; rows: BoardRow[] }
       {rows.map((r) => {
         const dir = directionOf(r.change ?? 0);
         return (
-          <div key={r.key} className={`grid h-11 grid-cols-[1.35fr_0.8fr_0.8fr_1fr] items-center gap-1.5 font-[family-name:var(--font-site-archivo)] text-xl font-medium ${TONE[dir]}`}>
-            <span>
+          <button
+            key={r.key}
+            type="button"
+            onClick={() => onOpen(r.id)}
+            aria-label={`Open one pager for ${r.symbol}`}
+            className={`-mx-1.5 grid h-11 w-[calc(100%+0.75rem)] grid-cols-[1.35fr_0.8fr_0.8fr_1fr] items-center gap-1.5 rounded px-1.5 text-left font-[family-name:var(--font-site-archivo)] text-xl font-medium transition-colors hover:bg-[var(--blue-muted)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--blue)] ${TONE[dir]}`}
+          >
+            <span className="whitespace-nowrap">
               <i className="mr-1.5 text-sm not-italic">{ARROW[dir]}</i>
               {r.symbol}
             </span>
             <span className="text-right">{r.crr === null ? "n/a" : Math.round(r.crr)}</span>
             <span className="text-right">{r.change === null ? "n/a" : signed(r.change)}</span>
             <span className="text-right">{signedPct(r.pct)}</span>
-          </div>
+          </button>
         );
       })}
       {Array.from({ length: fill }, (_, i) => (
@@ -67,7 +74,7 @@ function RowsPanel({ title, rows }: Readonly<{ title: string; rows: BoardRow[] }
   );
 }
 
-function SectorPanel({ sectors }: Readonly<{ sectors: SectorRow[] }>) {
+function SectorPanel({ sectors, active, onPick }: Readonly<{ sectors: SectorRow[]; active: string | null; onPick: (sector: string) => void }>) {
   return (
     <div className="px-4 py-4">
       <h3 className="mb-2 font-[family-name:var(--font-site-archivo)] text-2xl font-medium text-[var(--navy)]">Sector board</h3>
@@ -84,14 +91,21 @@ function SectorPanel({ sectors }: Readonly<{ sectors: SectorRow[] }>) {
         sectors.slice(0, 8).map((r) => {
           const dir = directionOf(r.change ?? 0);
           return (
-            <div key={r.sector} className={`grid h-8 grid-cols-[1.6fr_0.8fr_0.8fr] items-center gap-1.5 font-[family-name:var(--font-site-archivo)] text-lg font-medium ${TONE[dir]}`}>
+            <button
+              key={r.sector}
+              type="button"
+              onClick={() => onPick(r.sector)}
+              aria-pressed={active?.toLowerCase() === r.sector.toLowerCase()}
+              title={`Show only ${r.sector} companies`}
+              className={`-mx-1.5 grid h-8 w-[calc(100%+0.75rem)] grid-cols-[1.6fr_0.8fr_0.8fr] items-center gap-1.5 rounded px-1.5 text-left font-[family-name:var(--font-site-archivo)] text-lg font-medium transition-colors hover:bg-[var(--blue-muted)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--blue)] ${active?.toLowerCase() === r.sector.toLowerCase() ? "bg-[var(--blue-muted)] outline outline-2 outline-[var(--blue)]" : ""} ${TONE[dir]}`}
+            >
               <span className="truncate uppercase">
                 <i className="mr-1.5 text-sm not-italic">{ARROW[dir]}</i>
                 {r.sector}
               </span>
               <span className="text-right">{r.avg.toFixed(1)}</span>
               <span className="text-right">{r.change === null ? "n/a" : signed(r.change, 1)}</span>
-            </div>
+            </button>
           );
         })
       )}
@@ -162,9 +176,21 @@ function tickerItems(data: MarketBoardData, outreach: Delta): Array<{ label: str
 /**
  * The signed in Private Market board, NSE style: index tiles, top gainers, the
  * weekly candle chart of the platform average CRR, top new company and a ticker.
- * Every number is real; gainers and new companies are listed (opted in) companies only.
+ * Every number is real; the gainers are approved companies.
  */
-export function NseBoard({ data, companies }: Readonly<{ data: MarketBoardData; companies: ListedCompany[] }>) {
+export function NseBoard({
+  data,
+  companies,
+  activeSector,
+  onSector,
+  onOpenCompany,
+}: Readonly<{
+  data: MarketBoardData;
+  companies: ListedCompany[];
+  activeSector: string | null;
+  onSector: (sector: string) => void;
+  onOpenCompany: (id: string) => void;
+}>) {
   const t = data.tiles;
   const outreachPrev = data.outreach.total - data.outreach.change;
   const outreachDelta: Delta = {
@@ -175,7 +201,7 @@ export function NseBoard({ data, companies }: Readonly<{ data: MarketBoardData; 
 
   const asRow = (c: ListedCompany): BoardRow => {
     const ch = data.byCompany[c.id]?.crr ?? null;
-    return { key: c.id, symbol: toSymbol(c.name), crr: c.crr, change: ch?.change ?? null, pct: ch?.pct ?? null };
+    return { key: c.id, id: c.id, symbol: toSymbol(c.name), crr: c.crr, change: ch?.change ?? null, pct: ch?.pct ?? null };
   };
   const gainers = companies
     .filter((c) => (data.byCompany[c.id]?.crr?.change ?? 0) > 0)
@@ -194,32 +220,29 @@ export function NseBoard({ data, companies }: Readonly<{ data: MarketBoardData; 
 
   return (
     <section aria-label="Private Market board" className="overflow-hidden rounded-md border-[6px] border-slate-200 bg-white">
-      <div className="overflow-x-auto">
-        <div className="min-w-[1000px]">
-          <div className="grid grid-cols-[1.1fr_1fr_1.1fr_1fr_1fr_1fr_100px] items-stretch border-b-2 border-[var(--blue)]">
-            <div className="flex items-center border-r border-slate-200 px-5 py-3">
-              <IcapOSLogo height={40} priority />
-            </div>
+      <div>
+        <div>
+          <div className="grid grid-cols-2 items-stretch border-b-2 border-[var(--blue)] lg:grid-cols-[1fr_1fr_1fr_1fr_1.2fr_100px]">
             <Tile label="AVG CRR" delta={t.avgCrr} digits={2} />
             <Tile label="FOUNDERS SCORED" delta={t.founders} />
             <Tile label="STRONG BAND" delta={t.strong} />
             <Tile label="OUTREACH" delta={outreachDelta} />
-            <div className="border-r border-slate-200 px-5 py-3">
+            <div className="col-span-2 border-r border-slate-200 px-5 py-3 lg:col-span-1">
               <NseClock />
             </div>
-            <svg className="m-auto" width="76" height="64" viewBox="0 0 96 76" aria-hidden="true">
+            <svg className="m-auto hidden lg:block" width="76" height="64" viewBox="0 0 96 76" aria-hidden="true">
               {[22, 32, 44, 58].map((h, i) => (
                 <rect key={h} x={4 + i * 20} y={74 - h} width="14" height={h} fill="#0f9d6b" />
               ))}
             </svg>
           </div>
 
-          <div className="grid grid-cols-[1fr_1.45fr_0.95fr] border-b-2 border-[var(--blue)]">
-            <RowsPanel title="Top Gainers" rows={gainers} />
-            <div className="border-x border-slate-200 bg-[#f3f7ff] px-2.5 pb-1 pt-3">
+          <div className="grid grid-cols-1 border-b-2 border-[var(--blue)] md:grid-cols-2 lg:grid-cols-[1fr_1.45fr_0.95fr]">
+            <RowsPanel title="Top Gainers" rows={gainers} onOpen={onOpenCompany} />
+            <div className="border-slate-200 bg-[#f3f7ff] px-2.5 pb-1 pt-3 md:order-3 md:col-span-2 md:border-t lg:order-none lg:col-span-1 lg:border-x lg:border-t-0">
               <CandleChart candles={data.candles} ma={data.movingAverage} />
             </div>
-            <SectorPanel sectors={data.sectors} />
+            <SectorPanel sectors={data.sectors} active={activeSector} onPick={onSector} />
           </div>
 
           <div className="cap-marquee-host overflow-hidden whitespace-nowrap" aria-label="Board ticker">
@@ -250,7 +273,7 @@ export function NseBoard({ data, companies }: Readonly<{ data: MarketBoardData; 
       </div>
       <p className="border-t border-slate-200 px-5 py-3 font-mono text-[11px] leading-relaxed text-slate-600">
         Index tiles and the ticker show the change over the last {t.windowDays} days ({dayMonth(t.from)} to {dayMonth(t.to)}) across all scored
-        founders and all investor outreach on the platform. Top Gainers shows listed companies only, with the CRR change since a company&apos;s first reading. The Sector board
+        founders and all investor outreach on the platform. Top Gainers ranks approved companies by CRR change since their first reading. The Sector board
         averages CRR across all scored companies in a sector, shown once {SECTOR_MIN_COMPANIES} or more share it, with the change over the same {t.windowDays} days. Candles are the weekly open, high, low and close of the average CRR of scored founders (the
         number of founders grows over time), the blue line is a 3 week moving average and the blue bars count score readings per week.
       </p>

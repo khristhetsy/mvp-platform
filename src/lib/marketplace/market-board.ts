@@ -256,3 +256,12 @@ export function sectorBoard(
   }
   return rows.sort((a, b) => b.avg - a.avg || a.sector.localeCompare(b.sector));
 }
+
+/** True when a company's industry field (comma separated sectors) includes the sector, ignoring case. */
+export function companyInSector(industry: string | null | undefined, sector: string | null | undefined): boolean {
+  const want = (sector ?? "").trim().toLowerCase();
+  if (!want) return true;
+  return String(industry ?? "")
+    .split(",")
+    .some((x) => x.trim().toLowerCase() === want);
+}

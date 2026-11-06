@@ -15,6 +15,7 @@ import {
   listingFacets,
   sectorsOf,
   toListedCompany,
+  toApprovedCompany,
   truncateDescription,
   type ListedCompany,
 } from "./private-market";
@@ -99,6 +100,23 @@ describe("toListedCompany", () => {
       72,
     );
     expect(c).toMatchObject({ name: "Acme", location: "CA, US", raising: "Raising $500000", crr: 72, description: "Builds things." });
+  });
+});
+
+describe("toApprovedCompany", () => {
+  const base = {
+    id: "x", company_name: "Acme", industry: "AI", funding_stage: "Seed", state: null, country: null,
+    funding_amount: null, funding_amount_band: "$1m - $10m", business_description: null, revenue_stage: "pre_revenue", mrr: "None",
+    created_at: "2026-10-01T00:00:00Z",
+  };
+  it("flags opted in only when listing checks passed and the founder opted in", () => {
+    expect(toApprovedCompany({ ...base, listing_completed_at: "2026-10-09T00:00:00Z", listing_opt_in_at: "2026-10-10T00:00:00Z" }, 80).optedIn).toBe(true);
+    expect(toApprovedCompany({ ...base, listing_completed_at: "2026-10-09T00:00:00Z", listing_opt_in_at: null }, 80).optedIn).toBe(false);
+    expect(toApprovedCompany({ ...base, listing_completed_at: null, listing_opt_in_at: "2026-10-10T00:00:00Z" }, 80).optedIn).toBe(false);
+  });
+  it("falls back to the created date and keeps traction fields and an unscored CRR", () => {
+    const c = toApprovedCompany({ ...base, listing_completed_at: null, listing_opt_in_at: null }, null);
+    expect(c).toMatchObject({ listedAt: "2026-10-01T00:00:00Z", crr: null, revenueStage: "pre_revenue", mrr: "None", raising: "Raising $1m - $10m" });
   });
 });
 

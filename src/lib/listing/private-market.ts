@@ -29,6 +29,8 @@ export type ListedCompany = {
   /** Traction summary fields shown on the signed in board. Optional so other listing surfaces are unaffected. */
   revenueStage?: string | null;
   mrr?: string | null;
+  /** True once the company completed the listing checks and opted in. Set on the approved list only. */
+  optedIn?: boolean;
 };
 
 export type PrivateMarketSort = "crr" | "newest";
@@ -156,6 +158,48 @@ export async function listDiligenceCompleteCompanies(
   const scores = await crrScoresFor(rows.map((r) => r.id));
   return applyPrivateMarketFilter(
     rows.map((r) => toListedCompany(r, scores.get(r.id) ?? null)),
+    filter,
+  );
+}
+
+export type ApprovedRow = Omit<ListingRow, "listing_completed_at"> & {
+  listing_completed_at: string | null;
+  listing_opt_in_at: string | null;
+  created_at: string;
+};
+
+/** Pure: one approved company to the summary investors see, flagged when it also opted in. */
+export function toApprovedCompany(row: ApprovedRow, crr: number | null): ListedCompany {
+  return {
+    ...toListedCompany({ ...row, listing_completed_at: row.listing_completed_at ?? row.created_at }, crr),
+    optedIn: Boolean(row.listing_completed_at && row.listing_opt_in_at),
+  };
+}
+
+const APPROVED_COLUMNS = `${LISTING_COLUMNS}, listing_opt_in_at, created_at`;
+
+/**
+ * Every company approved by iCapOS (review_status approved, not a sample), each
+ * with its listing summary only and a flag for whether it opted in to the
+ * listing. Highest CRR first, unscored last. Same service role and summary
+ * columns rule as listDiligenceCompleteCompanies.
+ */
+export async function listApprovedCompanies(
+  filter: PrivateMarketFilter = {},
+  db: Db = createServiceRoleClient(),
+): Promise<ListedCompany[]> {
+  const { data, error } = await db
+    .from("companies")
+    .select(APPROVED_COLUMNS)
+    .eq("review_status", "approved")
+    .or("is_sample.is.null,is_sample.eq.false")
+    .order("created_at", { ascending: false })
+    .limit(1000);
+  if (error) throw new Error(`Could not load the Private Market companies: ${error.message}`);
+  const rows = (data ?? []) as ApprovedRow[];
+  const scores = await crrScoresFor(rows.map((r) => r.id));
+  return applyPrivateMarketFilter(
+    rows.map((r) => toApprovedCompany(r, scores.get(r.id) ?? null)),
     filter,
   );
 }

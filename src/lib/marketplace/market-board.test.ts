@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   ARROW,
   boardTiles,
+  companyInSector,
   companyChange,
   countInWindow,
   delta,
@@ -142,5 +143,17 @@ describe("sectorBoard", () => {
   it("has null change when the sector was too small a window ago and is empty with no sector reaching 3", () => {
     expect(sectorBoard(ev2, ind, t("2026-09-22T00:00:00Z"), 30)[0].change).toBeNull();
     expect(sectorBoard([ev("a", "2026-09-01T00:00:00Z", 60)], ind, t("2026-09-22T00:00:00Z"))).toEqual([]);
+  });
+});
+
+describe("companyInSector", () => {
+  it("matches any one sector of a multi sector company, ignoring case", () => {
+    expect(companyInSector("Biotechnology/Life Science, Business Services", "business services")).toBe(true);
+    expect(companyInSector("AI / ML", "AI")).toBe(false);
+    expect(companyInSector("Fintech", "FINTECH")).toBe(true);
+  });
+  it("matches everything with no sector and nothing without an industry", () => {
+    expect(companyInSector("Fintech", null)).toBe(true);
+    expect(companyInSector(null, "Fintech")).toBe(false);
   });
 });
