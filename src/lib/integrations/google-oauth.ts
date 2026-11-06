@@ -22,6 +22,17 @@ const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_REVOKE_URL = "https://oauth2.googleapis.com/revoke";
 const GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo";
 
+export const GOOGLE_RECONNECT_REQUIRED = "GOOGLE_RECONNECT_REQUIRED";
+
+/** Google rejected the saved refresh token (invalid_grant): the user must reconnect. */
+export class GoogleReconnectRequiredError extends Error {
+  readonly code = GOOGLE_RECONNECT_REQUIRED;
+  constructor() {
+    super("Your Google connection expired. Reconnect Google to send email.");
+    this.name = "GoogleReconnectRequiredError";
+  }
+}
+
 export type GoogleTokenResponse = {
   access_token: string;
   refresh_token?: string;
@@ -96,6 +107,7 @@ export async function refreshGoogleAccessToken(refreshToken: string) {
   const payload = (await response.json().catch(() => null)) as GoogleTokenResponse & { error?: string };
 
   if (!response.ok || !payload?.access_token) {
+    if (payload?.error === "invalid_grant") throw new GoogleReconnectRequiredError();
     throw new Error(payload?.error ?? "Unable to refresh Google access token.");
   }
 
