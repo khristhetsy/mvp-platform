@@ -34,6 +34,8 @@ const LEAD_STATUSES = ["new", "contacted", "qualified", "paused", "not intereste
 // even when Odoo reports selection options for them. These are free-form by
 // nature (a written note, a referral name, a management-team description).
 const FREE_TEXT_FIELD_LABELS = new Set(["Note", "Request", "Quick notes", "Pitch frame to use", "If other, referred you", "Company Name", "Company name", "Contact preference", "Investor business summary", "Investor short bio", "Investor special skills", "Investor work experience", "Short bio", "Special skills", "Work experience", "Business summary", "Management team"]);
+// Single line text inputs: these never show a pick list built from other contacts' values.
+const PLAIN_TEXT_FIELD_LABELS = new Set(["LinkedIn"]);
 // A value that is a URL (the Social section, a website in Other details) renders as a
 // link rather than a chip. Detected from the value, not the label, so it works for any
 // synced field. Requires an alphabetic TLD so numbers like "1.5" aren't caught.
@@ -1127,7 +1129,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                               freeText={FREE_TEXT_FIELD_LABELS.has(f.label)}
                               single={SINGLE_SELECT_FIELD_LABELS.has(f.label)}
                               derivedFrom={f.derivedFrom}
-                              options={FREE_TEXT_FIELD_LABELS.has(f.label) ? [] : (fieldOptions[f.saveKey] ?? [])}
+                              options={FREE_TEXT_FIELD_LABELS.has(f.label) || PLAIN_TEXT_FIELD_LABELS.has(f.label) ? [] : (fieldOptions[f.saveKey] ?? [])}
                               value={prefEdits[f.saveKey] ?? ""}
                               changed={(prefEdits[f.saveKey] ?? "") !== (prefOrig[f.saveKey] ?? "")}
                               editing={editingKey === f.saveKey}
@@ -1145,7 +1147,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                               freeText={FREE_TEXT_FIELD_LABELS.has(f.label)}
                               single={SINGLE_SELECT_FIELD_LABELS.has(f.label)}
                               derivedFrom={f.derivedFrom}
-                              options={FREE_TEXT_FIELD_LABELS.has(f.label) ? [] : (fieldOptions[f.saveKey] ?? [])}
+                              options={FREE_TEXT_FIELD_LABELS.has(f.label) || PLAIN_TEXT_FIELD_LABELS.has(f.label) ? [] : (fieldOptions[f.saveKey] ?? [])}
                               value={prefEdits[f.saveKey] ?? ""}
                               changed={(prefEdits[f.saveKey] ?? "") !== (prefOrig[f.saveKey] ?? "")}
                               editing={editingKey === f.saveKey}
