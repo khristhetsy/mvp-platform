@@ -158,6 +158,7 @@ import {
   BadgeCheck,
   KeyRound,
   ChartNoAxesColumn,
+  ChartCandlestick,
   type LucideIcon,
 } from "lucide-react";
 
@@ -193,6 +194,7 @@ export const workspaceNavIconByHref: Record<string, LucideIcon> = {
   "/founder/readiness/documents": FileCheck,
   "/founder/readiness/missing": AlertTriangle,
   "/founder/documents": Files,
+  "/private-market": ChartCandlestick, // Private Market board (founder, investor, admin)
   "/founder/private-market": Store,
   "/founder/inbox": MessageSquare, // Communications
   "/founder/messages": MessagesSquare,

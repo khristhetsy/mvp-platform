@@ -19,6 +19,7 @@ const EXEMPT = new Set([
   "/founder/stages/marketing",
   "/founder/stages/closing",
   "/founder/private-market",
+  "/private-market",
 ]);
 
 function collect(items: WorkspaceNavItem[], into: Map<string, number>) {

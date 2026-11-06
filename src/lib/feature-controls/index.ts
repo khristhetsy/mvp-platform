@@ -39,8 +39,8 @@ export const FEATURES: FeatureDef[] = [
 
   // ── Fundraising & market ───────────────────────────────────────────────
   { key: "private_market", label: "Private Market", group: "Fundraising & market", hrefs: {
-    founder: ["/founder/private-market"],
-    investor: ["/investor/opportunities", "/investor/watchlist", "/investor/interest-pipeline", "/investor/deal-room", "/investor/deals", "/investor/spvs", "/investor/portfolio", "/investor/activity"],
+    founder: ["/founder/private-market", "/private-market"],
+    investor: ["/private-market", "/investor/opportunities", "/investor/watchlist", "/investor/interest-pipeline", "/investor/deal-room", "/investor/deals", "/investor/spvs", "/investor/portfolio", "/investor/activity"],
   } },
   { key: "fundraising", label: "Fundraising suite", group: "Fundraising & market", hrefs: {
     founder: ["/founder/investors", "/founder/matching", "/founder/investors/outreach", "/founder/investors/matches", "/founder/deal-room", "/founder/capital-raise", "/founder/spvs"],
