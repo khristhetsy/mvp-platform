@@ -86,6 +86,7 @@ export async function getMarketBoard(listedCompanyIds: string[], db: Db = create
       db
         .from("investor_outreach_recipients")
         .select("campaign_id, sent_at, created_at")
+        .eq("status", "sent")
         .order("created_at", { ascending: true })
         .order("id", { ascending: true })
         .range(from, to),
