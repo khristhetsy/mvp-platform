@@ -1,9 +1,9 @@
-import { MarketClocks } from "@/components/marketing/MarketClocks";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
-import { FounderReadinessBoard, FounderStatsCard } from "@/components/marketing/FounderReadinessBoard";
-import { PrivateMarketListings } from "@/components/marketing/PrivateMarketListings";
-import { getReadinessBoard } from "@/lib/data/readiness-board";
+import { NseBoard } from "@/components/marketing/NseBoard";
+import { PrivateMarketListings, type ListingBoardStats } from "@/components/marketing/PrivateMarketListings";
+import { getMarketBoard, OUTREACH_COMPANY_WINDOW_DAYS } from "@/lib/data/market-board";
 import { listDiligenceCompleteCompanies, type ListedCompany } from "@/lib/listing/private-market";
+import { matchScoresForInvestor } from "@/lib/matching/private-market-match";
 import { requireRole } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
@@ -14,58 +14,54 @@ export const metadata = {
 };
 
 /**
- * Signed in Private Market: the deals board design with the real listed companies.
- * Investors and staff only. The public /deals page keeps aggregates only.
+ * Signed in Private Market: an NSE style board of real platform numbers and the
+ * listed companies. Investors and staff only. The public /deals page keeps
+ * aggregates only; this page never shows non listed companies or documents.
  */
 export default async function PrivateMarketPage() {
-  await requireRole(["investor", "admin", "analyst"]);
+  const profile = await requireRole(["investor", "admin", "analyst"]);
 
-  const board = await getReadinessBoard();
   const companies = await listDiligenceCompleteCompanies().catch((err): ListedCompany[] => {
     console.error("[private-market] listing failed", err);
     return [];
   });
+  const ids = companies.map((c) => c.id);
+  const [board, matches] = await Promise.all([
+    getMarketBoard(ids),
+    profile.role === "investor" ? matchScoresForInvestor(profile.id, ids) : Promise.resolve(new Map<string, number>()),
+  ]);
+
+  const stats: Record<string, ListingBoardStats> = {};
+  for (const c of companies) {
+    const b = board?.byCompany[c.id];
+    stats[c.id] = {
+      crrChange: b?.crr?.change ?? null,
+      firstAt: b?.crr?.firstAt ?? null,
+      outreachTotal: b?.outreachTotal ?? 0,
+      outreachChange: b?.outreachChange ?? 0,
+      match: matches.get(c.id) ?? null,
+    };
+  }
 
   return (
     <MarketingShell>
-      <section
-        className="px-4 py-12 lg:px-8 lg:py-16"
-        style={{ background: "radial-gradient(960px 460px at 75% -10%, var(--blue-muted), transparent 70%)" }}
-      >
-        <div className="mx-auto grid max-w-5xl gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-          <div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-[var(--blue-border)] bg-[var(--blue-muted)] px-3.5 py-1.5 font-mono text-[11.5px] text-[var(--blue)]">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--blue)]" />
-              Signed in · investor view
-            </span>
-            <h1 className="mt-5 max-w-[16ch] text-4xl font-semibold leading-[1.08] tracking-tight text-[var(--navy)] md:text-5xl">
-              The <span className="text-[var(--blue)]">Private Market</span> where readiness meets capital.
-            </h1>
-            <p className="mt-5 max-w-[46ch] text-base leading-7 text-slate-600">
-              Companies that completed diligence and opted in to be listed. You see the listing summary only, never
-              documents. Shown for informational purposes only and not investment recommendations.
-            </p>
-          </div>
-          {board ? <FounderStatsCard board={board} /> : null}
-        </div>
-      </section>
-
-      <section className="border-t border-slate-200/80 bg-slate-50/60 px-4 py-12 lg:px-8">
-        <div className="mx-auto max-w-5xl space-y-5">
-          <MarketClocks />
-          <div className="grid items-start gap-5 lg:grid-cols-[1.4fr_1fr]">
-            {board && board.scoredFounders > 0 ? <FounderReadinessBoard board={board} /> : <div />}
-            <div className="flex flex-col gap-5">
-              <PrivateMarketListings companies={companies} />
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-[var(--shadow-card)]">
-                <h3 className="text-[15px] font-semibold text-[var(--navy)]">Sector board</h3>
-                <p className="mt-1.5 text-[13px] leading-6 text-slate-600">
-                  A sector tile appears once 3 or more scored companies share an industry, so no single company can be
-                  picked out.
-                </p>
-              </div>
+      <section className="px-4 py-8 lg:px-8">
+        <div className="mx-auto max-w-[1360px]">
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="font-mono text-[11px] tracking-[0.16em] text-[var(--blue)]">● SIGNED IN · INVESTOR VIEW</p>
+              <h1 className="mt-1.5 text-3xl font-extrabold leading-tight tracking-tight text-[var(--navy)] md:text-4xl">
+                The <span className="text-[var(--blue)]">Private Market</span>
+              </h1>
+              <p className="mt-1.5 text-sm text-slate-600">
+                Companies that opted in and completed diligence. Click a row for the one pager.
+              </p>
             </div>
+            <span className="font-mono text-[11px] tracking-[0.1em] text-slate-600">{companies.length} LISTED · OPTED IN</span>
           </div>
+
+          {board ? <NseBoard data={board} companies={companies} /> : null}
+          <PrivateMarketListings companies={companies} stats={stats} outreachWindowDays={OUTREACH_COMPANY_WINDOW_DAYS} />
         </div>
       </section>
     </MarketingShell>
