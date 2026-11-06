@@ -182,7 +182,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/outreach-qualification", label: "Outreach Qualification", menuGroup: "Matching", requiredPermission: "manage_matching"  },
           { href: "/admin/portfolio",              label: "Portfolio", menuGroup: "Deals",              requiredPermission: "view_admin_dashboard" },
           { href: "/admin/readiness",              label: "Readiness Scores", menuGroup: "Diligence",       requiredPermission: "manage_companies" },
-          { href: "/admin/marketplace",            label: "Marketplace Review", menuGroup: "Diligence",     requiredPermission: "manage_companies" },
+          { href: "/private-market",               label: "Private Market board", menuGroup: "Diligence",   requiredPermission: "manage_companies" },
           { href: "/admin/partner-scores",         label: "Partner Scores", menuGroup: "Matching",         requiredPermission: "manage_investors"  },
           { href: "/admin/deal-rooms",             label: "Deal Rooms", menuGroup: "Deals",             requiredPermission: "manage_deal_rooms" },
           { href: "/admin/data-room",              label: "Diligence Tracker", menuGroup: "Diligence",      requiredPermission: "manage_companies"  },
@@ -489,6 +489,7 @@ export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
           { href: "/founder/investor-pipeline", label: "Investor CRM", minStage: "deploy" },
           { href: "/founder/events/present", label: "Present at event", minStage: "deploy" },
           { href: "/founder/private-market", label: "Marketplace", minStage: "deploy", requiresRegCf: true },
+          { href: "/private-market", label: "Private Market board", minStage: "deploy", requiresRegCf: true },
         ],
       },
       {
@@ -601,6 +602,7 @@ export const investorWorkspaceNavSections: WorkspaceNavSection[] = [
         children: [
           // Hidden from nav (route still resolves). Restore by uncommenting.
           // { href: "/investor/opportunities", label: "Overview" },
+          { href: "/private-market", label: "Market board" },
           { href: "/investor/watchlist", label: "Watchlist" },
           { href: "/investor/interest-pipeline", label: "Interest Pipeline" },
           { href: "/investor/deal-room", label: "Deal Room" },
