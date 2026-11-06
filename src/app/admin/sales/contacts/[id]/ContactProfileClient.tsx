@@ -9,6 +9,7 @@ import { INVESTOR_PROFILE_LABEL, INVESTOR_PROFILE_OPTIONS, isInvestorProfileLabe
 import { parseMoneyBand } from "@/lib/investors/preference-match";
 import { CompanyLinkedRecordEditor } from "./CompanyLinkedRecordEditor";
 import { NoteLogEntries } from "./NoteLogEntries";
+import { TaskEditRow } from "@/components/sales/TaskEditRow";
 import { ContactTaskViews } from "./ContactTaskViews";
 import { RatingRing } from "@/components/investor-rating/RatingRing";
 import { SalesChatter } from "@/components/sales/SalesChatter";
@@ -440,10 +441,11 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
   const [actionErr, setActionErr] = useState<string | null>(null);
   const [showTask, setShowTask] = useState(false);
   const [task, setTask] = useState({ title: "", taskType: "Call", dueDate: "", assigneeId: "", note: "" });
-  const [contactTasks, setContactTasks] = useState<{ id: string; title: string; task_type: string; due_date: string | null; status: string; assignee_name: string | null; opportunity_id?: string | null }[]>([]);
+  const [contactTasks, setContactTasks] = useState<{ id: string; title: string; task_type: string; due_date: string | null; status: string; assignee_name: string | null; summary?: string | null; assignee_id?: string | null; opportunity_id?: string | null }[]>([]);
   const [tasksLoaded, setTasksLoaded] = useState(false);
   const [taskView, setTaskView] = useState<"all" | "opps" | "pipeline">("all");
   const [confirmTaskId, setConfirmTaskId] = useState<string | null>(null);
+  const [editTaskId, setEditTaskId] = useState<string | null>(null);
   const [savedNotes, setSavedNotes] = useState<string | null>(initialContact.note);
   // Details are edited one field at a time (see Row); these hold the two composite editors.
   const [addrOpen, setAddrOpen] = useState(false);
@@ -1196,8 +1198,8 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
 
                       {taskView === "all" && (
                       <div style={{ marginTop: 12, border: "0.5px solid #eef1f5", borderRadius: 8, overflow: "hidden" }}>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 74px 92px 96px 68px 66px", gap: 8, padding: "8px 12px", background: "#F7F9FC", fontSize: 10, fontWeight: 600, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--muted-foreground)", borderBottom: "0.5px solid #eef1f5" }}>
-                          <span>Task</span><span>Type</span><span>Due</span><span>Assignee</span><span>Status</span><span style={{ textAlign: "right" }}>Actions</span>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 74px 70px 96px minmax(0, 1.1fr) 68px 66px", gap: 8, padding: "8px 12px", background: "#F7F9FC", fontSize: 10, fontWeight: 600, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--muted-foreground)", borderBottom: "0.5px solid #eef1f5" }}>
+                          <span>Task</span><span>Type</span><span>Due</span><span>Assignee</span><span>Note</span><span>Status</span><span style={{ textAlign: "right" }}>Actions</span>
                         </div>
                         {!tasksLoaded ? (
                           <p style={{ padding: 16, textAlign: "center", fontSize: 12, color: "var(--muted-foreground)" }}>Loading…</p>
@@ -1216,16 +1218,21 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                               </div>
                             );
                           }
+                          if (editTaskId === ct.id) {
+                            return <div key={ct.id} id={`contact-task-${ct.id}`} style={{ padding: "4px 12px", borderTop: "0.5px solid #eef1f5" }}><TaskEditRow task={{ id: ct.id, title: ct.title, task_type: ct.task_type, due_date: ct.due_date ? ct.due_date.slice(0, 10) : null, assignee_id: ct.assignee_id ?? null, summary: ct.summary ?? "" }} staff={staff} onCancel={() => setEditTaskId(null)} onSaved={async () => { setEditTaskId(null); await loadContactTasks(); }} /></div>;
+                          }
+                          const canEdit = !ct.id.startsWith("odoo:");
                           return (
-                            <div key={ct.id} id={`contact-task-${ct.id}`} style={{ display: "grid", gridTemplateColumns: "1fr 74px 92px 96px 68px 66px", gap: 8, alignItems: "center", padding: "9px 12px", borderTop: "0.5px solid #eef1f5", fontSize: 12.5, ...(ct.id === focusTaskId ? { background: "#FFF8DB", boxShadow: "inset 3px 0 0 #E0A100" } : {}) }}>
+                            <div key={ct.id} id={`contact-task-${ct.id}`} onClick={canEdit ? () => setEditTaskId(ct.id) : undefined} title={canEdit ? "Open to edit" : undefined} style={{ cursor: canEdit ? "pointer" : "default", display: "grid", gridTemplateColumns: "1fr 74px 70px 96px minmax(0, 1.1fr) 68px 66px", gap: 8, alignItems: "center", padding: "9px 12px", borderTop: "0.5px solid #eef1f5", fontSize: 12.5, ...(ct.id === focusTaskId ? { background: "#FFF8DB", boxShadow: "inset 3px 0 0 #E0A100" } : {}) }}>
                               <span style={{ textDecoration: cdone ? "line-through" : "none", color: cdone ? "var(--muted-foreground)" : "var(--foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ct.title}</span>
                               <span style={{ fontSize: 10.5, color: "#185FA5", background: "#E6F1FB", borderRadius: 8, padding: "2px 8px", justifySelf: "start" }}>{ct.task_type}</span>
                               <span style={{ fontSize: 11.5, color: "var(--muted-foreground)" }}>{ct.due_date ? ct.due_date.slice(5) : "—"}</span>
                               <span style={{ fontSize: 11.5, color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ct.assignee_name ?? "—"}</span>
+                              <span title={ct.summary ?? undefined} style={{ fontSize: 11.5, color: ct.summary ? "var(--foreground)" : "#9CA3AF", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ct.summary?.trim() || "No note"}</span>
                               <span style={{ fontSize: 10.5, borderRadius: 999, padding: "2px 9px", justifySelf: "start", color: cdone ? "#0F6E56" : "#854F0B", background: cdone ? "#E1F5EE" : "#FAEEDA" }}>{cdone ? "Done" : "Open"}</span>
                               <span style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                                {!cdone && <button type="button" onClick={() => taskDone(ct.id)} disabled={busy} style={{ fontSize: 10.5, color: "#0F6E56", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /></button>}
-                                <button type="button" onClick={() => setConfirmTaskId(ct.id)} disabled={busy} style={{ fontSize: 10.5, color: "#A32D2D", background: "none", border: "none", cursor: "pointer" }}>Delete</button>
+                                {!cdone && <button type="button" onClick={(e) => { e.stopPropagation(); void taskDone(ct.id); }} disabled={busy} style={{ fontSize: 10.5, color: "#0F6E56", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /></button>}
+                                <button type="button" onClick={(e) => { e.stopPropagation(); setConfirmTaskId(ct.id); }} disabled={busy} style={{ fontSize: 10.5, color: "#A32D2D", background: "none", border: "none", cursor: "pointer" }}>Delete</button>
                               </span>
                             </div>
                           );
