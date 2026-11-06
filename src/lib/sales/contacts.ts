@@ -26,7 +26,7 @@ const SOURCE_KEY_FOR_LABEL: Record<string, string> = {
 
 export type ContactProfile = {
   id: string; source: string; external_id: string; name: string; email: string | null; company: string | null;
-  phone: string | null; phone2: string | null; website: string | null; lead_status: string | null; lead_source: string | null;
+  phone: string | null; phone2: string | null; email2: string | null; website: string | null; lead_status: string | null; lead_source: string | null;
   tags: string[]; owner: string | null; owner_id: string | null; assignee_ids: string[]; membership: string | null; job_position: string | null;
   street: string | null; street2: string | null; city: string | null; state: string | null; zip: string | null; country: string | null;
   language: string | null; created_on: string | null; note: string | null;
@@ -184,6 +184,7 @@ export async function getContactProfile(id: string): Promise<{ contact: ContactP
     email: c.email ?? null, company: c.company ?? null,
     phone: c.phone ?? pickRaw(raw, ["phone"]) ?? pickRaw(raw, ["mobile"]),
     phone2: pref("phone2", pickRaw(raw, ["mobile", "phone2", "x_studio_phone_2"])),
+    email2: pref("email2", null),
     website: c.website ?? pickRaw(raw, ["website"]),
     lead_status: pref("lead_status", (c.lead_status as string) ?? pickExtra(raw, ["Lead Status"]) ?? pickRaw(raw, ["x_studio_lead_status"]) ?? null),
     lead_source: pref("lead_source", ((raw?.__profile as { leadSource?: unknown } | undefined)?.leadSource as string) ?? pickExtra(raw, ["Lead Source"]) ?? pickRaw(raw, ["x_studio_lead_type"])),
@@ -210,7 +211,7 @@ export async function getContactProfile(id: string): Promise<{ contact: ContactP
 export type ContactPatch = {
   name?: string; lead_status?: string | null; phone?: string | null; email?: string | null; company?: string | null;
   website?: string | null; owner?: string | null; owner_id?: string | null; assignee_ids?: string[] | null; tags?: string[];
-  phone2?: string | null; lead_source?: string | null; membership?: string | null; job_position?: string | null;
+  phone2?: string | null; email2?: string | null; lead_source?: string | null; membership?: string | null; job_position?: string | null;
   language?: string | null; street?: string | null; street2?: string | null; city?: string | null;
   state?: string | null; zip?: string | null; country?: string | null;
   ein?: string | null; operator_licence?: string | null; curp?: string | null; member_portal_plan?: string | null;
@@ -220,7 +221,7 @@ export type ContactPatch = {
 };
 
 // Fields stored in the `overrides` jsonb (Odoo-sourced; no dedicated column).
-const OVERRIDE_KEYS = ["phone2", "lead_source", "membership", "job_position", "language", "street", "street2", "city", "state", "zip", "country", "ein", "operator_licence", "curp", "member_portal_plan"] as const;
+const OVERRIDE_KEYS = ["phone2", "email2", "lead_source", "membership", "job_position", "language", "street", "street2", "city", "state", "zip", "country", "ein", "operator_licence", "curp", "member_portal_plan"] as const;
 
 // Edit user-owned contact fields on the mirror. Odoo-sourced fields go to `overrides` so a
 // re-sync of `raw` won't clobber them; top-level columns are written directly.
