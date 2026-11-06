@@ -80,7 +80,8 @@ export async function getMarketBoard(listedCompanyIds: string[], db: Db = create
     const companyRows = await pageAll<{ id: string; industry: string | null }>((from, to) =>
       db.from("companies").select("id, industry").eq("is_sample", false).order("id", { ascending: true }).range(from, to),
     );
-    const industryByCompany = new Map(companyRows.map((r) => [r.id, r.industry]));
+    const approved = new Set(listedCompanyIds);
+    const industryByCompany = new Map(companyRows.filter((r) => approved.has(r.id)).map((r) => [r.id, r.industry]));
 
     const recipients = await pageAll<{ campaign_id: string; sent_at: string | null; created_at: string }>((from, to) =>
       db

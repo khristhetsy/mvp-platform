@@ -19,7 +19,7 @@ const board: MarketBoardData = {
   tiles: { avgCrr: delta(58), founders: delta(22), strong: delta(12), moderate: delta(3), building: delta(7), windowDays: 7, from: "2026-10-30T00:00:00Z", to: "2026-11-06T00:00:00Z" },
   candles: [{ weekStart: "2026-11-02", open: 50, high: 60, low: 49, close: 58, readings: 4 }],
   movingAverage: [null],
-  sectors: [{ sector: "Fintech", avg: 76.5, change: 0.4 }],
+  sectors: [{ sector: "Fintech", avg: 76.5, change: 0.4, scored: 2, companies: 2 }, { sector: "SaaS", avg: null, change: null, scored: 0, companies: 1 }],
   outreach: { total: 131, change: 17, windowDays: 7 },
   byCompany: {},
 };
@@ -54,6 +54,10 @@ describe("PrivateMarketExperience", () => {
     const noBoard = render(true, false);
     expect(noBoard).not.toContain("Show only Fintech companies");
     expect(noBoard).toContain("Alpha Co");
+  });
+  it("lists sectors without a score as n/a on the sector board", () => {
+    const html = render(true);
+    expect(html).toContain("Show only SaaS companies (0 scored of 1)");
   });
   it("has no TRACTION column and no logo tile on the board", () => {
     const html = render(true);
