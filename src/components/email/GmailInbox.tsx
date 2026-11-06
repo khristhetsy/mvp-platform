@@ -78,6 +78,7 @@ export function GmailInbox() {
   const [needsReadScope, setNeedsReadScope] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [needsReconnect, setNeedsReconnect] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [thread, setThread] = useState<GmailThread | null>(null);
   const [openCardId, setOpenCardId] = useState<string | null>(null);
@@ -390,12 +391,16 @@ export function GmailInbox() {
     if (!hasRecipient || !draft.subject.trim() || !draft.body.trim()) { setError("A recipient (To, Cc, or Bcc), a subject, and a message are required."); return; }
     setSending(true);
     setError(null);
+    setNeedsReconnect(false);
     try {
       const res = await fetch("/api/integrations/google/gmail/send", {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to: draft.to.trim() || undefined, cc: draft.cc?.trim() || undefined, bcc: draft.bcc?.trim() || undefined, subject: draft.subject.trim(), body: draft.body, html: draft.html, attachments: draft.attachments }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Send failed.");
+      if (!res.ok) {
+        if (data.code === "GOOGLE_RECONNECT_REQUIRED") setNeedsReconnect(true);
+        throw new Error(data.error ?? "Send failed.");
+      }
       // Sent successfully — remove the draft from Gmail + our fallback buffer.
       if (draftIdRef.current) { void deleteDraftById(draftIdRef.current); draftIdRef.current = null; }
       clearComposeFallback();
@@ -696,6 +701,7 @@ export function GmailInbox() {
         title={composeContext.mode === "forward" ? "Forward · Gmail" : composeContext.mode === "reply" || composeContext.mode === "replyAll" ? "Reply · Gmail" : "New message · Gmail"}
         sending={sending}
         error={composeOpen ? error : null}
+        reconnectUrl={composeOpen && needsReconnect ? connectUrl : null}
         onSend={(d) => void onSend(d)}
         onSchedule={canSchedule ? onScheduleCompose : undefined}
         onClose={handleComposeClose}

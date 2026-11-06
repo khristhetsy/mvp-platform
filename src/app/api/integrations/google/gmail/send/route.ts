@@ -3,6 +3,7 @@ import { z } from "zod";
 import { sendViaGmail, type GmailAttachment } from "@/lib/integrations/gmail-send";
 import { parseRecipients } from "@/lib/email/send-email";
 import { absolutizeEmailHtml } from "@/lib/email/absolutize-html";
+import { GoogleReconnectRequiredError, GOOGLE_RECONNECT_REQUIRED } from "@/lib/integrations/google-oauth";
 import { getGoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -100,14 +101,15 @@ export async function POST(request: Request) {
   });
 
   if ("error" in result) {
+    if (result.error instanceof GoogleReconnectRequiredError) {
+      return NextResponse.json({ error: result.error.message, code: GOOGLE_RECONNECT_REQUIRED }, { status: 401 });
+    }
     return NextResponse.json({ error: result.error.message }, { status: 500 });
   }
 
   // Record an "Email sent" activity on any recipient that matches a CRM contact
   // (and its open opportunities), so the send shows on their Sales timeline.
-  await logOutboundEmailActivity([...toList, ...ccList, ...bccList], parsed.data.subject, user.id, 25, "gmail", {
-    body: parsed.data.body || parsed.data.html || null, externalId: result.messageId,
-  });
+  await logOutboundEmailActivity([...toList, ...ccList, ...bccList], parsed.data.subject, user.id, 25, "gmail");
 
   return NextResponse.json({ success: true, messageId: result.messageId });
 }

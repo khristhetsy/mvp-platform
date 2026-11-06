@@ -61,6 +61,8 @@ export interface ComposeModalProps {
   title?: string;
   sending?: boolean;
   error?: string | null;
+  /** When set, the error is a lapsed Google connection: show a reconnect banner instead of the red error. */
+  reconnectUrl?: string | null;
   /** When provided, a "Save draft" button appears and dirty-close auto-saves. */
   onSaveDraft?: (draft: ComposeDraft) => void;
   onSend: (draft: ComposeDraft) => void;
@@ -91,6 +93,7 @@ export function ComposeModal({
   title = "New message",
   sending = false,
   error,
+  reconnectUrl,
   onSaveDraft,
   onSend,
   onClose,
@@ -414,7 +417,13 @@ export function ComposeModal({
 
         {/* Body */}
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-4">
-          {error ? <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">{error}</p> : null}
+          {error && reconnectUrl ? (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-900">
+              <p className="text-[13px] font-semibold">Your Google connection expired</p>
+              <p className="mt-0.5">Google stopped trusting the saved sign in for this mailbox. Your draft is safe. Reconnect to send.</p>
+              <a href={reconnectUrl} className="mt-2 inline-flex rounded-lg bg-[#2f6cb0] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#234f86]">Reconnect Google</a>
+            </div>
+          ) : error ? <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">{error}</p> : null}
 
           <div className="flex items-center gap-2">
             <div className="relative w-full">
