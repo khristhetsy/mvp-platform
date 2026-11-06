@@ -4,7 +4,7 @@ import { NseClock } from "@/components/marketing/NseClock";
 import { toSymbol } from "@/lib/investor/private-market";
 import type { MarketBoardData } from "@/lib/data/market-board";
 import type { ListedCompany } from "@/lib/listing/private-market";
-import { ARROW, SECTOR_MIN_COMPANIES, directionOf, signed, signedPct, type Candle, type SectorRow, type Delta, type Direction } from "@/lib/marketplace/market-board";
+import { ARROW, directionOf, signed, signedPct, type Candle, type SectorRow, type Delta, type Direction } from "@/lib/marketplace/market-board";
 
 const TONE: Record<Direction, string> = { up: "text-[#0f7a54]", down: "text-[#d92d20]", flat: "text-slate-500" };
 const ROWS = 5;
@@ -74,7 +74,7 @@ function RowsPanel({ title, rows, onOpen }: Readonly<{ title: string; rows: Boar
   );
 }
 
-function SectorPanel({ sectors, active, onPick }: Readonly<{ sectors: SectorRow[]; active: string | null; onPick: (sector: string) => void }>) {
+function SectorPanel({ sectors, active, onPick, windowDays }: Readonly<{ sectors: SectorRow[]; active: string | null; onPick: (sector: string) => void; windowDays: number }>) {
   return (
     <div className="px-4 py-4">
       <h3 className="mb-2 font-[family-name:var(--font-site-archivo)] text-2xl font-medium text-[var(--navy)]">Sector board</h3>
@@ -85,10 +85,11 @@ function SectorPanel({ sectors, active, onPick }: Readonly<{ sectors: SectorRow[
       </div>
       {sectors.length === 0 ? (
         <p className="pt-3 font-mono text-[11px] leading-relaxed text-slate-500">
-          A sector appears once {SECTOR_MIN_COMPANIES} or more scored companies share it, so no single company can be picked out.
+          No approved companies yet.
         </p>
       ) : (
-        sectors.slice(0, 8).map((r) => {
+        <div className="max-h-[236px] overflow-y-auto pr-1.5">
+        {sectors.map((r) => {
           const dir = directionOf(r.change ?? 0);
           return (
             <button
@@ -96,19 +97,21 @@ function SectorPanel({ sectors, active, onPick }: Readonly<{ sectors: SectorRow[
               type="button"
               onClick={() => onPick(r.sector)}
               aria-pressed={active?.toLowerCase() === r.sector.toLowerCase()}
-              title={`Show only ${r.sector} companies`}
+              title={`Show only ${r.sector} companies (${r.scored} scored of ${r.companies})`}
               className={`-mx-1.5 grid h-8 w-[calc(100%+0.75rem)] grid-cols-[1.6fr_0.8fr_0.8fr] items-center gap-1.5 rounded px-1.5 text-left font-[family-name:var(--font-site-archivo)] text-lg font-medium transition-colors hover:bg-[var(--blue-muted)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--blue)] ${active?.toLowerCase() === r.sector.toLowerCase() ? "bg-[var(--blue-muted)] outline outline-2 outline-[var(--blue)]" : ""} ${TONE[dir]}`}
             >
               <span className="truncate uppercase">
                 <i className="mr-1.5 text-sm not-italic">{ARROW[dir]}</i>
                 {r.sector}
               </span>
-              <span className="text-right">{r.avg.toFixed(1)}</span>
+              <span className="text-right">{r.avg === null ? "n/a" : r.avg.toFixed(1)}</span>
               <span className="text-right">{r.change === null ? "n/a" : signed(r.change, 1)}</span>
             </button>
           );
-        })
+        })}
+        </div>
       )}
+      <p className="pt-2 font-mono text-[10px] tracking-[0.06em] text-slate-500">ALL SECTORS OF APPROVED COMPANIES. CHG IS N/A UNTIL EVERY SCORED COMPANY HAS A READING FROM {windowDays} DAYS AGO.</p>
     </div>
   );
 }
@@ -242,7 +245,7 @@ export function NseBoard({
             <div className="border-slate-200 bg-[#f3f7ff] px-2.5 pb-1 pt-3 md:order-3 md:col-span-2 md:border-t lg:order-none lg:col-span-1 lg:border-x lg:border-t-0">
               <CandleChart candles={data.candles} ma={data.movingAverage} />
             </div>
-            <SectorPanel sectors={data.sectors} active={activeSector} onPick={onSector} />
+            <SectorPanel sectors={data.sectors} active={activeSector} onPick={onSector} windowDays={t.windowDays} />
           </div>
 
           <div className="cap-marquee-host overflow-hidden whitespace-nowrap" aria-label="Board ticker">
@@ -274,7 +277,7 @@ export function NseBoard({
       <p className="border-t border-slate-200 px-5 py-3 font-mono text-[11px] leading-relaxed text-slate-600">
         Index tiles and the ticker show the change over the last {t.windowDays} days ({dayMonth(t.from)} to {dayMonth(t.to)}) across all scored
         founders and all investor outreach on the platform. Top Gainers ranks approved companies by CRR change since their first reading. The Sector board
-        averages CRR across all scored companies in a sector, shown once {SECTOR_MIN_COMPANIES} or more share it, with the change over the same {t.windowDays} days. Candles are the weekly open, high, low and close of the average CRR of scored founders (the
+        averages CRR across all scored companies in a sector, listed for every sector of the approved companies, with the change over the same {t.windowDays} days. Candles are the weekly open, high, low and close of the average CRR of scored founders (the
         number of founders grows over time), the blue line is a 3 week moving average and the blue bars count score readings per week.
       </p>
     </section>

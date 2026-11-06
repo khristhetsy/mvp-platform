@@ -8,6 +8,7 @@ import {
   delta,
   directionOf,
   movingAverage,
+  NOT_SET_SECTOR,
   sectorBoard,
   signed,
   signedPct,
@@ -129,20 +130,27 @@ describe("countInWindow, direction and formatting", () => {
 
 describe("sectorBoard", () => {
   const ind = new Map<string, string | null>([
-    ["a", "AI"], ["b", "ai, Fintech"], ["c", "AI"], ["d", "Fintech"], ["e", null],
+    ["a", "AI"], ["b", "ai, Fintech"], ["c", "AI"], ["d", "Fintech"], ["e", null], ["f", "SaaS"],
   ]);
   const ev2: ScoreEvent[] = [
     ev("a", "2026-09-01T00:00:00Z", 60), ev("b", "2026-09-01T00:00:00Z", 70), ev("c", "2026-09-01T00:00:00Z", 80),
     ev("d", "2026-09-01T00:00:00Z", 50), ev("e", "2026-09-01T00:00:00Z", 90),
     ev("a", "2026-09-20T00:00:00Z", 70),
   ];
-  it("lists only sectors with 3 or more scored companies, case insensitive, multi sector counted in each", () => {
+  it("lists every sector, case insensitive, multi sector counted in each, sorted by average with unscored last", () => {
     const rows = sectorBoard(ev2, ind, t("2026-09-22T00:00:00Z"), 7);
-    expect(rows).toEqual([{ sector: "AI", avg: 73.33, change: 3.33 }]);
+    expect(rows.map((r) => r.sector)).toEqual(["Not set", "AI", "Fintech", "SaaS"]);
+    expect(rows[1]).toEqual({ sector: "AI", avg: 73.33, change: 3.33, scored: 3, companies: 3 });
+    expect(rows[3]).toEqual({ sector: "SaaS", avg: null, change: null, scored: 0, companies: 1 });
   });
-  it("has null change when the sector was too small a window ago and is empty with no sector reaching 3", () => {
-    expect(sectorBoard(ev2, ind, t("2026-09-22T00:00:00Z"), 30)[0].change).toBeNull();
-    expect(sectorBoard([ev("a", "2026-09-01T00:00:00Z", 60)], ind, t("2026-09-22T00:00:00Z"))).toEqual([]);
+  it("groups companies with no industry under Not set", () => {
+    expect(sectorBoard(ev2, ind, t("2026-09-22T00:00:00Z")).find((r) => r.sector === NOT_SET_SECTOR)).toMatchObject({ avg: 90, scored: 1, companies: 1 });
+  });
+  it("has null change unless every scored company had a reading a window ago", () => {
+    expect(sectorBoard(ev2, ind, t("2026-09-22T00:00:00Z"), 30).find((r) => r.sector === "AI")?.change).toBeNull();
+    const late = [...ev2, ev("g", "2026-09-21T00:00:00Z", 40)];
+    const withG = new Map(ind).set("g", "AI");
+    expect(sectorBoard(late, withG, t("2026-09-22T00:00:00Z"), 7).find((r) => r.sector === "AI")?.change).toBeNull();
   });
 });
 
@@ -155,5 +163,10 @@ describe("companyInSector", () => {
   it("matches everything with no sector and nothing without an industry", () => {
     expect(companyInSector("Fintech", null)).toBe(true);
     expect(companyInSector(null, "Fintech")).toBe(false);
+  });
+  it("matches Not set for companies with a blank industry only", () => {
+    expect(companyInSector(null, NOT_SET_SECTOR)).toBe(true);
+    expect(companyInSector("  ", NOT_SET_SECTOR)).toBe(true);
+    expect(companyInSector("Fintech", NOT_SET_SECTOR)).toBe(false);
   });
 });

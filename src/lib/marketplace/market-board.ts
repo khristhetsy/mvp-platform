@@ -197,10 +197,10 @@ export function signedPct(n: number | null): string {
 }
 
 
-export type SectorRow = { sector: string; avg: number; change: number | null };
+export type SectorRow = { sector: string; avg: number | null; change: number | null; scored: number; companies: number };
 
-/** Fewer scored companies than this and a sector tile could single a company out. */
-export const SECTOR_MIN_COMPANIES = 3;
+/** Sector name for companies that have no industry set. */
+export const NOT_SET_SECTOR = "Not set";
 
 function latestAsOf(events: ReadonlyArray<ScoreEvent>, asOfMs: number): Map<string, number> {
   const latest = new Map<string, number>();
@@ -212,27 +212,12 @@ function latestAsOf(events: ReadonlyArray<ScoreEvent>, asOfMs: number): Map<stri
   return latest;
 }
 
-function sectorAverages(latest: Map<string, number>, industryByCompany: ReadonlyMap<string, string | null>) {
-  const groups = new Map<string, { label: string; scores: number[] }>();
-  for (const [companyId, score] of latest) {
-    const sectors = String(industryByCompany.get(companyId) ?? "")
-      .split(",")
-      .map((x) => x.trim())
-      .filter(Boolean);
-    for (const name of sectors) {
-      const g = groups.get(name.toLowerCase()) ?? { label: name, scores: [] };
-      g.scores.push(score);
-      groups.set(name.toLowerCase(), g);
-    }
-  }
-  return groups;
-}
-
 /**
- * Average CRR per sector, highest first, only for sectors with at least
- * SECTOR_MIN_COMPANIES scored companies. A company with several sectors counts
- * in each. The change compares with windowDays ago and is null when the sector
- * did not yet have enough companies then.
+ * Average CRR per sector for every company in industryByCompany, highest first,
+ * sectors with no score last. A company with several sectors counts in each and
+ * one with no industry counts under "Not set". The change compares with
+ * windowDays ago and is null unless every scored company in the sector already
+ * had a reading then.
  */
 export function sectorBoard(
   events: ReadonlyArray<ScoreEvent>,
@@ -240,27 +225,39 @@ export function sectorBoard(
   nowMs: number,
   windowDays = 7,
 ): SectorRow[] {
-  const now = sectorAverages(latestAsOf(events, nowMs), industryByCompany);
-  const then = sectorAverages(latestAsOf(events, nowMs - windowDays * DAY), industryByCompany);
+  const now = latestAsOf(events, nowMs);
+  const then = latestAsOf(events, nowMs - windowDays * DAY);
   const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
+  const groups = new Map<string, { label: string; ids: string[] }>();
+  for (const [companyId, industry] of industryByCompany) {
+    const names = String(industry ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+    for (const name of names.length > 0 ? names : [NOT_SET_SECTOR]) {
+      const g = groups.get(name.toLowerCase()) ?? { label: name, ids: [] };
+      g.ids.push(companyId);
+      groups.set(name.toLowerCase(), g);
+    }
+  }
   const rows: SectorRow[] = [];
-  for (const [key, g] of now) {
-    if (g.scores.length < SECTOR_MIN_COMPANIES) continue;
-    const before = then.get(key);
-    const nowAvg = round2(avg(g.scores));
+  for (const g of groups.values()) {
+    const scored = g.ids.filter((id) => now.has(id));
+    const nowAvg = scored.length > 0 ? round2(avg(scored.map((id) => now.get(id) as number))) : null;
+    const comparable = scored.length > 0 && scored.every((id) => then.has(id));
     rows.push({
       sector: g.label,
       avg: nowAvg,
-      change: before && before.scores.length >= SECTOR_MIN_COMPANIES ? round2(nowAvg - avg(before.scores)) : null,
+      change: comparable && nowAvg !== null ? round2(nowAvg - avg(scored.map((id) => then.get(id) as number))) : null,
+      scored: scored.length,
+      companies: g.ids.length,
     });
   }
-  return rows.sort((a, b) => b.avg - a.avg || a.sector.localeCompare(b.sector));
+  return rows.sort((a, b) => (b.avg ?? -1) - (a.avg ?? -1) || a.sector.localeCompare(b.sector));
 }
 
 /** True when a company's industry field (comma separated sectors) includes the sector, ignoring case. */
 export function companyInSector(industry: string | null | undefined, sector: string | null | undefined): boolean {
   const want = (sector ?? "").trim().toLowerCase();
   if (!want) return true;
+  if (want === NOT_SET_SECTOR.toLowerCase() && !String(industry ?? "").trim()) return true;
   return String(industry ?? "")
     .split(",")
     .some((x) => x.trim().toLowerCase() === want);
