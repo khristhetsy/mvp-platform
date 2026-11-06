@@ -26,6 +26,9 @@ export type ListedCompany = {
   description: string | null;
   crr: number | null;
   listedAt: string;
+  /** Traction summary fields shown on the signed in board. Optional so other listing surfaces are unaffected. */
+  revenueStage?: string | null;
+  mrr?: string | null;
 };
 
 export type PrivateMarketSort = "crr" | "newest";
@@ -106,6 +109,8 @@ export type ListingRow = {
   funding_amount_band: string | null;
   business_description: string | null;
   listing_completed_at: string;
+  revenue_stage?: string | null;
+  mrr?: string | null;
 };
 
 /** Pure: one database row to the listing summary investors see. */
@@ -120,11 +125,13 @@ export function toListedCompany(row: ListingRow, crr: number | null): ListedComp
     description: truncateDescription(row.business_description),
     crr,
     listedAt: row.listing_completed_at,
+    revenueStage: row.revenue_stage?.trim() || null,
+    mrr: row.mrr?.trim() || null,
   };
 }
 
 const LISTING_COLUMNS =
-  "id, company_name, industry, funding_stage, state, country, funding_amount, funding_amount_band, business_description, listing_completed_at";
+  "id, company_name, industry, funding_stage, state, country, funding_amount, funding_amount_band, business_description, listing_completed_at, revenue_stage, mrr";
 
 /**
  * Every diligence complete company that opted in to the listing, with its
