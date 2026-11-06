@@ -23,4 +23,14 @@ describe("Edit task row", () => {
   it("starts unassigned when the task has no assignee", () => {
     expect(html({ ...task, assignee_id: null })).toMatch(/<option value="" selected="">Unassigned<\/option>/);
   });
+
+  it("shows the note box with the saved note when the task carries a summary", () => {
+    const out = html({ ...task, summary: "Asked for the deck" });
+    expect(out).toContain("Add a note to this task");
+    expect(out).toContain("Asked for the deck");
+  });
+
+  it("has no note box when the caller does not supply a summary", () => {
+    expect(html()).not.toContain("Add a note to this task");
+  });
 });

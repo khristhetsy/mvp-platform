@@ -6,8 +6,9 @@ import { useState } from "react";
 /**
  * Edit a sales task in place: title, type, due date and assignee, the same four
  * fields as Sales › Tasks, saved through the same PATCH /api/sales/tasks/:id.
+ * When the caller passes the task's summary, a Note box is shown and saved too.
  */
-export type EditableTask = { id: string; title: string; task_type: string; due_date: string | null; assignee_id?: string | null };
+export type EditableTask = { id: string; title: string; task_type: string; due_date: string | null; assignee_id?: string | null; summary?: string | null };
 
 const DEFAULT_TYPES = ["Call", "Email", "Demo", "Follow-up", "Proposal"];
 
@@ -22,6 +23,8 @@ export function TaskEditRow({ task, staff, taskTypes = DEFAULT_TYPES, onSaved, o
   const [taskType, setTaskType] = useState(task.task_type);
   const [dueDate, setDueDate] = useState(task.due_date ?? "");
   const [assigneeId, setAssigneeId] = useState(task.assignee_id ?? "");
+  const hasNote = task.summary !== undefined;
+  const [note, setNote] = useState(task.summary ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Keep a type the list doesn't have (e.g. one set in Odoo) selectable.
@@ -35,7 +38,7 @@ export function TaskEditRow({ task, staff, taskTypes = DEFAULT_TYPES, onSaved, o
       const res = await fetch(`/api/sales/tasks/${task.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: title.trim(), taskType, dueDate: dueDate || null, assigneeId: assigneeId || null }),
+        body: JSON.stringify({ title: title.trim(), taskType, dueDate: dueDate || null, assigneeId: assigneeId || null, ...(hasNote ? { summary: note.trim() || null } : {}) }),
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
@@ -59,6 +62,7 @@ export function TaskEditRow({ task, staff, taskTypes = DEFAULT_TYPES, onSaved, o
         <label style={label}>Due date<input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} style={inp} /></label>
         <label style={label}>Assignee<select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)} style={inp}><option value="">Unassigned</option>{staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
       </div>
+      {hasNote ? <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Add a note to this task (optional)" aria-label="Task note" rows={3} maxLength={2000} style={{ ...inp, height: "auto", padding: 8, marginTop: 8, resize: "vertical", fontFamily: "inherit" }} /> : null}
       <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8, marginTop: 8 }}>
         {error ? <span role="alert" style={{ fontSize: 11.5, color: "#A32D2D", marginRight: "auto" }}>{error}</span> : null}
         <button type="button" onClick={onCancel} disabled={busy} style={{ fontSize: 12, color: "var(--foreground)", background: "#fff", border: "0.5px solid #d7dbe3", borderRadius: 7, padding: "7px 12px", cursor: "pointer" }}>Cancel</button>
