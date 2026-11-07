@@ -43,6 +43,13 @@ export type WeeklyEmailConfig = {
   skipIfUnchanged: boolean;
   fromName: string | null;
   fromEmail: string | null;
+  /** "std" is the logo and navy title block; "banner" shows bannerUrl across the top. */
+  headerMode: "std" | "banner";
+  bannerUrl: string | null;
+  /** Keeps the slim title and date strip under the banner. */
+  bannerStrip: boolean;
+  /** Name printed under the note as "Written by NAME". Null prints nothing. */
+  signOff: string | null;
 };
 
 export const DEFAULT_SUBJECT: Record<Audience, string> = {
@@ -63,6 +70,10 @@ export function defaultConfig(audience: Audience): WeeklyEmailConfig {
     skipIfUnchanged: false,
     fromName: null,
     fromEmail: null,
+    headerMode: "std",
+    bannerUrl: null,
+    bannerStrip: true,
+    signOff: null,
   };
 }
 
@@ -70,6 +81,10 @@ export const NOTE_QUICK_INSERTS: Array<{ label: string; text: string }> = [
   { label: "New feature", text: "New this week: the Private Market board now lists every sector of the approved companies. Click a sector to filter the table." },
   { label: "Event reminder", text: "Reminder: our next investor event is coming up. Open the Events page in your workspace to register." },
 ];
+
+/** The Private Market banner shipped with the app (public/email-banner.jpg). */
+export const PRESET_BANNER_PATH = "/email-banner.jpg";
+export const BANNER_MAX_BYTES = 1024 * 1024;
 
 export const MERGE_FIELDS = ["{rating}", "{band}", "{approved}"] as const;
 
@@ -166,8 +181,8 @@ export function renderWeeklyEmail(input: RenderInput): RenderedEmail {
   const text: string[] = [subject, market.range, ""];
 
   if (config.note.trim()) {
-    rows.push(`<tr><td style="padding:16px 28px;background:#eef3ff;border-bottom:1px solid ${LINE};"><div style="font:700 11px ${MONO};letter-spacing:.14em;color:${BLUE};margin:0 0 6px;">NOTE FROM ICAPOS</div><div style="font:400 14px/1.6 ${FONT};color:${NAVY};">${esc(config.note.trim())}</div></td></tr>`);
-    text.push(config.note.trim(), "");
+    rows.push(`<tr><td style="padding:16px 28px;background:#eef3ff;border-bottom:1px solid ${LINE};"><div style="font:700 11px ${MONO};letter-spacing:.14em;color:${BLUE};margin:0 0 6px;">NOTE FROM ICAPOS</div><div style="font:400 14px/1.6 ${FONT};color:${NAVY};">${esc(config.note.trim())}</div>${config.signOff?.trim() ? `<div style="font:400 12.5px ${FONT};color:${MUT};margin:8px 0 0;">Written by ${esc(config.signOff.trim())}</div>` : ""}</td></tr>`);
+    text.push(config.note.trim(), ...(config.signOff?.trim() ? [`Written by ${config.signOff.trim()}`] : []), "");
   }
 
   if (a === "founder" && on("rating") && viewer.kind === "founder" && !viewer.marketOnly) {
@@ -240,14 +255,20 @@ export function renderWeeklyEmail(input: RenderInput): RenderedEmail {
   const headTitle = a === "founder" && !viewer.marketOnly ? "Your rating this week" : "What moved this week";
   const testStrip = input.test ? `<tr><td style="background:#fff4c2;color:#6b4e00;font:700 11px ${MONO};letter-spacing:.12em;text-align:center;padding:8px;">TEST SEND · NOT PART OF THE WEEKLY SEND</td></tr>` : "";
 
+  const useBanner = config.headerMode === "banner" && !!config.bannerUrl;
+  const strip = `<tr><td style="background:${NAVY};color:#ffffff;padding:12px 28px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="font:700 15px ${FONT};color:#ffffff;">${esc(headTitle)}</td><td align="right" style="font:400 12px ${FONT};color:#c8d2ee;">${esc(market.range)}</td></tr></table></td></tr>`;
+  const header = useBanner
+    ? `<tr><td style="padding:0;line-height:0;"><img src="${esc(config.bannerUrl as string)}" alt="iCapOS, The Private Market" width="640" style="display:block;width:100%;height:auto;border:0;"></td></tr>${config.bannerStrip ? strip : ""}`
+    : `<tr><td style="padding:18px 28px;border-bottom:1px solid ${LINE};"><img src="${esc(links.logoUrl)}" alt="iCapOS" height="48" style="display:block;height:48px;width:auto;border:0;"></td></tr>
+<tr><td style="background:${NAVY};color:#ffffff;padding:22px 28px;"><div style="font:600 11px ${MONO};letter-spacing:.14em;color:#9fb4ff;">${esc(headKicker)}</div><div style="font:700 26px ${FONT};margin:6px 0 2px;">${esc(headTitle)}</div><div style="font:400 13px ${FONT};color:#c8d2ee;">${esc(market.range)}</div></td></tr>`;
+
   const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(subject)}</title></head>
 <body style="margin:0;padding:0;background:#e9eef7;">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${esc(preheader)}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#e9eef7;"><tr><td align="center" style="padding:18px 8px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;background:#ffffff;border:1px solid ${LINE};border-radius:14px;overflow:hidden;font-family:${FONT};color:${NAVY};">
 ${testStrip}
-<tr><td style="padding:18px 28px;border-bottom:1px solid ${LINE};"><img src="${esc(links.logoUrl)}" alt="iCapOS" height="48" style="display:block;height:48px;width:auto;border:0;"></td></tr>
-<tr><td style="background:${NAVY};color:#ffffff;padding:22px 28px;"><div style="font:600 11px ${MONO};letter-spacing:.14em;color:#9fb4ff;">${esc(headKicker)}</div><div style="font:700 26px ${FONT};margin:6px 0 2px;">${esc(headTitle)}</div><div style="font:400 13px ${FONT};color:#c8d2ee;">${esc(market.range)}</div></td></tr>
+${header}
 ${rows.join("\n")}
 <tr><td style="padding:18px 28px;font:400 11px/1.7 ${FONT};color:${MUT};background:#f7f9fd;">${footer}</td></tr>
 </table></td></tr></table></body></html>`;

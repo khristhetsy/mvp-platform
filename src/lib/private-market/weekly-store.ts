@@ -21,7 +21,7 @@ import { nothingChanged, type DigestViewer } from "./weekly-digest";
 import { founderViewer, investorViewer, loadWeeklyContext, marketOnlyViewer, type WeeklyContext } from "./weekly-data";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-const COLS = "audience, subject, preheader, note, button_text, sections, groups, list_ids, skip_if_unchanged, from_name, from_email, enabled, start_date, end_date, repeat, weekdays, send_time, max_per_run, reminder_minutes, unreviewed_action, reviewed_for, activated_at, last_run_for, run_sent, run_done, last_reminder_for";
+const COLS = "audience, subject, preheader, note, button_text, sections, groups, list_ids, skip_if_unchanged, from_name, from_email, header_mode, banner_url, banner_strip, sign_off, enabled, start_date, end_date, repeat, weekdays, send_time, max_per_run, reminder_minutes, unreviewed_action, reviewed_for, activated_at, last_run_for, run_sent, run_done, last_reminder_for";
 
 export type WeeklySchedule = Omit<SequenceSchedule, "sequence_id"> & { reviewed_for: string | null };
 export type WeeklyState = { config: WeeklyEmailConfig; schedule: WeeklySchedule; saved: boolean };
@@ -44,6 +44,8 @@ function fromRow(r: any): WeeklyState {
       audience: r.audience, subject: r.subject, preheader: r.preheader ?? "", note: r.note ?? "", buttonText: r.button_text,
       sections: { ...base.sections, ...(r.sections ?? {}) }, groups: r.groups ?? [], listIds: r.list_ids ?? [],
       skipIfUnchanged: !!r.skip_if_unchanged, fromName: r.from_name ?? null, fromEmail: r.from_email ?? null,
+      headerMode: r.header_mode === "banner" ? "banner" : "std", bannerUrl: r.banner_url ?? null, bannerStrip: r.banner_strip !== false,
+      signOff: r.sign_off?.trim() || null,
     },
     schedule: {
       enabled: !!r.enabled, start_date: r.start_date ?? todayInPt(), end_date: r.end_date ?? null, repeat: r.repeat, weekdays: r.weekdays ?? [],
@@ -70,6 +72,8 @@ export function validateWeekly(i: WeeklySaveInput): string | null {
   if (!c.buttonText.trim()) return "Add the button text.";
   if (c.groups.length === 0 && c.listIds.length === 0) return "Pick who to send to.";
   if (c.fromEmail && !isValidEmail(c.fromEmail)) return "The sender address isn't valid.";
+  if ((c.signOff ?? "").length > 80) return "The sign off name is too long.";
+  if (c.headerMode === "banner" && !/^https:\/\/[^\s"<>]+$/i.test(c.bannerUrl ?? "")) return "Choose a banner image, or switch back to Logo and title.";
   return validateScheduleInput(i.schedule as ScheduleInput);
 }
 
@@ -87,6 +91,8 @@ export async function saveWeekly(i: WeeklySaveInput, userId: string): Promise<vo
     audience: c.audience, subject: c.subject.trim(), preheader: c.preheader.trim(), note: c.note.trim(), button_text: c.buttonText.trim(),
     sections: c.sections, groups: c.groups, list_ids: c.listIds, skip_if_unchanged: c.skipIfUnchanged,
     from_name: c.fromName?.trim() || null, from_email: c.fromEmail?.trim() || null,
+    header_mode: c.headerMode === "banner" ? "banner" : "std", banner_url: c.bannerUrl?.trim() || null, banner_strip: c.bannerStrip !== false,
+    sign_off: c.signOff?.trim() || null,
     enabled: s.enabled, start_date: s.start_date, end_date: s.end_date || null, repeat: s.repeat as RepeatRule,
     weekdays: [...new Set(s.weekdays)].filter((d) => d >= 0 && d <= 6).sort(), send_time: s.send_time,
     max_per_run: s.max_per_run, reminder_minutes: Math.max(0, Math.round(s.reminder_minutes)), unreviewed_action: s.unreviewed_action,

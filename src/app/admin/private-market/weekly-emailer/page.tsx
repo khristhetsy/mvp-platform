@@ -3,6 +3,8 @@ import { marketingDb } from "@/lib/marketing/db";
 import { loadWeeklyContext, previewExamples } from "@/lib/private-market/weekly-data";
 import { getWeekly, platformPeople, type WeeklyState } from "@/lib/private-market/weekly-store";
 import { AUDIENCES, type Audience } from "@/lib/private-market/weekly-email";
+import { factOptions } from "@/lib/private-market/weekly-ai";
+import { listWriters } from "@/lib/private-market/weekly-ai-server";
 import { WeeklyEmailerClient, type ListOption } from "./WeeklyEmailerClient";
 
 export const dynamic = "force-dynamic";
@@ -25,12 +27,13 @@ async function loadLists(): Promise<ListOption[]> {
 export default async function WeeklyEmailerPage() {
   await requireRole(["admin"]);
   const ctx = await loadWeeklyContext();
-  const [lists, founders, investors, states, examples] = await Promise.all([
+  const [lists, founders, investors, states, examples, writers] = await Promise.all([
     loadLists(),
     platformPeople("founder").then((p) => p.length).catch(() => 0),
     platformPeople("investor").then((p) => p.length).catch(() => 0),
     Promise.all(AUDIENCES.map((a) => getWeekly(a))),
     ctx ? previewExamples(ctx) : Promise.resolve(null),
+    listWriters().catch(() => []),
   ]);
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com").replace(/\/+$/, "");
   const initial = Object.fromEntries(AUDIENCES.map((a, i) => [a, states[i]])) as Record<Audience, WeeklyState>;
@@ -41,6 +44,8 @@ export default async function WeeklyEmailerPage() {
       groupCounts={{ founder: founders, investor: investors }}
       market={ctx?.market ?? null}
       examples={examples}
+      writers={writers}
+      facts={ctx ? { founder: factOptions(ctx.market, "founder"), investor: factOptions(ctx.market, "investor") } : null}
       links={{ appUrl, logoUrl: process.env.EMAIL_LOGO_URL ?? `${appUrl}/email-logo.png`, unsubscribeUrl: "#", preferencesUrl: "#" }}
     />
   );
