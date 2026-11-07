@@ -113,10 +113,10 @@ export function WatchlistPageClient({ rows }: Readonly<{ rows: WatchlistRow[] }>
           className="min-w-[200px] flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none"
         />
         <Link
-          href="/deals"
+          href="/investor/opportunities"
           className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
         >
-          Browse marketplace →
+          Browse Private Market →
         </Link>
       </div>
 
@@ -129,7 +129,7 @@ export function WatchlistPageClient({ rows }: Readonly<{ rows: WatchlistRow[] }>
         <div className="rounded-xl border border-slate-200 bg-white px-6 py-8 text-center">
           <p className="text-sm text-slate-500">
             {rows.length === 0
-              ? "No saved deals yet. Browse the marketplace to start building your watchlist."
+              ? "No saved deals yet. Browse the Private Market to start building your watchlist."
               : `Nothing matches "${query}". Searched ${WATCHLIST_SEARCH_LABELS.join(", ")}.`}
           </p>
         </div>

@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { ArrowUpRight, X } from "lucide-react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { ScoreRing } from "@/components/ui/ScoreRing";
+import { formatApiError } from "@/lib/api/errors";
 import { toSymbol } from "@/lib/investor/private-market";
 import type { ListedCompany } from "@/lib/listing/private-market";
 import { ARROW, directionOf, signed, type Direction } from "@/lib/marketplace/market-board";
@@ -52,6 +52,7 @@ export function PrivateMarketListings({
   selected,
   onSelect,
   canRequest,
+  requestedIds = [],
   sector,
   onClearSector,
   approvedCount,
@@ -63,6 +64,8 @@ export function PrivateMarketListings({
   selected: ListedCompany | null;
   onSelect: (id: string | null) => void;
   canRequest: boolean;
+  /** Companies this investor has already requested an introduction to. */
+  requestedIds?: string[];
   sector: string | null;
   onClearSector: () => void;
   approvedCount: number;
@@ -156,7 +159,13 @@ export function PrivateMarketListings({
       </div>
 
       {selected ? (
-        <CompanyOnePager company={selected} stats={stats[selected.id]} canRequest={canRequest} onClose={() => onSelect(null)} />
+        <CompanyOnePager
+          company={selected}
+          stats={stats[selected.id]}
+          canRequest={canRequest}
+          alreadyRequested={requestedIds.includes(selected.id)}
+          onClose={() => onSelect(null)}
+        />
       ) : null}
     </>
   );
@@ -180,12 +189,37 @@ function Row({ label, value, last }: Readonly<{ label: string; value: string | n
   );
 }
 
+type IntroState = { status: "idle" | "sending" | "sent" | "error"; message?: string };
+
 function CompanyOnePager({
   company,
   stats,
   canRequest,
+  alreadyRequested,
   onClose,
-}: Readonly<{ company: ListedCompany; stats: ListingBoardStats | undefined; canRequest: boolean; onClose: () => void }>) {
+}: Readonly<{
+  company: ListedCompany;
+  stats: ListingBoardStats | undefined;
+  canRequest: boolean;
+  alreadyRequested: boolean;
+  onClose: () => void;
+}>) {
+  const [intro, setIntro] = useState<IntroState>({ status: alreadyRequested ? "sent" : "idle" });
+  async function requestIntro() {
+    setIntro({ status: "sending" });
+    try {
+      const res = await fetch("/api/investor/intro-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ companyId: company.id, message: `Intro request for ${company.name}.` }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(formatApiError(payload, "Could not send the request."));
+      setIntro({ status: "sent" });
+    } catch (e) {
+      setIntro({ status: "error", message: e instanceof Error ? e.message : "Could not send the request." });
+    }
+  }
   const ref = useDismiss<HTMLDivElement>(true, onClose);
   const symbol = toSymbol(company.name);
   const tags = [
@@ -195,7 +229,6 @@ function CompanyOnePager({
   ].filter((t): t is string => Boolean(t));
   const chg = stats?.crrChange ?? null;
   const chgDir = directionOf(chg ?? 0);
-  const introHref = `/investor/opportunities?company=${company.id}`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-2 sm:p-5" role="dialog" aria-modal="true" aria-label={`${company.name} one pager`}>
@@ -204,10 +237,15 @@ function CompanyOnePager({
           <span className="font-mono text-[11px] tracking-[0.12em] text-slate-600">COMPANY ONE PAGER · {symbol}</span>
           <div className="flex items-center gap-2.5">
             {canRequest ? (
-              <Link href={introHref} className="cap-btn-primary inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg px-5 text-sm font-semibold">
-                Request introduction
-                <ArrowUpRight className="h-4 w-4" strokeWidth={1.75} aria-hidden />
-              </Link>
+              <button
+                type="button"
+                onClick={requestIntro}
+                disabled={intro.status === "sending" || intro.status === "sent"}
+                className="cap-btn-primary inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg px-5 text-sm font-semibold disabled:cursor-default disabled:opacity-80"
+              >
+                {intro.status === "sending" ? "Sending..." : intro.status === "sent" ? "Introduction requested" : "Request introduction"}
+                {intro.status === "idle" || intro.status === "error" ? <ArrowUpRight className="h-4 w-4" strokeWidth={1.75} aria-hidden /> : null}
+              </button>
             ) : (
               <span className="rounded-lg border border-dashed border-slate-300 px-3.5 py-3 font-mono text-[11px] tracking-[0.08em] text-slate-600">
                 INVESTORS ONLY · REQUEST INTRODUCTION
@@ -283,9 +321,17 @@ function CompanyOnePager({
                 {canRequest ? (
                   <>
                     <p className="mt-2 text-sm leading-snug text-blue-100">Request an introduction and iCapOS routes it to the founder.</p>
-                    <Link href={introHref} className="mt-3.5 inline-flex min-h-11 items-center rounded-lg bg-white px-5 text-sm font-semibold text-[var(--blue)]">
-                      Request introduction
-                    </Link>
+                    <button
+                      type="button"
+                      onClick={requestIntro}
+                      disabled={intro.status === "sending" || intro.status === "sent"}
+                      className="mt-3.5 inline-flex min-h-11 items-center rounded-lg bg-white px-5 text-sm font-semibold text-[var(--blue)] disabled:cursor-default disabled:opacity-80"
+                    >
+                      {intro.status === "sending" ? "Sending..." : intro.status === "sent" ? "Introduction requested" : "Request introduction"}
+                    </button>
+                    {intro.status === "error" ? (
+                      <p className="mt-2 text-xs text-white" role="alert">{intro.message}</p>
+                    ) : null}
                   </>
                 ) : (
                   <p className="mt-2 text-sm leading-snug text-blue-100">Introductions are requested by approved investors.</p>

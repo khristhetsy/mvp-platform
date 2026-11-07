@@ -106,8 +106,8 @@ function currentGate(key: InvestorStageKey, input: InvestorGateInput): Pick<Inve
   ];
   if (key === "access") {
     return {
-      items: [...done, { label: "Make your first move", detail: "Express interest in a company or open a conversation.", state: "active", cta: { label: "Browse the marketplace", href: "/investor/opportunities" } }],
-      primaryCta: { label: "Browse the marketplace", href: "/investor/opportunities" },
+      items: [...done, { label: "Make your first move", detail: "Express interest in a company or open a conversation.", state: "active", cta: { label: "Browse the Private Market", href: "/investor/opportunities" } }],
+      primaryCta: { label: "Browse the Private Market", href: "/investor/opportunities" },
     };
   }
   return {

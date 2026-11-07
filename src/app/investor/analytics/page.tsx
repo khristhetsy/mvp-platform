@@ -41,7 +41,7 @@ export default async function InvestorAnalyticsPage() {
             href="/investor/portfolio"
             // No ceiling on a watchlist, so the ring is a presence indicator, not a proportion.
             ring={{ percent: null, center: String(analytics.savedDeals), pending: analytics.savedDeals === 0, color: analytics.savedDeals > 0 ? "#4F46E5" : undefined }}
-            flag={analytics.savedDeals === 0 ? { text: "Browse the marketplace to start a watchlist.", tone: "warn" } : null}
+            flag={analytics.savedDeals === 0 ? { text: "Browse the Private Market to start a watchlist.", tone: "warn" } : null}
           />
           <MetricCard
             label={t("expressed_interests")}
