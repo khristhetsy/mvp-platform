@@ -18,15 +18,21 @@ export function PrivateMarketExperience({
   board,
   canRequest,
   outreachWindowDays,
+  requestedIds,
+  initialSelectedId = null,
 }: Readonly<{
   companies: ListedCompany[];
   stats: Record<string, ListingBoardStats>;
   board: MarketBoardData | null;
   canRequest: boolean;
   outreachWindowDays: number;
+  /** Companies the investor has already requested an introduction to. */
+  requestedIds?: string[];
+  /** Opens this company's one pager on load, e.g. from an email link. */
+  initialSelectedId?: string | null;
 }>) {
   const [sector, setSector] = useState<string | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId);
 
   const visible = useMemo(() => companies.filter((c) => companyInSector(c.industry, sector)), [companies, sector]);
   const selected = companies.find((c) => c.id === selectedId) ?? null;
@@ -43,6 +49,7 @@ export function PrivateMarketExperience({
         selected={selected}
         onSelect={setSelectedId}
         canRequest={canRequest}
+        requestedIds={requestedIds}
         sector={sector}
         onClearSector={() => setSector(null)}
         approvedCount={companies.length}

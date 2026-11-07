@@ -37,7 +37,7 @@ export const INVESTOR_STAGE_META: Record<InvestorStageKey, InvestorStageMeta> = 
     number: 3,
     label: "Deals access",
     short: "Access",
-    description: "Browse the marketplace, express interest, request intros, and join SPVs.",
+    description: "Browse the Private Market, express interest, request intros, and join SPVs.",
   },
   manage: {
     key: "manage",

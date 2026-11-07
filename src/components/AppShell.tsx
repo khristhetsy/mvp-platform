@@ -13,7 +13,7 @@ const AppShellContext = createContext(false);
 
 const platformNavItems: { href: string; label: string; roles: Role[] }[] = [
   { href: "/founder/dashboard", label: "Founder", roles: ["FOUNDER", "ADMIN", "ANALYST"] },
-  { href: "/deals", label: "Marketplace", roles: ["INVESTOR", "ADMIN", "ANALYST"] },
+  { href: "/private-market", label: "Private Market", roles: ["INVESTOR", "ADMIN", "ANALYST"] },
   { href: "/investor/dashboard", label: "Investor", roles: ["INVESTOR", "ADMIN", "ANALYST"] },
   { href: "/admin/dashboard", label: "Admin", roles: ["ADMIN", "ANALYST"] },
 ];

@@ -610,7 +610,6 @@ export const investorWorkspaceNavSections: WorkspaceNavSection[] = [
         children: [
           // Hidden from nav (route still resolves). Restore by uncommenting.
           // { href: "/investor/opportunities", label: "Overview" },
-          { href: "/private-market", label: "Market board" },
           { href: "/investor/watchlist", label: "Watchlist" },
           { href: "/investor/interest-pipeline", label: "Interest Pipeline" },
           { href: "/investor/deal-room", label: "Deal Room" },

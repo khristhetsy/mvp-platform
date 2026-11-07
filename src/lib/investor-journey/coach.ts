@@ -92,7 +92,7 @@ export function buildInvestorStageCoach(input: InvestorCoachInput): InvestorStag
           ...base,
           headline: "Make your first move",
           body: "You're verified and have full access. Express interest in a company or open a conversation to start building your track record.",
-          action: { label: "Browse the marketplace", href: "/investor/opportunities" },
+          action: { label: "Browse the Private Market", href: "/investor/opportunities" },
           scoreHint: "Engaging founders builds your Partner Score's follow-through and responsiveness.",
         };
       }

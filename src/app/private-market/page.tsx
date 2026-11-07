@@ -4,6 +4,7 @@ import type { ListingBoardStats } from "@/components/marketing/PrivateMarketList
 import { getMarketBoard, OUTREACH_COMPANY_WINDOW_DAYS } from "@/lib/data/market-board";
 import { listApprovedCompanies, type ListedCompany } from "@/lib/listing/private-market";
 import { matchScoresForInvestor } from "@/lib/matching/private-market-match";
+import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +23,8 @@ export default async function PrivateMarketPage() {
   const profile = await requireRole(["investor", "founder", "admin", "analyst"]);
 
   const isInvestor = profile.role === "investor";
+  // Investors use the same board inside their own workspace.
+  if (isInvestor) redirect("/investor/opportunities");
   const companies = await listApprovedCompanies().catch((err): ListedCompany[] => {
     console.error("[private-market] approved companies failed", err);
     return [];
