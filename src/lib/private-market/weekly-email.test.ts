@@ -58,6 +58,17 @@ describe("founder email", () => {
     expect(r.html).toContain("A note &lt;b&gt;x&lt;/b&gt;");
     expect(r.html).toContain(">Go<");
   });
+  it("explains who is listed above the rankings, and can be turned off", () => {
+    const on = renderWeeklyEmail({ config: defaultConfig("founder"), market, viewer: scored, links });
+    expect(on.html).toContain("WHO IS LISTED");
+    expect(on.html).toContain("Finish your readiness assessment to be listed.");
+    expect(on.html.indexOf("WHO IS LISTED")).toBeLessThan(on.html.indexOf("TOP GAINERS"));
+    expect(on.html).toContain("Only companies with a qualifying CRR are ranked.");
+    const cfg = { ...defaultConfig("founder"), sections: { ...defaultConfig("founder").sections, listedNote: false } };
+    const off = renderWeeklyEmail({ config: cfg, market, viewer: scored, links });
+    expect(off.html).not.toContain("WHO IS LISTED");
+    expect(off.html).not.toContain("qualifying CRR");
+  });
   it("marks a test send", () => {
     const r = renderWeeklyEmail({ config: defaultConfig("founder"), market, viewer: scored, links, test: true });
     expect(r.subject.startsWith("[TEST] ")).toBe(true);
@@ -75,6 +86,9 @@ describe("investor email", () => {
     expect(out.html).toContain("NEWLY APPROVED");
     expect(out.html).toContain("RATING MOVES");
     expect(out.html).toContain("not investment advice");
+  });
+  it("uses the investor wording for who is listed", () => {
+    expect(out.html).toContain("ranked or matched in this email");
   });
   it("asks an investor without a profile to complete it", () => {
     const r = renderWeeklyEmail({ config: defaultConfig("investor"), market, viewer: { kind: "investor", matches: [], hasProfile: false }, links });

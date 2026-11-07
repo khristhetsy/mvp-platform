@@ -9,7 +9,7 @@ import { ordinal, BAND_LABEL, type DigestMarket, type DigestViewer, type Founder
 export type Audience = "founder" | "investor";
 export const AUDIENCES: Audience[] = ["founder", "investor"];
 
-export type SectionKey = "rating" | "matches" | "approved" | "moves" | "market" | "gainers" | "sectors";
+export type SectionKey = "rating" | "matches" | "approved" | "moves" | "market" | "gainers" | "sectors" | "listedNote";
 
 export const SECTION_OPTIONS: Record<Audience, Array<{ key: SectionKey; label: string }>> = {
   founder: [
@@ -17,6 +17,7 @@ export const SECTION_OPTIONS: Record<Audience, Array<{ key: SectionKey; label: s
     { key: "market", label: "The market this week" },
     { key: "gainers", label: "Top gainers" },
     { key: "sectors", label: "Sector board" },
+    { key: "listedNote", label: "Who is listed note" },
   ],
   investor: [
     { key: "matches", label: "Your top matches" },
@@ -25,6 +26,7 @@ export const SECTION_OPTIONS: Record<Audience, Array<{ key: SectionKey; label: s
     { key: "market", label: "The market this week" },
     { key: "gainers", label: "Top gainers" },
     { key: "sectors", label: "Sector board" },
+    { key: "listedNote", label: "Who is listed note" },
   ],
 };
 
@@ -206,6 +208,14 @@ export function renderWeeklyEmail(input: RenderInput): RenderedEmail {
     text.push("THE MARKET THIS WEEK", ...t.map((x) => `${x.label}: ${x.value}${x.delta ? ` (${x.delta})` : ""}`), "");
   }
 
+  if (on("listedNote") && ((on("gainers") && market.gainers.length > 0) || (on("sectors") && market.sectors.length > 0))) {
+    const body = a === "founder"
+      ? "Only companies with a qualifying Capital Readiness Rating are ranked below. Finish your readiness assessment to be listed."
+      : "Only companies with a qualifying Capital Readiness Rating are ranked or matched in this email.";
+    rows.push(`<tr><td style="padding:16px 28px;border-bottom:1px solid ${LINE};"><div style="border:1px solid #cdd9f5;border-left:4px solid ${BLUE};background:#eef3ff;border-radius:8px;padding:12px 14px;font:400 12.5px/1.6 ${FONT};color:${NAVY};"><div style="font:700 10.5px ${MONO};letter-spacing:.12em;color:${BLUE};margin-bottom:3px;">WHO IS LISTED</div>${esc(body)}</div></td></tr>`);
+    text.push(`WHO IS LISTED: ${body}`, "");
+  }
+
   if (on("gainers") && market.gainers.length > 0) {
     rows.push(section("TOP GAINERS SINCE FIRST READING", dataTable(["SYMBOL", "CRR", "CHG", "%CHG"], market.gainers.map((g) => [esc(g.symbol), String(g.crr), `<span style="color:${tone(g.change)};">${arrow(g.change)} ${signed(g.change)}</span>`, g.pct === null ? "n/a" : `<span style="color:${tone(g.change)};">${signed(g.pct, 1)}%</span>`]))));
     text.push("TOP GAINERS", ...market.gainers.map((g) => `${g.symbol} ${g.crr} (${signed(g.change)})`), "");
@@ -223,7 +233,7 @@ export function renderWeeklyEmail(input: RenderInput): RenderedEmail {
     viewer.marketOnly ? "You receive this because you are on an iCapOS mailing list." :
     a === "founder" ? "You receive this because you have an iCapOS founder workspace." : "You receive this because you are an approved iCapOS investor.";
   const disclaimer = a === "investor" ? " Ratings are readiness indicators, not investment advice." : "";
-  const footer = `${why} Figures are live platform data for the 7 days to ${esc(market.asOfLabel)}. Outreach counts messages sent, never investor names.${disclaimer}<br><a href="${esc(links.unsubscribeUrl)}" style="color:${BLUE};">Unsubscribe</a> · <a href="${esc(links.preferencesUrl)}" style="color:${BLUE};">Email preferences</a> · iCFO Capital Global, Inc., La Jolla, CA`;
+  const footer = `${why} Figures are live platform data for the 7 days to ${esc(market.asOfLabel)}. ${on("listedNote") ? " Only companies with a qualifying CRR are ranked." : ""} Outreach counts messages sent, never investor names.${disclaimer}<br><a href="${esc(links.unsubscribeUrl)}" style="color:${BLUE};">Unsubscribe</a> · <a href="${esc(links.preferencesUrl)}" style="color:${BLUE};">Email preferences</a> · iCFO Capital Global, Inc., La Jolla, CA`;
   text.push(`${why.replace(/&amp;/g, "&")} To unsubscribe: ${links.unsubscribeUrl}`);
 
   const headKicker = a === "founder" ? "THE PRIVATE MARKET · WEEKLY" : "THE PRIVATE MARKET · WEEKLY FOR INVESTORS";
