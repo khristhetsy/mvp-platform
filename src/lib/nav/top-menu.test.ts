@@ -93,6 +93,7 @@ describe("toApps: admin", () => {
       "Deals",
       "Matching",
       "Diligence",
+      "Private Market board",
       "Analytics",
       "Compliance",
     ]);

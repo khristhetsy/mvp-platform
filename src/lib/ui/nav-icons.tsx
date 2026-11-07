@@ -196,6 +196,7 @@ export const workspaceNavIconByHref: Record<string, LucideIcon> = {
   "/founder/documents": Files,
   "/private-market": ChartCandlestick, // Private Market board (founder, investor, admin)
   "/founder/private-market": Store,
+  "/admin/private-market/weekly-emailer": Newspaper, // Private Market board, Weekly emailer (admin)
   "/founder/inbox": MessageSquare, // Communications
   "/founder/messages": MessagesSquare,
   "/founder/updates": Mail,

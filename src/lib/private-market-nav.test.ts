@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { FEATURES } from "@/lib/feature-controls";
 import { workspaceNavIconByHref } from "@/lib/ui/nav-icons";
-import { founderWorkspaceNavSectionsV2, type WorkspaceNavItem } from "@/lib/workspace-nav";
+import { adminWorkspaceNavSections, founderWorkspaceNavSectionsV2, type WorkspaceNavItem } from "@/lib/workspace-nav";
 
 const find = (items: WorkspaceNavItem[], href: string): WorkspaceNavItem | undefined => {
   for (const i of items) {
@@ -25,5 +25,17 @@ describe("Private Market board menu link", () => {
     const item = find(founderWorkspaceNavSectionsV2.flatMap((x) => x.items), "/private-market");
     expect(item).toBeDefined();
     expect(item?.requiresRegCf).toBeFalsy();
+  });
+});
+
+describe("Weekly emailer menu entry", () => {
+  const admin = () => adminWorkspaceNavSections.flatMap((x) => x.items);
+  it("sits under the admin Private Market board with the Board", () => {
+    const parent = find(admin(), "/private-market");
+    expect(parent?.children?.map((c) => c.label)).toEqual(["Board", "Weekly emailer"]);
+    expect(find(admin(), "/admin/private-market/weekly-emailer")).toBeDefined();
+  });
+  it("has its own icon and page note", () => {
+    expect(workspaceNavIconByHref["/admin/private-market/weekly-emailer"]).toBeDefined();
   });
 });

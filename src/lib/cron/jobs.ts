@@ -39,6 +39,7 @@ const LABELS: Record<string, Label> = {
   "/api/cron/social-queue": { name: "Social publishing", group: "Marketing", description: "Publishes due social posts, with retries" },
   "/api/cron/social-maintenance": { name: "Social maintenance", group: "Marketing" },
   "/api/marketing/process-sequences": { name: "Email sequences", group: "Marketing", description: "Collects due contacts into batches for review" },
+  "/api/cron/private-market-weekly": { name: "Private Market weekly emails", group: "Marketing", description: "Sends the founder and investor Private Market weekly emails at their scheduled time (PT) and reminds the approver before each run" },
   "/api/cron/sequence-schedules": { name: "Sequence scheduled sends", group: "Sales", description: "Sends pending sequence batches at their scheduled time (PT) and reminds the approver before each run" },
   "/api/marketing/process-scheduled": { name: "Scheduled campaigns", group: "Marketing", description: "Sends campaigns whose scheduled time has passed" },
   "/api/cron/match-followups": { name: "Match campaign follow ups", group: "Marketing", description: "Sends due Match campaign follow ups and creates call tasks" },
