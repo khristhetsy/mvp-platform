@@ -5,14 +5,17 @@
 // schedule them in Pacific Time, send a test, and watch a live preview.
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { groupByDepartment, departmentOf } from "@/lib/marketing/department-grouping";
 import { countRuns, formatPt, nextRuns, todayInPt, type RepeatRule } from "@/lib/marketing/sequence-schedule";
 import {
-  AUDIENCES, NOTE_QUICK_INSERTS, MERGE_FIELDS, SECTION_OPTIONS, renderWeeklyEmail,
+  AUDIENCES, BANNER_MAX_BYTES, NOTE_QUICK_INSERTS, PRESET_BANNER_PATH, MERGE_FIELDS, SECTION_OPTIONS, renderWeeklyEmail,
   type Audience, type EmailLinks, type WeeklyEmailConfig,
 } from "@/lib/private-market/weekly-email";
 import type { DigestMarket } from "@/lib/private-market/weekly-digest";
+import type { FactOption, Target } from "@/lib/private-market/weekly-ai";
+import type { WriterOption } from "@/lib/private-market/weekly-ai-server";
+import { WeeklyAiWriter } from "./WeeklyAiWriter";
 import type { PreviewExample } from "@/lib/private-market/weekly-data";
 import type { WeeklySchedule, WeeklyState } from "@/lib/private-market/weekly-store";
 
@@ -24,6 +27,8 @@ type Props = {
   groupCounts: Record<Audience, number>;
   market: DigestMarket | null;
   examples: { founder: PreviewExample[]; investor: PreviewExample[] } | null;
+  writers: WriterOption[];
+  facts: Record<Audience, FactOption[]> | null;
   links: EmailLinks;
 };
 
@@ -34,18 +39,18 @@ const REPEATS: Array<{ key: RepeatRule; label: string }> = [
 const DAYS = [{ d: 1, l: "M" }, { d: 2, l: "T" }, { d: 3, l: "W" }, { d: 4, l: "T" }, { d: 5, l: "F" }, { d: 6, l: "S" }, { d: 0, l: "S" }];
 const REMINDERS = [{ v: 60, l: "1 hour before each run" }, { v: 180, l: "3 hours before each run" }, { v: 1440, l: "The day before" }, { v: 0, l: "Off" }];
 
-const card: React.CSSProperties = { border: "0.5px solid var(--border)", borderRadius: 12, padding: 16, background: "var(--card, var(--background))", marginBottom: 14 };
+const card: React.CSSProperties = { border: "0.5px solid #e2e6ed", borderRadius: 12, padding: 16, background: "#fff", marginBottom: 14 };
 const h: React.CSSProperties = { margin: "0 0 10px", fontSize: 12, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--muted-foreground)" };
 const lab: React.CSSProperties = { fontSize: 11.5, color: "var(--muted-foreground)", display: "block", marginBottom: 4 };
-const inp: React.CSSProperties = { width: "100%", fontSize: 13, padding: "7px 9px", borderRadius: 7, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)", boxSizing: "border-box" };
-const btn = (primary = false, disabled = false): React.CSSProperties => ({ fontSize: 13, fontWeight: 600, padding: "8px 14px", borderRadius: 8, cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.5 : 1, border: primary ? "none" : "0.5px solid var(--border)", background: primary ? "#1d4ed8" : "var(--background)", color: primary ? "#fff" : "var(--foreground)" });
-const seg = (on: boolean): React.CSSProperties => ({ fontSize: 12.5, padding: "6px 11px", borderRadius: 999, cursor: "pointer", border: "0.5px solid var(--border)", background: on ? "var(--foreground)" : "var(--background)", color: on ? "var(--background)" : "var(--foreground)" });
+const inp: React.CSSProperties = { width: "100%", fontSize: 13, padding: "7px 9px", borderRadius: 7, border: "0.5px solid var(--border)", background: "#fff", color: "var(--foreground)", boxSizing: "border-box" };
+const btn = (primary = false, disabled = false): React.CSSProperties => ({ fontSize: 13, fontWeight: 600, padding: "8px 14px", borderRadius: 8, cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.5 : 1, border: primary ? "none" : "0.5px solid var(--border)", background: primary ? "#1d4ed8" : "#fff", color: primary ? "#fff" : "var(--foreground)" });
+const seg = (on: boolean): React.CSSProperties => ({ fontSize: 12.5, padding: "6px 11px", borderRadius: 999, cursor: "pointer", border: "0.5px solid var(--border)", background: on ? "var(--foreground)" : "#fff", color: on ? "var(--background)" : "var(--foreground)" });
 
 type Draft = { config: WeeklyEmailConfig; schedule: WeeklySchedule; maxText: string };
 
 const draftOf = (s: WeeklyState): Draft => ({ config: s.config, schedule: s.schedule, maxText: String(s.schedule.max_per_run) });
 
-export function WeeklyEmailerClient({ initial, lists, groupCounts, market, examples, links }: Props) {
+export function WeeklyEmailerClient({ initial, lists, groupCounts, market, examples, writers, facts, links }: Props) {
   const [aud, setAud] = useState<Audience>("founder");
   const [drafts, setDrafts] = useState<Record<Audience, Draft>>({ founder: draftOf(initial.founder), investor: draftOf(initial.investor) });
   const [saved, setSaved] = useState<Record<Audience, boolean>>({ founder: initial.founder.saved, investor: initial.investor.saved });
@@ -59,6 +64,9 @@ export function WeeklyEmailerClient({ initial, lists, groupCounts, market, examp
   const [testAdd, setTestAdd] = useState("");
   const [testVer, setTestVer] = useState<Audience>("founder");
   const [testEx, setTestEx] = useState("");
+  const [bannerMsg, setBannerMsg] = useState<string | null>(null);
+  const noteRef = useRef<HTMLTextAreaElement>(null);
+  const [sel, setSel] = useState({ start: 0, end: 0, text: "" });
 
   const d = drafts[aud];
   const c = d.config;
@@ -118,6 +126,23 @@ export function WeeklyEmailerClient({ initial, lists, groupCounts, market, examp
       patchS({ enabled }); setSaved((x) => ({ ...x, [aud]: true }));
       setMsg({ ok: true, text: doneText });
     } catch (e) { setMsg({ ok: false, text: e instanceof Error ? e.message : "Failed." }); }
+    finally { setBusy(null); }
+  }
+
+  async function uploadBanner(file: File | undefined) {
+    if (!file) return;
+    if (file.size > BANNER_MAX_BYTES) { setBannerMsg("That file is over 1 MB. Choose a smaller one."); return; }
+    if (!["image/png", "image/jpeg"].includes(file.type)) { setBannerMsg("Use a PNG or JPG image."); return; }
+    setBusy("banner"); setBannerMsg(null);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const res = await fetch("/api/marketing/assets/upload", { method: "POST", body });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.url) throw new Error(data.error ?? "Upload failed.");
+      patch({ bannerUrl: data.url as string });
+      setBannerMsg(`${file.name} uploaded.`);
+    } catch (e) { setBannerMsg(e instanceof Error ? e.message : "Upload failed."); }
     finally { setBusy(null); }
   }
 
@@ -211,6 +236,87 @@ export function WeeklyEmailerClient({ initial, lists, groupCounts, market, examp
           </div>
 
           <div style={card}>
+            <p style={h}>Email header</p>
+            <div style={{ display: "flex", gap: 6 }}>
+              <button type="button" style={seg(c.headerMode === "std")} onClick={() => patch({ headerMode: "std" })}>Logo and title</button>
+              <button type="button" style={seg(c.headerMode === "banner")} onClick={() => patch({ headerMode: "banner", bannerUrl: c.bannerUrl ?? `${links.appUrl}${PRESET_BANNER_PATH}` })}>Banner image</button>
+            </div>
+            {c.headerMode === "banner" ? (
+              <div style={{ marginTop: 12 }}>
+                <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+                  {c.bannerUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={c.bannerUrl} alt="" style={{ width: 150, height: "auto", border: "0.5px solid var(--border)", borderRadius: 8 }} />
+                  ) : null}
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <button type="button" style={btn()} onClick={() => { patch({ bannerUrl: `${links.appUrl}${PRESET_BANNER_PATH}` }); setBannerMsg(null); }}>Use the Private Market banner</button>
+                    <label style={{ ...btn(false, busy === "banner"), display: "inline-block" }}>
+                      {busy === "banner" ? "Uploading" : "Upload your own"}
+                      <input type="file" accept="image/png,image/jpeg" style={{ display: "none" }} disabled={busy === "banner"} onChange={(e) => { void uploadBanner(e.target.files?.[0]); e.target.value = ""; }} />
+                    </label>
+                    <button type="button" style={btn()} onClick={() => { patch({ headerMode: "std", bannerUrl: null }); setBannerMsg(null); }}>Remove</button>
+                  </div>
+                </div>
+                {bannerMsg && <p role="status" style={{ margin: "8px 0 0", fontSize: 12.5 }}>{bannerMsg}</p>}
+                <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13, marginTop: 12 }}>
+                  <input type="checkbox" checked={c.bannerStrip} onChange={(e) => patch({ bannerStrip: e.target.checked })} /> Show the title strip under the banner
+                </label>
+                <p style={{ margin: "8px 0 0", fontSize: 11.5, color: "var(--muted-foreground)" }}>Best at 2172 x 724 (3:1), PNG or JPG, 1 MB at most. Shown at 640 px wide, so keep text large. Leave live figures out of the image, they will not update each week.</p>
+              </div>
+            ) : (
+              <p style={{ margin: "10px 0 0", fontSize: 12, color: "var(--muted-foreground)" }}>The iCapOS logo with the navy title block. Each version keeps its own header.</p>
+            )}
+          </div>
+
+          <div style={card}>
+            <p style={h}>Subject and intro</p>
+            <label style={lab}>Subject line</label>
+            <input style={inp} value={c.subject} onChange={(e) => patch({ subject: e.target.value })} />
+            <p style={{ margin: "4px 0 10px", fontSize: 11.5, color: "var(--muted-foreground)" }}>Merge fields: {MERGE_FIELDS.join("  ")}</p>
+            <label style={lab}>Preheader</label>
+            <input style={inp} value={c.preheader} onChange={(e) => patch({ preheader: e.target.value })} />
+            <label style={{ ...lab, marginTop: 12 }}>Note from iCapOS (optional)</label>
+            <textarea
+              ref={noteRef}
+              style={{ ...inp, minHeight: 70 }}
+              maxLength={600}
+              value={c.note}
+              onChange={(e) => { patch({ note: e.target.value }); setSel({ start: 0, end: 0, text: "" }); }}
+              onSelect={(e) => { const t = e.currentTarget; setSel({ start: t.selectionStart, end: t.selectionEnd, text: t.value.slice(t.selectionStart, t.selectionEnd) }); }}
+            />
+            <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+              {NOTE_QUICK_INSERTS.map((n) => <button key={n.label} type="button" style={seg(false)} onClick={() => patch({ note: n.text })}>{n.label}</button>)}
+              <button type="button" style={seg(false)} onClick={() => patch({ note: "" })}>Clear</button>
+            </div>
+          </div>
+
+          {facts && (
+            <WeeklyAiWriter
+              key={aud}
+              audience={aud}
+              writers={writers}
+              facts={facts[aud]}
+              styles={{ card, h, lab, inp, seg }}
+              selection={sel}
+              signOff={c.signOff}
+              onSignOff={(name) => patch({ signOff: name })}
+              onUse={(target: Target, text: string) => patch(target === "subject" ? { subject: text } : target === "preheader" ? { preheader: text } : { note: text.slice(0, 600) })}
+              onReplaceSelection={(start, end, text) => { patch({ note: (c.note.slice(0, start) + text + c.note.slice(end)).slice(0, 600) }); setSel({ start: 0, end: 0, text: "" }); }}
+            />
+          )}
+
+          <div style={card}>
+            <p style={h}>Sections</p>
+            {sectionOptions.map((o) => (
+              <label key={o.key} style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13, padding: "2px 0" }}>
+                <input type="checkbox" checked={c.sections[o.key] !== false} onChange={(e) => patch({ sections: { ...c.sections, [o.key]: e.target.checked } })} /> {o.label}
+              </label>
+            ))}
+            <label style={{ ...lab, marginTop: 12 }}>Button text</label>
+            <input style={inp} value={c.buttonText} onChange={(e) => patch({ buttonText: e.target.value })} />
+          </div>
+
+          <div style={card}>
             <p style={h}>Schedule</p>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               {REPEATS.map((r) => <button key={r.key} type="button" style={seg(s.repeat === r.key)} onClick={() => patchS({ repeat: r.key })}>{r.label}</button>)}
@@ -246,29 +352,6 @@ export function WeeklyEmailerClient({ initial, lists, groupCounts, market, examp
           </div>
 
           <div style={card}>
-            <p style={h}>Content</p>
-            <label style={lab}>Subject line</label>
-            <input style={inp} value={c.subject} onChange={(e) => patch({ subject: e.target.value })} />
-            <p style={{ margin: "4px 0 10px", fontSize: 11.5, color: "var(--muted-foreground)" }}>Merge fields: {MERGE_FIELDS.join("  ")}</p>
-            <label style={lab}>Preheader</label>
-            <input style={inp} value={c.preheader} onChange={(e) => patch({ preheader: e.target.value })} />
-            <label style={{ ...lab, marginTop: 12 }}>Note from iCapOS (optional)</label>
-            <textarea style={{ ...inp, minHeight: 70 }} maxLength={600} value={c.note} onChange={(e) => patch({ note: e.target.value })} />
-            <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-              {NOTE_QUICK_INSERTS.map((n) => <button key={n.label} type="button" style={seg(false)} onClick={() => patch({ note: n.text })}>{n.label}</button>)}
-              <button type="button" style={seg(false)} onClick={() => patch({ note: "" })}>Clear</button>
-            </div>
-            <p style={{ ...lab, marginTop: 12 }}>Sections</p>
-            {sectionOptions.map((o) => (
-              <label key={o.key} style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13, padding: "2px 0" }}>
-                <input type="checkbox" checked={c.sections[o.key] !== false} onChange={(e) => patch({ sections: { ...c.sections, [o.key]: e.target.checked } })} /> {o.label}
-              </label>
-            ))}
-            <label style={{ ...lab, marginTop: 12 }}>Button text</label>
-            <input style={inp} value={c.buttonText} onChange={(e) => patch({ buttonText: e.target.value })} />
-          </div>
-
-          <div style={card}>
             <p style={h}>Send</p>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button type="button" style={btn(false, !market)} disabled={!market} onClick={() => { setTestVer(aud); setTestEx(""); setTestOpen(true); }}>Send test email</button>
@@ -294,7 +377,7 @@ export function WeeklyEmailerClient({ initial, lists, groupCounts, market, examp
             )}
           </div>
           {preview ? (
-            <div style={{ border: "0.5px solid var(--border)", borderRadius: 12, overflow: "hidden", background: "var(--card, var(--background))" }}>
+            <div style={{ border: "0.5px solid #e2e6ed", borderRadius: 12, overflow: "hidden", background: "#fff" }}>
               <div style={{ padding: "10px 14px", borderBottom: "0.5px solid var(--border)" }}>
                 <div style={{ fontSize: 14, fontWeight: 700 }}>{preview.subject}</div>
                 <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{preview.preheader || " "}</div>

@@ -127,17 +127,14 @@ export async function agentReply(req: Request, body: ReplyRequest, system: strin
   return { ok: true, reply };
 }
 
-/** The fact sheet and rules for a founder's agent. Everything about the company comes from the founder. */
-export function founderSystemPrompt(input: {
-  displayName: string;
+/** What an agent knows about its company: the about text, the answers the founder wrote and the trained documents. Shared by the chat prompt and the weekly emailer writer. */
+export function agentFactSheet(input: {
   companyName: string;
   about: string | null;
   taught: Array<{ question: string; answer: string }>;
   sources: string[];
-  fieldsAsked: string[];
-  agentType?: AgentType;
 }): string {
-  const facts = [
+  return [
     input.about?.trim() ? `ABOUT ${input.companyName.toUpperCase()}:\n${input.about.trim().slice(0, 4000)}` : "",
     input.taught.length
       ? `ANSWERS THE FOUNDER WROTE (use these words when the question comes up):\n${input.taught
@@ -149,6 +146,19 @@ export function founderSystemPrompt(input: {
   ]
     .filter(Boolean)
     .join("\n\n");
+}
+
+/** The fact sheet and rules for a founder's agent. Everything about the company comes from the founder. */
+export function founderSystemPrompt(input: {
+  displayName: string;
+  companyName: string;
+  about: string | null;
+  taught: Array<{ question: string; answer: string }>;
+  sources: string[];
+  fieldsAsked: string[];
+  agentType?: AgentType;
+}): string {
+  const facts = agentFactSheet(input);
   const spec = AGENT_TYPE_SPECS[input.agentType ?? DEFAULT_AGENT_TYPE];
   const asked = input.fieldsAsked.length ? input.fieldsAsked.join(", ") : "investor type, check size, industries, stages, capital types";
   const goal = spec.goal.replace("{asked}", asked);

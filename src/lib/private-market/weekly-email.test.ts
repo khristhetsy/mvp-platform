@@ -76,6 +76,30 @@ describe("founder email", () => {
   });
 });
 
+describe("email header", () => {
+  const banner = "https://example.com/banner.jpg";
+  it("keeps the logo and title block by default", () => {
+    const r = renderWeeklyEmail({ config: defaultConfig("founder"), market, viewer: scored, links });
+    expect(r.html).toContain("email-logo.png");
+    expect(r.html).toContain("THE PRIVATE MARKET · WEEKLY");
+  });
+  it("shows the banner with a title strip in place of the logo and title block", () => {
+    const cfg = { ...defaultConfig("founder"), headerMode: "banner" as const, bannerUrl: banner };
+    const r = renderWeeklyEmail({ config: cfg, market, viewer: scored, links });
+    expect(r.html).toContain(`src="${banner}"`);
+    expect(r.html).not.toContain("email-logo.png");
+    expect(r.html).not.toContain("THE PRIVATE MARKET · WEEKLY");
+    expect(r.html).toContain("Your rating this week");
+    expect(r.html).toContain("30 Oct to 6 Nov 2026");
+  });
+  it("can drop the strip, and falls back to the logo when no banner is set", () => {
+    const noStrip = renderWeeklyEmail({ config: { ...defaultConfig("investor"), headerMode: "banner", bannerUrl: banner, bannerStrip: false }, market, viewer: { kind: "investor", marketOnly: true }, links });
+    expect(noStrip.html).not.toContain("What moved this week");
+    const missing = renderWeeklyEmail({ config: { ...defaultConfig("founder"), headerMode: "banner", bannerUrl: null }, market, viewer: scored, links });
+    expect(missing.html).toContain("email-logo.png");
+  });
+});
+
 describe("investor email", () => {
   const viewer: DigestViewer = { kind: "investor", hasProfile: true, matches: [{ symbol: "NAI", name: "NAI Technology", match: 88, crr: 84, sector: "AI" }] };
   const out = renderWeeklyEmail({ config: defaultConfig("investor"), market, viewer, links });
@@ -93,5 +117,21 @@ describe("investor email", () => {
   it("asks an investor without a profile to complete it", () => {
     const r = renderWeeklyEmail({ config: defaultConfig("investor"), market, viewer: { kind: "investor", matches: [], hasProfile: false }, links });
     expect(r.html).toContain("Complete your investor profile");
+  });
+});
+
+describe("sign off under the note", () => {
+  const cfg = { ...defaultConfig("founder"), note: "New this week: the board lists every sector." };
+  it("prints Written by NAME under the note when set", () => {
+    const out = renderWeeklyEmail({ config: { ...cfg, signOff: "iCFO Capital" }, market, viewer: scored, links });
+    expect(out.html).toContain("Written by iCFO Capital");
+    expect(out.text).toContain("Written by iCFO Capital");
+  });
+  it("prints nothing when off, or when there is no note", () => {
+    expect(renderWeeklyEmail({ config: cfg, market, viewer: scored, links }).html).not.toContain("Written by");
+    expect(renderWeeklyEmail({ config: { ...defaultConfig("founder"), signOff: "iCFO Capital" }, market, viewer: scored, links }).html).not.toContain("Written by");
+  });
+  it("escapes the name", () => {
+    expect(renderWeeklyEmail({ config: { ...cfg, signOff: "A <b>Co</b>" }, market, viewer: scored, links }).html).toContain("Written by A &lt;b&gt;Co&lt;/b&gt;");
   });
 });
