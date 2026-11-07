@@ -16,7 +16,7 @@ import { SalesChatter } from "@/components/sales/SalesChatter";
 import { TaskTitleInput } from "@/components/sales/TaskTitleInput";
 
 type Contact = {
-  id: string; source: string; name: string; email: string | null; company: string | null; phone: string | null; phone2: string | null;
+  id: string; source: string; name: string; email: string | null; company: string | null; phone: string | null; phone2: string | null; email2: string | null;
   website: string | null; lead_status: string | null; lead_source: string | null; tags: string[]; owner: string | null; owner_id: string | null; assignee_ids: string[]; membership: string | null;
   job_position: string | null; street: string | null; street2: string | null; city: string | null; state: string | null; zip: string | null;
   country: string | null; language: string | null; created_on: string | null; note: string | null;
@@ -924,6 +924,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
               <Row icon="ti-phone" label="Phone 2" value={contact.phone2} action="tel" onSave={saveText("phone2")} />
               <Row icon="ti-device-mobile" label="Mobile" value={null} action="tel" readOnly />
               <Row icon="ti-mail" label="Email" value={contact.email} link action="email" placeholder="name@company.com" onSave={saveText("email")} />
+              <Row icon="ti-mail" label="Email 2" value={contact.email2} link action="email" placeholder="name@company.com" onSave={saveText("email2")} />
               <Row icon="ti-world" label="Website" value={contact.website} link action="web" placeholder="example.com" onSave={saveText("website")} />
               <Row icon="ti-calendar" label="Created on" value={contact.created_on ? contact.created_on.slice(0, 10) : null} readOnly />
               {/* Tags — colored pills; click to edit as chips (Enter / comma adds, Backspace removes). */}

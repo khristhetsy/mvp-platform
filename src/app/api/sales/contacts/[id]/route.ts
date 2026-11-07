@@ -19,6 +19,7 @@ const patchSchema = z.object({
   assignee_ids: z.array(z.string().uuid()).max(50).nullable().optional(),
   tags: z.array(z.string().min(1).max(40)).max(20).optional(),
   phone2: z.string().max(60).nullable().optional(),
+  email2: z.string().max(200).nullable().optional(),
   lead_source: z.string().max(120).nullable().optional(),
   membership: z.string().max(120).nullable().optional(),
   job_position: z.string().max(120).nullable().optional(),
