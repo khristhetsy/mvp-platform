@@ -277,6 +277,7 @@ export const founderWorkspaceNavSections: WorkspaceNavSection[] = [
   {
     items: [
       { href: "/founder", label: "Dashboard" },
+      { href: "/private-market", label: "Private Market" },
     ],
   },
   {
@@ -440,13 +441,14 @@ export const founderWorkspaceNav: WorkspaceNavItem[] = founderWorkspaceNavSectio
  * that aren't part of the raise sit in a quiet "Account" group.
  */
 export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
+  // Dashboard and Private Market are untitled sections of one item each so the top menu
+  // keeps them as their own apps. Private Market shows at every stage: the board is open to
+  // all founders, so it is not gated behind Stage 3.
+  { items: [{ href: "/founder", label: "Dashboard" }] },
+  { items: [{ href: "/private-market", label: "Private Market" }] },
   {
     title: "Your raise",
     items: [
-      {
-        href: "/founder",
-        label: "Dashboard",
-      },
       {
         href: "/founder/onboarding",
         label: "Stage 1 – Onboarding",
@@ -497,7 +499,6 @@ export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
           { href: "/founder/investor-pipeline", label: "Investor CRM", minStage: "deploy" },
           { href: "/founder/events/present", label: "Present at event", minStage: "deploy" },
           { href: "/founder/private-market", label: "Marketplace", minStage: "deploy", requiresRegCf: true },
-          { href: "/private-market", label: "Private Market board", minStage: "deploy" },
         ],
       },
       {
