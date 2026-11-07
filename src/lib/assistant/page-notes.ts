@@ -44,6 +44,7 @@ export const PAGE_NOTES: Record<string, string> = {
   "/founder/investors/outreach": "Outreach (CRM): the founder's investor outreach records.",
   "/founder/outreach-report": "Outreach report: weekly and monthly summaries of the investor outreach the iCFO Capital team runs for the founder.",
   "/founder/private-market": "Marketplace: listing for Reg CF offerings only.",
+  "/admin/private-market/weekly-emailer": "Weekly emailer: write, preview, test and schedule the Private Market weekly email for founders and investors. Pick platform groups and Marketing lists, set the Pacific Time schedule, and send a [TEST] copy to chosen addresses first.",
   "/private-market": "Private Market board: every company iCapOS has approved, with its CRR and change, outreach count and sector averages. Click a sector to filter or a company for its one pager. Founders can view it but cannot request introductions; only approved investors can.",
   "/founder/marketplace/new": "List on marketplace: create a listing that links to the founder's registered funding portal (Reg CF only), reviewed before it goes live.",
   "/founder/capital-raise": "Capital Raise: plan and track the capital raise.",

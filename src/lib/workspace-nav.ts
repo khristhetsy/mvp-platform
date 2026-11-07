@@ -182,7 +182,15 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/outreach-qualification", label: "Outreach Qualification", menuGroup: "Matching", requiredPermission: "manage_matching"  },
           { href: "/admin/portfolio",              label: "Portfolio", menuGroup: "Deals",              requiredPermission: "view_admin_dashboard" },
           { href: "/admin/readiness",              label: "Readiness Scores", menuGroup: "Diligence",       requiredPermission: "manage_companies" },
-          { href: "/private-market",               label: "Private Market board", menuGroup: "Diligence",   requiredPermission: "manage_companies" },
+          {
+            href: "/private-market",
+            label: "Private Market board",
+            requiredPermission: "manage_companies",
+            children: [
+              { href: "/private-market",                      label: "Board"          },
+              { href: "/admin/private-market/weekly-emailer", label: "Weekly emailer" },
+            ],
+          },
           { href: "/admin/partner-scores",         label: "Partner Scores", menuGroup: "Matching",         requiredPermission: "manage_investors"  },
           { href: "/admin/deal-rooms",             label: "Deal Rooms", menuGroup: "Deals",             requiredPermission: "manage_deal_rooms" },
           { href: "/admin/data-room",              label: "Diligence Tracker", menuGroup: "Diligence",      requiredPermission: "manage_companies"  },
