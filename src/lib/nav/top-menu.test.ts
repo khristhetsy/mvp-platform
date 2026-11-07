@@ -123,6 +123,7 @@ describe("toApps: founder", () => {
     const apps = toApps(founderWorkspaceNavSectionsV2);
     expect(apps.map((a) => a.label)).toEqual([
       "Dashboard",
+      "Private Market",
       "Stage 1 – Onboarding",
       "Stage 2 – Preparation",
       "Stage 3 – Marketing",

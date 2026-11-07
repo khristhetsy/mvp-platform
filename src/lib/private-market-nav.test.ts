@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { FEATURES } from "@/lib/feature-controls";
 import { workspaceNavIconByHref } from "@/lib/ui/nav-icons";
-import { adminWorkspaceNavSections, founderWorkspaceNavSectionsV2, type WorkspaceNavItem } from "@/lib/workspace-nav";
+import { adminWorkspaceNavSections, founderWorkspaceNavSections, founderWorkspaceNavSectionsV2, type WorkspaceNavItem } from "@/lib/workspace-nav";
 
 const find = (items: WorkspaceNavItem[], href: string): WorkspaceNavItem | undefined => {
   for (const i of items) {
@@ -25,6 +25,19 @@ describe("Private Market board menu link", () => {
     const item = find(founderWorkspaceNavSectionsV2.flatMap((x) => x.items), "/private-market");
     expect(item).toBeDefined();
     expect(item?.requiresRegCf).toBeFalsy();
+  });
+  it("sits right under Dashboard with no stage gate, in both founder menus", () => {
+    for (const sections of [founderWorkspaceNavSections, founderWorkspaceNavSectionsV2]) {
+      const first = sections.flatMap((x) => x.items).slice(0, 2);
+      expect(first.map((i) => i.href)).toEqual(["/founder", "/private-market"]);
+      expect(first[1].label).toBe("Private Market");
+      expect(first[1].minStage).toBeUndefined();
+    }
+  });
+  it("is not repeated inside Stage 3", () => {
+    const all = founderWorkspaceNavSectionsV2.flatMap((x) => x.items);
+    expect(all.filter((i) => i.href === "/private-market")).toHaveLength(1);
+    expect(all.flatMap((i) => i.children ?? []).some((c) => c.href === "/private-market")).toBe(false);
   });
 });
 
