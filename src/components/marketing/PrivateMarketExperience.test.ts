@@ -36,13 +36,13 @@ const render = (canRequest: boolean, withBoard = true) =>
   );
 
 describe("PrivateMarketExperience", () => {
-  it("lists every approved company with its opt in status and counts", () => {
+  it("lists every approved company with its opt in status", () => {
     const html = render(true);
     expect(html).toContain("Alpha Co");
     expect(html).toContain("Beta Co");
     expect(html).toContain("OPTED IN");
     expect(html).toContain("APPROVED · NOT OPTED IN");
-    expect(html).toContain("2 APPROVED · 1 OPTED IN");
+    expect(html).toContain("Approved companies");
   });
   it("shows the match for each company and n/a when there is none", () => {
     const html = render(true);

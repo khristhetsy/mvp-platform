@@ -55,8 +55,6 @@ export function PrivateMarketListings({
   requestedIds = [],
   sector,
   onClearSector,
-  approvedCount,
-  optedInCount,
   outreachWindowDays,
 }: Readonly<{
   companies: ListedCompany[];
@@ -68,18 +66,13 @@ export function PrivateMarketListings({
   requestedIds?: string[];
   sector: string | null;
   onClearSector: () => void;
-  approvedCount: number;
-  optedInCount: number;
   outreachWindowDays: number;
 }>) {
   return (
     <>
-      <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <div className="mt-8 overflow-hidden rounded-2xl border border-site-line bg-white shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-[var(--blue-muted)] px-5 py-3.5">
-          <h2 className="text-[15px] font-semibold text-[var(--navy)]">Approved companies</h2>
-          <span className="font-mono text-[11px] text-slate-600">
-            {approvedCount} APPROVED · {optedInCount} OPTED IN
-          </span>
+          <h2 className="font-[family-name:var(--font-site-archivo)] text-base font-bold text-[var(--navy)]">Approved companies</h2>
         </div>
 
         {sector ? (
