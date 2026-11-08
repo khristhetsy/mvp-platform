@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
+
 import { NseClock } from "@/components/marketing/NseClock";
 import { toSymbol } from "@/lib/investor/private-market";
 import type { MarketBoardData } from "@/lib/data/market-board";
@@ -38,6 +40,7 @@ function RowsPanel({ title, rows, onOpen }: Readonly<{ title: string; rows: Boar
   return (
     <div className={`${CARD} px-5 py-5`}>
       <h3 className="mb-1 font-[family-name:var(--font-site-archivo)] text-xl font-bold tracking-tight text-[var(--navy)]">{title}</h3>
+      <p className="text-[13px] text-slate-500">CRR change since first reading</p>
       <div className="grid grid-cols-[1.35fr_0.8fr_0.8fr_1fr] gap-1.5 mt-3 border-b border-site-line pb-2 font-mono text-[10.5px] tracking-[0.12em] text-slate-500">
         <span>SYMBOL</span>
         <span className="text-right">CRR</span>
@@ -80,7 +83,8 @@ function SectorPanel({ sectors, active, onPick, windowDays }: Readonly<{ sectors
   return (
     <div className={`${CARD} px-5 py-5`}>
       <h3 className="mb-1 font-[family-name:var(--font-site-archivo)] text-xl font-bold tracking-tight text-[var(--navy)]">Sector board</h3>
-      <div className="grid grid-cols-[1.6fr_0.8fr_0.8fr] gap-1.5 mt-3 border-b border-site-line pb-2 font-mono text-[10.5px] tracking-[0.12em] text-slate-500">
+      <p className="text-[13px] text-slate-500">Click a sector to filter</p>
+      <div className="grid grid-cols-[3fr_0.5fr_0.5fr] gap-1.5 mt-3 border-b border-site-line pb-2 font-mono text-[10.5px] tracking-[0.12em] text-slate-500">
         <span>SECTOR</span>
         <span className="text-right">CRR</span>
         <span className="text-right">CHG</span>
@@ -104,9 +108,9 @@ function SectorPanel({ sectors, active, onPick, windowDays }: Readonly<{ sectors
               onClick={() => onPick(r.sector)}
               aria-pressed={active?.toLowerCase() === r.sector.toLowerCase()}
               title={`Show only ${r.sector} companies (${r.scored} scored of ${r.companies})`}
-              className={`-mx-1.5 grid h-[42px] w-[calc(100%+0.75rem)] grid-cols-[1.9fr_0.6fr_0.6fr] items-center gap-1.5 rounded-lg px-1.5 text-left font-[family-name:var(--font-site-archivo)] text-base font-semibold transition-colors hover:bg-[var(--blue-muted)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--blue)] ${active?.toLowerCase() === r.sector.toLowerCase() ? "bg-[var(--blue-muted)] outline outline-2 outline-[var(--blue)]" : ""} ${TONE[dir]}`}
+              className={`-mx-1.5 grid h-[54px] w-[calc(100%+0.75rem)] grid-cols-[3fr_0.5fr_0.5fr] items-center gap-1.5 rounded-lg px-1.5 text-left font-[family-name:var(--font-site-archivo)] text-[17px] font-semibold transition-colors hover:bg-[var(--blue-muted)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--blue)] ${active?.toLowerCase() === r.sector.toLowerCase() ? "bg-[var(--blue-muted)] outline outline-2 outline-[var(--blue)]" : ""} ${TONE[dir]}`}
             >
-              <span className="truncate uppercase">
+              <span className="truncate text-[18px] font-bold uppercase">
                 <i className="mr-1.5 text-sm not-italic">{ARROW[dir]}</i>
                 {r.sector}
               </span>
@@ -125,20 +129,24 @@ function SectorPanel({ sectors, active, onPick, windowDays }: Readonly<{ sectors
   );
 }
 
-function CandleChart({ candles, ma }: Readonly<{ candles: Candle[]; ma: Array<number | null> }>) {
+const MONTH = new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "UTC" });
+
+/** The weekly candle chart, drawn at the pixel size of its box so it fills the card. */
+function CandleChart({ candles, ma, W, H }: Readonly<{ candles: Candle[]; ma: Array<number | null>; W: number; H: number }>) {
   if (candles.length === 0) return <div className="flex h-full items-center justify-center font-mono text-xs text-slate-500">No readings yet</div>;
-  const W = 640;
-  const L = 46;
-  const R = 628;
+  const L = 34;
+  const R = W - 8;
+  const T = 18;
+  const B = H - 30;
   const lo = Math.floor(Math.min(...candles.map((c) => c.low)) - 2);
   const hi = Math.ceil(Math.max(...candles.map((c) => c.high)) + 2);
-  const y = (v: number) => 20 + (1 - (v - lo) / (hi - lo || 1)) * 160;
+  const y = (v: number) => T + (1 - (v - lo) / (hi - lo || 1)) * (B - T);
   const step = (R - L) / candles.length;
   const x = (i: number) => L + step * i + step / 2;
   const ticks = [0, 1, 2, 3].map((i) => lo + ((hi - lo) * i) / 3);
   const maPoints = ma.flatMap((v, i) => (v === null ? [] : [`${x(i).toFixed(1)},${y(v).toFixed(1)}`])).join(" ");
   return (
-    <svg viewBox={`0 0 ${W} 268`} width="100%" role="img" aria-label="Weekly candles of the average CRR of scored founders">
+    <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} role="img" aria-label="Weekly candles of the average CRR of scored founders">
       {ticks.map((t) => (
         <g key={t}>
           <line x1={L} x2={R} y1={y(t)} y2={y(t)} stroke="#dbe4f3" />
@@ -158,15 +166,44 @@ function CandleChart({ candles, ma }: Readonly<{ candles: Candle[]; ma: Array<nu
           </g>
         );
       })}
-      {maPoints ? <polyline points={maPoints} fill="none" stroke="#1d4ed8" strokeWidth="2" /> : null}
+      {maPoints ? <polyline points={maPoints} fill="none" stroke="#1d4ed8" strokeWidth="2.2" strokeLinejoin="round" /> : null}
       {candles.map((c, i) =>
         i === 0 || c.weekStart.slice(0, 7) !== candles[i - 1].weekStart.slice(0, 7) ? (
-          <text key={`m${c.weekStart}`} x={x(i)} y={264} textAnchor="middle" fontSize="12" fill="#0f1b3d">
-            {new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "UTC" }).format(new Date(c.weekStart)).toUpperCase()}
+          <text key={`m${c.weekStart}`} x={x(i)} y={H - 10} textAnchor="middle" fontSize="12" fill="#0f1b3d">
+            {MONTH.format(new Date(c.weekStart)).toUpperCase()}
           </text>
         ) : null,
       )}
     </svg>
+  );
+}
+
+function ChartPanel({ candles, ma }: Readonly<{ candles: Candle[]; ma: Array<number | null> }>) {
+  const box = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ w: 320, h: 300 });
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const measure = () => setSize({ w: Math.max(200, el.clientWidth), h: Math.max(200, el.clientHeight) });
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return (
+    <div className={`${CARD} flex flex-col bg-gradient-to-b from-[#f3f7ff] to-white px-5 py-5 md:order-3 md:col-span-2 lg:order-none lg:col-span-1`}>
+      <h3 className="mb-1 font-[family-name:var(--font-site-archivo)] text-xl font-bold tracking-tight text-[var(--navy)]">Average CRR, weekly</h3>
+      <div className="flex gap-4 font-mono text-[11px] text-slate-500">
+        <span><i className="mr-1.5 inline-block h-2.5 w-2.5 rounded-sm bg-[#0f9d6b] align-[-1px]" />Up week</span>
+        <span><i className="mr-1.5 inline-block h-2.5 w-2.5 rounded-sm bg-[#d92d20] align-[-1px]" />Down week</span>
+        <span><i className="mr-1.5 inline-block h-2.5 w-2.5 rounded-sm bg-[#1d4ed8] align-[-1px]" />3 week average</span>
+      </div>
+      <div ref={box} className="relative mt-[35px] min-h-[280px] flex-1 border-t border-site-line">
+        <div className="absolute inset-0 overflow-hidden">
+          <CandleChart candles={candles} ma={ma} W={size.w} H={size.h} />
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -246,11 +283,9 @@ export function NseBoard({
             </svg>
           </div>
 
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-[1fr_1.45fr_0.95fr]">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-[repeat(3,minmax(0,1fr))]">
             <RowsPanel title="Top Gainers" rows={gainers} onOpen={onOpenCompany} />
-            <div className={`${CARD} bg-gradient-to-b from-[#f3f7ff] to-white px-3 pb-2 pt-4 md:order-3 md:col-span-2 lg:order-none lg:col-span-1`}>
-              <CandleChart candles={data.candles} ma={data.movingAverage} />
-            </div>
+            <ChartPanel candles={data.candles} ma={data.movingAverage} />
             <SectorPanel sectors={data.sectors} active={activeSector} onPick={onSector} windowDays={t.windowDays} />
           </div>
 
