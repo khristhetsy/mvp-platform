@@ -52,3 +52,18 @@ describe("Weekly emailer menu entry", () => {
     expect(workspaceNavIconByHref["/admin/private-market/weekly-emailer"]).toBeDefined();
   });
 });
+
+describe("founder menu groups", () => {
+  it("marks each stage row with its journey stage, in order", () => {
+    const raise = founderWorkspaceNavSectionsV2.find((s) => s.title === "Your raise");
+    expect(raise?.items.map((i) => i.journeyStage)).toEqual(["initialize", "qualify", "deploy", "optimize"]);
+  });
+  it("keeps the investor pages in Stage 3 as well as in the Investors group", () => {
+    const stage3 = founderWorkspaceNavSectionsV2.flatMap((s) => s.items).find((i) => i.label === "Stage 3 – Marketing");
+    const group = founderWorkspaceNavSectionsV2.find((s) => s.title === "Investors");
+    const stage3Hrefs = new Set((stage3?.children ?? []).map((c) => c.href));
+    for (const it of group?.items ?? []) {
+      if (it.href !== "/founder/investor-interest") expect(stage3Hrefs.has(it.href)).toBe(true);
+    }
+  });
+});
