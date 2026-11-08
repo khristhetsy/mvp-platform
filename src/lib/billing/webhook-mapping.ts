@@ -100,3 +100,18 @@ export function variantToPlan(
   if (name.includes("basic")) return { plan: "founder_basic", source: "name" };
   return { plan: null, source: "none" };
 }
+
+/**
+ * True when this webhook moves a subscription into a paying state it was not
+ * in before (pending, free, trialing, canceled or no row yet). Renewals and
+ * plan changes on an already active subscription are not a new payment.
+ * The staff "New paying customer" alert keys off this, not the event name,
+ * because Lemon Squeezy can report the first payment on an event other than
+ * subscription_created when the row already exists from signup.
+ */
+export function isFirstActivation(
+  previousStatus: string | null | undefined,
+  nextStatus: string,
+): boolean {
+  return nextStatus === "active" && previousStatus !== "active";
+}

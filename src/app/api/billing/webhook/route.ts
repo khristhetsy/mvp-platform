@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyWebhookSignature, type LsWebhookPayload } from "@/lib/lemonsqueezy";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { mapStatus, variantToPlan } from "@/lib/billing/webhook-mapping";
+import { isFirstActivation, mapStatus, variantToPlan } from "@/lib/billing/webhook-mapping";
 import { isNewPastDue, keepGraceWindow } from "@/lib/billing/past-due";
 import { notifyPastDue } from "@/lib/billing/past-due-alerts";
 import { PLAN_PRICES } from "@/lib/subscriptions/plans";
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const admin = createServiceRoleClient() as any;
 
-  let query = admin.from("subscriptions").select("id, profile_id, pending_plan_type, plan_type, grace_period_ends_at, cancel_at_period_end");
+  let query = admin.from("subscriptions").select("id, profile_id, pending_plan_type, plan_type, subscription_status, grace_period_ends_at, cancel_at_period_end");
   if (lsSubId) {
     query = query.eq("ls_subscription_id", lsSubId);
   } else if (profileId) {
@@ -65,6 +65,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       profile_id: string;
       pending_plan_type: string | null;
       plan_type: string;
+      subscription_status: string | null;
       grace_period_ends_at: string | null;
       cancel_at_period_end: boolean | null;
     } | null;
@@ -181,6 +182,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         await alertStaffNewCustomer({ event: "payment", founderId: existing.profile_id, plan });
         if (plan === "founder_premium") await assignAccountManagerForPremium({ founderId: existing.profile_id });
       }
+    }
+    // The first payment can arrive on an event other than subscription_created
+    // when the row already exists from signup (pending_payment to active). Alert
+    // staff on that move too. Deduped per company, so the branch above plus this
+    // one never double alert.
+    if (funnelStepFor(event_name) !== "checkout_complete" && isFirstActivation(existing.subscription_status, mapped.status)) {
+      await alertStaffNewCustomer({ event: "payment", founderId: existing.profile_id, plan });
     }
     return NextResponse.json({ received: true, updated: existing.id });
   }

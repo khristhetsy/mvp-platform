@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { mapStatus, variantToPlan, PAST_DUE_GRACE_DAYS } from "./webhook-mapping";
+import { isFirstActivation, mapStatus, variantToPlan, PAST_DUE_GRACE_DAYS } from "./webhook-mapping";
 
 const ORIG_BASIC = process.env.LEMONSQUEEZY_VARIANT_ID_BASIC;
 const ORIG_PRO = process.env.LEMONSQUEEZY_VARIANT_ID_PROFESSIONAL;
@@ -80,5 +80,22 @@ describe("variantToPlan", () => {
     delete process.env.LEMONSQUEEZY_VARIANT_ID_BASIC;
     delete process.env.LEMONSQUEEZY_VARIANT_ID_PROFESSIONAL;
     expect(variantToPlan(999, "Mystery", "Unknown Product")).toEqual({ plan: null, source: "none" });
+  });
+});
+
+describe("isFirstActivation", () => {
+  it("is true when a signup row moves to active (pending, free, trialing, canceled or new)", () => {
+    for (const prev of ["pending_payment", "free", "trialing", "canceled", "expired", null, undefined]) {
+      expect(isFirstActivation(prev, "active")).toBe(true);
+    }
+  });
+
+  it("is false for renewals and plan changes on an already active subscription", () => {
+    expect(isFirstActivation("active", "active")).toBe(false);
+  });
+
+  it("is false when the subscription is not becoming active", () => {
+    expect(isFirstActivation("pending_payment", "canceled")).toBe(false);
+    expect(isFirstActivation("active", "canceled")).toBe(false);
   });
 });
