@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, ArrowLeft, CalendarDays } from "lucide-react";
+import { ArrowLeft, CalendarDays } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { ComplianceBlock } from "@/components/ComplianceBlock";
 import { MarketingFooter } from "@/components/MarketingFooter";
@@ -9,6 +9,8 @@ import { getCurrentUserProfile, dashboardForRole } from "@/lib/supabase/auth";
 import { normalizeUserRole } from "@/lib/api/admin";
 import { listPublicEvents } from "@/lib/icfo-events/queries";
 import { bannerPublicUrl } from "@/lib/icfo-events/banner";
+import { EventCountdown } from "@/components/events/EventCountdown";
+import { EventsList, type EventCardData } from "@/components/events/EventsList";
 import type { EventRecord } from "@/lib/icfo-events/types";
 
 export const dynamic = "force-dynamic";
@@ -34,6 +36,16 @@ function fmtRange(start: string | null, end: string | null): string {
   return `${s.toLocaleDateString(undefined, { month: "long", day: "numeric" })} – ${e.toLocaleDateString(undefined, opts)}`;
 }
 
+function badge(start: string | null, tz: string | null): { month: string | null; day: string | null } {
+  if (!start) return { month: null, day: null };
+  const d = new Date(start);
+  const timeZone = tz ?? undefined;
+  return {
+    month: d.toLocaleDateString("en-US", { month: "short", timeZone }).toUpperCase(),
+    day: d.toLocaleDateString("en-US", { day: "numeric", timeZone }),
+  };
+}
+
 export default async function EventsListPage() {
   const supabase = await createServerSupabaseClient();
   const t = await getTranslations("appPages");
@@ -50,75 +62,138 @@ export default async function EventsListPage() {
   const role = profile ? normalizeUserRole(profile.role) : null;
   const dashboardHref = role ? dashboardForRole(role) : null;
 
+  // eslint-disable-next-line react-hooks/purity -- server component; single render, real request time
+  const nowMs = Date.now();
+  const isPast = (ev: EventRecord) =>
+    ev.status === "ended" || (ev.endsAt ? new Date(ev.endsAt).getTime() < nowMs : false);
+  const cards: EventCardData[] = events.map((ev) => ({
+    id: ev.id,
+    slug: ev.slug,
+    title: ev.title,
+    format: ev.format,
+    status: ev.status,
+    summary: ev.summary,
+    dateRange: fmtRange(ev.startsAt, ev.endsAt),
+    ...badge(ev.startsAt, ev.timezone),
+    coverUrl: bannerPublicUrl(supabase, ev.coverPath),
+    coverFocal: ev.coverFocal,
+    coverOverlay: ev.coverOverlay,
+    isPast: isPast(ev),
+  }));
+  const upcoming = events.filter((ev) => !isPast(ev));
+  const next = upcoming.find((ev) => ev.startsAt && new Date(ev.startsAt).getTime() > nowMs) ?? upcoming[0] ?? null;
+
   return (
     <MarketingShell>
-      <section className="mx-auto max-w-5xl px-4 py-16">
-        {dashboardHref ? (
-          <Link
-            href={dashboardHref}
-            className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-[var(--text-secondary)] transition hover:text-[var(--indigo)]"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to dashboard
-          </Link>
-        ) : null}
-        <p className="text-sm font-semibold uppercase tracking-wide text-[var(--indigo)]">iCFO Events</p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-[var(--navy)] sm:text-4xl">
-          Where capital-ready founders meet the room
-        </h1>
-        <p className="mt-3 max-w-2xl text-[var(--text-secondary)]">
-          Sector-curated showcases, panels, and talk shows convening founders, investors, and operators.
-          Education and community in the room — deals stay behind the accredited diligence flow.
-        </p>
-
-        <div className="mt-10 grid gap-4">
-          {events.length === 0 ? (
-            <div className="rounded-xl border border-[var(--border-subtle)] bg-white px-6 py-16 text-center">
-              <CalendarDays className="mx-auto h-8 w-8 text-[var(--text-muted)]" />
-              <p className="mt-3 text-sm font-medium text-[var(--text-primary)]">{t("no_events_scheduled_yet")}</p>
-              <p className="mt-1 text-sm text-[var(--text-muted)]">
-                Check back soon — the first sector showcases are being lined up.
-              </p>
-            </div>
-          ) : (
-            events.map((ev) => {
-              const coverUrl = bannerPublicUrl(supabase, ev.coverPath);
-              return (
+      <section
+        className="relative text-white"
+        style={{
+          background: "#031a55 url(/events-hero.jpg) right center / cover no-repeat",
+        }}
+      >
+        <div className="mx-auto max-w-5xl px-4 pb-16 pt-14 sm:pb-20 sm:pt-16">
+          {dashboardHref ? (
+            <Link
+              href={dashboardHref}
+              className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-blue-100 transition hover:text-white"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to dashboard
+            </Link>
+          ) : null}
+          <div className="max-w-xl">
+            <p className="text-sm font-semibold uppercase tracking-wider text-blue-200">iCFO Events</p>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-5xl sm:leading-[1.08]">
+              Where capital-ready founders meet the room
+            </h1>
+            <p className="mt-4 text-blue-50/90">
+              Sector-curated showcases, panels, and talk shows convening founders, investors, and operators.
+              Education and community in the room — deals stay behind the accredited diligence flow.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              {next ? (
                 <Link
-                  key={ev.id}
-                  href={`/events/${ev.slug}`}
-                  className="group flex flex-col overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-white shadow-[var(--shadow-panel)] transition hover:border-[var(--indigo)] sm:flex-row"
+                  href={`/events/${next.slug}`}
+                  className="rounded-xl bg-white px-5 py-3 text-sm font-semibold text-[var(--navy)] transition hover:bg-blue-50"
                 >
-                  {coverUrl ? (
-                    <div className="relative h-44 w-full flex-none overflow-hidden bg-[var(--navy)] sm:h-auto sm:min-h-[190px] sm:w-80">
-                      <div
-                        aria-hidden
-                        className="absolute inset-0"
-                        style={{ backgroundImage: `url(${coverUrl})`, backgroundSize: "cover", backgroundPosition: ev.coverFocal }}
-                      />
-                      <div aria-hidden className="absolute inset-0" style={{ background: "#0c2340", opacity: ev.coverOverlay / 100 }} />
-                    </div>
-                  ) : null}
-                  <div className="flex flex-1 items-center justify-between gap-3 px-6 py-5">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="rounded-full bg-[var(--indigo-soft)] px-2.5 py-0.5 text-xs font-medium capitalize text-[var(--indigo)]">
-                          {ev.format.replace("_", " ")}
-                        </span>
-                        {ev.status === "live" && (
-                          <span className="rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">{t("live")}</span>
-                        )}
-                      </div>
-                      <h2 className="mt-2 text-lg font-semibold text-[var(--navy)]">{ev.title}</h2>
-                      <p className="mt-1 text-sm text-[var(--text-muted)]">{fmtRange(ev.startsAt, ev.endsAt)}</p>
-                      {ev.summary && <p className="mt-2 max-w-2xl text-sm text-[var(--text-secondary)]">{ev.summary}</p>}
-                    </div>
-                    <ArrowRight className="h-5 w-5 flex-none text-[var(--text-muted)] transition group-hover:translate-x-0.5 group-hover:text-[var(--indigo)]" />
-                  </div>
+                  Register for the next event
                 </Link>
-              );
-            })
-          )}
+              ) : null}
+              <Link
+                href="/founder/events/present"
+                className="rounded-xl border border-white/40 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+              >
+                Present at an event
+              </Link>
+            </div>
+          </div>
+
+          {next ? (
+            <div className="mt-8 grid max-w-2xl items-center gap-4 rounded-2xl border border-white/25 bg-[#03103c]/55 p-4 backdrop-blur sm:grid-cols-[1fr_auto] sm:p-5">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-blue-200">Next event</p>
+                <h2 className="mt-1 text-lg font-semibold">{next.title}</h2>
+                <p className="text-sm text-blue-100">{fmtRange(next.startsAt, next.endsAt)}</p>
+              </div>
+              {next.startsAt && next.showCountdown ? <EventCountdown startsAt={next.startsAt} hero /> : null}
+              <Link
+                href={`/events/${next.slug}`}
+                className="rounded-xl bg-[var(--indigo)] px-5 py-2.5 text-center text-sm font-semibold text-white transition hover:opacity-90 sm:col-span-2"
+              >
+                Save my spot
+              </Link>
+            </div>
+          ) : null}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-5xl px-4 py-12">
+        {events.length === 0 ? (
+          <div className="rounded-xl border border-[var(--border-subtle)] bg-white px-6 py-16 text-center">
+            <CalendarDays className="mx-auto h-8 w-8 text-[var(--text-muted)]" />
+            <p className="mt-3 text-sm font-medium text-[var(--text-primary)]">{t("no_events_scheduled_yet")}</p>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">
+              Check back soon — the first sector showcases are being lined up.
+            </p>
+          </div>
+        ) : (
+          <EventsList events={cards} />
+        )}
+      </section>
+
+      <section className="mx-auto max-w-5xl px-4 pb-6">
+        <h2 className="text-2xl font-bold tracking-tight text-[var(--navy)]">How an iCFO event works</h2>
+        <div className="mt-5 grid gap-4 md:grid-cols-3">
+          {[
+            ["1", "Register", "Pick your event and sector track. Your iCapOS profile fills the form for you."],
+            ["2", "Join the live room", "Main stage, sector sessions, lounge, and networking with founders and investors."],
+            ["3", "Follow up in iCapOS", "Intro requests and diligence continue inside the platform, behind accredited access."],
+          ].map(([n, h, p]) => (
+            <div key={n} className="rounded-2xl border border-[var(--border-subtle)] bg-white p-5">
+              <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-full bg-[var(--indigo-soft)] font-bold text-[var(--indigo)]">
+                {n}
+              </div>
+              <h3 className="font-semibold text-[var(--navy)]">{h}</h3>
+              <p className="mt-1 text-sm leading-relaxed text-[var(--text-secondary)]">{p}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-5xl px-4 py-10">
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-[var(--navy)] p-8 text-white">
+          <div>
+            <h2 className="text-xl font-bold">Have a company ready to show?</h2>
+            <p className="mt-1 max-w-lg text-sm text-blue-100">
+              Founders with a strong Capital Readiness Rating can apply to present at an upcoming event.
+            </p>
+          </div>
+          <Link
+            href="/founder/events/present"
+            className="rounded-xl bg-white px-5 py-3 text-sm font-semibold text-[var(--navy)] transition hover:bg-blue-50"
+          >
+            Apply to present
+          </Link>
         </div>
       </section>
 

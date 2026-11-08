@@ -23,7 +23,7 @@ const pad = (n: number) => String(n).padStart(2, "0");
  * another card — and because it can vanish mid-session, the rule has to belong
  * to the countdown rather than to whatever is above it.
  */
-export function EventCountdown({ startsAt, bare = false }: { startsAt: string; bare?: boolean }) {
+export function EventCountdown({ startsAt, bare = false, hero = false }: { startsAt: string; bare?: boolean; hero?: boolean }) {
   const t = useTranslations("appPages");
   const target = new Date(startsAt).getTime();
   const [now, setNow] = useState<number>(() => Date.now());
@@ -42,6 +42,19 @@ export function EventCountdown({ startsAt, bare = false }: { startsAt: string; b
     { value: pad(m), label: t("countdown_minutes") },
     { value: pad(s), label: t("countdown_seconds") },
   ];
+
+  if (hero) {
+    return (
+      <div className="flex gap-2" role="timer" aria-label={t("countdown_days")}>
+        {cells.slice(0, 3).map((c) => (
+          <div key={c.label} className="min-w-[64px] rounded-xl bg-white/12 px-3 py-2 text-center">
+            <div className="text-2xl font-bold tabular-nums text-white">{c.value}</div>
+            <div className="text-[10px] uppercase tracking-wider text-blue-100">{c.label}</div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div
