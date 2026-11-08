@@ -179,7 +179,8 @@ export function toApprovedCompany(row: ApprovedRow, crr: number | null): ListedC
 const APPROVED_COLUMNS = `${LISTING_COLUMNS}, listing_opt_in_at, created_at`;
 
 /**
- * Every company approved by iCapOS (review_status approved, not a sample), each
+ * Every company approved by iCapOS (review_status approved, published and visible on
+ * the marketplace, not a sample), each
  * with its listing summary only and a flag for whether it opted in to the
  * listing. Highest CRR first, unscored last. Same service role and summary
  * columns rule as listDiligenceCompleteCompanies.
@@ -192,6 +193,8 @@ export async function listApprovedCompanies(
     .from("companies")
     .select(APPROVED_COLUMNS)
     .eq("review_status", "approved")
+    .eq("is_published", true)
+    .eq("marketplace_visible", true)
     .or("is_sample.is.null,is_sample.eq.false")
     .order("created_at", { ascending: false })
     .limit(1000);
