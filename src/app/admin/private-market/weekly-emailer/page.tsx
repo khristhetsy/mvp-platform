@@ -2,7 +2,7 @@ import { requireRole } from "@/lib/supabase/auth";
 import { marketingDb } from "@/lib/marketing/db";
 import { loadWeeklyContext, previewExamples } from "@/lib/private-market/weekly-data";
 import { getWeekly, platformPeople, type WeeklyState } from "@/lib/private-market/weekly-store";
-import { AUDIENCES, type Audience } from "@/lib/private-market/weekly-email";
+import { VERSIONS, versionAudience, type Version } from "@/lib/private-market/weekly-email";
 import { factOptions } from "@/lib/private-market/weekly-ai";
 import { listWriters } from "@/lib/private-market/weekly-ai-server";
 import { WeeklyEmailerClient, type ListOption } from "./WeeklyEmailerClient";
@@ -31,12 +31,12 @@ export default async function WeeklyEmailerPage() {
     loadLists(),
     platformPeople("founder").then((p) => p.length).catch(() => 0),
     platformPeople("investor").then((p) => p.length).catch(() => 0),
-    Promise.all(AUDIENCES.map((a) => getWeekly(a))),
+    Promise.all(VERSIONS.map((a) => getWeekly(a))),
     ctx ? previewExamples(ctx) : Promise.resolve(null),
     listWriters().catch(() => []),
   ]);
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com").replace(/\/+$/, "");
-  const initial = Object.fromEntries(AUDIENCES.map((a, i) => [a, states[i]])) as Record<Audience, WeeklyState>;
+  const initial = Object.fromEntries(VERSIONS.map((a, i) => [a, states[i]])) as Record<Version, WeeklyState>;
   return (
     <WeeklyEmailerClient
       initial={initial}
@@ -45,7 +45,7 @@ export default async function WeeklyEmailerPage() {
       market={ctx?.market ?? null}
       examples={examples}
       writers={writers}
-      facts={ctx ? { founder: factOptions(ctx.market, "founder"), investor: factOptions(ctx.market, "investor") } : null}
+      facts={ctx ? (Object.fromEntries(VERSIONS.map((v) => [v, factOptions(ctx.market, versionAudience(v))])) as Record<Version, ReturnType<typeof factOptions>>) : null}
       links={{ appUrl, logoUrl: process.env.EMAIL_LOGO_URL ?? `${appUrl}/email-logo.png`, unsubscribeUrl: "#", preferencesUrl: "#" }}
     />
   );

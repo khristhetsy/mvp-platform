@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/supabase/auth";
-import { loadWeeklyContext, previewExamples } from "@/lib/private-market/weekly-data";
+import { exampleGroup, loadWeeklyContext, previewExamples } from "@/lib/private-market/weekly-data";
 import { markNextRunReviewed, saveWeekly, sendTestEmail, type WeeklySaveInput } from "@/lib/private-market/weekly-store";
-import { AUDIENCES, type Audience, type WeeklyEmailConfig } from "@/lib/private-market/weekly-email";
+import { isVersion, type WeeklyEmailConfig } from "@/lib/private-market/weekly-email";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-const isAudience = (v: unknown): v is Audience => AUDIENCES.includes(v as Audience);
 
 /**
  * POST /api/admin/private-market/weekly-emailer
@@ -24,22 +23,23 @@ export async function POST(request: Request): Promise<Response> {
   try {
     if (body.action === "save") {
       const input = { config: body.config, schedule: body.schedule } as WeeklySaveInput;
-      if (!isAudience(input.config?.audience)) return NextResponse.json({ error: "Pick a version." }, { status: 400 });
+      if (!isVersion(input.config?.version)) return NextResponse.json({ error: "Pick a version." }, { status: 400 });
+      input.config = { ...input.config, audience: input.config.version === "founder" ? "founder" : "investor" };
       await saveWeekly(input, profile.id);
       return NextResponse.json({ ok: true });
     }
     if (body.action === "test") {
       const config = body.config as WeeklyEmailConfig;
-      if (!config || !isAudience(config.audience)) return NextResponse.json({ error: "Pick a version." }, { status: 400 });
+      if (!config || !isVersion(config.version)) return NextResponse.json({ error: "Pick a version." }, { status: 400 });
       const ctx = await loadWeeklyContext();
       if (!ctx) return NextResponse.json({ error: "The market numbers could not be read, so no test was sent." }, { status: 503 });
-      const ex = (await previewExamples(ctx))[config.audience];
+      const ex = (await previewExamples(ctx))[exampleGroup(config.version)];
       const picked = ex.find((e) => e.key === body.example) ?? ex[0];
       const r = await sendTestEmail(config, Array.isArray(body.to) ? (body.to as unknown[]).map(String) : [], picked.viewer, profile.id);
       return NextResponse.json({ ok: r.failed.length === 0, ...r });
     }
     if (body.action === "review") {
-      if (!isAudience(body.audience)) return NextResponse.json({ error: "Pick a version." }, { status: 400 });
+      if (!isVersion(body.audience)) return NextResponse.json({ error: "Pick a version." }, { status: 400 });
       const at = await markNextRunReviewed(body.audience);
       return NextResponse.json({ ok: true, reviewedFor: at });
     }

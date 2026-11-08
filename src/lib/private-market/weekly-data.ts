@@ -12,8 +12,8 @@ import { ARROW, directionOf, signed, signedPct, type ScoreEvent } from "@/lib/ma
 import { matchScoresForInvestor } from "@/lib/matching/private-market-match";
 import { toSymbol } from "@/lib/investor/private-market";
 import {
-  dateLabel, founderRating, rangeLabel, ratingMoves,
-  type DigestMarket, type DigestMatch, type DigestTile, type DigestViewer,
+  dateLabel, founderRating, hasIntroActivity, latestScores, rangeLabel, ratingMoves,
+  type DigestMarket, type DigestMatch, type DigestTile, type DigestViewer, type IntroActivity, type MonthlyDigest, type NewCompanyLine,
 } from "./weekly-digest";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -52,11 +52,19 @@ export async function loadWeeklyContext(now: Date = new Date()): Promise<WeeklyC
     const nowMs = now.getTime();
     const approved = await listApprovedCompanies({}, db);
     const ids = approved.map((c) => c.id);
-    const [board, events, newly, owners] = await Promise.all([
+    const iso = (days: number) => new Date(nowMs - days * DAY).toISOString();
+    const approvedCount = (from: string, to: string) =>
+      db.from("companies").select("id", { count: "exact", head: true }).eq("review_status", "approved").or("is_sample.is.null,is_sample.eq.false").gte("approved_at", from).lt("approved_at", to);
+    const introCount = (from: string, to: string) => db.from("intro_requests").select("id", { count: "exact", head: true }).gte("created_at", from).lt("created_at", to);
+    const [board, events, newly, owners, added30, added60, intros30, intros60] = await Promise.all([
       getMarketBoard(ids, db),
       loadEvents(db),
-      db.from("companies").select("id").eq("review_status", "approved").or("is_sample.is.null,is_sample.eq.false").gte("approved_at", new Date(nowMs - 7 * DAY).toISOString()),
+      db.from("companies").select("id, company_name, industry").eq("review_status", "approved").or("is_sample.is.null,is_sample.eq.false").gte("approved_at", iso(7)).order("approved_at", { ascending: false }),
       db.from("companies").select("id, founder_id").in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]),
+      approvedCount(iso(30), iso(-1)),
+      approvedCount(iso(60), iso(30)),
+      introCount(iso(30), iso(-1)),
+      introCount(iso(60), iso(30)),
     ]);
     if (!board) return null;
     if (newly.error) throw new Error(newly.error.message);
@@ -64,7 +72,8 @@ export async function loadWeeklyContext(now: Date = new Date()): Promise<WeeklyC
     const companies = approved.map((c) => ({ id: c.id, name: c.name, symbol: toSymbol(c.name), industry: c.industry, crr: c.crr }));
     const symbol = new Map(companies.map((c) => [c.id, c.symbol]));
     const scoredNow = new Set(events.filter((e) => typeof e.score === "number").map((e) => e.companyId));
-    const newlyIds = ((newly.data ?? []) as Array<{ id: string }>).map((r) => r.id);
+    const newlyRows = (newly.data ?? []) as Array<{ id: string; company_name: string | null; industry: string | null }>;
+    const newlyIds = newlyRows.map((r) => r.id);
 
     const t = board.tiles;
     const tile = (label: string, value: string, change: number | null, pct: number | null, digits = 0): DigestTile => ({
@@ -84,7 +93,36 @@ export async function loadWeeklyContext(now: Date = new Date()): Promise<WeeklyC
       .slice(0, 5)
       .map(([id, v]) => ({ symbol: symbol.get(id) ?? "", crr: v.crr!.latest, change: v.crr!.change, pct: v.crr!.pct }));
 
+    const nowScores = latestScores(events, nowMs);
+    const thirtyAgo = latestScores(events, nowMs - 30 * DAY);
+    const avgOf = (m: Map<string, number>) => (m.size ? [...m.values()].reduce((a, b) => a + b, 0) / m.size : null);
+    const industryOf = new Map(companies.map((c) => [c.id, c.industry]));
+    const newCompanies: NewCompanyLine[] = newlyRows.map((r) => {
+      const crr = nowScores.get(r.id) ?? null;
+      const sameSector = r.industry ? [...nowScores.entries()].filter(([id]) => industryOf.get(id) === r.industry).map(([, v]) => v) : [];
+      return {
+        symbol: toSymbol(r.company_name ?? "Company"), name: r.company_name?.trim() || "Company", sector: r.industry, crr,
+        rank: crr === null ? null : 1 + [...nowScores.values()].filter((v) => v > crr).length,
+        of: nowScores.size,
+        sectorAvg: sameSector.length ? sameSector.reduce((a, b) => a + b, 0) / sameSector.length : null,
+      };
+    });
+    const monthGainers = ratingMoves(events, nowMs, 30)
+      .filter((m) => m.change > 0 && m.from !== null && symbol.has(m.companyId))
+      .slice(0, 5)
+      .map((m) => ({ symbol: symbol.get(m.companyId) as string, crr: m.to, change: m.change, pct: (m.from as number) > 0 ? (m.change / (m.from as number)) * 100 : null }));
+    const monthly: MonthlyDigest = {
+      range: rangeLabel(nowMs, 30),
+      approved: { total: approved.length, added: added30.count ?? 0, addedBefore: added60.count ?? 0 },
+      avgCrr: { now: avgOf(nowScores), before: avgOf(thirtyAgo) },
+      scored: { now: nowScores.size, before: thirtyAgo.size },
+      intros: { now: intros30.count ?? 0, before: intros60.count ?? 0 },
+      gainers: monthGainers,
+    };
+
     const market: DigestMarket = {
+      newCompanies,
+      monthly,
       range: rangeLabel(nowMs),
       asOfLabel: dateLabel(nowMs),
       tiles,
@@ -127,13 +165,33 @@ export async function investorViewer(ctx: WeeklyContext, profileId: string): Pro
   return { kind: "investor", matches, hasProfile: scores.size > 0 };
 }
 
+/** One investor's introduction requests over the last 7 days, from their own rows only. */
+export async function introActivity(ctx: WeeklyContext, profileId: string): Promise<IntroActivity> {
+  const db: any = createServiceRoleClient();
+  const since = new Date(ctx.nowMs - 7 * DAY).toISOString();
+  const [recent, reviewing] = await Promise.all([
+    db.from("intro_requests").select("status, created_at, updated_at, companies(company_name)").eq("investor_id", profileId).gte("updated_at", since).order("updated_at", { ascending: false }).limit(200),
+    db.from("intro_requests").select("id", { count: "exact", head: true }).eq("investor_id", profileId).eq("status", "reviewing"),
+  ]);
+  const rows = (recent.data ?? []) as Array<{ status: string; created_at: string; updated_at: string; companies: { company_name: string | null } | { company_name: string | null }[] | null }>;
+  const nameOf = (r: (typeof rows)[number]) => (Array.isArray(r.companies) ? r.companies[0]?.company_name : r.companies?.company_name) ?? "";
+  return {
+    requested: rows.filter((r) => r.created_at >= since).length,
+    facilitated: rows.filter((r) => r.status === "facilitated").length,
+    declined: rows.filter((r) => r.status === "declined").length,
+    reviewing: reviewing.count ?? 0,
+    latest: rows.filter((r) => nameOf(r)).slice(0, 5).map((r) => ({ symbol: toSymbol(nameOf(r)), status: r.status })),
+  };
+}
+
 export const marketOnlyViewer = (audience: "founder" | "investor"): DigestViewer =>
   audience === "founder" ? { kind: "founder", marketOnly: true } : { kind: "investor", marketOnly: true };
 
 export type PreviewExample = { key: string; label: string; viewer: DigestViewer };
+export type PreviewSet = { founder: PreviewExample[]; investor: PreviewExample[]; intros: PreviewExample[] };
 
 /** Real people for the admin preview: a scored founder, an unscored founder, an investor with matches. */
-export async function previewExamples(ctx: WeeklyContext): Promise<{ founder: PreviewExample[]; investor: PreviewExample[] }> {
+export async function previewExamples(ctx: WeeklyContext): Promise<PreviewSet> {
   const db: any = createServiceRoleClient();
   const founder: PreviewExample[] = [];
   const scoredIds = new Set(ctx.events.filter((e) => typeof e.score === "number").map((e) => e.companyId));
@@ -152,5 +210,15 @@ export async function previewExamples(ctx: WeeklyContext): Promise<{ founder: Pr
     if (v.kind === "investor" && v.matches && v.matches.length > 0) { investor.push({ key: "matches", label: "Investor with matches", viewer: v }); break; }
   }
   if (investor.length === 0) investor.push({ key: "none", label: "Investor with no matches yet", viewer: { kind: "investor", matches: [], hasProfile: false } });
-  return { founder, investor };
+  const intros: PreviewExample[] = [];
+  for (const r of (data ?? []) as Array<{ profile_id: string }>) {
+    const v = await investorViewer(ctx, r.profile_id);
+    const activity = await introActivity(ctx, r.profile_id);
+    if (v.kind === "investor" && !v.marketOnly && hasIntroActivity(activity)) { intros.push({ key: "activity", label: "Investor with introduction activity", viewer: { kind: "investor", matches: v.matches, hasProfile: v.hasProfile, intros: activity } }); break; }
+  }
+  intros.push({ key: "none", label: "Investor with no activity", viewer: { kind: "investor", matches: [], hasProfile: false, intros: { requested: 0, facilitated: 0, declined: 0, reviewing: 0, latest: [] } } });
+  return { founder, investor, intros };
 }
+
+/** The preview group a version uses. */
+export const exampleGroup = (v: "founder" | "investor" | "listed" | "intros" | "monthly"): keyof PreviewSet => (v === "founder" ? "founder" : v === "intros" ? "intros" : "investor");

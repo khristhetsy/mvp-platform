@@ -9,26 +9,26 @@ import { useMemo, useRef, useState } from "react";
 import { groupByDepartment, departmentOf } from "@/lib/marketing/department-grouping";
 import { countRuns, formatPt, nextRuns, todayInPt, type RepeatRule } from "@/lib/marketing/sequence-schedule";
 import {
-  AUDIENCES, BANNER_MAX_BYTES, NOTE_QUICK_INSERTS, PRESET_BANNER_PATH, MERGE_FIELDS, SECTION_OPTIONS, renderWeeklyEmail,
-  type Audience, type EmailLinks, type WeeklyEmailConfig,
+  BANNER_MAX_BYTES, NOTE_QUICK_INSERTS, PRESET_BANNER_PATH, MERGE_FIELDS, SECTION_OPTIONS, VERSIONS, VERSION_LABEL, renderWeeklyEmail, versionAudience,
+  type Audience, type EmailLinks, type Version, type WeeklyEmailConfig,
 } from "@/lib/private-market/weekly-email";
 import type { DigestMarket } from "@/lib/private-market/weekly-digest";
 import type { FactOption, Target } from "@/lib/private-market/weekly-ai";
 import type { WriterOption } from "@/lib/private-market/weekly-ai-server";
 import { WeeklyAiWriter } from "./WeeklyAiWriter";
-import type { PreviewExample } from "@/lib/private-market/weekly-data";
+import type { PreviewSet } from "@/lib/private-market/weekly-data";
 import type { WeeklySchedule, WeeklyState } from "@/lib/private-market/weekly-store";
 
 export type ListOption = { id: string; name: string; department: string | null; count: number };
 
 type Props = {
-  initial: Record<Audience, WeeklyState>;
+  initial: Record<Version, WeeklyState>;
   lists: ListOption[];
   groupCounts: Record<Audience, number>;
   market: DigestMarket | null;
-  examples: { founder: PreviewExample[]; investor: PreviewExample[] } | null;
+  examples: PreviewSet | null;
   writers: WriterOption[];
-  facts: Record<Audience, FactOption[]> | null;
+  facts: Record<Version, FactOption[]> | null;
   links: EmailLinks;
 };
 
@@ -49,20 +49,23 @@ const seg = (on: boolean): React.CSSProperties => ({ fontSize: 12.5, padding: "6
 type Draft = { config: WeeklyEmailConfig; schedule: WeeklySchedule; maxText: string };
 
 const draftOf = (s: WeeklyState): Draft => ({ config: s.config, schedule: s.schedule, maxText: String(s.schedule.max_per_run) });
+const groupOf = (v: Version): keyof PreviewSet => (v === "founder" ? "founder" : v === "intros" ? "intros" : "investor");
+const draftsOf = (i: Record<Version, WeeklyState>) => Object.fromEntries(VERSIONS.map((v) => [v, draftOf(i[v])])) as Record<Version, Draft>;
+const blankKeys = (v: string) => Object.fromEntries(VERSIONS.map((x) => [x, v])) as Record<Version, string>;
 
 export function WeeklyEmailerClient({ initial, lists, groupCounts, market, examples, writers, facts, links }: Props) {
-  const [aud, setAud] = useState<Audience>("founder");
-  const [drafts, setDrafts] = useState<Record<Audience, Draft>>({ founder: draftOf(initial.founder), investor: draftOf(initial.investor) });
-  const [saved, setSaved] = useState<Record<Audience, boolean>>({ founder: initial.founder.saved, investor: initial.investor.saved });
+  const [aud, setAud] = useState<Version>("founder");
+  const [drafts, setDrafts] = useState<Record<Version, Draft>>(() => draftsOf(initial));
+  const [saved, setSaved] = useState<Record<Version, boolean>>(() => Object.fromEntries(VERSIONS.map((v) => [v, initial[v].saved])) as Record<Version, boolean>);
   const [q, setQ] = useState("");
   const [device, setDevice] = useState<"d" | "m">("d");
-  const [asKey, setAsKey] = useState<Record<Audience, string>>({ founder: "", investor: "" });
+  const [asKey, setAsKey] = useState<Record<Version, string>>(() => blankKeys(""));
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [testOpen, setTestOpen] = useState(false);
   const [testTo, setTestTo] = useState<string[]>(["kthetsy@myicfos.com"]);
   const [testAdd, setTestAdd] = useState("");
-  const [testVer, setTestVer] = useState<Audience>("founder");
+  const [testVer, setTestVer] = useState<Version>("founder");
   const [testEx, setTestEx] = useState("");
   const [bannerMsg, setBannerMsg] = useState<string | null>(null);
   const noteRef = useRef<HTMLTextAreaElement>(null);
@@ -74,7 +77,8 @@ export function WeeklyEmailerClient({ initial, lists, groupCounts, market, examp
   const patch = (p: Partial<WeeklyEmailConfig>) => { setDrafts((x) => ({ ...x, [aud]: { ...x[aud], config: { ...x[aud].config, ...p } } })); setMsg(null); };
   const patchS = (p: Partial<WeeklySchedule>) => { setDrafts((x) => ({ ...x, [aud]: { ...x[aud], schedule: { ...x[aud].schedule, ...p } } })); setMsg(null); };
 
-  const exs = examples?.[aud] ?? [];
+  const role = versionAudience(aud);
+  const exs = examples?.[groupOf(aud)] ?? [];
   const ex = exs.find((e) => e.key === asKey[aud]) ?? exs[0];
 
   const preview = useMemo(() => {
@@ -166,7 +170,7 @@ export function WeeklyEmailerClient({ initial, lists, groupCounts, market, examp
     finally { setBusy(null); }
   }
 
-  const testExamples = examples?.[testVer] ?? [];
+  const testExamples = examples?.[groupOf(testVer)] ?? [];
   const sectionOptions = SECTION_OPTIONS[aud];
 
   return (
@@ -174,7 +178,7 @@ export function WeeklyEmailerClient({ initial, lists, groupCounts, market, examp
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 22 }}>Weekly emailer</h1>
-          <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--muted-foreground)" }}>The Private Market weekly email for founders and investors. Real platform numbers, sent on your schedule.</p>
+          <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--muted-foreground)" }}>The Private Market emails for founders and investors: weekly, new company listed, introduction update and monthly recap. Real platform numbers, sent on your schedule.</p>
         </div>
         <div style={{ display: "flex", gap: 6 }}>
           <Link href="/private-market" style={seg(false)}>Board</Link>
@@ -186,9 +190,9 @@ export function WeeklyEmailerClient({ initial, lists, groupCounts, market, examp
         <div>
           <div style={card}>
             <p style={h}>Email version</p>
-            <div style={{ display: "flex", gap: 6 }}>
-              {AUDIENCES.map((a) => (
-                <button key={a} type="button" style={seg(a === aud)} onClick={() => { setAud(a); setMsg(null); }}>{a === "founder" ? "Founder email" : "Investor email"}</button>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {VERSIONS.map((a) => (
+                <button key={a} type="button" style={seg(a === aud)} onClick={() => { setAud(a); setMsg(null); }}>{VERSION_LABEL[a]}</button>
               ))}
             </div>
             <p style={{ margin: "8px 0 0", fontSize: 12, color: "var(--muted-foreground)" }}>
@@ -199,8 +203,8 @@ export function WeeklyEmailerClient({ initial, lists, groupCounts, market, examp
           <div style={card}>
             <p style={h}>Send to</p>
             <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13, marginBottom: 6 }}>
-              <input type="checkbox" checked={c.groups.includes(aud)} onChange={() => toggleGroup(aud)} />
-              {aud === "founder" ? "All founders with a workspace" : "All approved investors"} <b>({groupCounts[aud].toLocaleString()})</b>
+              <input type="checkbox" checked={c.groups.includes(role)} onChange={() => toggleGroup(role)} />
+              {role === "founder" ? "All founders with a workspace" : "All approved investors"} <b>({groupCounts[role].toLocaleString()})</b>
             </label>
             <p style={{ ...lab, marginTop: 10 }}>Contact lists from Marketing, Lists</p>
             <input style={inp} placeholder="Search lists" value={q} onChange={(e) => setQ(e.target.value)} />
@@ -231,7 +235,7 @@ export function WeeklyEmailerClient({ initial, lists, groupCounts, market, examp
               <b>{picked.all.length} selected</b> · up to <b>{picked.total.toLocaleString()}</b> recipients{picked.multi ? " or fewer" : ""}
             </p>
             <p style={{ margin: "4px 0 0", fontSize: 11.5, color: "var(--muted-foreground)" }}>
-              Each address gets one email. Unsubscribed and held contacts are skipped. Platform {aud === "founder" ? "founders" : "investors"} get their own {aud === "founder" ? "rating" : "matches"}; other contacts get the market sections only.
+              Each address gets one email. Unsubscribed and held contacts are skipped. {aud === "intros" ? "Only approved investors with introduction activity that week get this email." : <>Platform {role === "founder" ? "founders" : "investors"} get their own {role === "founder" ? "rating" : "matches"}; other contacts get the market sections only.</>}
             </p>
           </div>
 
@@ -293,7 +297,7 @@ export function WeeklyEmailerClient({ initial, lists, groupCounts, market, examp
           {facts && (
             <WeeklyAiWriter
               key={aud}
-              audience={aud}
+              audience={role}
               writers={writers}
               facts={facts[aud]}
               styles={{ card, h, lab, inp, seg }}
@@ -342,9 +346,15 @@ export function WeeklyEmailerClient({ initial, lists, groupCounts, market, examp
               {runs.next.length ? runs.next.map((r) => <li key={r.toISOString()}>{formatPt(r)}</li>) : <li>No runs in this range</li>}
             </ul>
             {runs.total > 0 && <p style={{ margin: "4px 0 0", fontSize: 11.5, color: "var(--muted-foreground)" }}>{runs.total >= 500 ? "500+" : runs.total} runs in this range.</p>}
-            <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13, marginTop: 12 }}>
-              <input type="checkbox" checked={c.skipIfUnchanged} onChange={(e) => patch({ skipIfUnchanged: e.target.checked })} /> Skip a week when nothing changed
-            </label>
+            {role === "founder" || aud === "investor" ? (
+              <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13, marginTop: 12 }}>
+                <input type="checkbox" checked={c.skipIfUnchanged} onChange={(e) => patch({ skipIfUnchanged: e.target.checked })} /> Skip a week when nothing changed
+              </label>
+            ) : (
+              <p style={{ margin: "12px 0 0", fontSize: 12, color: "var(--muted-foreground)" }}>
+                {aud === "listed" ? "Skipped automatically on a week with no newly approved company." : aud === "intros" ? "Each investor is skipped on a week with no introduction activity." : "Sends once a month on the date you pick."}
+              </p>
+            )}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 12 }}>
               <div><label style={lab}>Sender name</label><input style={inp} placeholder="iCapOS" value={c.fromName ?? ""} onChange={(e) => patch({ fromName: e.target.value || null })} /></div>
               <div><label style={lab}>Sender address</label><input style={inp} placeholder="Default sender (iCapOS)" value={c.fromEmail ?? ""} onChange={(e) => patch({ fromEmail: e.target.value || null })} /></div>
@@ -356,7 +366,7 @@ export function WeeklyEmailerClient({ initial, lists, groupCounts, market, examp
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button type="button" style={btn(false, !market)} disabled={!market} onClick={() => { setTestVer(aud); setTestEx(""); setTestOpen(true); }}>Send test email</button>
               <button type="button" style={btn(false, busy !== null)} disabled={busy !== null} onClick={() => save(false, "Draft saved. Nothing is scheduled.")}>Save draft</button>
-              <button type="button" style={btn(true, busy !== null)} disabled={busy !== null} onClick={() => save(true, `Scheduled. Next send ${runs.next[0] ? formatPt(runs.next[0]) : "has no date in this range"}.`)}>{s.enabled ? "Update schedule" : "Schedule weekly send"}</button>
+              <button type="button" style={btn(true, busy !== null)} disabled={busy !== null} onClick={() => save(true, `Scheduled. Next send ${runs.next[0] ? formatPt(runs.next[0]) : "has no date in this range"}.`)}>{s.enabled ? "Update schedule" : "Schedule send"}</button>
               {s.enabled && <button type="button" style={btn(false, busy !== null)} disabled={busy !== null} onClick={() => save(false, "Paused. Nothing will send until you schedule it again.")}>Pause</button>}
               {s.enabled && <button type="button" style={btn(false, busy !== null)} disabled={busy !== null} onClick={review}>Mark next send reviewed</button>}
             </div>
@@ -400,7 +410,7 @@ export function WeeklyEmailerClient({ initial, lists, groupCounts, market, examp
             </div>
             <input style={inp} placeholder="name@company.com" value={testAdd} onChange={(e) => setTestAdd(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && testAdd.trim()) { e.preventDefault(); setTestTo([...new Set([...testTo, testAdd.trim().toLowerCase()])]); setTestAdd(""); } }} />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 12 }}>
-              <div><label style={lab}>Version</label><select style={inp} value={testVer} onChange={(e) => { setTestVer(e.target.value as Audience); setTestEx(""); }}><option value="founder">Founder email</option><option value="investor">Investor email</option></select></div>
+              <div><label style={lab}>Version</label><select style={inp} value={testVer} onChange={(e) => { setTestVer(e.target.value as Version); setTestEx(""); }}>{VERSIONS.map((v) => <option key={v} value={v}>{VERSION_LABEL[v]}</option>)}</select></div>
               <div><label style={lab}>Example data</label><select style={inp} value={testEx || testExamples[0]?.key || ""} onChange={(e) => setTestEx(e.target.value)}>{testExamples.map((e) => <option key={e.key} value={e.key}>{e.label}</option>)}</select></div>
             </div>
             <p style={{ margin: "10px 0 0", fontSize: 12, color: "var(--muted-foreground)" }}>The subject starts with [TEST] and a yellow strip marks the email. It goes only to the addresses above, never to your lists, and does not count as a weekly send.</p>

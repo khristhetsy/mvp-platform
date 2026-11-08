@@ -91,6 +91,31 @@ export type GainerRow = { symbol: string; crr: number; change: number; pct: numb
 export type SectorLine = { sector: string; avg: number; scored: number };
 export type MoveLine = { symbol: string; from: number | null; to: number };
 
+/** A company approved in the last 7 days, for the "New company listed" email. */
+export type NewCompanyLine = {
+  symbol: string;
+  name: string;
+  sector: string | null;
+  /** Latest rating; null when the company has none yet. */
+  crr: number | null;
+  /** Rank among scored companies, null when unscored. */
+  rank: number | null;
+  of: number;
+  /** Average rating of the scored companies in the same sector, null when none. */
+  sectorAvg: number | null;
+};
+
+/** Figures for the monthly recap: the 30 days to now against the 30 days before. */
+export type MonthlyDigest = {
+  /** "9 Oct to 8 Nov 2026" */
+  range: string;
+  approved: { total: number; added: number; addedBefore: number };
+  avgCrr: { now: number | null; before: number | null };
+  scored: { now: number; before: number };
+  intros: { now: number; before: number };
+  gainers: GainerRow[];
+};
+
 /** Everything in the email that is the same for every recipient. */
 export type DigestMarket = {
   /** "30 Oct to 6 Nov 2026" */
@@ -103,6 +128,19 @@ export type DigestMarket = {
   approvedTotal: number;
   newlyApproved: { count: number; scored: number };
   moves: MoveLine[];
+  /** Companies approved in the last 7 days. Missing in older callers. */
+  newCompanies?: NewCompanyLine[];
+  monthly?: MonthlyDigest;
+};
+
+/** One investor's introduction requests, for the "Introduction update" email. */
+export type IntroLine = { symbol: string; status: string };
+export type IntroActivity = {
+  requested: number;
+  facilitated: number;
+  declined: number;
+  reviewing: number;
+  latest: IntroLine[];
 };
 
 export type DigestMatch = { symbol: string; name: string; match: number; crr: number | null; sector: string | null };
@@ -110,11 +148,16 @@ export type DigestMatch = { symbol: string; name: string; match: number; crr: nu
 export type DigestViewer =
   | { kind: "founder"; rating: FounderRating | null; marketOnly?: false }
   | { kind: "founder"; rating?: null; marketOnly: true }
-  | { kind: "investor"; matches: DigestMatch[]; hasProfile: boolean; marketOnly?: false }
-  | { kind: "investor"; matches?: []; hasProfile?: false; marketOnly: true };
+  | { kind: "investor"; matches: DigestMatch[]; hasProfile: boolean; marketOnly?: false; intros?: IntroActivity }
+  | { kind: "investor"; matches?: []; hasProfile?: false; marketOnly: true; intros?: undefined };
 
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const d = (ms: number) => new Date(ms);
+
+/** True when an investor had introduction activity in the window (the email is skipped otherwise). */
+export function hasIntroActivity(a: IntroActivity | undefined): boolean {
+  return !!a && a.requested + a.facilitated + a.declined > 0;
+}
 
 /** "30 Oct to 6 Nov 2026" for the 7 days ending at nowMs (UTC dates). */
 export function rangeLabel(nowMs: number, windowDays = 7): string {

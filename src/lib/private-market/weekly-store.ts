@@ -16,9 +16,9 @@ import {
   type RepeatRule, type SequenceSchedule,
 } from "@/lib/marketing/sequence-schedule";
 import { validateScheduleInput, type ScheduleInput } from "@/lib/marketing/sequence-schedule-store";
-import { defaultConfig, renderWeeklyEmail, testSubject, type Audience, type EmailLinks, type WeeklyEmailConfig } from "./weekly-email";
-import { nothingChanged, type DigestViewer } from "./weekly-digest";
-import { founderViewer, investorViewer, loadWeeklyContext, marketOnlyViewer, type WeeklyContext } from "./weekly-data";
+import { defaultConfig, renderWeeklyEmail, testSubject, VERSION_LABEL, versionAudience, type Audience, type EmailLinks, type Version, type WeeklyEmailConfig } from "./weekly-email";
+import { hasIntroActivity, nothingChanged, type DigestViewer } from "./weekly-digest";
+import { founderViewer, introActivity, investorViewer, loadWeeklyContext, marketOnlyViewer, type WeeklyContext } from "./weekly-data";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const COLS = "audience, subject, preheader, note, button_text, sections, groups, list_ids, skip_if_unchanged, from_name, from_email, header_mode, banner_url, banner_strip, sign_off, enabled, start_date, end_date, repeat, weekdays, send_time, max_per_run, reminder_minutes, unreviewed_action, reviewed_for, activated_at, last_run_for, run_sent, run_done, last_reminder_for";
@@ -26,22 +26,22 @@ const COLS = "audience, subject, preheader, note, button_text, sections, groups,
 export type WeeklySchedule = Omit<SequenceSchedule, "sequence_id"> & { reviewed_for: string | null };
 export type WeeklyState = { config: WeeklyEmailConfig; schedule: WeeklySchedule; saved: boolean };
 
-export function defaultSchedule(now: Date = new Date()): WeeklySchedule {
+export function defaultSchedule(now: Date = new Date(), version?: Version): WeeklySchedule {
   return {
-    enabled: false, start_date: todayInPt(now), end_date: null, repeat: "weekly", weekdays: [1], send_time: "05:00",
+    enabled: false, start_date: todayInPt(now), end_date: null, repeat: version === "monthly" ? "monthly" : "weekly", weekdays: [1], send_time: "05:00",
     max_per_run: 5000, reminder_minutes: 1440, unreviewed_action: "send",
     activated_at: now.toISOString(), last_run_for: null, run_sent: 0, run_done: false, last_reminder_for: null, reviewed_for: null,
   };
 }
 
-const asSchedule = (audience: Audience, s: WeeklySchedule): SequenceSchedule => ({ ...s, sequence_id: audience });
+const asSchedule = (audience: Version, s: WeeklySchedule): SequenceSchedule => ({ ...s, sequence_id: audience });
 
 function fromRow(r: any): WeeklyState {
   const base = defaultConfig(r.audience);
   return {
     saved: true,
     config: {
-      audience: r.audience, subject: r.subject, preheader: r.preheader ?? "", note: r.note ?? "", buttonText: r.button_text,
+      audience: versionAudience(r.audience), version: r.audience, subject: r.subject, preheader: r.preheader ?? "", note: r.note ?? "", buttonText: r.button_text,
       sections: { ...base.sections, ...(r.sections ?? {}) }, groups: r.groups ?? [], listIds: r.list_ids ?? [],
       skipIfUnchanged: !!r.skip_if_unchanged, fromName: r.from_name ?? null, fromEmail: r.from_email ?? null,
       headerMode: r.header_mode === "banner" ? "banner" : "std", bannerUrl: r.banner_url ?? null, bannerStrip: r.banner_strip !== false,
@@ -56,9 +56,9 @@ function fromRow(r: any): WeeklyState {
   };
 }
 
-export async function getWeekly(audience: Audience, now: Date = new Date()): Promise<WeeklyState> {
+export async function getWeekly(audience: Version, now: Date = new Date()): Promise<WeeklyState> {
   const { data } = await marketingDb().from("private_market_weekly_emails").select(COLS).eq("audience", audience).maybeSingle();
-  return data ? fromRow(data) : { config: defaultConfig(audience), schedule: defaultSchedule(now), saved: false };
+  return data ? fromRow(data) : { config: defaultConfig(audience), schedule: defaultSchedule(now, audience), saved: false };
 }
 
 export type WeeklySaveInput = { config: WeeklyEmailConfig; schedule: Pick<WeeklySchedule, "enabled" | "start_date" | "end_date" | "repeat" | "weekdays" | "send_time" | "max_per_run" | "reminder_minutes" | "unreviewed_action"> };
@@ -81,14 +81,14 @@ export function validateWeekly(i: WeeklySaveInput): string | null {
 export async function saveWeekly(i: WeeklySaveInput, userId: string): Promise<void> {
   const err = validateWeekly(i);
   if (err) throw new Error(err);
-  const prev = await getWeekly(i.config.audience);
+  const prev = await getWeekly(i.config.version);
   const s = i.schedule;
   const same = prev.saved && prev.schedule.enabled === s.enabled && prev.schedule.start_date === s.start_date && prev.schedule.end_date === (s.end_date || null) &&
     prev.schedule.repeat === s.repeat && prev.schedule.send_time === s.send_time && prev.schedule.weekdays.join() === [...new Set(s.weekdays)].sort().join();
   const now = new Date().toISOString();
   const c = i.config;
   const { error } = await marketingDb().from("private_market_weekly_emails").upsert({
-    audience: c.audience, subject: c.subject.trim(), preheader: c.preheader.trim(), note: c.note.trim(), button_text: c.buttonText.trim(),
+    audience: c.version, subject: c.subject.trim(), preheader: c.preheader.trim(), note: c.note.trim(), button_text: c.buttonText.trim(),
     sections: c.sections, groups: c.groups, list_ids: c.listIds, skip_if_unchanged: c.skipIfUnchanged,
     from_name: c.fromName?.trim() || null, from_email: c.fromEmail?.trim() || null,
     header_mode: c.headerMode === "banner" ? "banner" : "std", banner_url: c.bannerUrl?.trim() || null, banner_strip: c.bannerStrip !== false,
@@ -103,7 +103,7 @@ export async function saveWeekly(i: WeeklySaveInput, userId: string): Promise<vo
 }
 
 /** Marks the next run as reviewed, so "hold if not reviewed" lets it go. */
-export async function markNextRunReviewed(audience: Audience): Promise<string | null> {
+export async function markNextRunReviewed(audience: Version): Promise<string | null> {
   const st = await getWeekly(audience);
   const next = nextRuns(asSchedule(audience, st.schedule), new Date(), 1)[0];
   if (!next) return null;
@@ -112,7 +112,7 @@ export async function markNextRunReviewed(audience: Audience): Promise<string | 
   return next.toISOString();
 }
 
-export function scheduleSummary(audience: Audience, s: WeeklySchedule, now: Date = new Date()) {
+export function scheduleSummary(audience: Version, s: WeeklySchedule, now: Date = new Date()) {
   const ss = asSchedule(audience, s);
   return { label: describeSchedule(ss), next: nextRuns(ss, now, 4).map((d) => d.toISOString()) };
 }
@@ -206,10 +206,17 @@ function linksFor(email: string): EmailLinks {
   };
 }
 
-async function viewerFor(ctx: WeeklyContext, audience: Audience, r: WeeklyRecipient): Promise<DigestViewer> {
+async function viewerFor(ctx: WeeklyContext, version: Version, r: WeeklyRecipient): Promise<DigestViewer> {
+  const audience = versionAudience(version);
   if (r.viewer === "contact" || !r.profileId) return marketOnlyViewer(audience);
-  return audience === "founder" ? founderViewer(ctx, r.profileId) : investorViewer(ctx, r.profileId);
+  if (audience === "founder") return founderViewer(ctx, r.profileId);
+  const v = await investorViewer(ctx, r.profileId);
+  return version === "intros" && v.kind === "investor" && !v.marketOnly ? { kind: "investor", matches: v.matches, hasProfile: v.hasProfile, intros: await introActivity(ctx, r.profileId) } : v;
 }
+
+/** The introduction email only goes to an investor with activity this week. */
+const skipRecipient = (version: Version, viewer: DigestViewer): boolean =>
+  version === "intros" && !(viewer.kind === "investor" && !viewer.marketOnly && hasIntroActivity(viewer.intros));
 
 async function deliver(config: WeeklyEmailConfig, ctx: WeeklyContext, email: string, viewer: DigestViewer, test: boolean, triggeredBy: string | null) {
   const links = linksFor(email);
@@ -218,7 +225,7 @@ async function deliver(config: WeeklyEmailConfig, ctx: WeeklyContext, email: str
     to: email, subject: out.subject, html: out.html, text: out.text,
     fromName: config.fromName ?? undefined, fromAddress: config.fromEmail,
     headers: { "List-Unsubscribe": `<${links.unsubscribeUrl}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
-    tags: [{ name: "kind", value: test ? "private-market-weekly-test" : "private-market-weekly" }],
+    tags: [{ name: "kind", value: test ? "private-market-weekly-test" : "private-market-weekly" }, { name: "version", value: config.version }],
     source: test ? "private-market-weekly-test" : "private-market-weekly",
     audience: (test ? "staff" : config.audience) as "staff" | "founder" | "investor",
     triggeredBy,
@@ -260,7 +267,7 @@ export async function runWeeklyEmails(now: Date = new Date(), budgetMs = 240_000
   const states = ((data ?? []) as any[]).map((r) => ({ ...fromRow(r), updatedBy: (r.updated_by as string | null) ?? null }));
 
   for (const st of states) {
-    const audience = st.config.audience;
+    const audience = st.config.version;
     const sched = asSchedule(audience, st.schedule);
     const run = latestRun(sched, now);
     if (!run || run < new Date(st.schedule.activated_at)) continue;
@@ -276,7 +283,11 @@ export async function runWeeklyEmails(now: Date = new Date(), budgetMs = 240_000
 
     const ctx = await loadWeeklyContext(now);
     if (!ctx) continue; // numbers unreadable: try again on the next 5 minute pass
-    if (st.config.skipIfUnchanged && nothingChanged(ctx.market)) {
+    const nothingToSend =
+      (audience === "listed" && (ctx.market.newCompanies?.length ?? 0) === 0) ||
+      (audience === "monthly" && !ctx.market.monthly) ||
+      ((audience === "founder" || audience === "investor") && st.config.skipIfUnchanged && nothingChanged(ctx.market));
+    if (nothingToSend) {
       await db.from("private_market_weekly_emails").update({ run_done: true }).eq("audience", audience);
       out.skippedUnchanged++;
       continue;
@@ -293,7 +304,15 @@ export async function runWeeklyEmails(now: Date = new Date(), budgetMs = 240_000
       if (sent >= st.schedule.max_per_run) break;
       if (timeLeft() < 20_000) { outOfTime = true; break; }
       let ok = false, error: string | null = null;
-      try { ok = await deliver(st.config, ctx, r.email, await viewerFor(ctx, audience, r), false, st.updatedBy); if (!ok) error = "Send failed"; }
+      try {
+        const viewer = await viewerFor(ctx, audience, r);
+        if (skipRecipient(audience, viewer)) {
+          await db.from("private_market_weekly_sends").upsert({ audience, run_for: run.toISOString(), email: r.email, status: "skipped", error: "No introduction activity" }, { onConflict: "audience,run_for,email" });
+          continue;
+        }
+        ok = await deliver(st.config, ctx, r.email, viewer, false, st.updatedBy);
+        if (!ok) error = "Send failed";
+      }
       catch (e) { error = e instanceof Error ? e.message.slice(0, 200) : "Send failed"; }
       await db.from("private_market_weekly_sends").upsert({ audience, run_for: run.toISOString(), email: r.email, status: ok ? "sent" : "failed", error }, { onConflict: "audience,run_for,email" });
       sent++;
@@ -307,18 +326,18 @@ export async function runWeeklyEmails(now: Date = new Date(), budgetMs = 240_000
   // Review reminder before the next run.
   for (const st of states) {
     if (st.schedule.reminder_minutes <= 0) continue;
-    const audience = st.config.audience;
+    const audience = st.config.version;
     const next = nextRuns(asSchedule(audience, st.schedule), now, 1)[0];
     if (!next || next.getTime() - st.schedule.reminder_minutes * 60_000 > now.getTime()) continue;
     if (st.schedule.last_reminder_for && new Date(st.schedule.last_reminder_for).getTime() === next.getTime()) continue;
     await db.from("private_market_weekly_emails").update({ last_reminder_for: next.toISOString() }).eq("audience", audience);
     if (st.schedule.reviewed_for && new Date(st.schedule.reviewed_for).getTime() === next.getTime()) continue;
     const recipients = st.updatedBy ? [st.updatedBy] : await listStaffProfileIds();
-    const label = audience === "founder" ? "founder" : "investor";
+    const label = VERSION_LABEL[audience].toLowerCase();
     await Promise.all(recipients.map((recipientUserId) => createNotification({
       recipientUserId, type: "private_market_weekly_reminder",
-      title: `Review the ${label} weekly email before ${formatTime(st.schedule.send_time)} PT`,
-      message: `The ${label} Private Market weekly email sends ${formatPt(next)}. ` + (st.schedule.unreviewed_action === "send" ? "It goes out even if not reviewed." : "It is held until you mark it reviewed."),
+      title: `Review the ${label} email before ${formatTime(st.schedule.send_time)} PT`,
+      message: `The ${label} Private Market email sends ${formatPt(next)}. ` + (st.schedule.unreviewed_action === "send" ? "It goes out even if not reviewed." : "It is held until you mark it reviewed."),
       entityType: "private_market_weekly_email", entityId: audience, severity: "info",
       deepLink: "/admin/private-market/weekly-emailer", dedupeKey: `pm-weekly-reminder:${audience}:${next.toISOString()}`,
     })));
