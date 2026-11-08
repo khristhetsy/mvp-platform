@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, ChevronRight, ChevronLeft, Lock } from "lucide-react";
+import { ChevronRight, ChevronLeft, Lock } from "lucide-react";
 import { useLocale } from "next-intl";
 import type { InternalPermission } from "@/lib/rbac/constants";
 import { JOURNEY_STAGES, type JourneyStage } from "@/lib/founder-journey/types";
@@ -551,16 +551,9 @@ export function WorkspaceSidebar({
     ) : renderLeafLink(child, isLocked(child)));
   }
 
-  // A stage row is done once the founder's journey has moved past it.
-  function isStageDone(item: WorkspaceNavItem): boolean {
-    if (currentStageIndex == null || !item.journeyStage) return false;
-    return JOURNEY_STAGES.indexOf(item.journeyStage) < currentStageIndex;
-  }
-
   function renderTopLevel(item: WorkspaceNavItem, locked = false) {
     if (item.children && item.children.length > 0) {
       const parentActive = isChildActive(item);
-      const done = isStageDone(item);
       const Icon = getWorkspaceNavIcon(item.href);
       return (
         <button
@@ -584,14 +577,11 @@ export function WorkspaceSidebar({
           {locked ? (
             <Lock className="ml-auto h-3.5 w-3.5 shrink-0 text-slate-400" strokeWidth={1.75} aria-hidden />
           ) : (
-            <>
-              {done ? <Check className="ml-auto h-3.5 w-3.5 shrink-0 text-emerald-600" strokeWidth={2.5} aria-label="Stage complete" /> : null}
-              <ChevronRight
-                className={`${done ? "" : "ml-auto "}h-3.5 w-3.5 shrink-0 ${parentActive ? "text-[var(--blue)]" : "text-slate-400"}`}
-                strokeWidth={2}
-                aria-hidden
-              />
-            </>
+            <ChevronRight
+              className={`ml-auto h-3.5 w-3.5 shrink-0 ${parentActive ? "text-[var(--blue)]" : "text-slate-400"}`}
+              strokeWidth={2}
+              aria-hidden
+            />
           )}
         </button>
       );
