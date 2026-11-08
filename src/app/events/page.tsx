@@ -8,6 +8,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getCurrentUserProfile, dashboardForRole } from "@/lib/supabase/auth";
 import { normalizeUserRole } from "@/lib/api/admin";
 import { listPublicEvents } from "@/lib/icfo-events/queries";
+import { bannerPublicUrl } from "@/lib/icfo-events/banner";
 import type { EventRecord } from "@/lib/icfo-events/types";
 
 export const dynamic = "force-dynamic";
@@ -80,28 +81,43 @@ export default async function EventsListPage() {
               </p>
             </div>
           ) : (
-            events.map((ev) => (
-              <Link
-                key={ev.id}
-                href={`/events/${ev.slug}`}
-                className="group flex items-center justify-between rounded-xl border border-[var(--border-subtle)] bg-white px-6 py-5 shadow-[var(--shadow-panel)] transition hover:border-[var(--indigo)]"
-              >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="rounded-full bg-[var(--indigo-soft)] px-2.5 py-0.5 text-xs font-medium capitalize text-[var(--indigo)]">
-                      {ev.format.replace("_", " ")}
-                    </span>
-                    {ev.status === "live" && (
-                      <span className="rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">{t("live")}</span>
-                    )}
+            events.map((ev) => {
+              const coverUrl = bannerPublicUrl(supabase, ev.coverPath);
+              return (
+                <Link
+                  key={ev.id}
+                  href={`/events/${ev.slug}`}
+                  className="group flex flex-col overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-white shadow-[var(--shadow-panel)] transition hover:border-[var(--indigo)] sm:flex-row"
+                >
+                  {coverUrl ? (
+                    <div className="relative h-44 w-full flex-none overflow-hidden bg-[var(--navy)] sm:h-auto sm:min-h-[190px] sm:w-80">
+                      <div
+                        aria-hidden
+                        className="absolute inset-0"
+                        style={{ backgroundImage: `url(${coverUrl})`, backgroundSize: "cover", backgroundPosition: ev.coverFocal }}
+                      />
+                      <div aria-hidden className="absolute inset-0" style={{ background: "#0c2340", opacity: ev.coverOverlay / 100 }} />
+                    </div>
+                  ) : null}
+                  <div className="flex flex-1 items-center justify-between gap-3 px-6 py-5">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-full bg-[var(--indigo-soft)] px-2.5 py-0.5 text-xs font-medium capitalize text-[var(--indigo)]">
+                          {ev.format.replace("_", " ")}
+                        </span>
+                        {ev.status === "live" && (
+                          <span className="rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">{t("live")}</span>
+                        )}
+                      </div>
+                      <h2 className="mt-2 text-lg font-semibold text-[var(--navy)]">{ev.title}</h2>
+                      <p className="mt-1 text-sm text-[var(--text-muted)]">{fmtRange(ev.startsAt, ev.endsAt)}</p>
+                      {ev.summary && <p className="mt-2 max-w-2xl text-sm text-[var(--text-secondary)]">{ev.summary}</p>}
+                    </div>
+                    <ArrowRight className="h-5 w-5 flex-none text-[var(--text-muted)] transition group-hover:translate-x-0.5 group-hover:text-[var(--indigo)]" />
                   </div>
-                  <h2 className="mt-2 text-lg font-semibold text-[var(--navy)]">{ev.title}</h2>
-                  <p className="mt-1 text-sm text-[var(--text-muted)]">{fmtRange(ev.startsAt, ev.endsAt)}</p>
-                  {ev.summary && <p className="mt-2 max-w-2xl text-sm text-[var(--text-secondary)]">{ev.summary}</p>}
-                </div>
-                <ArrowRight className="h-5 w-5 flex-none text-[var(--text-muted)] transition group-hover:translate-x-0.5 group-hover:text-[var(--indigo)]" />
-              </Link>
-            ))
+                </Link>
+              );
+            })
           )}
         </div>
       </section>
