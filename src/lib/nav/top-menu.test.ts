@@ -128,10 +128,15 @@ describe("toApps: founder", () => {
       "Stage 2 – Preparation",
       "Stage 3 – Marketing",
       "Stage 4 – Closing",
-      "Communications",
-      "Calendar",
+      "Investors",
       "Workspace",
+      "Calendar",
+      "Communications",
+      "Help",
     ]);
+    expect(entryLabels(byLabel(apps, "Investors"))).toEqual(["Investor interest", "Investor matches", "Outreach", "Investor directory", "Investor CRM"]);
+    expect(entryLabels(byLabel(apps, "Workspace"))).toEqual(["Tasks", "Investor events"]);
+    expect(entryLabels(byLabel(apps, "Help"))).toEqual(["How it works", "Support"]);
     expect(entryLabels(byLabel(apps, "Stage 2 – Preparation"))).toEqual([
       "Stage guide",
       "Capital Readiness Rating",

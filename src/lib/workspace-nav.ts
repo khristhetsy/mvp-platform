@@ -9,6 +9,8 @@ export type WorkspaceNavItem = {
   label: string;
   requiredPermission?: InternalPermission;
   minStage?: JourneyStage;
+  /** Founder stage rows: the journey stage this row stands for. The sidebar marks it done once the founder is past it. */
+  journeyStage?: JourneyStage;
   /** Founder-only: show only when the founder's offering_type is 'reg_cf'. */
   requiresRegCf?: boolean;
   /** Top menu layout: the dropdown this page sits in when its app has more than 7 menu items. Ignored by the sidebar. */
@@ -452,6 +454,7 @@ export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
       {
         href: "/founder/onboarding",
         label: "Stage 1 – Onboarding",
+        journeyStage: "initialize",
         children: [
           { href: "/founder/stages/onboarding", label: "Stage guide" },
           { href: "/founder/settings", label: "Company profile" },
@@ -463,6 +466,7 @@ export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
         href: "/founder/readiness",
         label: "Stage 2 – Preparation",
         minStage: "qualify",
+        journeyStage: "qualify",
         children: [
           { href: "/founder/stages/preparation", label: "Stage guide", minStage: "qualify" },
           { href: "/founder/readiness/wizard", label: "Capital Readiness Rating", minStage: "qualify" },
@@ -488,6 +492,7 @@ export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
         href: "/founder/investors",
         label: "Stage 3 – Marketing",
         minStage: "deploy",
+        journeyStage: "deploy",
         children: [
           { href: "/founder/stages/marketing", label: "Stage guide", minStage: "deploy" },
           { href: "/founder/contacts", label: "My contacts", minStage: "deploy" },
@@ -505,6 +510,7 @@ export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
         href: "/founder/deal-room",
         label: "Stage 4 – Closing",
         minStage: "deploy",
+        journeyStage: "optimize",
         children: [
           { href: "/founder/stages/closing", label: "Stage guide", minStage: "deploy" },
           { href: "/founder/deal-room", label: "Deal Room", minStage: "deploy" },
@@ -519,11 +525,32 @@ export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
     ],
   },
   {
+    // Everything about investors in one place. The Stage 3 menu keeps its own links to the
+    // same pages, so nothing moves out of the stage.
+    title: "Investors",
+    items: [
+      { href: "/founder/investor-interest", label: "Investor interest" },
+      { href: "/founder/matches", label: "Investor matches", minStage: "deploy" },
+      { href: "/founder/deploy", label: "Outreach", minStage: "deploy" },
+      { href: "/founder/investor-directory", label: "Investor directory", minStage: "deploy" },
+      { href: "/founder/investor-pipeline", label: "Investor CRM", minStage: "deploy" },
+    ],
+  },
+  {
     // Working areas that aren't raise steps but don't belong in a dropdown.
     // Settings, Team, Billing, Integrations, iCFO Points, and Feedback live
     // behind the top-bar avatar menu (WorkspaceHeader), not here.
     title: "Workspace",
     items: [
+      { href: "/founder/tasks", label: "Tasks", minStage: "qualify" },
+      {
+        href: "/founder/calendar",
+        label: "Calendar",
+        children: [
+          { href: "/founder/calendar", label: "Calendar" },
+          { href: "/founder/schedule", label: "Scheduling" },
+        ],
+      },
       {
         href: "/founder/inbox",
         label: "Communications",
@@ -533,19 +560,20 @@ export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
           { href: "/founder/updates", label: "Investor Updates", minStage: "deploy" },
         ],
       },
+      { href: "/founder/events", label: "Investor events", minStage: "qualify" },
+    ],
+  },
+  {
+    title: "Help",
+    items: [
       {
-        href: "/founder/calendar",
-        label: "Calendar",
+        href: "/founder/help",
+        label: "Help",
         children: [
-          { href: "/founder/calendar", label: "Calendar" },
-          { href: "/founder/schedule", label: "Scheduling" },
+          { href: "/founder/help", label: "How it works" },
+          { href: "/founder/support", label: "Support" },
         ],
       },
-      { href: "/founder/events", label: "Events", minStage: "qualify" },
-      { href: "/founder/investor-interest", label: "Investor interest" },
-      { href: "/founder/tasks", label: "Tasks", minStage: "qualify" },
-      { href: "/founder/help", label: "How it works" },
-      { href: "/founder/support", label: "Support" },
     ],
   },
 ];
