@@ -30,6 +30,7 @@ const DESCRIPTIONS: Record<string, string> = {
   "/admin/investor-directory": "Public investor data",
   "/admin/accounting": "Invoices, A/R and bank",
   "/admin/social": "Posts and accounts",
+  "/admin/linkedin": "Invites and AI hand off",
   "/admin/events": "Events and sponsors",
   "/admin/voice": "AI calling",
   "/admin/inbox": "Inbox and calendar",
@@ -44,7 +45,7 @@ const DESCRIPTIONS: Record<string, string> = {
 /** Groups for the "Grouped by work" style; hubs not listed go under "More". */
 const GROUPS: Array<{ label: string; hrefs: string[] }> = [
   { label: "Raise", hrefs: ["/admin", "/admin/ceo", "/admin/ir", "/admin/investor-directory", "/admin/contacts"] },
-  { label: "Grow", hrefs: ["/admin/sales", "/admin/marketing", "/admin/social", "/admin/events", "/admin/voice"] },
+  { label: "Grow", hrefs: ["/admin/sales", "/admin/marketing", "/admin/social", "/admin/linkedin", "/admin/events", "/admin/voice"] },
   { label: "Operate", hrefs: ["/admin/accounting", "/admin/inbox", "/admin/actions", "/admin/companies", "/admin/learning", "/admin/manual"] },
   { label: "Admin", hrefs: ["/admin/users/manage", "/admin/integrations"] },
 ];
