@@ -3,19 +3,37 @@
 // points at the phone's session, so they behave exactly as they do on the website. New file, nothing existing is changed.
 import "server-only";
 import { NextResponse } from "next/server";
-import { withBearerFounder } from "./_bearer";
-import { withBearerInvestor } from "./_bearer-investor";
+import { withBearerFounder, withBearerRole } from "./_bearer";
+
+/** A request that runs longer than this answers 504 instead of holding the function open. */
+export const MOBILE_TIMEOUT_MS = 25_000;
+
+function withTimeout(run: () => Promise<Response>, ms = MOBILE_TIMEOUT_MS): () => Promise<Response> {
+  return () =>
+    new Promise<Response>((resolve, reject) => {
+      const timer = setTimeout(() => resolve(NextResponse.json({ error: "timeout" }, { status: 504 })), ms);
+      run().then(
+        (r) => {
+          clearTimeout(timer);
+          resolve(r);
+        },
+        (e) => {
+          clearTimeout(timer);
+          reject(e);
+        },
+      );
+    });
+}
 
 export async function asFounder(req: Request, run: () => Promise<Response>): Promise<Response> {
-  const r = await withBearerFounder(req, run);
+  const r = await withBearerFounder(req, withTimeout(run));
   if (!r.ok) return NextResponse.json({ error: "unauthorized" }, { status: r.status });
   return r.value;
 }
 
 /** Same, for routes both app sides use (reminders, notifications): a founder token runs as founder, an investor token as investor. */
 export async function asMember(req: Request, run: () => Promise<Response>): Promise<Response> {
-  let r = await withBearerFounder(req, run);
-  if (!r.ok && r.status === 403) r = await withBearerInvestor(req, run);
+  const r = await withBearerRole(req, ["founder", "investor"], withTimeout(run));
   if (!r.ok) return NextResponse.json({ error: "unauthorized" }, { status: r.status });
   return r.value;
 }
