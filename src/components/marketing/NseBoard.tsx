@@ -135,11 +135,10 @@ function CandleChart({ candles, ma }: Readonly<{ candles: Candle[]; ma: Array<nu
   const y = (v: number) => 20 + (1 - (v - lo) / (hi - lo || 1)) * 160;
   const step = (R - L) / candles.length;
   const x = (i: number) => L + step * i + step / 2;
-  const maxReadings = Math.max(1, ...candles.map((c) => c.readings));
   const ticks = [0, 1, 2, 3].map((i) => lo + ((hi - lo) * i) / 3);
   const maPoints = ma.flatMap((v, i) => (v === null ? [] : [`${x(i).toFixed(1)},${y(v).toFixed(1)}`])).join(" ");
   return (
-    <svg viewBox={`0 0 ${W} 268`} width="100%" role="img" aria-label="Weekly candles of the average CRR of scored founders, with score readings per week as bars">
+    <svg viewBox={`0 0 ${W} 268`} width="100%" role="img" aria-label="Weekly candles of the average CRR of scored founders">
       {ticks.map((t) => (
         <g key={t}>
           <line x1={L} x2={R} y1={y(t)} y2={y(t)} stroke="#dbe4f3" />
@@ -152,10 +151,8 @@ function CandleChart({ candles, ma }: Readonly<{ candles: Candle[]; ma: Array<nu
         const color = up ? "#0f9d6b" : down ? "#d92d20" : "#4a5878";
         const top = y(Math.max(c.open, c.close));
         const h = Math.max(1.5, Math.abs(y(c.open) - y(c.close)));
-        const bar = (c.readings / maxReadings) * 52;
         return (
           <g key={c.weekStart}>
-            <rect x={x(i) - step * 0.3} y={250 - bar} width={step * 0.6} height={bar} fill="#93b4f0" />
             <line x1={x(i)} x2={x(i)} y1={y(c.high)} y2={y(c.low)} stroke={color} strokeWidth="1.5" />
             <rect x={x(i) - step * 0.28} y={top} width={step * 0.56} height={h} fill={color} />
           </g>
@@ -287,7 +284,7 @@ export function NseBoard({
         Index tiles and the ticker show the change over the last {t.windowDays} days ({dayMonth(t.from)} to {dayMonth(t.to)}) across all scored
         founders and all investor outreach on the platform. Top Gainers ranks approved companies by CRR change since their first reading. The Sector board
         averages CRR across all scored companies in a sector, listed for every sector of the approved companies, with the change over the same {t.windowDays} days. Candles are the weekly open, high, low and close of the average CRR of scored founders (the
-        number of founders grows over time), the blue line is a 3 week moving average and the blue bars count score readings per week.
+        number of founders grows over time), and the blue line is a 3 week moving average.
       </p>
     </section>
   );
