@@ -58,13 +58,22 @@ export async function refreshPartnerScoreSnapshots(
   const deadlineMs = opts.deadlineMs ?? Number.POSITIVE_INFINITY;
 
   const investorsRes = await admin.from("investor_profiles").select("profile_id");
-  const ids = [
+  const candidateIds = [
     ...new Set(
       ((investorsRes as { data: Array<{ profile_id: string | null }> | null }).data ?? [])
         .map((r) => r.profile_id)
         .filter((id): id is string => Boolean(id)),
     ),
   ];
+  if (candidateIds.length === 0) return { refreshed: 0, remaining: 0 };
+
+  // partner_score_snapshots.investor_id references profiles(id). An investor_profiles row whose profile is gone
+  // would make the whole upsert fail on the foreign key and no score would be saved, so only score investors
+  // that still have a profile. If the lookup itself fails, keep every id as before.
+  const profileRes = await snap(admin).from("profiles").select("id").in("id", candidateIds);
+  const profileRows = (profileRes as { data: Array<{ id: string }> | null }).data;
+  const knownProfileIds = profileRows ? new Set(profileRows.map((r) => r.id)) : null;
+  const ids = knownProfileIds ? candidateIds.filter((id) => knownProfileIds.has(id)) : candidateIds;
   if (ids.length === 0) return { refreshed: 0, remaining: 0 };
 
   // Refresh the least-recently-computed investors first so runs rotate coverage.
