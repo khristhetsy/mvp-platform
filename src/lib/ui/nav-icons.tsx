@@ -159,6 +159,7 @@ import {
   KeyRound,
   ChartNoAxesColumn,
   type LucideIcon,
+  Linkedin,
 } from "lucide-react";
 
 // One icon per nav destination. Keyed by href so both the top-level category and
@@ -380,6 +381,7 @@ export const workspaceNavIconByHref: Record<string, LucideIcon> = {
   "/admin/ir/tasks": ClipboardList,
   "/admin/ir/import": Import,
   "/admin/social": Share2,
+  "/admin/linkedin": Linkedin,
   "/admin/events/applications": FileInput,
   "/admin/events/sponsors": BadgeDollarSign,
   "/admin/events/invitations": MailPlus,

@@ -1,0 +1,8 @@
+{
+  "name": "icapos-linkedin-sender",
+  "private": true,
+  "type": "module",
+  "description": "Runs on your own computer. Fills in LinkedIn invites that iCapOS has approved, one at a time.",
+  "scripts": { "start": "node sender.mjs" },
+  "dependencies": { "playwright": "^1.49.0" }
+}

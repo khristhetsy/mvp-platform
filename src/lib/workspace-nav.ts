@@ -99,6 +99,8 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
         ],
       },
       { href: "/admin/social", label: "Social Media", requiredPermission: "view_admin_dashboard" },
+      // LinkedIn outreach (admin pilot): invites, follow ups and the hand off to the AI chat agents.
+      { href: "/admin/linkedin", label: "LinkedIn", requiredPermission: "view_admin_dashboard" },
       { href: "/admin/ai-agent", label: "AI Agent", requiredPermission: "manage_settings" },
       {
         href: "/admin/events",

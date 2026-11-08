@@ -13,6 +13,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, use
 import {
   BookOpen, BookUser, CalendarDays, ChevronDown, Contact, Crown, GraduationCap, Grip, Headset, Landmark, LayoutDashboard,
   LifeBuoy, Lock, Mail, Megaphone, MessagesSquare, Settings, Share2, ShieldCheck, TrendingUp, Wrench, type LucideIcon,
+  Linkedin,
 } from "lucide-react";
 import type { WorkspaceId } from "@/lib/workspace-nav";
 import { workspaceLabel } from "@/lib/workspace-nav";
@@ -47,6 +48,8 @@ export const TILE_ICONS: Record<string, LucideIcon> = {
   "/admin/integrations": Settings,
   "/admin/investor-directory": BookUser,
   "/admin/accounting": Landmark,
+  // Added last on purpose: tile colors follow the key order, so earlier hubs keep their colors.
+  "/admin/linkedin": Linkedin,
 };
 
 /** A tile's colors, fixed per admin hub so they don't shift when someone can't see every hub. */
