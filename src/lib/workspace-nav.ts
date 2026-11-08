@@ -613,6 +613,11 @@ export const investorWorkspaceNavSections: WorkspaceNavSection[] = [
     ],
   },
   {
+    // The board is open at every stage and one click from the top, like the founder menu.
+    // Browsing is not gated; expressing interest and intros are, inside the board.
+    items: [{ href: "/investor/opportunities", label: "Private Market" }],
+  },
+  {
     title: "Stage 1 · Onboarding",
     items: [
       { href: "/investor/stages/onboarding", label: "Stage guide" },
@@ -633,18 +638,10 @@ export const investorWorkspaceNavSections: WorkspaceNavSection[] = [
     // as a clean funnel step.
     items: [
       { href: "/investor/stages/access", label: "Stage guide" },
-      {
-        href: "/investor/opportunities",
-        label: "Private Market",
-        children: [
-          // Hidden from nav (route still resolves). Restore by uncommenting.
-          // { href: "/investor/opportunities", label: "Overview" },
-          { href: "/investor/watchlist", label: "Watchlist" },
-          { href: "/investor/interest-pipeline", label: "Interest Pipeline" },
-          { href: "/investor/deal-room", label: "Deal Room" },
-          { href: "/investor/deals", label: "Diligence" },
-        ],
-      },
+      { href: "/investor/watchlist", label: "Watchlist" },
+      { href: "/investor/interest-pipeline", label: "Interest Pipeline" },
+      { href: "/investor/deal-room", label: "Deal Room" },
+      { href: "/investor/deals", label: "Diligence" },
       { href: "/investor/matches", label: "Matches" },
       { href: "/investor/matching", label: "Matching Center" },
       { href: "/events", label: "Events" },
@@ -683,7 +680,6 @@ export const investorWorkspaceNavSections: WorkspaceNavSection[] = [
       },
       { href: "/investor/learning", label: "Learning" },
       { href: "/investor/analytics", label: "Analytics" },
-      { href: "/credits", label: "iCFO Points" },
       { href: "/notifications", label: "Notifications" },
       { href: "/investor/help", label: "Help & guides" },
       { href: "/investor/settings", label: "Settings" },
