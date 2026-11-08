@@ -110,7 +110,7 @@ function SectorPanel({ sectors, active, onPick, windowDays }: Readonly<{ sectors
               title={`Show only ${r.sector} companies (${r.scored} scored of ${r.companies})`}
               className={`-mx-1.5 grid h-[54px] w-[calc(100%+0.75rem)] grid-cols-[3fr_0.5fr_0.5fr] items-center gap-1.5 rounded-lg px-1.5 text-left font-[family-name:var(--font-site-archivo)] text-[17px] font-semibold transition-colors hover:bg-[var(--blue-muted)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--blue)] ${active?.toLowerCase() === r.sector.toLowerCase() ? "bg-[var(--blue-muted)] outline outline-2 outline-[var(--blue)]" : ""} ${TONE[dir]}`}
             >
-              <span className="truncate text-[18px] font-bold uppercase">
+              <span className="truncate text-[17px] font-bold uppercase">
                 <i className="mr-1.5 text-sm not-italic">{ARROW[dir]}</i>
                 {r.sector}
               </span>
@@ -283,7 +283,7 @@ export function NseBoard({
             </svg>
           </div>
 
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-[repeat(3,minmax(0,1fr))]">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-[0.88fr_1.38fr_1.1fr]">
             <RowsPanel title="Top Gainers" rows={gainers} onOpen={onOpenCompany} />
             <ChartPanel candles={data.candles} ma={data.movingAverage} />
             <SectorPanel sectors={data.sectors} active={activeSector} onPick={onSector} windowDays={t.windowDays} />
