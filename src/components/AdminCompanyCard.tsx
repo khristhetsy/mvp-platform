@@ -482,6 +482,11 @@ export function AdminCompanyCard({ company }: Props) {
               Open company workspace →
             </Link>
           </p>
+          {isApproved && !isLiveOnMarketplace ? (
+            <p className="mt-2 text-xs text-slate-500">
+              Hidden from the Private Market, investor matching and the public directory until published.
+            </p>
+          ) : null}
           <p className="mt-2 text-sm text-slate-600">
             {company.founder_name} · {company.founder_email}
           </p>
