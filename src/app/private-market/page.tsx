@@ -1,11 +1,13 @@
 import { MarketingShell } from "@/components/marketing/MarketingShell";
+import { PrivateMarketGate } from "@/components/marketing/PrivateMarketGate";
+import { PrivateMarketHero } from "@/components/marketing/PrivateMarketHero";
 import { PrivateMarketExperience } from "@/components/marketing/PrivateMarketExperience";
 import type { ListingBoardStats } from "@/components/marketing/PrivateMarketListings";
 import { getMarketBoard, OUTREACH_COMPANY_WINDOW_DAYS } from "@/lib/data/market-board";
 import { listApprovedCompanies, type ListedCompany } from "@/lib/listing/private-market";
 import { matchScoresForInvestor } from "@/lib/matching/private-market-match";
 import { redirect } from "next/navigation";
-import { requireRole } from "@/lib/supabase/auth";
+import { getCurrentUserProfile, requireRole } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +22,8 @@ export const metadata = {
  * aggregates only; this page shows approved companies' listing summaries, never documents.
  */
 export default async function PrivateMarketPage() {
+  // Signed out visitors get the sign in gate (it carries no company data).
+  if (!(await getCurrentUserProfile())) return <PrivateMarketGate />;
   const profile = await requireRole(["investor", "founder", "admin", "analyst"]);
 
   const isInvestor = profile.role === "investor";
@@ -49,23 +53,9 @@ export default async function PrivateMarketPage() {
 
   return (
     <MarketingShell>
-      <section className="px-4 py-8 lg:px-8">
-        <div className="mx-auto max-w-[1360px]">
-          <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <p className="font-mono text-[11px] tracking-[0.16em] text-[var(--blue)]">● SIGNED IN</p>
-              <h1 className="mt-1.5 text-3xl font-extrabold leading-tight tracking-tight text-[var(--navy)] md:text-4xl">
-                The <span className="text-[var(--blue)]">Private Market</span>
-              </h1>
-              <p className="mt-1.5 text-sm text-slate-600">
-                Companies approved by iCapOS. Click a company for the one pager.
-              </p>
-            </div>
-            <span className="font-mono text-[11px] tracking-[0.1em] text-slate-600">
-              {companies.length} APPROVED · {companies.filter((c) => c.optedIn).length} OPTED IN
-            </span>
-          </div>
-
+      <PrivateMarketHero />
+      <section className="bg-site-paper px-6 pb-12">
+        <div className="relative mx-auto -mt-12 max-w-6xl">
           <PrivateMarketExperience
             companies={companies}
             stats={stats}

@@ -52,8 +52,6 @@ export function PrivateMarketExperience({
         requestedIds={requestedIds}
         sector={sector}
         onClearSector={() => setSector(null)}
-        approvedCount={companies.length}
-        optedInCount={companies.filter((c) => c.optedIn).length}
         outreachWindowDays={outreachWindowDays}
       />
     </>

@@ -9,7 +9,9 @@ import { useSiteViewer, type SiteViewer } from "@/components/marketing-site/useS
 /**
  * Public marketing-site top nav (spec §3). Client component for the dropdowns +
  * active-state. Structure is fixed:
- *   Home · Founders ▾ · Investors · Events · About ▾
+ *   Home · Founders ▾ · Investors · Private Market · Events · About ▾
+ *   Private Market is members only: signed-out visitors see a lock and a sign in
+ *   panel, and sign in returns them to /private-market.
  *   Founders ▾ : How it works · Readiness Rating · Pricing  (Pricing lives here only)
  *   About ▾    : About us · Client stories · Disclosures
  *   Right side : AI Mode · Sign in · Get started   (signed out)
@@ -92,6 +94,7 @@ export function SiteNav() {
           />
 
           <Link href="/investors" className={linkClass("/investors")} aria-current={isActive("/investors") ? "page" : undefined}>Investors</Link>
+          <PrivateMarketLink active={isActive("/private-market")} signedOut={viewer.status === "signed-out"} className={linkClass("/private-market")} />
           <Link href="/events" className={linkClass("/events")} aria-current={isActive("/events") ? "page" : undefined}>Events</Link>
 
           <Dropdown
@@ -166,6 +169,7 @@ export function SiteNav() {
               { href: "/", label: "Home" },
               ...FOUNDERS.map((i) => ({ ...i, label: i.href === "/founders" ? "Founders" : i.label, indent: i.href !== "/founders" })),
               { href: "/investors", label: "Investors" },
+              { href: "/private-market", label: "Private Market" },
               { href: "/events", label: "Events" },
               ...ABOUT.map((i) => ({ ...i, label: i.href === "/about" ? "About" : i.label, indent: i.href !== "/about" })),
               ...(viewer.status === "signed-in"
@@ -302,6 +306,54 @@ function AccountMenu({
             </button>
           </div>
         </>
+      ) : null}
+    </div>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="4" y="11" width="16" height="10" rx="2" stroke="currentColor" strokeWidth="2" />
+      <path d="M8 11V7a4 4 0 0 1 8 0v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/**
+ * Private Market menu link. Members only: signed-out visitors see a lock and, on
+ * hover or keyboard focus, a panel with a sign in link that returns to the page.
+ */
+function PrivateMarketLink({ active, signedOut, className }: Readonly<{ active: boolean; signedOut: boolean; className: string }>) {
+  return (
+    <div className="group relative flex items-center">
+      <Link href="/private-market" className={`${className} inline-flex items-center gap-1.5`} aria-current={active ? "page" : undefined}>
+        Private Market
+        {signedOut ? <span className="text-site-blue" title="Sign in required"><LockIcon /></span> : null}
+      </Link>
+      {signedOut ? (
+        <div className="invisible absolute left-0 top-full z-20 w-[22rem] pt-3 opacity-0 transition group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">
+          <div className="rounded-2xl border border-site-line bg-white p-5 shadow-xl">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-site-blue/30 bg-site-blue-pale px-2.5 py-0.5 font-site-mono text-[10.5px] font-semibold uppercase tracking-[0.1em] text-site-blue">
+              <LockIcon /> Members only
+            </span>
+            <p className="mt-2 font-site-display text-lg font-extrabold text-site-navy">The Private Market</p>
+            <p className="mt-1 text-[13px] leading-6 text-site-muted">
+              Companies approved by iCapOS, with their Capital Readiness Rating, sector averages and one pagers. Sign in to view.
+            </p>
+            <div className="mt-4 flex items-center gap-4">
+              <Link
+                href="/auth/sign-in?next=%2Fprivate-market"
+                className="rounded-lg bg-site-blue px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi"
+              >
+                Sign in to view
+              </Link>
+              <Link href="/start" className="text-sm font-semibold text-site-blue transition-colors hover:text-site-blue-hi">
+                Get started
+              </Link>
+            </div>
+          </div>
+        </div>
       ) : null}
     </div>
   );
