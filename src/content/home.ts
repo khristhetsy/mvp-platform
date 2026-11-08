@@ -47,6 +47,22 @@ export const home = {
       "To be precise about what “outreach” means. iCapOS distributes your materials to matched investors. It does not make introductions, vouch for your company, or act as an intermediary in any transaction.",
   },
 
+  app: {
+    eyebrow: "The iCapOS mobile app",
+    title: "Find the investors that fit your raise, from your phone.",
+    sub: "Answer four questions. See the top five investors in the iCapOS network for your sector, stage and raise size.",
+    points: [
+      "Four questions, no sign up to see your matches",
+      "Investor Fit Score, investor type and stated check size on every match",
+      "Book a 15 minute match review with our team",
+      "Continue into your iCapOS account when you are ready",
+    ],
+    installPrompt: "Prefer no download?",
+    installLink: { label: "Add iCapOS to your home screen", href: "/install" },
+    compliance:
+      "iCapOS is a software platform. It is not a broker-dealer, funding portal, investment adviser, or placement agent, and it does not raise capital or guarantee funding.",
+  },
+
   funnel: {
     eyebrow: "Why this is hard",
     title: "The math is brutal. That's the point.",

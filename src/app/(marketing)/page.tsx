@@ -8,6 +8,7 @@ import { AiModeLauncher } from "@/components/marketing-site/AiModeLauncher";
 import { Reveal } from "@/components/marketing-site/Reveal";
 import { EventGallery } from "@/components/marketing-site/EventGallery";
 import { NetworkSupply } from "@/components/marketing-site/NetworkSupply";
+import { AppPromo } from "@/components/marketing-site/AppPromo";
 import { FounderResultsSection } from "@/components/marketing-site/FounderResultsSection";
 import { loadFunnelDelta } from "@/lib/marketing-site/funnel-delta";
 
@@ -57,6 +58,9 @@ export default function MarketingHomePage() {
 
       {/* Network supply — verifiable aggregate figures, above the illustrative cards (brief Step 1) */}
       <NetworkSupply />
+
+      {/* Mobile app promotion */}
+      <AppPromo />
 
 
       {/* How it works */}
