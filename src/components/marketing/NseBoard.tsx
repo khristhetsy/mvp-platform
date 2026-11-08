@@ -7,6 +7,8 @@ import type { ListedCompany } from "@/lib/listing/private-market";
 import { ARROW, directionOf, signed, signedPct, type Candle, type SectorRow, type Delta, type Direction } from "@/lib/marketplace/market-board";
 
 const TONE: Record<Direction, string> = { up: "text-[#0f7a54]", down: "text-[#d92d20]", flat: "text-slate-500" };
+const TICKER_TONE: Record<Direction, string> = { up: "text-[#4ade9b]", down: "text-[#ff8a80]", flat: "text-slate-300" };
+const CARD = "rounded-2xl border border-site-line bg-white shadow-sm";
 const ROWS = 5;
 
 const dayMonth = (iso: string) =>
@@ -15,9 +17,9 @@ const dayMonth = (iso: string) =>
 function Tile({ label, delta, digits = 0 }: Readonly<{ label: string; delta: Delta | null; digits?: number }>) {
   const dir = directionOf(delta?.change ?? 0);
   return (
-    <div className="flex flex-col justify-center gap-0.5 border-r border-slate-200 px-5 py-3">
-      <span className="font-[family-name:var(--font-site-archivo)] text-[15px] tracking-wide text-[var(--navy)]">{label}</span>
-      <span className={`font-[family-name:var(--font-site-archivo)] text-3xl font-semibold leading-none sm:text-4xl ${TONE[dir]}`}>
+    <div className="flex flex-col justify-center gap-1 border-r border-site-line px-5 py-4 last:border-r-0">
+      <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">{label}</span>
+      <span className={`font-[family-name:var(--font-site-archivo)] text-3xl font-extrabold leading-none tracking-tight text-[var(--navy)] sm:text-4xl`}>
         {delta === null ? "n/a" : digits ? delta.value.toFixed(digits) : delta.value}
       </span>
       {delta ? (
@@ -34,9 +36,9 @@ type BoardRow = { key: string; id: string; symbol: string; crr: number | null; c
 function RowsPanel({ title, rows, onOpen }: Readonly<{ title: string; rows: BoardRow[]; onOpen: (id: string) => void }>) {
   const fill = Math.max(0, ROWS - rows.length);
   return (
-    <div className="px-4 py-4">
-      <h3 className="mb-2 font-[family-name:var(--font-site-archivo)] text-2xl font-medium text-[var(--navy)]">{title}</h3>
-      <div className="grid grid-cols-[1.35fr_0.8fr_0.8fr_1fr] gap-1.5 border-b-2 border-[var(--navy)] pb-1.5 font-mono text-[11px] text-[var(--navy)]">
+    <div className={`${CARD} px-5 py-5`}>
+      <h3 className="mb-1 font-[family-name:var(--font-site-archivo)] text-xl font-bold tracking-tight text-[var(--navy)]">{title}</h3>
+      <div className="grid grid-cols-[1.35fr_0.8fr_0.8fr_1fr] gap-1.5 mt-3 border-b border-site-line pb-2 font-mono text-[10.5px] tracking-[0.12em] text-slate-500">
         <span>SYMBOL</span>
         <span className="text-right">CRR</span>
         <span className="text-right">CHG</span>
@@ -50,9 +52,9 @@ function RowsPanel({ title, rows, onOpen }: Readonly<{ title: string; rows: Boar
             type="button"
             onClick={() => onOpen(r.id)}
             aria-label={`Open one pager for ${r.symbol}`}
-            className={`-mx-1.5 grid h-11 w-[calc(100%+0.75rem)] grid-cols-[1.35fr_0.8fr_0.8fr_1fr] items-center gap-1.5 rounded px-1.5 text-left font-[family-name:var(--font-site-archivo)] text-xl font-medium transition-colors hover:bg-[var(--blue-muted)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--blue)] ${TONE[dir]}`}
+            className={`-mx-1.5 grid h-[54px] w-[calc(100%+0.75rem)] grid-cols-[1.35fr_0.8fr_0.8fr_1fr] items-center gap-1.5 rounded-lg px-1.5 text-left font-[family-name:var(--font-site-archivo)] text-[17px] font-semibold transition-colors hover:bg-[var(--blue-muted)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--blue)] ${TONE[dir]}`}
           >
-            <span className="whitespace-nowrap">
+            <span className="whitespace-nowrap text-[19px] font-bold">
               <i className="mr-1.5 text-sm not-italic">{ARROW[dir]}</i>
               {r.symbol}
             </span>
@@ -63,7 +65,7 @@ function RowsPanel({ title, rows, onOpen }: Readonly<{ title: string; rows: Boar
         );
       })}
       {Array.from({ length: fill }, (_, i) => (
-        <div key={`f${i}`} aria-hidden className="grid h-11 grid-cols-[1.35fr_0.8fr_0.8fr_1fr] items-center gap-1.5 font-[family-name:var(--font-site-archivo)] text-lg text-slate-300">
+        <div key={`f${i}`} aria-hidden className="grid h-[54px] grid-cols-[1.35fr_0.8fr_0.8fr_1fr] items-center gap-1.5 font-[family-name:var(--font-site-archivo)] text-lg text-slate-300">
           <span>—</span>
           <span className="text-right">—</span>
           <span className="text-right">—</span>
@@ -76,9 +78,9 @@ function RowsPanel({ title, rows, onOpen }: Readonly<{ title: string; rows: Boar
 
 function SectorPanel({ sectors, active, onPick, windowDays }: Readonly<{ sectors: SectorRow[]; active: string | null; onPick: (sector: string) => void; windowDays: number }>) {
   return (
-    <div className="px-4 py-4">
-      <h3 className="mb-2 font-[family-name:var(--font-site-archivo)] text-2xl font-medium text-[var(--navy)]">Sector board</h3>
-      <div className="grid grid-cols-[1.6fr_0.8fr_0.8fr] gap-1.5 border-b-2 border-[var(--navy)] pb-1.5 font-mono text-[11px] text-[var(--navy)]">
+    <div className={`${CARD} px-5 py-5`}>
+      <h3 className="mb-1 font-[family-name:var(--font-site-archivo)] text-xl font-bold tracking-tight text-[var(--navy)]">Sector board</h3>
+      <div className="grid grid-cols-[1.6fr_0.8fr_0.8fr] gap-1.5 mt-3 border-b border-site-line pb-2 font-mono text-[10.5px] tracking-[0.12em] text-slate-500">
         <span>SECTOR</span>
         <span className="text-right">CRR</span>
         <span className="text-right">CHG</span>
@@ -88,17 +90,21 @@ function SectorPanel({ sectors, active, onPick, windowDays }: Readonly<{ sectors
           No approved companies yet.
         </p>
       ) : (
-        <div className="max-h-[236px] overflow-y-auto pr-1.5">
+        <div className="cap-vmarquee-host h-[300px] overflow-hidden pr-1.5">
+        <div className={sectors.length > 6 ? "cap-vmarquee" : ""}>
+        {(sectors.length > 6 ? [0, 1] : [0]).map((copy) => (
+        <div key={copy} aria-hidden={copy === 1}>
         {sectors.map((r) => {
           const dir = directionOf(r.change ?? 0);
           return (
             <button
               key={r.sector}
               type="button"
+              tabIndex={copy === 1 ? -1 : undefined}
               onClick={() => onPick(r.sector)}
               aria-pressed={active?.toLowerCase() === r.sector.toLowerCase()}
               title={`Show only ${r.sector} companies (${r.scored} scored of ${r.companies})`}
-              className={`-mx-1.5 grid h-8 w-[calc(100%+0.75rem)] grid-cols-[1.6fr_0.8fr_0.8fr] items-center gap-1.5 rounded px-1.5 text-left font-[family-name:var(--font-site-archivo)] text-lg font-medium transition-colors hover:bg-[var(--blue-muted)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--blue)] ${active?.toLowerCase() === r.sector.toLowerCase() ? "bg-[var(--blue-muted)] outline outline-2 outline-[var(--blue)]" : ""} ${TONE[dir]}`}
+              className={`-mx-1.5 grid h-[42px] w-[calc(100%+0.75rem)] grid-cols-[1.9fr_0.6fr_0.6fr] items-center gap-1.5 rounded-lg px-1.5 text-left font-[family-name:var(--font-site-archivo)] text-base font-semibold transition-colors hover:bg-[var(--blue-muted)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--blue)] ${active?.toLowerCase() === r.sector.toLowerCase() ? "bg-[var(--blue-muted)] outline outline-2 outline-[var(--blue)]" : ""} ${TONE[dir]}`}
             >
               <span className="truncate uppercase">
                 <i className="mr-1.5 text-sm not-italic">{ARROW[dir]}</i>
@@ -109,6 +115,9 @@ function SectorPanel({ sectors, active, onPick, windowDays }: Readonly<{ sectors
             </button>
           );
         })}
+        </div>
+        ))}
+        </div>
         </div>
       )}
       <p className="pt-2 font-mono text-[10px] tracking-[0.06em] text-slate-500">ALL SECTORS OF APPROVED COMPANIES. CHG IS N/A UNTIL EVERY SCORED COMPANY HAS A READING FROM {windowDays} DAYS AGO.</p>
@@ -222,15 +231,15 @@ export function NseBoard({
   const loop = [...gainerItems, ...items];
 
   return (
-    <section aria-label="Private Market board" className="overflow-hidden rounded-md border-[6px] border-slate-200 bg-white">
+    <section aria-label="Private Market board" className="space-y-5">
       <div>
-        <div>
-          <div className="grid grid-cols-2 items-stretch border-b-2 border-[var(--blue)] lg:grid-cols-[1fr_1fr_1fr_1fr_1.2fr_100px]">
+        <div className="space-y-5">
+          <div className={`${CARD} grid grid-cols-2 items-stretch overflow-hidden shadow-[0_8px_24px_rgba(12,35,64,0.08)] lg:grid-cols-[1fr_1fr_1fr_1fr_1.2fr_100px]`}>
             <Tile label="AVG CRR" delta={t.avgCrr} digits={2} />
             <Tile label="FOUNDERS SCORED" delta={t.founders} />
             <Tile label="STRONG BAND" delta={t.strong} />
             <Tile label="OUTREACH" delta={outreachDelta} />
-            <div className="col-span-2 border-r border-slate-200 px-5 py-3 lg:col-span-1">
+            <div className="col-span-2 border-r border-site-line px-5 py-4 lg:col-span-1">
               <NseClock />
             </div>
             <svg className="m-auto hidden lg:block" width="76" height="64" viewBox="0 0 96 76" aria-hidden="true">
@@ -240,28 +249,28 @@ export function NseBoard({
             </svg>
           </div>
 
-          <div className="grid grid-cols-1 border-b-2 border-[var(--blue)] md:grid-cols-2 lg:grid-cols-[1fr_1.45fr_0.95fr]">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-[1fr_1.45fr_0.95fr]">
             <RowsPanel title="Top Gainers" rows={gainers} onOpen={onOpenCompany} />
-            <div className="border-slate-200 bg-[#f3f7ff] px-2.5 pb-1 pt-3 md:order-3 md:col-span-2 md:border-t lg:order-none lg:col-span-1 lg:border-x lg:border-t-0">
+            <div className={`${CARD} bg-gradient-to-b from-[#f3f7ff] to-white px-3 pb-2 pt-4 md:order-3 md:col-span-2 lg:order-none lg:col-span-1`}>
               <CandleChart candles={data.candles} ma={data.movingAverage} />
             </div>
             <SectorPanel sectors={data.sectors} active={activeSector} onPick={onSector} windowDays={t.windowDays} />
           </div>
 
-          <div className="cap-marquee-host overflow-hidden whitespace-nowrap" aria-label="Board ticker">
+          <div className="cap-marquee-host overflow-hidden whitespace-nowrap rounded-2xl bg-[var(--navy)]" aria-label="Board ticker">
             <div className="cap-marquee inline-flex">
               {[0, 1].map((copy) => (
                 <div key={copy} className="inline-flex" aria-hidden={copy === 1}>
                   {loop.map((it) => {
                     const dir = directionOf(it.delta?.change ?? 0);
                     return (
-                      <span key={`${copy}${it.label}`} className="inline-flex min-w-[200px] flex-col border-r-2 border-[var(--blue)] px-8 py-2.5">
-                        <span className="flex items-baseline gap-3 font-[family-name:var(--font-site-archivo)] text-3xl text-[var(--navy)]">
-                          {it.label} <em className={`not-italic ${TONE[dir]}`}>{it.value}</em>
-                          {it.delta ? <u className={`text-xl no-underline ${TONE[dir]}`}>{ARROW[dir]}</u> : null}
+                      <span key={`${copy}${it.label}`} className="inline-flex min-w-[200px] flex-col border-r border-white/10 px-8 py-3">
+                        <span className="flex items-baseline gap-3 font-[family-name:var(--font-site-archivo)] text-2xl font-bold text-white">
+                          {it.label} <em className={`not-italic ${TICKER_TONE[dir]}`}>{it.value}</em>
+                          {it.delta ? <u className={`text-xl no-underline ${TICKER_TONE[dir]}`}>{ARROW[dir]}</u> : null}
                         </span>
                         {it.delta ? (
-                          <span className={`font-mono text-[13px] ${TONE[dir]}`}>
+                          <span className={`font-mono text-[13px] ${TICKER_TONE[dir]}`}>
                             {signed(it.delta.change, it.digits ?? 0)} ({signedPct(it.delta.pct)})
                           </span>
                         ) : null}
@@ -274,7 +283,7 @@ export function NseBoard({
           </div>
         </div>
       </div>
-      <p className="border-t border-slate-200 px-5 py-3 font-mono text-[11px] leading-relaxed text-slate-600">
+      <p className="px-1 pt-1 font-mono text-[11px] leading-relaxed text-slate-600">
         Index tiles and the ticker show the change over the last {t.windowDays} days ({dayMonth(t.from)} to {dayMonth(t.to)}) across all scored
         founders and all investor outreach on the platform. Top Gainers ranks approved companies by CRR change since their first reading. The Sector board
         averages CRR across all scored companies in a sector, listed for every sector of the approved companies, with the change over the same {t.windowDays} days. Candles are the weekly open, high, low and close of the average CRR of scored founders (the

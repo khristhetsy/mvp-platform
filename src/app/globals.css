@@ -233,6 +233,17 @@ select {
 .cap-marquee-host:hover .cap-marquee {
   animation-play-state: paused;
 }
+@keyframes cap-vmarquee {
+  to {
+    transform: translateY(-50%);
+  }
+}
+.cap-vmarquee {
+  animation: cap-vmarquee 28s linear infinite;
+}
+.cap-vmarquee-host:hover .cap-vmarquee {
+  animation-play-state: paused;
+}
 .cap-ping {
   position: relative;
 }
@@ -251,7 +262,8 @@ select {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cap-marquee {
+  .cap-marquee,
+  .cap-vmarquee {
     animation: none;
   }
   .cap-ping::after {
