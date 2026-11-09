@@ -74,7 +74,7 @@ export async function loadSupportLog(selectedKey: string | null): Promise<Suppor
   const ids = reqs.map((r) => r.id);
 
   const [{ data: companies }, { data: people }, { data: staffMsgs }, { data: overdueEv }, { data: aiEv }, { data: spend }] = await Promise.all([
-    reqs.length ? svc().from("companies").select("id, company_name").in("id", [...new Set(reqs.map((r) => r.company_id))]) : Promise.resolve({ data: [] }),
+    reqs.some((r) => r.company_id) ? svc().from("companies").select("id, company_name").in("id", [...new Set(reqs.map((r) => r.company_id).filter(Boolean) as string[])]) : Promise.resolve({ data: [] }),
     reqs.length
       ? svc().from("profiles").select("id, full_name, email").in("id", [...new Set([...reqs.map((r) => r.founder_id), ...(reqs.map((r) => r.assigned_to).filter(Boolean) as string[])])])
       : Promise.resolve({ data: [] }),
@@ -96,7 +96,7 @@ export async function loadSupportLog(selectedKey: string | null): Promise<Suppor
     id: r.id,
     refNo: r.ref_no ?? null,
     subject: r.subject,
-    companyName: companyName.get(r.company_id) ?? "Company",
+    companyName: r.company_id ? companyName.get(r.company_id) ?? "Company" : "Investor",
     founderName: personName.get(r.founder_id) ?? "Founder",
     ownerName: r.assigned_to ? personName.get(r.assigned_to) ?? null : null,
     status: r.status,

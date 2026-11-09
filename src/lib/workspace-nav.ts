@@ -611,50 +611,62 @@ export const investorWorkspaceNavSections: WorkspaceNavSection[] = [
     items: [{ href: "/investor/opportunities", label: "Private Market" }],
   },
   {
-    title: "Stage 1 · Onboarding",
+    // Each stage is one group that folds open, like the Founder menu. A group is tagged with its
+    // own stage, so the sidebar shows a lock on stages the investor has not reached yet.
+    title: "Your journey",
     items: [
-      { href: "/investor/stages/onboarding", label: "Stage guide" },
-      { href: "/investor/onboarding", label: "Profile" },
-    ],
-  },
-  {
-    title: "Stage 2 · Verification",
-    items: [
-      { href: "/investor/stages/verification", label: "Stage guide" },
-      { href: "/investor/verification", label: "Identity & accreditation" },
-    ],
-  },
-  {
-    title: "Stage 3 · Deals access",
-    // Kept to actual deal access; cross-cutting tools (Communications, Calendar,
-    // Learning, Analytics) live in the Workspace group below so the stage reads
-    // as a clean funnel step.
-    items: [
-      { href: "/investor/stages/access", label: "Stage guide" },
-      { href: "/investor/watchlist", label: "Watchlist", minInvestorStage: "access" },
-      { href: "/investor/interest-pipeline", label: "Interest Pipeline", minInvestorStage: "access" },
-      { href: "/investor/deal-room", label: "Deal Room" },
-      { href: "/investor/deals", label: "Diligence" },
-      { href: "/investor/matches", label: "Matches", minInvestorStage: "access" },
-      { href: "/investor/matching", label: "Matching Center", minInvestorStage: "access" },
-      { href: "/events", label: "Events" },
-      { href: "/investor/partner-score", label: "Partner Score", minInvestorStage: "access" },
-    ],
-  },
-  {
-    title: "Stage 4 · Manage deals",
-    items: [
-      { href: "/investor/stages/manage", label: "Stage guide" },
-      { href: "/investor/portfolio", label: "Portfolio", minInvestorStage: "manage" },
-      { href: "/investor/spvs", label: "SPVs & closings", minInvestorStage: "manage" },
-      { href: "/investor/activity", label: "Recent Activity", minInvestorStage: "manage" },
+      {
+        href: "/investor/stages/onboarding",
+        label: "Stage 1 – Onboarding",
+        minInvestorStage: "onboard",
+        children: [
+          { href: "/investor/stages/onboarding", label: "Stage guide" },
+          { href: "/investor/onboarding", label: "Profile" },
+        ],
+      },
+      {
+        href: "/investor/stages/verification",
+        label: "Stage 2 – Verification",
+        minInvestorStage: "verify",
+        children: [
+          { href: "/investor/stages/verification", label: "Stage guide" },
+          { href: "/investor/verification", label: "Identity & accreditation" },
+        ],
+      },
+      {
+        href: "/investor/stages/access",
+        label: "Stage 3 – Deals access",
+        minInvestorStage: "access",
+        // Kept to actual deal access; cross-cutting tools live in the Workspace group below.
+        children: [
+          { href: "/investor/stages/access", label: "Stage guide" },
+          { href: "/investor/watchlist", label: "Watchlist", minInvestorStage: "access" },
+          { href: "/investor/interest-pipeline", label: "Interest Pipeline", minInvestorStage: "access" },
+          { href: "/investor/deal-room", label: "Deal Room" },
+          { href: "/investor/deals", label: "Diligence" },
+          { href: "/investor/matches", label: "Matches", minInvestorStage: "access" },
+          { href: "/investor/matching", label: "Matching Center", minInvestorStage: "access" },
+          { href: "/events", label: "Events" },
+          { href: "/investor/partner-score", label: "Partner Score", minInvestorStage: "access" },
+        ],
+      },
+      {
+        href: "/investor/stages/manage",
+        label: "Stage 4 – Manage deals",
+        minInvestorStage: "manage",
+        children: [
+          { href: "/investor/stages/manage", label: "Stage guide" },
+          { href: "/investor/portfolio", label: "Portfolio", minInvestorStage: "manage" },
+          { href: "/investor/spvs", label: "SPVs & closings", minInvestorStage: "manage" },
+          { href: "/investor/activity", label: "Recent Activity", minInvestorStage: "manage" },
+        ],
+      },
     ],
   },
   {
     title: "Workspace",
     items: [
       { href: "/investor/actions", label: "Action Center" },
-      { href: "/investor/tasks", label: "Tasks" },
       {
         href: "/investor/inbox",
         label: "Communications",
@@ -663,19 +675,39 @@ export const investorWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/investor/messages", label: "Messages" },
         ],
       },
-      {
-        href: "/investor/calendar",
-        label: "Calendar",
-        children: [
-          { href: "/investor/calendar", label: "Calendar" },
-          { href: "/investor/schedule", label: "Scheduling" },
-        ],
-      },
       { href: "/investor/learning", label: "Learning" },
       { href: "/investor/analytics", label: "Analytics" },
-      { href: "/notifications", label: "Notifications" },
-      { href: "/investor/help", label: "Help & guides" },
-      { href: "/investor/settings", label: "Settings" },
+      { href: "/credits", label: "iCFO Points" },
+      {
+        href: "/investor/settings",
+        label: "Settings",
+        children: [
+          { href: "/investor/settings", label: "Settings" },
+          { href: "/investor/tasks", label: "Tasks" },
+          { href: "/notifications", label: "Notifications" },
+          {
+            href: "/investor/calendar",
+            label: "Calendar",
+            children: [
+              { href: "/investor/calendar", label: "Calendar" },
+              { href: "/investor/schedule", label: "Scheduling" },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Help",
+    items: [
+      {
+        href: "/investor/help",
+        label: "Help",
+        children: [
+          { href: "/investor/help", label: "Help & guides" },
+          { href: "/investor/support", label: "Support" },
+        ],
+      },
     ],
   },
 ];

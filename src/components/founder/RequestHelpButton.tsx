@@ -11,7 +11,8 @@ export function RequestHelpButton({
   contextItem = null,
   contextStage = null,
   variant = "default",
-}: Readonly<{ contextItem?: string | null; contextStage?: string | null; variant?: "default" | "primary" }>) {
+  workspace = "founder",
+}: Readonly<{ contextItem?: string | null; contextStage?: string | null; variant?: "default" | "primary"; workspace?: "founder" | "investor" }>) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [sent, setSent] = useState(false);
@@ -29,7 +30,7 @@ export function RequestHelpButton({
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/founder/support", {
+      const res = await fetch(`/api/${workspace}/support`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ subject, body, source: "request_help", contextStage, contextItem }),
@@ -64,7 +65,7 @@ export function RequestHelpButton({
             {due ? ` Expect a first reply by ${due}.` : ""} We&apos;ll email you and notify you here when there&apos;s a reply.
           </p>
           {confirmation?.id ? (
-            <a href={`/founder/support?request=${confirmation.id}`} className="mt-1.5 inline-block font-medium text-indigo-700 hover:underline">
+            <a href={`/${workspace}/support?request=${confirmation.id}`} className="mt-1.5 inline-block font-medium text-indigo-700 hover:underline">
               Track my request
             </a>
           ) : null}

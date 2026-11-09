@@ -564,9 +564,13 @@ export function SupportTicketView({
               <dd className="truncate text-slate-800">{context.founderEmail ?? "None"}</dd>
               <dt className="text-slate-500">Company</dt>
               <dd className="truncate">
-                <a href={`/admin/companies/${context.companyId}`} className="text-indigo-600 hover:underline">
-                  {context.companyName ?? row.companyName}
-                </a>
+                {context.companyId ? (
+                  <a href={`/admin/companies/${context.companyId}`} className="text-indigo-600 hover:underline">
+                    {context.companyName ?? row.companyName}
+                  </a>
+                ) : (
+                  <span className="text-slate-800">{context.companyName ?? row.companyName}</span>
+                )}
               </dd>
               <dt className="text-slate-500">Plan</dt>
               <dd className="truncate text-slate-800">

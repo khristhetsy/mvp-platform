@@ -207,6 +207,7 @@ export const workspaceNavIconByHref: Record<string, LucideIcon> = {
   "/founder/tasks": CheckSquare,
   "/founder/help": Compass,
   "/investor/help": Compass,
+  "/investor/support": LifeBuoy,
   "/investor/stages/onboarding": Rocket,
   "/investor/stages/verification": ClipboardCheck,
   "/investor/stages/access": Map,

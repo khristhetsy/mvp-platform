@@ -14,7 +14,8 @@ import { supportChannel, type SupportChannel, type SupportRequest } from "@/lib/
 export type TicketContext = {
   founderName: string | null;
   founderEmail: string | null;
-  companyId: string;
+  /** Null for investor tickets. */
+  companyId: string | null;
   companyName: string | null;
   industry: string | null;
   plan: string | null;
@@ -35,10 +36,12 @@ function db(): SupabaseClient {
 export async function loadTicketContext(request: SupportRequest): Promise<TicketContext> {
   const [{ data: prof }, { data: comp }, { data: sub }, { count }, scores, guides] = await Promise.all([
     db().from("profiles").select("full_name, email, journey_stage").eq("id", request.founder_id).maybeSingle(),
-    db().from("companies").select("company_name, industry").eq("id", request.company_id).maybeSingle(),
+    request.company_id
+      ? db().from("companies").select("company_name, industry").eq("id", request.company_id).maybeSingle()
+      : Promise.resolve({ data: null }),
     db().from("subscriptions").select("plan_type, subscription_status, monthly_price_cents").eq("profile_id", request.founder_id).maybeSingle(),
     db().from("support_requests").select("id", { count: "exact", head: true }).eq("founder_id", request.founder_id).neq("id", request.id),
-    crrScoresFor([request.company_id]).catch(() => new Map<string, number>()),
+    request.company_id ? crrScoresFor([request.company_id]).catch(() => new Map<string, number>()) : Promise.resolve(new Map<string, number>()),
     getSupportGuides(),
   ]);
   const p = prof as { full_name: string | null; email: string | null; journey_stage: string | null } | null;
@@ -51,10 +54,10 @@ export async function loadTicketContext(request: SupportRequest): Promise<Ticket
     companyId: request.company_id,
     companyName: c?.company_name ?? null,
     industry: c?.industry ?? null,
-    plan: s ? `${PLAN_LABELS[s.plan_type] ?? s.plan_type}${s.subscription_status === "pending_payment" ? ", payment pending" : ""}` : "No plan",
+    plan: s ? `${PLAN_LABELS[s.plan_type] ?? s.plan_type}${s.subscription_status === "pending_payment" ? ", payment pending" : ""}` : request.requester_role === "investor" ? "Investor account (free)" : "No plan",
     planPrice: cents !== null && cents > 0 ? `$${(cents / 100).toLocaleString("en-US", { maximumFractionDigits: 2 })}/mo` : null,
     stage: p?.journey_stage ? STAGE_LABEL[p.journey_stage] ?? p.journey_stage : null,
-    investable: scores.get(request.company_id) ?? null,
+    investable: request.company_id ? scores.get(request.company_id) ?? null : null,
     pastRequests: count ?? 0,
     channel: supportChannel(request),
     guide: pickGuide(guides, request.context_item, request.ai_triage?.topic ?? null),

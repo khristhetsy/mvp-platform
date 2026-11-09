@@ -38,6 +38,8 @@ export type FounderEmailCtx = {
   subject: string;
   founderName: string | null;
   ownerName: string | null;
+  /** The requester's own support page (founder or investor). Defaults to the founder page. */
+  supportPath?: string;
 };
 
 const founderFooter = {
@@ -60,7 +62,7 @@ export function confirmationEmail(c: FounderEmailCtx, firstMessage: string | nul
       ...(firstMessage ? [{ type: "quote" as const, label: "Your message", text: clip(firstMessage) }] : []),
       { type: "paragraph", text: "You can add details any time from your request page. We'll email you the moment there's a reply." },
     ],
-    primary: { label: "View my request", url: `${APP_URL}${founderSupportLink(c.requestId)}` },
+    primary: { label: "View my request", url: `${APP_URL}${c.supportPath ?? founderSupportLink(c.requestId)}` },
     footer: founderFooter,
   });
 }
@@ -79,7 +81,7 @@ export function staffReplyEmail(c: FounderEmailCtx, body: string, attachmentName
         : []),
       ...(supportInboundEnabled() ? [{ type: "note" as const, text: "You can reply to this email, or reply from your request page." }] : []),
     ],
-    primary: { label: "View and reply", url: `${APP_URL}${founderSupportLink(c.requestId)}` },
+    primary: { label: "View and reply", url: `${APP_URL}${c.supportPath ?? founderSupportLink(c.requestId)}` },
     footer: founderFooter,
   });
 }
@@ -93,7 +95,7 @@ export function moreTimeEmail(c: FounderEmailCtx, newDueAt: string): RenderedEma
     context: ref(c.refNo),
     headline: "An update on your request",
     intro: `Hi ${firstName(c.founderName)}, ${owner(c)} needs a bit more time to give you a proper answer. New reply time: ${due}. Sorry for the wait.`,
-    primary: { label: "View my request", url: `${APP_URL}${founderSupportLink(c.requestId)}` },
+    primary: { label: "View my request", url: `${APP_URL}${c.supportPath ?? founderSupportLink(c.requestId)}` },
     footer: founderFooter,
   });
 }
@@ -107,7 +109,7 @@ export function waitingOnYouEmail(c: FounderEmailCtx, lastStaffMessage: string |
     headline: `${owner(c)} is waiting on you`,
     intro: `Hi ${firstName(c.founderName)}, ${owner(c)} asked you something on your request. Reply to keep things moving.`,
     blocks: lastStaffMessage ? [{ type: "quote", label: owner(c), text: clip(lastStaffMessage) }] : [],
-    primary: { label: "Reply now", url: `${APP_URL}${founderSupportLink(c.requestId)}` },
+    primary: { label: "Reply now", url: `${APP_URL}${c.supportPath ?? founderSupportLink(c.requestId)}` },
     footer: founderFooter,
   });
 }

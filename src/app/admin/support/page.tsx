@@ -49,7 +49,7 @@ export default async function AdminSupportPage() {
   const queue = await listSupportQueue(admin as unknown as Parameters<typeof listSupportQueue>[0], { includeResolved: true });
 
   const ids = queue.map((q) => q.id);
-  const companyIds = [...new Set(queue.map((q) => q.company_id))];
+  const companyIds = [...new Set(queue.map((q) => q.company_id).filter(Boolean) as string[])];
   const personIds = [...new Set([...queue.map((q) => q.founder_id), ...(queue.map((q) => q.assigned_to).filter(Boolean) as string[])])];
 
   const [{ data: companies }, { data: people }, { data: staff }, { data: lastMsgs }] = await Promise.all([
@@ -87,8 +87,8 @@ export default async function AdminSupportPage() {
     contextStage: q.context_stage,
     contextItem: q.context_item,
     companyId: q.company_id,
-    companyName: companyName.get(q.company_id) ?? "Company",
-    founderName: personName.get(q.founder_id) ?? "Founder",
+    companyName: q.company_id ? companyName.get(q.company_id) ?? "Company" : "Investor",
+    founderName: personName.get(q.founder_id) ?? (q.requester_role === "investor" ? "Investor" : "Founder"),
     assignedTo: q.assigned_to,
     assigneeName: q.assigned_to ? personName.get(q.assigned_to) ?? "Staff" : null,
     csat: q.csat,

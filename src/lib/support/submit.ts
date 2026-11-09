@@ -23,8 +23,9 @@ export type SubmittedRequest = {
 export async function submitSupportRequest(
   supabase: SupabaseClient<Database>,
   input: {
-    companyId: string;
+    companyId: string | null;
     founderId: string;
+    requesterRole?: "founder" | "investor";
     subject: string;
     body: string;
     source?: SupportSource;
@@ -36,6 +37,7 @@ export async function submitSupportRequest(
   const created = await createSupportRequest(supabase, {
     companyId: input.companyId,
     founderId: input.founderId,
+    requesterRole: input.requesterRole,
     subject: input.subject,
     body: input.body,
     source: input.source,

@@ -18,7 +18,8 @@ export type QueueRow = {
   priority: string;
   contextStage: string | null;
   contextItem: string | null;
-  companyId: string;
+  /** Null for investor tickets. */
+  companyId: string | null;
   companyName: string;
   founderName: string;
   assignedTo: string | null;

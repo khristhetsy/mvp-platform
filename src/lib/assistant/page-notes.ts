@@ -96,6 +96,7 @@ export const PAGE_NOTES: Record<string, string> = {
   "/investor/learning": "Learning: investor courses.",
   "/investor/analytics": "Analytics: the investor's activity metrics.",
   "/investor/settings": "Settings: account and notification settings.",
+  "/investor/support": "Support: ask the iCapOS assistant a question, browse the guides, or send a request to the iCapOS team and follow it here.",
   "/investor/stages/onboarding": "Stage guide for Stage 1 Onboarding: step by step how to complete the investor profile and get approved.",
   "/investor/stages/verification": "Stage guide for Stage 2 Verification: step by step how to verify identity and accreditation to unlock deal flow.",
   "/investor/stages/access": "Stage guide for Stage 3 Deals access: step by step how to review matches, save deals, express interest and commit through an SPV.",

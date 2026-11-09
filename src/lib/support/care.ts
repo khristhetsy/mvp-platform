@@ -31,7 +31,7 @@ import {
   type FounderEmailCtx,
   type StaffEmailKind,
 } from "./emails";
-import { REQUEST_COLS, founderSupportLink, staffSupportLink, type SupportRequest } from "./support";
+import { REQUEST_COLS, requesterSupportLink, staffSupportLink, type SupportRequest } from "./support";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 function svc(): SupabaseClient<any> {
@@ -77,7 +77,9 @@ export async function loadRequestCtx(requestId: string): Promise<RequestCtx | nu
   const request = data as SupportRequest | null;
   if (!request) return null;
   const [{ data: company }, people, { data: msgs }] = await Promise.all([
-    svc().from("companies").select("company_name").eq("id", request.company_id).maybeSingle(),
+    request.company_id
+      ? svc().from("companies").select("company_name").eq("id", request.company_id).maybeSingle()
+      : Promise.resolve({ data: null }),
     loadPeople([request.founder_id, request.assigned_to ?? ""]),
     svc()
       .from("support_messages")
@@ -89,7 +91,10 @@ export async function loadRequestCtx(requestId: string): Promise<RequestCtx | nu
   const rows = (msgs ?? []) as Array<{ author_role: string; body: string }>;
   return {
     request,
-    companyName: (company as { company_name: string | null } | null)?.company_name ?? null,
+    // Investors have no company: the label is the investor's own name.
+    companyName:
+      (company as { company_name: string | null } | null)?.company_name ??
+      (request.requester_role === "investor" ? `Investor ${people.get(request.founder_id)?.name ?? ""}`.trim() : null),
     founder: people.get(request.founder_id) ?? null,
     owner: request.assigned_to ? people.get(request.assigned_to) ?? null : null,
     firstMessage: rows.find((m) => m.author_role === "founder")?.body ?? null,
@@ -104,6 +109,7 @@ function founderCtx(c: RequestCtx): FounderEmailCtx {
     subject: c.request.subject,
     founderName: c.founder?.name ?? null,
     ownerName: c.owner?.name ?? null,
+    supportPath: requesterSupportLink(c.request.requester_role, c.request.id),
   };
 }
 
@@ -179,7 +185,7 @@ export async function notifyStaffAbout(
           title: staffTitle(kind, c, userId === ownerId),
           message: `${c.companyName ?? "A founder"}: ${c.request.subject}`,
           entityType: "company",
-          entityId: c.request.company_id,
+          entityId: c.request.company_id ?? c.request.founder_id,
           deepLink: link,
           severity: kind === "overdue" || kind === "due_soon" ? "high" : null,
         });
@@ -267,7 +273,7 @@ export async function finishNewRequest(requestId: string, via: "form" | "assista
       to: c.founder.email,
       userId: c.founder.id,
       type: "support_confirmation",
-      deepLink: founderSupportLink(requestId),
+      deepLink: requesterSupportLink(c.request.requester_role, requestId),
       requestId,
       email: confirmationEmail(founderCtx(c), c.firstMessage, c.request.due_at),
     });
@@ -348,7 +354,7 @@ export async function onStaffReply(requestId: string, staffId: string, body: str
       to: c.founder.email,
       userId: c.founder.id,
       type: "support_staff_reply",
-      deepLink: founderSupportLink(requestId),
+      deepLink: requesterSupportLink(c.request.requester_role, requestId),
       requestId,
       email: staffReplyEmail(ctx, body, attachmentNames),
       senderName,
@@ -397,7 +403,7 @@ export async function onResolved(requestId: string, staffId: string, summary: st
       to: c.founder.email,
       userId: c.founder.id,
       type: "support_resolved",
-      deepLink: founderSupportLink(requestId),
+      deepLink: requesterSupportLink(c.request.requester_role, requestId),
       requestId,
       email: resolvedEmail({ ...founderCtx(c), ownerName: c.owner?.name ?? staffName }, summary),
     });
@@ -471,7 +477,7 @@ export async function founderConfirm(
         title: "A founder says their issue isn't solved",
         message: `${c.companyName ?? "A founder"}: ${c.request.subject}. Reopened at top priority.`,
         entityType: "company",
-        entityId: c.request.company_id,
+        entityId: c.request.company_id ?? c.request.founder_id,
         deepLink: staffSupportLink(requestId),
         severity: "high",
       });
@@ -502,7 +508,7 @@ export async function founderRate(requestId: string, rating: number, comment: st
       title: `A founder rated support ${r} of 5`,
       message: c.request.subject,
       entityType: "company",
-      entityId: c.request.company_id,
+      entityId: c.request.company_id ?? c.request.founder_id,
       deepLink: staffSupportLink(requestId),
     });
   }
@@ -575,14 +581,14 @@ export async function runSupportCarePass(nowDate: Date = new Date()): Promise<Ca
             title: "Update on your request",
             message: `${c.owner?.name ?? "Our team"} needs a bit more time. New reply time set.`,
             entityType: "company",
-            entityId: r.company_id,
-            deepLink: founderSupportLink(id),
+            entityId: r.company_id ?? r.founder_id,
+            deepLink: requesterSupportLink(c.request.requester_role, id),
           });
           const sent = await deliverSupportEmail({
             to: c.founder.email,
             userId: c.founder.id,
             type: "support_update",
-            deepLink: founderSupportLink(id),
+            deepLink: requesterSupportLink(c.request.requester_role, id),
             requestId: id,
             email: moreTimeEmail(founderCtx(c), newDue),
           });
@@ -644,14 +650,14 @@ export async function runSupportCarePass(nowDate: Date = new Date()): Promise<Ca
           title: `${c.owner?.name ?? "Our team"} is waiting on you`,
           message: `Reply to keep "${r.subject}" moving.`,
           entityType: "company",
-          entityId: r.company_id,
-          deepLink: founderSupportLink(id),
+          entityId: r.company_id ?? r.founder_id,
+          deepLink: requesterSupportLink(c.request.requester_role, id),
         });
         await deliverSupportEmail({
           to: c.founder.email,
           userId: c.founder.id,
           type: "support_waiting_on_you",
-          deepLink: founderSupportLink(id),
+          deepLink: requesterSupportLink(c.request.requester_role, id),
           requestId: id,
           email: waitingOnYouEmail(founderCtx(c), c.lastStaffMessage),
         });
@@ -675,7 +681,7 @@ export async function runSupportCarePass(nowDate: Date = new Date()): Promise<Ca
           to: c.founder.email,
           userId: c.founder.id,
           type: "support_closed",
-          deepLink: founderSupportLink(id),
+          deepLink: requesterSupportLink(c.request.requester_role, id),
           requestId: id,
           email: closedEmail(founderCtx(c)),
         });
@@ -688,7 +694,7 @@ export async function runSupportCarePass(nowDate: Date = new Date()): Promise<Ca
           to: c.founder.email,
           userId: c.founder.id,
           type: "support_confirm_reminder",
-          deepLink: founderSupportLink(id),
+          deepLink: requesterSupportLink(c.request.requester_role, id),
           requestId: id,
           email: resolvedEmail(founderCtx(c), c.request.resolution_summary, true),
         });

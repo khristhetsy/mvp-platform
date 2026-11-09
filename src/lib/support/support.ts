@@ -13,6 +13,10 @@ export const SUPPORT_STATUSES = ["open", "pending_founder", "resolved"] as const
  *  page, with the request preselected. Both pages read `?request=`. */
 export const staffSupportLink = (requestId: string) => `/admin/support?request=${requestId}`;
 export const founderSupportLink = (requestId: string) => `/founder/support?request=${requestId}`;
+export const investorSupportLink = (requestId: string) => `/investor/support?request=${requestId}`;
+/** The requester's own support page: founders and investors share the ticket system. */
+export const requesterSupportLink = (role: "founder" | "investor" | null | undefined, requestId: string) =>
+  role === "investor" ? investorSupportLink(requestId) : founderSupportLink(requestId);
 export type SupportStatus = (typeof SUPPORT_STATUSES)[number];
 
 export const SUPPORT_SOURCES = ["request_help", "question", "manual", "email", "chat"] as const;
@@ -20,8 +24,11 @@ export type SupportSource = (typeof SUPPORT_SOURCES)[number];
 
 export type SupportRequest = {
   id: string;
-  company_id: string;
+  /** Null for investor tickets: investors have no company. */
+  company_id: string | null;
+  /** The requester's profile id. Historic name: it holds an investor's id for investor tickets. */
   founder_id: string;
+  requester_role: "founder" | "investor";
   subject: string;
   context_stage: string | null;
   context_item: string | null;
@@ -89,11 +96,14 @@ function db(c: SupabaseClient<Database>): SupabaseClient<any> {
 
 // One literal (not concatenated) so the query builder can type the selected columns.
 export const REQUEST_COLS =
-  "id, company_id, founder_id, subject, context_stage, context_item, source, status, assigned_to, priority, csat, created_at, updated_at, resolved_at, ref_no, due_at, first_staff_reply_at, due_soon_alerted_at, overdue_alerted_at, last_reminder_at, reminder_count, founder_nudged_at, resolution_summary, confirm_reminded_at, closed_at, rating, rating_comment, reopened_count, ai_triage";
+  "id, company_id, founder_id, requester_role, subject, context_stage, context_item, source, status, assigned_to, priority, csat, created_at, updated_at, resolved_at, ref_no, due_at, first_staff_reply_at, due_soon_alerted_at, overdue_alerted_at, last_reminder_at, reminder_count, founder_nudged_at, resolution_summary, confirm_reminded_at, closed_at, rating, rating_comment, reopened_count, ai_triage";
 
 export type CreateSupportRequestInput = {
-  companyId: string;
+  /** Null for an investor. */
+  companyId: string | null;
+  /** The requester's profile id (founder or investor). */
   founderId: string;
+  requesterRole?: "founder" | "investor";
   subject: string;
   body: string;
   source?: SupportSource;
@@ -110,6 +120,7 @@ export async function createSupportRequest(
     .insert({
       company_id: input.companyId,
       founder_id: input.founderId,
+      requester_role: input.requesterRole ?? "founder",
       subject: input.subject.trim().slice(0, 160),
       source: input.source ?? "request_help",
       context_stage: input.contextStage ?? null,

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse, after } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { addSupportMessage, assignSupportRequest, resolveSupportRequest, getSupportThread, staffSupportLink, founderSupportLink, setSupportStatus, setSupportPriority } from "@/lib/support/support";
+import { addSupportMessage, assignSupportRequest, resolveSupportRequest, getSupportThread, staffSupportLink, requesterSupportLink, setSupportStatus, setSupportPriority } from "@/lib/support/support";
 import { loadTicketContext } from "@/lib/support/ticket-context";
 import { logSupportEvent } from "@/lib/support/events";
 import { onAssigned, onResolved, onStaffReply } from "@/lib/support/care";
@@ -71,8 +71,8 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
       title: "Support replied to your request",
       message: thread.request.subject,
       entityType: "company",
-      entityId: thread.request.company_id,
-      deepLink: founderSupportLink(id),
+      entityId: thread.request.company_id ?? thread.request.founder_id,
+      deepLink: requesterSupportLink(thread.request.requester_role, id),
     }).catch(() => {});
     // Email the founder, keep the promised time honest, log it.
     after(async () => {
@@ -159,7 +159,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
         title: "A support request was assigned to you",
         message: thread.request.subject,
         entityType: "company",
-        entityId: thread.request.company_id,
+        entityId: thread.request.company_id ?? thread.request.founder_id,
         deepLink: staffSupportLink(id),
       }).catch(() => {});
     }
@@ -184,8 +184,8 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     title: "Your support request was resolved",
     message: `${thread.request.subject}. Tell us if it's solved.`,
     entityType: "company",
-    entityId: thread.request.company_id,
-    deepLink: founderSupportLink(id),
+    entityId: thread.request.company_id ?? thread.request.founder_id,
+    deepLink: requesterSupportLink(thread.request.requester_role, id),
   }).catch(() => {});
   after(async () => {
     try {
