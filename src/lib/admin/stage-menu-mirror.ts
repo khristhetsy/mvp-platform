@@ -108,7 +108,6 @@ const STAGE_MENU: Record<JourneyStage, MenuDef[]> = {
     { label: "AI agent", href: "/founder/ir-agent" },
     { label: "Investor CRM", href: "/founder/investor-pipeline", condition: "hasInvestorInterest" },
     { label: "Present at event", href: "/founder/events/present" },
-    { label: "Marketplace", href: "/founder/private-market" },
   ],
   optimize: [
     { label: "Deal Room", href: "/founder/deal-room", condition: "hasDealRoom" },

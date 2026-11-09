@@ -58,12 +58,12 @@ describe("founder menu groups", () => {
     const raise = founderWorkspaceNavSectionsV2.find((s) => s.title === "Your raise");
     expect(raise?.items.map((i) => i.journeyStage)).toEqual(["initialize", "qualify", "deploy", "optimize"]);
   });
-  it("keeps the investor pages in Stage 3 as well as in the Investors group", () => {
+  it("has no separate Investors group, and Stage 3 keeps the investor pages", () => {
+    expect(founderWorkspaceNavSectionsV2.find((s) => s.title === "Investors")).toBeUndefined();
     const stage3 = founderWorkspaceNavSectionsV2.flatMap((s) => s.items).find((i) => i.label === "Stage 3 – Marketing");
-    const group = founderWorkspaceNavSectionsV2.find((s) => s.title === "Investors");
-    const stage3Hrefs = new Set((stage3?.children ?? []).map((c) => c.href));
-    for (const it of group?.items ?? []) {
-      if (it.href !== "/founder/investor-interest") expect(stage3Hrefs.has(it.href)).toBe(true);
+    const hrefs = new Set((stage3?.children ?? []).map((c) => c.href));
+    for (const h of ["/founder/matches", "/founder/deploy", "/founder/investor-directory", "/founder/investor-pipeline"]) {
+      expect(hrefs.has(h)).toBe(true);
     }
   });
 });
