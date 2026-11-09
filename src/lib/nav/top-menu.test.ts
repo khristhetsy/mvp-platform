@@ -171,13 +171,14 @@ describe("toApps: investor", () => {
     expect(apps.map((a) => a.label)).toEqual([
       "Dashboard",
       "Private Market",
-      "Stage 1 · Onboarding",
-      "Stage 2 · Verification",
-      "Stage 3 · Deals access",
-      "Stage 4 · Manage deals",
+      "Stage 1 – Onboarding",
+      "Stage 2 – Verification",
+      "Stage 3 – Deals access",
+      "Stage 4 – Manage deals",
       "Workspace",
       "Communications",
-      "Calendar",
+      "Settings",
+      "Help",
     ]);
   });
 

@@ -3,22 +3,19 @@ import { getInvestorSidebarSections, investorWorkspaceNavSections } from "@/lib/
 
 describe("getInvestorSidebarSections", () => {
   const sections = getInvestorSidebarSections();
-  const stageSections = sections.filter((s) => s.title?.startsWith("Stage "));
+  const journey = sections.find((s) => s.title === "Your journey")!;
 
-  it("collapses each stage into one Stage guide row that opens a drill-in", () => {
-    expect(stageSections).toHaveLength(4);
-    for (const s of stageSections) {
-      expect(s.items).toHaveLength(1);
-      expect(s.items[0].label).toBe("Stage guide");
-      expect(s.items[0].drillTitle).toBe(s.title);
-      expect(s.items[0].children?.[0].href).toBe(s.items[0].href);
+  it("shows each stage as one folding group whose first page is the Stage guide", () => {
+    expect(journey.items).toHaveLength(4);
+    for (const g of journey.items) {
+      expect(g.label.startsWith("Stage ")).toBe(true);
+      expect(g.children?.[0].label).toBe("Stage guide");
+      expect(g.children?.[0].href).toBe(g.href);
     }
   });
 
-  it("never locks a Stage guide and keeps every page reachable", () => {
-    const original = investorWorkspaceNavSections.flatMap((s) => s.items).map((i) => i.href).sort();
-    const sidebar = sections.flatMap((s) => s.items.flatMap((i) => (i.children && s.title?.startsWith("Stage ") ? i.children : [i]))).map((i) => i.href).sort();
-    expect(sidebar).toEqual(original);
-    for (const s of stageSections) expect(s.items[0].minInvestorStage).toBeUndefined();
+  it("never locks a Stage guide and keeps the sections as authored", () => {
+    expect(sections).toEqual(investorWorkspaceNavSections);
+    for (const g of journey.items) expect(g.children?.[0].minInvestorStage).toBeUndefined();
   });
 });

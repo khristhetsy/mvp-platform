@@ -18,8 +18,8 @@ const schema = z.union([
 ]);
 
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
-  const profile = await requireRole(["founder"]).catch(() => null);
-  if (!profile) return NextResponse.json({ error: "Founders only." }, { status: 403 });
+  const profile = await requireRole(["founder", "investor"]).catch(() => null);
+  if (!profile) return NextResponse.json({ error: "Founders and investors only." }, { status: 403 });
   const { id } = await ctx.params;
   const supabase = await createServerSupabaseClient();
   // RLS restricts reads to the founder's own request.
@@ -45,8 +45,8 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
 }
 
 export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
-  const profile = await requireRole(["founder"]).catch(() => null);
-  if (!profile) return NextResponse.json({ error: "Founders only." }, { status: 403 });
+  const profile = await requireRole(["founder", "investor"]).catch(() => null);
+  if (!profile) return NextResponse.json({ error: "Founders and investors only." }, { status: 403 });
   const { id } = await ctx.params;
   const parsed = schema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "A rating is required." }, { status: 400 });

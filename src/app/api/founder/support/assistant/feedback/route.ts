@@ -14,8 +14,8 @@ const schema = z.object({ question: z.string().max(4000), solved: z.boolean() })
  * a request, from the client, through the normal handoff.
  */
 export async function POST(req: NextRequest): Promise<Response> {
-  const profile = await requireRole(["founder"]).catch(() => null);
-  if (!profile) return NextResponse.json({ error: "Founders only." }, { status: 403 });
+  const profile = await requireRole(["founder", "investor"]).catch(() => null);
+  if (!profile) return NextResponse.json({ error: "Founders and investors only." }, { status: 403 });
   const parsed = schema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   await logSupportEvent({
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     actor: "founder",
     actorUserId: profile.id,
     kind: parsed.data.solved ? "ai_answer_solved" : "ai_answer_needs_person",
-    summary: parsed.data.solved ? "Founder marked an AI answer: That solved it" : "Founder marked an AI answer: I still need a person",
+    summary: parsed.data.solved ? "Requester marked an AI answer: That solved it" : "Requester marked an AI answer: I still need a person",
     detail: parsed.data.question,
   });
   return NextResponse.json({ ok: true });

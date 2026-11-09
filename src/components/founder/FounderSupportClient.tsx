@@ -95,7 +95,13 @@ function Tracker({ row, hasStaffReply }: Readonly<{ row: FounderRequestRow; hasS
   );
 }
 
-export function FounderSupportClient({ rows, emailReplies = false }: Readonly<{ rows: FounderRequestRow[]; emailReplies?: boolean }>) {
+export function FounderSupportClient({
+  rows,
+  emailReplies = false,
+  workspace = "founder",
+}: Readonly<{ rows: FounderRequestRow[]; emailReplies?: boolean; workspace?: "founder" | "investor" }>) {
+  // Investors share the founder support handlers, reached under their own API zone.
+  const api = `/api/${workspace}/support`;
   const router = useRouter();
   const params = useSearchParams();
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -121,7 +127,7 @@ export function FounderSupportClient({ rows, emailReplies = false }: Readonly<{ 
     setComment("");
     setRated(false);
     setError(null);
-    const res = await fetch(`/api/founder/support/${row.id}`);
+    const res = await fetch(`${api}/${row.id}`);
     if (res.ok) {
       const json = await res.json();
       setMessages(json.messages ?? []);
@@ -142,7 +148,7 @@ export function FounderSupportClient({ rows, emailReplies = false }: Readonly<{ 
     if (!selected || !reply.trim()) return;
     setBusy(true);
     try {
-      const res = await fetch(`/api/founder/support/${selected.id}/messages`, {
+      const res = await fetch(`${api}/${selected.id}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ body: reply.trim(), attachments: files }),
@@ -168,7 +174,7 @@ export function FounderSupportClient({ rows, emailReplies = false }: Readonly<{ 
     try {
       const form = new FormData();
       form.append("file", file);
-      const res = await fetch(`/api/founder/support/${selected.id}/attachments`, { method: "POST", body: form });
+      const res = await fetch(`${api}/${selected.id}/attachments`, { method: "POST", body: form });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json.attachment) setError(json.error ?? "Couldn't attach that file. PDFs up to 10 MB.");
       else setFiles((f) => [...f, json.attachment as SupportAttachment]);
@@ -184,7 +190,7 @@ export function FounderSupportClient({ rows, emailReplies = false }: Readonly<{ 
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/founder/support/${selected.id}`, {
+      const res = await fetch(`${api}/${selected.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -257,9 +263,9 @@ export function FounderSupportClient({ rows, emailReplies = false }: Readonly<{ 
                   <p className="text-xs text-slate-500">
                     {selected.refNo ? `Request #${selected.refNo} · ` : ""}opened {when(selected.createdAt)}
                   </p>
-                  {toolLink(selected.contextItem) ? (
-                    <a href={toolLink(selected.contextItem)!.href} className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:underline">
-                      <i className="ti ti-external-link" aria-hidden="true" /> Open your {toolLink(selected.contextItem)!.label}
+                  {(workspace === "founder" ? toolLink(selected.contextItem) : null) ? (
+                    <a href={(workspace === "founder" ? toolLink(selected.contextItem) : null)!.href} className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:underline">
+                      <i className="ti ti-external-link" aria-hidden="true" /> Open your {(workspace === "founder" ? toolLink(selected.contextItem) : null)!.label}
                     </a>
                   ) : null}
                 </div>
@@ -428,7 +434,7 @@ export function FounderSupportClient({ rows, emailReplies = false }: Readonly<{ 
         )}
       </div>
       <p className="text-[11px] leading-snug text-slate-400 lg:col-span-2">
-        iCapOS support helps you use the platform. It is not investment, legal or tax advice. iCFO introductions and guidance are informational only and are not a recommendation or a guarantee of funding.
+        iCapOS support helps you use the platform. It is not investment, legal or tax advice. iCFO introductions and guidance are informational only and are not a recommendation or a guarantee of {workspace === "investor" ? "returns" : "funding"}.
       </p>
     </div>
   );

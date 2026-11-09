@@ -8,8 +8,8 @@ export const dynamic = "force-dynamic";
 
 /** A founder attaches a PDF to their own request. */
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
-  const profile = await requireRole(["founder"]).catch(() => null);
-  if (!profile) return NextResponse.json({ error: "Founders only." }, { status: 403 });
+  const profile = await requireRole(["founder", "investor"]).catch(() => null);
+  if (!profile) return NextResponse.json({ error: "Founders and investors only." }, { status: 403 });
   const { id } = await ctx.params;
   const thread = await getSupportThread(await createServerSupabaseClient(), id);
   if (!thread || thread.request.founder_id !== profile.id) return NextResponse.json({ error: "Not found." }, { status: 404 });

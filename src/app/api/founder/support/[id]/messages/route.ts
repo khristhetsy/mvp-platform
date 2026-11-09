@@ -16,8 +16,8 @@ const schema = z.object({
 });
 
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
-  const profile = await requireRole(["founder"]).catch(() => null);
-  if (!profile) return NextResponse.json({ error: "Founders only." }, { status: 403 });
+  const profile = await requireRole(["founder", "investor"]).catch(() => null);
+  if (!profile) return NextResponse.json({ error: "Founders and investors only." }, { status: 403 });
 
   const { id } = await ctx.params;
   const parsed = schema.safeParse(await req.json().catch(() => ({})));

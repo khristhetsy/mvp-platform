@@ -17,18 +17,20 @@ const schema = z.object({
 });
 
 export async function GET(): Promise<Response> {
-  const profile = await requireRole(["founder"]).catch(() => null);
-  if (!profile) return NextResponse.json({ error: "Founders only." }, { status: 403 });
+  const profile = await requireRole(["founder", "investor"]).catch(() => null);
+  if (!profile) return NextResponse.json({ error: "Founders and investors only." }, { status: 403 });
   const supabase = await createServerSupabaseClient();
   return NextResponse.json({ requests: await listFounderRequests(supabase, profile.id) });
 }
 
 export async function POST(req: NextRequest): Promise<Response> {
-  const profile = await requireRole(["founder"]).catch(() => null);
-  if (!profile) return NextResponse.json({ error: "Founders only." }, { status: 403 });
+  const profile = await requireRole(["founder", "investor"]).catch(() => null);
+  if (!profile) return NextResponse.json({ error: "Founders and investors only." }, { status: 403 });
 
-  const { company } = await getActiveCompanyForUser(profile);
-  if (!company) return NextResponse.json({ error: "No active company." }, { status: 400 });
+  // Investors have no company; their ticket carries only their own profile.
+  const isInvestor = profile.role === "investor";
+  const { company } = isInvestor ? { company: null } : await getActiveCompanyForUser(profile);
+  if (!isInvestor && !company) return NextResponse.json({ error: "No active company." }, { status: 400 });
 
   const parsed = schema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
@@ -45,7 +47,8 @@ export async function POST(req: NextRequest): Promise<Response> {
   // after the response (see lib/support/care.ts).
   const supabase = await createServerSupabaseClient();
   const result = await submitSupportRequest(supabase, {
-    companyId: company.id,
+    companyId: company?.id ?? null,
+    requesterRole: isInvestor ? "investor" : "founder",
     founderId: profile.id,
     subject: parsed.data.subject,
     body: parsed.data.body ?? "",

@@ -20,7 +20,7 @@ function formatDue(iso: string | null): string | null {
   return new Date(iso).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
-function HandoffCard({ h }: Readonly<{ h: Handoff }>) {
+function HandoffCard({ h, workspace }: Readonly<{ h: Handoff; workspace: "founder" | "investor" }>) {
   const due = formatDue(h.dueAt);
   return (
     <div className="mt-2 rounded-lg border border-slate-200 bg-white p-2.5">
@@ -33,7 +33,7 @@ function HandoffCard({ h }: Readonly<{ h: Handoff }>) {
           {due ? <p className="text-[11.5px] text-slate-500">Reply expected by {due}</p> : null}
         </div>
       </div>
-      <a href={`/founder/support?request=${h.requestId}`} className="mt-2 inline-block text-[12px] font-medium text-indigo-600 hover:underline">
+      <a href={`/${workspace}/support?request=${h.requestId}`} className="mt-2 inline-block text-[12px] font-medium text-indigo-600 hover:underline">
         Track my request
       </a>
     </div>
@@ -45,6 +45,15 @@ const DEFAULT_PROMPTS = [
   "When are my investor identities revealed?",
   "What does my plan include?",
 ];
+
+// Investor starters, keyed by investor stage key. Each matches what that stage's guide covers.
+const INVESTOR_DEFAULT_PROMPTS = ["What are my next steps?", "How do the four stages work?", "Where do I find the stage guides?"];
+const INVESTOR_STAGE_PROMPTS: Record<string, string[]> = {
+  onboard: ["What do I need to get my profile approved?", "What happens after I am approved?", "Where do I find my stage guide?"],
+  verify: ["What documents do I need for verification?", "What unlocks after I am verified?", "Where do I upload my documents?"],
+  access: ["How do matches work?", "How do I join an SPV?", "How do I express interest in a deal?"],
+  manage: ["Where do I track my commitments?", "What does SPVs & closings show?", "What are my next steps?"],
+};
 
 // Stage-aware starters so the suggestions match where the founder actually is.
 const STAGE_PROMPTS: Record<string, string[]> = {
@@ -73,14 +82,22 @@ const STAGE_PROMPTS: Record<string, string[]> = {
 export function FounderSupportAssistant({
   founderName,
   stageSlug = null,
-}: Readonly<{ founderName: string; stageSlug?: string | null }>) {
+  workspace = "founder",
+}: Readonly<{ founderName: string; stageSlug?: string | null; workspace?: "founder" | "investor" }>) {
   const router = useRouter();
+  const isInvestor = workspace === "investor";
+  // Investors share the founder support handlers, reached under their own API zone.
+  const api = `/api/${workspace}/support`;
   const firstName = founderName.split(" ")[0] || founderName;
-  const prompts = (stageSlug && STAGE_PROMPTS[stageSlug]) || DEFAULT_PROMPTS;
+  const prompts = isInvestor
+    ? (stageSlug && INVESTOR_STAGE_PROMPTS[stageSlug]) || INVESTOR_DEFAULT_PROMPTS
+    : (stageSlug && STAGE_PROMPTS[stageSlug]) || DEFAULT_PROMPTS;
 
   const greeting: ChatMessage = {
     role: "assistant",
-    content: `Hi ${firstName} 👋 I can help with your raise — matches, documents, moving between stages, billing, and more. What are you working on?`,
+    content: isInvestor
+      ? `Hi ${firstName} 👋 I can help with your investor account: verification, matches, deal rooms, SPVs, and moving between stages. What are you working on?`
+      : `Hi ${firstName} 👋 I can help with your raise — matches, documents, moving between stages, billing, and more. What are you working on?`,
   };
 
   const [messages, setMessages] = useState<ChatMessage[]>([greeting]);
@@ -106,7 +123,7 @@ export function FounderSupportAssistant({
     setBusy(true);
     if (handedTo) {
       try {
-        const res = await fetch(`/api/founder/support/${handedTo.requestId}/messages`, {
+        const res = await fetch(`${api}/${handedTo.requestId}/messages`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ body: content }),
@@ -127,7 +144,7 @@ export function FounderSupportAssistant({
       return;
     }
     try {
-      const res = await fetch("/api/founder/support/assistant", {
+      const res = await fetch(`${api}/assistant`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         // Send only the real turns (skip the local greeting) so the model sees a clean thread.
@@ -163,7 +180,7 @@ export function FounderSupportAssistant({
     const msg = messages[index];
     if (!msg || msg.feedback) return;
     setMessages((m) => m.map((x, i) => (i === index ? { ...x, feedback: solved ? "solved" : "person" } : x)));
-    void fetch("/api/founder/support/assistant/feedback", {
+    void fetch(`${api}/assistant/feedback`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ question: msg.question ?? "", solved }),
@@ -176,12 +193,12 @@ export function FounderSupportAssistant({
     setHandoff("sending");
     const transcript = messages
       .slice(1)
-      .map((m) => `${m.role === "user" ? "Founder" : "Assistant"}: ${m.content}`)
+      .map((m) => `${m.role === "user" ? (isInvestor ? "Investor" : "Founder") : "Assistant"}: ${m.content}`)
       .join("\n\n");
     const firstQuestion = messages.find((m) => m.role === "user")?.content ?? "Assistant conversation";
     const subject = `Assistant handoff: ${firstQuestion.slice(0, 120)}`;
     try {
-      const res = await fetch("/api/founder/support", {
+      const res = await fetch(api, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -243,7 +260,7 @@ export function FounderSupportAssistant({
               }`}
             >
               <p className="whitespace-pre-wrap">{m.content}</p>
-              {m.handoff ? <HandoffCard h={m.handoff} /> : null}
+              {m.handoff ? <HandoffCard h={m.handoff} workspace={workspace} /> : null}
               {m.role === "assistant" && m.question && i === messages.length - 1 && !busy ? (
                 m.feedback ? (
                   <p className="mt-2 text-[11.5px] text-slate-400">
@@ -300,7 +317,7 @@ export function FounderSupportAssistant({
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={handedTo ? `Add a message for ${handedTo.ownerName ?? "the team"}…` : "Ask anything about your raise…"}
+            placeholder={handedTo ? `Add a message for ${handedTo.ownerName ?? "the team"}…` : isInvestor ? "Ask anything about your investor account…" : "Ask anything about your raise…"}
             disabled={busy}
             className="flex-1 bg-transparent text-[13px] text-slate-800 placeholder:text-slate-400 focus:outline-none"
           />

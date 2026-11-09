@@ -1,0 +1,143 @@
+import Link from "next/link";
+import { AppShell } from "@/components/AppShell";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
+import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { getInvestorProfileByProfileId } from "@/lib/investor/profile";
+import { loadInvestorStageView } from "@/lib/investor-journey/load";
+import { listFounderRequests } from "@/lib/support/support";
+import { FounderSupportClient, type FounderRequestRow } from "@/components/founder/FounderSupportClient";
+import { FounderSupportAssistant } from "@/components/founder/FounderSupportAssistant";
+import { RequestHelpButton } from "@/components/founder/RequestHelpButton";
+import { supportInboundEnabled } from "@/lib/support/inbound";
+import { formatSupportTime } from "@/lib/support/business-hours";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+export const dynamic = "force-dynamic";
+export const metadata = { title: "Support" };
+
+// Investor support reuses the Founder support page and its ticket code end to end:
+// same tickets, same queue, same assistant. Only the content below is investor specific.
+const BROWSE = [
+  { href: "/investor/help", icon: "ti-book-2", title: "Stage guides", desc: "Step by step for each stage of your journey." },
+  { href: "/investor/learning", icon: "ti-compass", title: "Learning", desc: "Courses and lessons for private market investing." },
+  { href: "/investor/stages/verification", icon: "ti-shield-check", title: "Verification help", desc: "Identity, accreditation and document questions." },
+];
+
+export default async function InvestorSupportPage() {
+  const { profile } = await requireInvestorWorkspaceSession();
+  const supabase = await createServerSupabaseClient();
+
+  const [requests, investorProfile] = await Promise.all([
+    listFounderRequests(supabase, profile.id),
+    getInvestorProfileByProfileId(profile.id).catch(() => null),
+  ]);
+  const stageView = investorProfile ? await loadInvestorStageView(investorProfile).catch(() => null) : null;
+
+  // Owner names: staff profiles aren't readable under investor RLS.
+  const ownerIds = [...new Set(requests.map((r) => r.assigned_to).filter(Boolean) as string[])];
+  const { data: owners } = ownerIds.length
+    ? await (createServiceRoleClient() as unknown as SupabaseClient).from("profiles").select("id, full_name, email").in("id", ownerIds)
+    : { data: [] };
+  const ownerName = new Map(
+    ((owners ?? []) as Array<{ id: string; full_name: string | null; email: string | null }>).map((p) => [p.id, p.full_name?.trim() || p.email || "iCapOS team"]),
+  );
+
+  const rows: FounderRequestRow[] = requests.map((r) => ({
+    id: r.id,
+    subject: r.subject,
+    status: r.status,
+    contextItem: r.context_item,
+    csat: r.csat,
+    createdAt: r.created_at,
+    refNo: r.ref_no ?? null,
+    ownerId: r.assigned_to,
+    ownerName: r.assigned_to ? ownerName.get(r.assigned_to) ?? null : null,
+    dueAt: r.due_at ?? null,
+    resolutionSummary: r.resolution_summary ?? null,
+    rating: r.rating ?? null,
+    closedAt: r.closed_at ?? null,
+  }));
+
+  const openRequest = [...rows]
+    .filter((r) => r.status !== "resolved")
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] ?? null;
+  const openCount = rows.filter((r) => r.status !== "resolved").length;
+
+  const investorName = profile.full_name ?? profile.email ?? "Investor";
+
+  return (
+    <AppShell role="INVESTOR" workspace="investor" profileName={investorName} profileSubtitle="Support">
+      <WorkspacePageContainer>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <PageHeader
+            eyebrow="Help"
+            title="Support"
+            description="Ask the iCapOS assistant, browse a guide, or reach the team."
+          />
+          <RequestHelpButton contextItem="Support" variant="primary" workspace="investor" />
+        </div>
+
+        {openRequest ? (
+          <section aria-label="Open request" className="mt-2 flex flex-wrap items-center gap-4 rounded-2xl border-2 border-indigo-600 bg-white p-5">
+            <div className="min-w-0 flex-1 basis-72">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-700">
+                  {openCount > 1 ? `${openCount} open requests, latest` : "Open request"}
+                  {openRequest.refNo ? ` #${openRequest.refNo}` : ""}
+                </span>
+                <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${openRequest.status === "pending_founder" ? "bg-blue-50 text-blue-800" : "bg-amber-50 text-amber-800"}`}>
+                  {openRequest.status === "pending_founder" ? "Waiting on you" : "In progress"}
+                </span>
+              </div>
+              <p className="mt-1 truncate text-base font-semibold text-slate-900">{openRequest.subject}</p>
+              <p className="mt-0.5 text-sm text-slate-600">
+                {openRequest.ownerName ? `Assigned to ${openRequest.ownerName}. ` : "Waiting to be assigned. "}
+                {openRequest.dueAt ? `Reply expected by ${formatSupportTime(openRequest.dueAt)}.` : "The team usually replies within 1 business day."}
+              </p>
+            </div>
+            <Link
+              href={`/investor/support?request=${openRequest.id}`}
+              className="inline-flex min-h-[44px] items-center rounded-xl border-2 border-indigo-600 px-5 text-sm font-semibold text-indigo-700 hover:bg-indigo-50"
+            >
+              View conversation
+            </Link>
+          </section>
+        ) : null}
+
+        <div className="mt-4">
+          <FounderSupportAssistant founderName={investorName} stageSlug={stageView?.current.key ?? null} workspace="investor" />
+        </div>
+
+        <section className="mt-8">
+          <h2 className="mb-3 text-sm font-medium text-slate-700">Browse on your own</h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {BROWSE.map((b) => (
+              <Link
+                key={b.href}
+                href={b.href}
+                className="group rounded-xl border border-slate-200 bg-white p-4 transition-colors hover:border-indigo-300 hover:bg-indigo-50/30"
+              >
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
+                  <i className={`ti ${b.icon} text-[17px]`} aria-hidden="true" />
+                </div>
+                <p className="mt-2.5 text-[13px] font-medium text-slate-900">{b.title}</p>
+                <p className="mt-0.5 text-[11.5px] leading-relaxed text-slate-500">{b.desc}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        {rows.length > 0 ? (
+          <section className="mt-8">
+            <h2 className="mb-3 text-sm font-medium text-slate-700">Your requests</h2>
+            <FounderSupportClient emailReplies={supportInboundEnabled()} rows={rows} workspace="investor" />
+          </section>
+        ) : null}
+
+      </WorkspacePageContainer>
+    </AppShell>
+  );
+}
