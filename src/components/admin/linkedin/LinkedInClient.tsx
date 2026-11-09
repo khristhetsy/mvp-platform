@@ -2,23 +2,25 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { CampaignWithStats, HubLinkedIn, LinkedInAccount, ThreadRow } from "@/lib/linkedin/store";
+import { ActivityTab } from "./ActivityTab";
 import { CampaignsTab } from "./CampaignsTab";
 import { LinkedInInbox } from "./LinkedInInbox";
 import { NewCampaignTab } from "./NewCampaignTab";
 import { SettingsTab } from "./SettingsTab";
 import { ErrorLine, api, btnCls } from "./ui";
 
-type TabId = "campaigns" | "new" | "inbox" | "settings";
+type TabId = "campaigns" | "new" | "inbox" | "activity" | "settings";
 const TABS: Array<{ id: TabId; label: string }> = [
   { id: "campaigns", label: "Campaigns" },
   { id: "new", label: "New campaign" },
   { id: "inbox", label: "Inbox" },
+  { id: "activity", label: "Activity" },
   { id: "settings", label: "Settings" },
 ];
 
 type Overview = { account: LinkedInAccount; campaigns: CampaignWithStats[]; threads: ThreadRow[]; sentToday: number; hub: HubLinkedIn | null };
 
-/** Admin › LinkedIn. Four tabs: Campaigns, New campaign, Inbox, Settings. */
+/** Admin › LinkedIn. Five tabs: Campaigns, New campaign, Inbox, Activity, Settings. */
 export function LinkedInClient() {
   const [tab, setTab] = useState<TabId>("campaigns");
   const [data, setData] = useState<Overview | null>(null);
@@ -62,6 +64,7 @@ export function LinkedInClient() {
           {tab === "campaigns" ? <CampaignsTab campaigns={data.campaigns} onNew={() => setTab("new")} onChanged={load} /> : null}
           {tab === "new" ? <NewCampaignTab onSaved={() => { void load(); setTab("campaigns"); }} /> : null}
           {tab === "inbox" ? <LinkedInInbox threads={data.threads} onChanged={load} /> : null}
+          {tab === "activity" ? <ActivityTab campaigns={data.campaigns} timeZone={data.account.timezone} /> : null}
           {tab === "settings" ? <SettingsTab account={data.account} sentToday={data.sentToday} hub={data.hub} onChanged={(account) => setData({ ...data, account })} /> : null}
         </>
       )}
