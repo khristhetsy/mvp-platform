@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState, type DragEvent } from "react";
 import { ARCHETYPES, type Archetype } from "@/lib/social/composer";
+import { SocialPreview } from "@/components/founder/social/SocialPreview";
+import { NETWORKS, type Network } from "@/lib/social/templates";
 import { DEPARTMENTS } from "@/lib/marketing/department-grouping";
 import { POST_LIBRARY, fitLink } from "@/lib/social/post-library";
 import type { SocialAccount, QueueItem, SocialSettings, SocialSlot } from "@/lib/social/queries";
@@ -165,9 +167,11 @@ function Composer({ accounts, googleReady, onScheduled }: { accounts: SocialAcco
   const [schedOn, setSchedOn] = useState(true);
   const [schedDates, setSchedDates] = useState<string[]>([]);   // one or more days, one post per day
   const [schedTime, setSchedTime] = useState("08:15");
+  const [repeat, setRepeat] = useState<"none" | "daily" | "weekly" | "monthly">("none");   // series from the one picked date
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [previewNet, setPreviewNet] = useState<Network | null>(null);
   const [libOpen, setLibOpen] = useState(false);
 
    
@@ -216,14 +220,14 @@ function Composer({ accounts, googleReady, onScheduled }: { accounts: SocialAcco
 
   const isoFor = (d: string) => (fromPlatformInput(`${d}T${schedTime || "08:15"}`) ?? new Date(`${d}T${schedTime || "08:15"}`)).toISOString();
 
-  async function save(mode: "draft" | "park" | "schedule") {
+  async function save(mode: "draft" | "park" | "schedule" | "now") {
     if (variants.length === 0) return;
     // One post per picked day. Anything else saves a single post.
-    const targets: (string | null)[] = mode === "schedule" ? schedDates.map(isoFor) : [null];
+    const targets: (string | null)[] = mode === "schedule" ? schedDates.map(isoFor) : mode === "now" ? [new Date().toISOString()] : [null];
     if (mode === "schedule" && targets.length === 0) { setMsg("Pick at least one date and a time to schedule."); return; }
     setBusy(true); setMsg(null);
     let made = 0;
-    let last: { queued?: number; parked?: number } = {};
+    let last: { queued?: number; parked?: number; postId?: string } = {};
     try {
       for (const scheduledAt of targets) {
         const res = await fetch("/api/admin/social/posts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ brief, archetype, department, campaignId: campaignId || null, linkUrl: linkUrl || null, imageUrl: imageUrl || null, comment: comment || null, approve: mode !== "draft", scheduledAt, variants }) });
@@ -232,14 +236,27 @@ function Composer({ accounts, googleReady, onScheduled }: { accounts: SocialAcco
         last = j; made += 1;
       }
       if (made === 0) return;
-      if (made === targets.length) setMsg(mode === "schedule" ? `Scheduled ${made} post${made === 1 ? "" : "s"}.` : mode === "park" ? `Parked ${last.parked ?? made} post(s) in the queue.` : "Saved as draft.");
+      // Repeat: seed a series from the one scheduled post, the same way Schedule's "Make recurring" does.
+      let repeatNote = "";
+      if (mode === "schedule" && repeat !== "none" && targets.length === 1 && targets[0] && last.postId) {
+        const when = new Date(targets[0]);
+        const rr = await fetch("/api/admin/social/recurrences/from-post", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ postId: last.postId, freq: repeat, interval: 1, weekdays: repeat === "weekly" ? [when.getUTCDay()] : [], timeLocal: when.toISOString().slice(11, 16), startDate: when.toISOString().slice(0, 10), endType: "never", endDate: null, endCount: null }) });
+        repeatNote = rr.ok ? ` Repeats ${repeat}.` : " The post is scheduled, but the repeat could not be set up. Use Make recurring on the Schedule tab.";
+      }
+      if (made === targets.length) setMsg(mode === "schedule" ? `Scheduled ${made} post${made === 1 ? "" : "s"}.${repeatNote}` : mode === "now" ? "Queued. It publishes within 5 minutes." : mode === "park" ? `Parked ${last.parked ?? made} post(s) in the queue.` : "Saved as draft.");
       setVariants([]); setBrief("");
-      if (mode === "schedule") { setSchedDates([]); onScheduled(made); }
+      if (mode === "schedule") { setSchedDates([]); setRepeat("none"); onScheduled(made); }
     } finally { setBusy(false); }
   }
 
+  // Live preview (right side): first draft variant, else the raw notes. Network follows the first account unless picked.
+  const previewAccountId = variants[0]?.accountId ?? selected[0] ?? accounts[0]?.id ?? "";
+  const accountNetwork = platformOf(previewAccountId);
+  const previewNetwork: Network = previewNet ?? ((NETWORKS as readonly string[]).includes(accountNetwork) ? (accountNetwork as Network) : "linkedin");
+
   return (
-    <div className="max-w-2xl">
+    <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,400px)]">
+    <div className="min-w-0 max-w-2xl">
       {/* Heading */}
       <div className="border-b border-slate-100 pb-3">
         <h2 className="text-[16px] font-semibold text-slate-900">Compose a post</h2>
@@ -406,6 +423,18 @@ function Composer({ accounts, googleReady, onScheduled }: { accounts: SocialAcco
               {googleReady ? <span className="inline-flex items-center gap-1 text-[11px] text-slate-400"><i className="ti ti-brand-google" aria-hidden="true" /> mirrors to Google Calendar</span> : null}
             </div>
             {schedOn ? <div className="mt-2"><MultiDatePicker dates={schedDates} onDates={setSchedDates} time={schedTime} onTime={setSchedTime} /></div> : null}
+            {schedOn ? (
+              <div className="mt-3">
+                <label htmlFor="admin-compose-repeat" className="text-[12px] font-medium text-slate-700">Repeat</label>
+                <select id="admin-compose-repeat" value={schedDates.length === 1 ? repeat : "none"} disabled={schedDates.length !== 1} onChange={(e) => setRepeat(e.target.value as typeof repeat)} className="mt-1 block rounded-lg border border-slate-200 px-2.5 py-1.5 text-[12.5px] disabled:opacity-50">
+                  <option value="none">Does not repeat</option>
+                  <option value="daily">Every day</option>
+                  <option value="weekly">Every week</option>
+                  <option value="monthly">Every month</option>
+                </select>
+                {schedDates.length !== 1 ? <p className="mt-1 text-[11px] text-slate-400">Repeat works when exactly one date is picked.</p> : null}
+              </div>
+            ) : null}
             <p className="mt-1.5 text-[11px] text-slate-400">Toggle off to park the post in the queue without a date — you can schedule it later from the Schedule tab.</p>
           </div>
           </div>
@@ -414,6 +443,7 @@ function Composer({ accounts, googleReady, onScheduled }: { accounts: SocialAcco
             <button type="button" onClick={() => setShowPreview(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600"><i className="ti ti-eye" aria-hidden="true" /> Preview</button>
             <button type="button" onClick={() => save("draft")} disabled={busy} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 disabled:opacity-50">Save draft</button>
             <button type="button" onClick={() => save("park")} disabled={busy} className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 disabled:opacity-50">Park in Queue</button>
+            <button type="button" onClick={() => { if (confirm("Post now? It goes out to every selected account within 5 minutes.")) void save("now"); }} disabled={busy} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 disabled:opacity-50">Post now</button>
             <button type="button" onClick={() => save("schedule")} disabled={busy || !schedOn || schedDates.length === 0} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">{schedDates.length > 1 ? `Schedule ${schedDates.length} posts` : "Schedule post"}</button>
           </div>
         </div>
@@ -427,6 +457,10 @@ function Composer({ accounts, googleReady, onScheduled }: { accounts: SocialAcco
       <div className="mt-4">
         <AiCmo tab="Compose" context={() => ({ archetype, department, campaign: campaigns.find((c) => c.id === campaignId)?.name ?? null, hasLink: Boolean(linkUrl) })} />
       </div>
+    </div>
+    <aside className="min-w-0 xl:sticky xl:top-4" aria-label="Post preview">
+      <SocialPreview body={variants[0]?.body ?? brief} network={previewNetwork} onNetwork={setPreviewNet} name={previewAccountId ? nameOf(previewAccountId) : "Your account"} company={null} linkUrl={linkUrl} firstComment={comment.trim() || null} />
+    </aside>
     </div>
   );
 }
