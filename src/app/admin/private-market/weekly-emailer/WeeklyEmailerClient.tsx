@@ -9,7 +9,7 @@ import { useMemo, useRef, useState } from "react";
 import { groupByDepartment, departmentOf } from "@/lib/marketing/department-grouping";
 import { countRuns, formatPt, nextRuns, todayInPt, type RepeatRule } from "@/lib/marketing/sequence-schedule";
 import {
-  BANNER_MAX_BYTES, NOTE_QUICK_INSERTS, PRESET_BANNER_PATH, MERGE_FIELDS, SECTION_OPTIONS, VERSIONS, VERSION_LABEL, renderWeeklyEmail, versionAudience,
+  BANNER_MAX_BYTES, NOTE_QUICK_INSERTS, PRESET_BANNER_PATH, MERGE_FIELDS, SECTION_OPTIONS, VERSIONS, VERSION_LABEL, renderWeeklyEmail, versionAudience, WEEKLY_THEMES,
   type Audience, type EmailLinks, type Version, type WeeklyEmailConfig,
 } from "@/lib/private-market/weekly-email";
 import type { DigestMarket } from "@/lib/private-market/weekly-digest";
@@ -237,6 +237,29 @@ export function WeeklyEmailerClient({ initial, lists, groupCounts, market, examp
             <p style={{ margin: "4px 0 0", fontSize: 11.5, color: "var(--muted-foreground)" }}>
               Each address gets one email. Unsubscribed and held contacts are skipped. {aud === "intros" ? "Only approved investors with introduction activity that week get this email." : <>Platform {role === "founder" ? "founders" : "investors"} get their own {role === "founder" ? "rating" : "matches"}; other contacts get the market sections only.</>}
             </p>
+          </div>
+
+          <div style={card}>
+            <p style={h}>Email template</p>
+            <p style={{ margin: "0 0 8px", fontSize: 12.5, fontWeight: 600 }}>Theme preset</p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              {WEEKLY_THEMES.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  aria-pressed={c.themeId === t.id}
+                  onClick={() => patch({ themeId: t.id })}
+                  style={{ textAlign: "left", fontSize: 12.5, padding: 8, borderRadius: 8, cursor: "pointer", background: "#fff", color: "var(--foreground)", border: c.themeId === t.id ? "1.5px solid #1d4ed8" : "0.5px solid var(--border)" }}
+                >
+                  <span style={{ display: "block", height: 10, borderRadius: 3, marginBottom: 6, background: `linear-gradient(90deg, ${t.swatch[0]} 70%, ${t.swatch[1]} 70%)` }} />
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            <p style={{ margin: "8px 0 0", fontSize: 11.5, color: "var(--muted-foreground)" }}>
+              Presets recolour the header band, the button and the links. These are the same four theme presets your email templates use. Rating band colors stay fixed because they carry meaning.
+            </p>
+            <p style={{ margin: "8px 0 0", fontSize: 12.5 }}><Link href="/admin/marketing/templates">Open the template editor</Link></p>
           </div>
 
           <div style={card}>
