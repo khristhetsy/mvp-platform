@@ -974,7 +974,7 @@ function ConversationsTab() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [api]);
 
   const setState = async (id: string, review_state: Conversation["review_state"]) => {
     await fetch(api("/conversations"), { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, review_state }) });

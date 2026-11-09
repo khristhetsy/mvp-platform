@@ -118,6 +118,7 @@ export function ContractsListClient() {
     try {
       const v = window.localStorage.getItem(COLS_KEY);
       const saved = v ? (JSON.parse(v) as unknown) : null;
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- saved columns are read after mount so server and client match
       if (Array.isArray(saved) && saved.every((k) => typeof k === "string")) setVisibleCols(saved as string[]);
       const u = window.localStorage.getItem(UP_COLS_KEY);
       const savedUp = u ? (JSON.parse(u) as unknown) : null;
