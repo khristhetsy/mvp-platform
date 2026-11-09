@@ -4,8 +4,9 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createTask } from "@/lib/sales/tasks";
 import { logCommunication, type LogResult } from "@/lib/notes-log";
+import { isNetworkAudience } from "./network";
 import { classifyContact, summarize, type AudienceContact, type AudienceSummary, type Classified, type TargetRoute } from "./audience";
-import { checkWording, isApproved, wordingHash, type InviteVariant } from "./wording";
+import { checkNetworkWording, checkWording, isApproved, wordingHash, type InviteVariant } from "./wording";
 import { acceptanceTooLow, DEFAULT_MANUAL_ALLOWANCE, type SafetyLevel } from "./safety";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -48,29 +49,32 @@ export type CampaignRow = {
   id: string; account_id: string; name: string;
   status: "draft" | "pending_approval" | "ready" | "running" | "paused" | "completed" | "stopped";
   audience: Record<string, unknown>; invite_variants: InviteVariant[]; message_text: string | null;
+  /** Wording for people already connected. Optional. */
+  connected_message_text: string | null;
   wording_hash: string | null; approved_by: string | null; approved_at: string | null;
   handoff_mode: "web_chat" | "linkedin"; agent: "johnny" | "jessica"; created_at: string;
 };
 
-const CAMPAIGN_COLS = "id, account_id, name, status, audience, invite_variants, message_text, wording_hash, approved_by, approved_at, handoff_mode, agent, created_at";
+const CAMPAIGN_COLS = "id, account_id, name, status, audience, invite_variants, message_text, connected_message_text, wording_hash, approved_by, approved_at, handoff_mode, agent, created_at";
 
-export type CampaignWithStats = CampaignRow & { people: number; invited: number; accepted: number; needs_approval: boolean };
+export type CampaignWithStats = CampaignRow & { people: number; invited: number; accepted: number; messaged: number; needs_approval: boolean };
 
 export async function listCampaigns(accountId: string): Promise<CampaignWithStats[]> {
   const { data } = await db().from("linkedin_campaigns").select(CAMPAIGN_COLS).eq("account_id", accountId).order("created_at", { ascending: false }).limit(100);
   const rows = (data ?? []) as CampaignRow[];
   if (rows.length === 0) return [];
-  const t = await db().from("linkedin_targets").select("campaign_id, status").in("campaign_id", rows.map((r) => r.id)).limit(20000);
-  const counts = new Map<string, { people: number; invited: number; accepted: number }>();
-  for (const x of (t.data ?? []) as Array<{ campaign_id: string; status: string }>) {
+  const t = await db().from("linkedin_targets").select("campaign_id, status, route").in("campaign_id", rows.map((r) => r.id)).limit(20000);
+  const counts = new Map<string, { people: number; invited: number; accepted: number; messaged: number }>();
+  for (const x of (t.data ?? []) as Array<{ campaign_id: string; status: string; route?: string }>) {
     if (x.status === "skipped") continue;
-    const c = counts.get(x.campaign_id) ?? { people: 0, invited: 0, accepted: 0 };
+    const c = counts.get(x.campaign_id) ?? { people: 0, invited: 0, accepted: 0, messaged: 0 };
     c.people += 1;
+    if (x.route === "message") { if (["messaged", "replied", "handed_off"].includes(x.status)) c.messaged += 1; counts.set(x.campaign_id, c); continue; } // a message to an existing connection is not an invite
     if (["invited", "accepted", "messaged", "replied", "handed_off", "withdrawn"].includes(x.status)) c.invited += 1;
     if (["accepted", "messaged", "replied", "handed_off"].includes(x.status)) c.accepted += 1;
     counts.set(x.campaign_id, c);
   }
-  return rows.map((r) => ({ ...r, ...(counts.get(r.id) ?? { people: 0, invited: 0, accepted: 0 }), needs_approval: !isApproved(r) }));
+  return rows.map((r) => ({ ...r, ...(counts.get(r.id) ?? { people: 0, invited: 0, accepted: 0, messaged: 0 }), needs_approval: !isApproved(r) }));
 }
 
 export async function getCampaign(id: string): Promise<CampaignRow | null> {
@@ -80,6 +84,7 @@ export async function getCampaign(id: string): Promise<CampaignRow | null> {
 
 export type CampaignInput = {
   name: string; audience: Record<string, unknown>; invite_variants: InviteVariant[]; message_text: string | null;
+  connected_message_text?: string | null;
   handoff_mode: "web_chat" | "linkedin"; agent: "johnny" | "jessica";
 };
 
@@ -94,7 +99,7 @@ export async function updateCampaign(id: string, patch: Partial<CampaignInput>):
   const current = await getCampaign(id);
   if (!current) throw new Error("Campaign not found.");
   const next = { ...current, ...patch };
-  const wordingChanged = wordingHash(next.invite_variants, next.message_text) !== wordingHash(current.invite_variants, current.message_text);
+  const wordingChanged = wordingHash(next.invite_variants, next.message_text, next.connected_message_text) !== wordingHash(current.invite_variants, current.message_text, current.connected_message_text);
   const update: Record<string, unknown> = { ...patch, updated_at: new Date().toISOString() };
   if (wordingChanged) {
     update.approved_at = null; update.approved_by = null; update.wording_hash = null;
@@ -111,10 +116,10 @@ export type ApproveResult = { ok: true; campaign: CampaignRow } | { ok: false; p
 export async function approveCampaign(id: string, approverId: string): Promise<ApproveResult> {
   const c = await getCampaign(id);
   if (!c) throw new Error("Campaign not found.");
-  const problems = checkWording(c.invite_variants, c.message_text);
+  const problems = isNetworkAudience(c.audience) ? checkNetworkWording(c.connected_message_text) : checkWording(c.invite_variants, c.message_text, c.connected_message_text);
   if (problems.length) return { ok: false, problems };
   const { data, error } = await db().from("linkedin_campaigns").update({
-    approved_by: approverId, approved_at: new Date().toISOString(), wording_hash: wordingHash(c.invite_variants, c.message_text),
+    approved_by: approverId, approved_at: new Date().toISOString(), wording_hash: wordingHash(c.invite_variants, c.message_text, c.connected_message_text),
     status: c.status === "draft" || c.status === "pending_approval" ? "draft" : c.status, updated_at: new Date().toISOString(),
   }).eq("id", id).select(CAMPAIGN_COLS).single();
   if (error) throw new Error(error.message);
@@ -212,6 +217,13 @@ export async function startCampaign(id: string, userId: string): Promise<StartRe
   const account = accRes.data as LinkedInAccount | null;
   if (!account) return { ok: false, error: "Account not found." };
 
+  if (isNetworkAudience(c.audience)) {
+    // People are read from your own LinkedIn connections by the sender, a few pages a day. Nothing to queue now.
+    await db().from("linkedin_campaigns").update({ status: "ready", updated_at: new Date().toISOString() }).eq("id", id);
+    await event({ account_id: account.id, campaign_id: id, kind: "started", detail: "Reading your LinkedIn connections", created_by: userId });
+    return { ok: true, summary: summarize([]), tasks: 0 };
+  }
+
   const { contacts, rows } = await classifyAudience(account, id, readFilters(c.audience));
   const byId = new Map(contacts.map((x) => [x.id, x] as const));
   const existing = await db().from("linkedin_targets").select("contact_id").eq("campaign_id", id).limit(20000);
@@ -251,8 +263,8 @@ export async function setCampaignStatus(id: string, status: "paused" | "ready" |
 
 /** Pause a running campaign when too few invites were accepted. Called by the sender (Step 2). */
 export async function pauseIfAcceptanceLow(campaignId: string): Promise<boolean> {
-  const { data } = await db().from("linkedin_targets").select("status").eq("campaign_id", campaignId).limit(20000);
-  const rows = (data ?? []) as Array<{ status: string }>;
+  const { data } = await db().from("linkedin_targets").select("status, route").eq("campaign_id", campaignId).limit(20000);
+  const rows = ((data ?? []) as Array<{ status: string; route?: string }>).filter((r) => r.route !== "message");
   const invited = rows.filter((r) => ["invited", "accepted", "messaged", "replied", "handed_off", "withdrawn"].includes(r.status)).length;
   const accepted = rows.filter((r) => ["accepted", "messaged", "replied", "handed_off"].includes(r.status)).length;
   if (!acceptanceTooLow({ invited, accepted })) return false;

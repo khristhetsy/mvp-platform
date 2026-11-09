@@ -22,6 +22,8 @@ beforeAll(async () => {
   `);
   await pg.exec(readFileSync(join(process.cwd(), "supabase/migrations/20261108100000_linkedin_outreach.sql"), "utf8"));
   await pg.exec(readFileSync(join(process.cwd(), "supabase/migrations/20261108110000_linkedin_worker.sql"), "utf8"));
+  await pg.exec(readFileSync(join(process.cwd(), "supabase/migrations/20261109120000_linkedin_connected_message.sql"), "utf8"));
+  await pg.exec(readFileSync(join(process.cwd(), "supabase/migrations/20261109130000_linkedin_network_audience.sql"), "utf8"));
 }, 60_000);
 
 afterAll(async () => { await pg?.close(); });
@@ -42,6 +44,16 @@ describe("linkedin outreach migration", () => {
     const OTHER = "00000000-0000-0000-0000-0000000000f2";
     await pg.exec(`insert into profiles values ('${OTHER}')`);
     await expect(pg.exec(`insert into linkedin_accounts (owner_id, label, worker_key_hash) values ('${OTHER}', 'x', 'abc')`)).rejects.toThrow();
+    await pg.exec(`delete from linkedin_accounts where id = '${a}'`);
+  });
+
+  it("adds the existing connections message columns, applies twice, and leaves old campaigns unchanged", async () => {
+    await pg.exec(readFileSync(join(process.cwd(), "supabase/migrations/20261109120000_linkedin_connected_message.sql"), "utf8"));
+    const a = await account();
+    const c = (await pg.query<{ id: string; connected_message_text: string | null }>(`insert into linkedin_campaigns (account_id, name, created_by) values ('${a}', 'Old', '${OWNER}') returning id, connected_message_text`)).rows[0];
+    expect(c.connected_message_text).toBeNull();
+    const t = await pg.query<{ messaged_at: string | null }>(`insert into linkedin_targets (campaign_id) values ('${c.id}') returning messaged_at`);
+    expect(t.rows[0].messaged_at).toBeNull();
     await pg.exec(`delete from linkedin_accounts where id = '${a}'`);
   });
 
@@ -67,6 +79,17 @@ describe("linkedin outreach migration", () => {
     await pg.exec(`delete from linkedin_accounts where id = '${accId}'`);
     const left = await pg.query<{ n: number }>(`select count(*)::int as n from linkedin_targets`);
     expect(left.rows[0].n).toBe(0);
+  });
+
+  it("keeps one person once per campaign when read from LinkedIn, applies twice, and leaves CRM targets alone", async () => {
+    await pg.exec(readFileSync(join(process.cwd(), "supabase/migrations/20261109130000_linkedin_network_audience.sql"), "utf8"));
+    const a = await account();
+    const camp = (await pg.query<{ id: string }>(`insert into linkedin_campaigns (account_id, name, created_by) values ('${a}', 'Network', '${OWNER}') returning id`)).rows[0].id;
+    await pg.exec(`insert into linkedin_targets (campaign_id, linkedin_slug, route) values ('${camp}', 'ben', 'message')`);
+    await expect(pg.exec(`insert into linkedin_targets (campaign_id, linkedin_slug, route) values ('${camp}', 'ben', 'message')`)).rejects.toThrow();
+    await pg.exec(`insert into linkedin_targets (campaign_id, linkedin_slug, route) values ('${camp}', 'cat', 'message')`);
+    await pg.exec(`insert into linkedin_targets (campaign_id, contact_id, linkedin_slug) values ('${camp}', '${CONTACT}', 'ben')`);
+    await pg.exec(`delete from linkedin_accounts where id = '${a}'`);
   });
 
   it("turns row level security on for every table", async () => {

@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   acceptanceTooLow,
   canSendInvite,
+  canSendMessage,
   dailyAutoCap,
+  dailyMessageCap,
   dailyTotalCap,
   hubTokenState,
   inWorkingHours,
@@ -126,5 +128,27 @@ describe("hub connection state", () => {
     expect(hubTokenState("2026-11-27T18:00:00Z", now)).toBe("ok");
     expect(hubTokenState("2026-11-01T00:00:00Z", now)).toBe("expired");
     expect(hubTokenState(null, now)).toBe("ok");
+  });
+});
+
+describe("messages to existing connections", () => {
+  const acct = { ...std, status: "connected" as const, timeZone: "UTC" };
+  it("is zero until the warm up starts, then rises to 15 on Standard", () => {
+    expect(dailyMessageCap({ level: "standard", warmUpStartedAt: null }, START)).toBe(0);
+    expect(dailyMessageCap(std, START)).toBe(3);
+    expect(dailyMessageCap(std, at(20))).toBe(15);
+    expect(dailyMessageCap(std, at(60))).toBe(15);
+  });
+  it("is lower on Careful and never above Standard on a custom level", () => {
+    expect(dailyMessageCap({ level: "careful", warmUpStartedAt: START }, at(60))).toBe(8);
+    expect(dailyMessageCap({ level: "custom", customDaily: 20, customWeekly: 80, warmUpStartedAt: START }, at(60))).toBe(15);
+    expect(dailyMessageCap({ level: "custom", customDaily: 4, customWeekly: 20, warmUpStartedAt: START }, at(60))).toBe(4);
+  });
+  it("stops at the cap, outside working hours and when paused", () => {
+    const noon = new Date("2026-11-10T12:00:00Z"); // Tuesday
+    expect(canSendMessage({ account: acct, now: noon, sentToday: 0 })).toEqual({ ok: true });
+    expect(canSendMessage({ account: acct, now: noon, sentToday: 15 })).toEqual({ ok: false, reason: "daily_cap" });
+    expect(canSendMessage({ account: acct, now: new Date("2026-11-10T03:00:00Z"), sentToday: 0 })).toEqual({ ok: false, reason: "outside_hours" });
+    expect(canSendMessage({ account: { ...acct, status: "paused" }, now: noon, sentToday: 0 })).toEqual({ ok: false, reason: "paused" });
   });
 });

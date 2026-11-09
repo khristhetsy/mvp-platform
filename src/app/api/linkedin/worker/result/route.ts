@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 const schema = z.object({
   targetId: z.string().uuid(),
-  outcome: z.enum(["sent", "dry_run", "already_connected", "not_found", "failed", "warning"]),
+  outcome: z.enum(["sent", "message_sent", "dry_run", "already_connected", "not_connected", "not_found", "failed", "warning"]),
   detail: z.string().max(300).nullable().optional(),
 });
 

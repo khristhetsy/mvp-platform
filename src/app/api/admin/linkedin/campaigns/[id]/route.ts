@@ -12,6 +12,7 @@ const editSchema = z.object({
   name: z.string().trim().min(1).max(120).optional(),
   invite_variants: z.array(z.object({ id: z.string().min(1).max(20), text: z.string().max(400) })).max(5).optional(),
   message_text: z.string().max(2500).nullable().optional(),
+  connected_message_text: z.string().max(2500).nullable().optional(),
   handoff_mode: z.enum(["web_chat", "linkedin"]).optional(),
   agent: z.enum(["johnny", "jessica"]).optional(),
 });

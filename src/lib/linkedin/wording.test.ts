@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { agentFor, checkWording, handoffLink, isApproved, pickVariant, renderAcceptedMessage, renderInvite, wordingHash, type InviteVariant } from "./wording";
+import { agentFor, checkNetworkWording, checkWording, handoffLink, isApproved, pickVariant, renderAcceptedMessage, renderConnectedMessage, renderInvite, wordingHash, type InviteVariant } from "./wording";
 
 const v = (id: string, text: string): InviteVariant => ({ id, text });
 const good = [v("a", "Hi {first_name}, I saw your work at {company}."), v("b", "Hello {first_name}, would like to connect.")];
@@ -55,5 +55,41 @@ describe("helpers", () => {
     expect(agentFor("founder")).toBe("jessica");
     expect(agentFor("investor")).toBe("johnny");
     expect(agentFor(null)).toBe("johnny");
+  });
+});
+
+describe("message for existing connections", () => {
+  it("keeps an earlier approval valid when there is no such message", () => {
+    expect(wordingHash(good, "msg", null)).toBe(wordingHash(good, "msg"));
+    expect(wordingHash(good, "msg", "  ")).toBe(wordingHash(good, "msg"));
+  });
+  it("clears the approval when the message is added or changed", () => {
+    const base = { approved_at: "2026-11-09T10:00:00Z", wording_hash: wordingHash(good, "msg", "hello"), invite_variants: good, message_text: "msg", connected_message_text: "hello" };
+    expect(isApproved(base)).toBe(true);
+    expect(isApproved({ ...base, connected_message_text: "hello!" })).toBe(false);
+    expect(isApproved({ ...base, connected_message_text: null })).toBe(false);
+  });
+  it("is optional but limited in length", () => {
+    expect(checkWording(good, "msg", null)).toEqual([]);
+    expect(checkWording(good, "msg", "x".repeat(1901))).toHaveLength(1);
+  });
+  it("fills the name and the link, and never cuts a long text", () => {
+    expect(renderConnectedMessage("Hi {first_name}, chat: {link}", { name: "Ana Silva" }, "https://x.test/j")).toBe("Hi Ana, chat: https://x.test/j");
+    expect(renderConnectedMessage("Hi {first_name}", { name: "Ana" }, null)).toBe("Hi Ana");
+    expect(renderConnectedMessage("x".repeat(1950), { name: "Ana" }, null)).toBeNull();
+  });
+});
+
+describe("wording for a network campaign", () => {
+  it("needs only the message people get", () => {
+    expect(checkNetworkWording("Hi {first_name}")).toEqual([]);
+    expect(checkNetworkWording("  ")).toHaveLength(1);
+    expect(checkNetworkWording(null)).toHaveLength(1);
+    expect(checkNetworkWording("x".repeat(1901))).toHaveLength(1);
+  });
+  it("is approved by the same fingerprint with no invites", () => {
+    const h = wordingHash([], "", "Hi {first_name}");
+    expect(isApproved({ approved_at: "2026-11-09T10:00:00Z", wording_hash: h, invite_variants: [], message_text: null, connected_message_text: "Hi {first_name}" })).toBe(true);
+    expect(isApproved({ approved_at: "2026-11-09T10:00:00Z", wording_hash: h, invite_variants: [], message_text: null, connected_message_text: "Hi" })).toBe(false);
   });
 });
