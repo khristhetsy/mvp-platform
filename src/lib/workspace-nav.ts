@@ -13,6 +13,10 @@ export type WorkspaceNavItem = {
   journeyStage?: JourneyStage;
   /** Founder-only: show only when the founder's offering_type is 'reg_cf'. */
   requiresRegCf?: boolean;
+  /** Investor-only: the investor stage ("onboard" | "verify" | "access" | "manage") this page opens at. Earlier stages see it locked. */
+  minInvestorStage?: "onboard" | "verify" | "access" | "manage";
+  /** Sidebar drill-in panel heading, when it should differ from the row label. */
+  drillTitle?: string;
   /** Top menu layout: the dropdown this page sits in when its app has more than 7 menu items. Ignored by the sidebar. */
   menuGroup?: string;
   children?: WorkspaceNavItem[];
@@ -640,23 +644,23 @@ export const investorWorkspaceNavSections: WorkspaceNavSection[] = [
     // as a clean funnel step.
     items: [
       { href: "/investor/stages/access", label: "Stage guide" },
-      { href: "/investor/watchlist", label: "Watchlist" },
-      { href: "/investor/interest-pipeline", label: "Interest Pipeline" },
+      { href: "/investor/watchlist", label: "Watchlist", minInvestorStage: "access" },
+      { href: "/investor/interest-pipeline", label: "Interest Pipeline", minInvestorStage: "access" },
       { href: "/investor/deal-room", label: "Deal Room" },
       { href: "/investor/deals", label: "Diligence" },
-      { href: "/investor/matches", label: "Matches" },
-      { href: "/investor/matching", label: "Matching Center" },
+      { href: "/investor/matches", label: "Matches", minInvestorStage: "access" },
+      { href: "/investor/matching", label: "Matching Center", minInvestorStage: "access" },
       { href: "/events", label: "Events" },
-      { href: "/investor/partner-score", label: "Partner Score" },
+      { href: "/investor/partner-score", label: "Partner Score", minInvestorStage: "access" },
     ],
   },
   {
     title: "Stage 4 · Manage deals",
     items: [
       { href: "/investor/stages/manage", label: "Stage guide" },
-      { href: "/investor/portfolio", label: "Portfolio" },
-      { href: "/investor/spvs", label: "SPVs & closings" },
-      { href: "/investor/activity", label: "Recent Activity" },
+      { href: "/investor/portfolio", label: "Portfolio", minInvestorStage: "manage" },
+      { href: "/investor/spvs", label: "SPVs & closings", minInvestorStage: "manage" },
+      { href: "/investor/activity", label: "Recent Activity", minInvestorStage: "manage" },
     ],
   },
   {
@@ -693,6 +697,24 @@ export const investorWorkspaceNav: WorkspaceNavItem[] = investorWorkspaceNavSect
 
 export function getInvestorWorkspaceNavSections(): WorkspaceNavSection[] {
   return investorWorkspaceNavSections;
+}
+
+/**
+ * Sidebar shape of the investor menu: each "Stage N" section collapses to one
+ * "Stage guide" row (founder style) that opens the drill-in panel listing the
+ * stage's pages. The flat sections above stay the source for the top menu,
+ * search and the assistant.
+ */
+export function getInvestorSidebarSections(): WorkspaceNavSection[] {
+  return investorWorkspaceNavSections.map((section) => {
+    if (!section.title?.startsWith("Stage ")) return section;
+    const guide = section.items[0];
+    if (!guide || section.items.length < 2) return section;
+    return {
+      ...section,
+      items: [{ href: guide.href, label: guide.label, drillTitle: section.title, children: section.items }],
+    };
+  });
 }
 
 export const adminWorkspaceNav: WorkspaceNavItem[] = adminWorkspaceNavSections.flatMap((section) => section.items);
