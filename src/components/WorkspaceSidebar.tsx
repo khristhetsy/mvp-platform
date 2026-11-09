@@ -7,9 +7,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronRight, ChevronLeft, Lock } from "lucide-react";
 import { useLocale } from "next-intl";
 import type { InternalPermission } from "@/lib/rbac/constants";
+import { INVESTOR_STAGES, INVESTOR_STAGE_META, type InvestorStageKey } from "@/lib/investor-journey/stages";
 import { JOURNEY_STAGES, type JourneyStage } from "@/lib/founder-journey/types";
 import type { WorkspaceId, WorkspaceNavItem } from "@/lib/workspace-nav";
-import { getAdminWorkspaceNavSections, getFounderWorkspaceNavSections, getInvestorWorkspaceNavSections, getWorkspaceNav, workspaceLabel, isFounderNavV2Enabled } from "@/lib/workspace-nav";
+import { getAdminWorkspaceNavSections, getFounderWorkspaceNavSections, getInvestorSidebarSections, getWorkspaceNav, workspaceLabel, isFounderNavV2Enabled } from "@/lib/workspace-nav";
 import { getWorkspaceNavIcon } from "@/lib/ui/nav-icons";
 import { useToast } from "@/components/ui/ToastProvider";
 import { IcapOSLogo } from "@/components/IcapOSLogo";
@@ -190,6 +191,25 @@ function useFounderStage(workspace: WorkspaceId) {
   return stage;
 }
 
+function useInvestorStage(workspace: WorkspaceId) {
+  const [stage, setStage] = useState<InvestorStageKey | null>(null);
+
+  useEffect(() => {
+    if (workspace !== "investor") return;
+    let cancelled = false;
+    void fetch("/api/investor/journey/stage")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { stage?: string } | null) => {
+        if (cancelled) return;
+        if (data?.stage && (INVESTOR_STAGES as readonly string[]).includes(data.stage)) setStage(data.stage as InvestorStageKey);
+      })
+      .catch(() => { /* silent: locks are non-critical */ });
+    return () => { cancelled = true; };
+  }, [workspace]);
+
+  return stage;
+}
+
 function useFounderOfferingType(workspace: WorkspaceId) {
   const [offeringType, setOfferingType] = useState<string | null>(null);
 
@@ -287,6 +307,7 @@ export function WorkspaceSidebar({
   const adminNav = useAdminNavPermissions(workspace);
   const deptAccess = useDepartmentAccess(workspace);
   const founderStage = useFounderStage(workspace);
+  const investorStage = useInvestorStage(workspace);
   const founderOfferingType = useFounderOfferingType(workspace);
 
   // Live unread-email count for the Inbox nav badge (polled), plus a toast when
@@ -433,7 +454,7 @@ export function WorkspaceSidebar({
         ? getAdminWorkspaceNavSections()
         : workspace === "founder"
           ? getFounderWorkspaceNavSections(founderNavV2)
-          : getInvestorWorkspaceNavSections();
+          : getInvestorSidebarSections();
     if (!source) return null;
     return source
       .map((section) => ({ ...section, items: gateItems(section.items) }))
@@ -453,10 +474,13 @@ export function WorkspaceSidebar({
 
   const isLocked = useMemo(
     () => (item: WorkspaceNavItem) => {
+      if (item.minInvestorStage && investorStage) {
+        return INVESTOR_STAGES.indexOf(item.minInvestorStage) > INVESTOR_STAGES.indexOf(investorStage);
+      }
       if (currentStageIndex == null || !item.minStage) return false;
       return JOURNEY_STAGES.indexOf(item.minStage) > currentStageIndex;
     },
-    [currentStageIndex],
+    [currentStageIndex, investorStage],
   );
 
   function isNavItemActive(href: string) {
@@ -500,6 +524,10 @@ export function WorkspaceSidebar({
   }, [drilled, pathname]);
 
   function lockHint(item: WorkspaceNavItem): string | undefined {
+    if (item.minInvestorStage) {
+      const m = INVESTOR_STAGE_META[item.minInvestorStage];
+      return `Unlocks at Stage ${m.number}, ${m.label}`;
+    }
     if (!item.minStage) return undefined;
     return `Unlocks at ${STAGE_LABELS[item.minStage] ?? item.minStage}`;
   }
@@ -640,7 +668,7 @@ export function WorkspaceSidebar({
                 className="mb-1 flex w-full items-center gap-1.5 rounded-lg px-2 py-2 text-[13.5px] font-semibold text-[var(--navy)] transition-colors hover:bg-slate-100"
               >
                 <ChevronLeft className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
-                <span className="truncate">{tLabel(drilledItem.label)}</span>
+                <span className="truncate">{tLabel(drilledItem.drillTitle ?? drilledItem.label)}</span>
               </button>
               {renderChildren(drilledItem.children!)}
             </nav>
