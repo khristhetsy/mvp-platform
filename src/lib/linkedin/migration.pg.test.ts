@@ -22,7 +22,7 @@ beforeAll(async () => {
   `);
   await pg.exec(readFileSync(join(process.cwd(), "supabase/migrations/20261108100000_linkedin_outreach.sql"), "utf8"));
   await pg.exec(readFileSync(join(process.cwd(), "supabase/migrations/20261108110000_linkedin_worker.sql"), "utf8"));
-  await pg.exec(readFileSync(join(process.cwd(), "supabase/migrations/20261109120000_linkedin_connected_message.sql"), "utf8"));
+  await pg.exec(readFileSync(join(process.cwd(), "supabase/migrations/20261109120100_linkedin_connected_message.sql"), "utf8"));
   await pg.exec(readFileSync(join(process.cwd(), "supabase/migrations/20261109130000_linkedin_network_audience.sql"), "utf8"));
 }, 60_000);
 
@@ -48,7 +48,7 @@ describe("linkedin outreach migration", () => {
   });
 
   it("adds the existing connections message columns, applies twice, and leaves old campaigns unchanged", async () => {
-    await pg.exec(readFileSync(join(process.cwd(), "supabase/migrations/20261109120000_linkedin_connected_message.sql"), "utf8"));
+    await pg.exec(readFileSync(join(process.cwd(), "supabase/migrations/20261109120100_linkedin_connected_message.sql"), "utf8"));
     const a = await account();
     const c = (await pg.query<{ id: string; connected_message_text: string | null }>(`insert into linkedin_campaigns (account_id, name, created_by) values ('${a}', 'Old', '${OWNER}') returning id, connected_message_text`)).rows[0];
     expect(c.connected_message_text).toBeNull();
