@@ -19,14 +19,15 @@ function builder(name: string) {
   };
   const run = () => {
     if (mode === "update") { const m = matched(); m.forEach((r) => Object.assign(r, patch)); return { data: m, error: null, count: m.length }; }
-    if (mode === "insert") { rows().push({ id: `n${rows().length}`, ...patch }); return { data: [patch], error: null }; }
+    if (mode === "insert") { for (const row of (Array.isArray(patch) ? patch : [patch]) as Row[]) rows().push({ id: `n${rows().length}`, ...row }); return { data: [patch], error: null }; }
     const m = matched();
     return { data: head ? null : m, error: null, count: m.length };
   };
   const b: Record<string, unknown> = {
     select: (_c?: string, o?: { head?: boolean }) => { head = !!o?.head; return b; },
     update: (p: Row) => { mode = "update"; patch = p; return b; },
-    insert: (p: Row) => { mode = "insert"; patch = p; return b; },
+    insert: (p: Row | Row[]) => { mode = "insert"; patch = p as Row; return b; },
+    neq: (c: string, v: unknown) => { filters.push((r) => r[c] !== v); return b; },
     eq: (c: string, v: unknown) => { filters.push((r) => r[c] === v); return b; },
     in: (c: string, v: unknown[]) => { filters.push((r) => v.includes(r[c])); return b; },
     gte: (c: string, v: string) => { filters.push((r) => r[c] != null && String(r[c]) >= v); return b; },
@@ -44,7 +45,7 @@ vi.mock("@/lib/supabase/admin", () => ({ createServiceRoleClient: () => ({ from:
 vi.mock("@/lib/sales/tasks", () => ({ createTask: vi.fn() }));
 vi.mock("@/lib/notes-log", () => ({ logCommunication: vi.fn(), toInsertRow: vi.fn() }));
 
-import { nextForSender, recordResult } from "./worker-store";
+import { nextForSender, recordRead, recordResult } from "./worker-store";
 import type { LinkedInAccount } from "./store";
 
 const MON_10AM_LA = new Date("2026-11-09T18:00:00Z"); // Monday 10:00 in Los Angeles
@@ -141,5 +142,114 @@ describe("recordResult", () => {
   it("ignores a person who belongs to another account", async () => {
     await recordResult(account({ id: "other" }), { targetId: "t0", outcome: "sent", now: MON_10AM_LA });
     expect(tables.linkedin_targets[0].status).toBe("queued");
+  });
+});
+
+describe("messages to existing connections", () => {
+  const withMessageTargets = (n = 2) => {
+    seed(0);
+    tables.linkedin_campaigns[0] = { ...tables.linkedin_campaigns[0], connected_message_text: "Hi {first_name}, chat: {link}", handoff_mode: "web_chat", agent: "jessica" };
+    tables.linkedin_targets = Array.from({ length: n }, (_, i) => ({ id: `m${i}`, campaign_id: "c1", route: "message", status: "queued", linkedin_slug: `c${i}`, display_name: `Sam ${i}`, next_action_at: null, messaged_at: null, updated_at: "2026-11-01" }));
+  };
+
+  it("hands out a message with the name and the chat link, and reserves the person", async () => {
+    withMessageTargets();
+    const r = await nextForSender(account(), { dryRun: true, now: MON_10AM_LA });
+    expect(r).toMatchObject({ action: "message", slug: "c0", contactName: "Sam 0" });
+    expect((r as { text: string }).text).toMatch(/^Hi Sam, chat: https:\/\/.+\/jessica\?src=linkedin&t=m0$/);
+    expect(await nextForSender(account(), { dryRun: true, now: MON_10AM_LA })).toMatchObject({ action: "message", slug: "c1" });
+  });
+  it("sends no message when the campaign has no approved text for existing connections", async () => {
+    withMessageTargets();
+    delete tables.linkedin_campaigns[0].connected_message_text;
+    expect(await nextForSender(account(), { dryRun: true, now: MON_10AM_LA })).toMatchObject({ action: "wait", reason: "nothing_queued" });
+    expect(tables.linkedin_targets.every((t) => t.status === "queued")).toBe(true);
+  });
+  it("prefers an invite when one is allowed, and falls back to messages when invites are capped", async () => {
+    withMessageTargets();
+    tables.linkedin_targets.push({ id: "i0", campaign_id: "c1", route: "invite", status: "queued", linkedin_slug: "p0", display_name: "Pat", next_action_at: null, invited_at: null, updated_at: "2026-11-01" });
+    expect(await nextForSender(account(), { dryRun: true, now: MON_10AM_LA })).toMatchObject({ action: "invite" });
+    for (let i = 0; i < 15; i++) tables.linkedin_targets.push({ id: `d${i}`, campaign_id: "c1", route: "invite", status: "invited", linkedin_slug: `d${i}`, invited_at: new Date(MON_10AM_LA.getTime() - (10 + i) * 60_000).toISOString() });
+    expect(await nextForSender(account(), { dryRun: true, now: MON_10AM_LA })).toMatchObject({ action: "message" });
+  });
+  it("stops at the message cap and keeps the gap", async () => {
+    withMessageTargets(3);
+    tables.linkedin_targets[0] = { ...tables.linkedin_targets[0], status: "messaged", messaged_at: new Date(MON_10AM_LA.getTime() - 60_000).toISOString() };
+    expect(await nextForSender(account(), { dryRun: true, now: MON_10AM_LA })).toMatchObject({ reason: "gap" });
+    tables.linkedin_targets[0].messaged_at = new Date(MON_10AM_LA.getTime() - 20 * 60_000).toISOString();
+    for (let i = 0; i < 15; i++) tables.linkedin_targets.push({ id: `s${i}`, campaign_id: "c1", route: "message", status: "messaged", linkedin_slug: `s${i}`, messaged_at: new Date(MON_10AM_LA.getTime() - (10 + i) * 60_000).toISOString() });
+    expect(await nextForSender(account(), { dryRun: true, now: MON_10AM_LA })).toMatchObject({ action: "wait", reason: "daily_cap" });
+  });
+  it("records a sent message, a dry run and a person who is not a connection", async () => {
+    withMessageTargets();
+    await recordResult(account(), { targetId: "m0", outcome: "message_sent", now: MON_10AM_LA });
+    expect(tables.linkedin_targets[0]).toMatchObject({ status: "messaged", messaged_at: MON_10AM_LA.toISOString() });
+    expect(tables.linkedin_events.at(-1)).toMatchObject({ kind: "message_sent" });
+    await recordResult(account(), { targetId: "m1", outcome: "dry_run", now: MON_10AM_LA });
+    expect(tables.linkedin_targets[1].status).toBe("queued");
+    expect(String(tables.linkedin_events.at(-1)?.detail)).toMatch(/^Dry run: message was typed/);
+    tables.linkedin_targets.push({ id: "m2", campaign_id: "c1", route: "message", status: "queued", linkedin_slug: "c2" });
+    await recordResult(account(), { targetId: "m2", outcome: "not_connected", now: MON_10AM_LA });
+    expect(tables.linkedin_targets[2].route).toBe("invite");
+  });
+});
+
+
+describe("reading your own LinkedIn connections", () => {
+  const network = (over: Record<string, unknown> = {}) => {
+    tables.linkedin_accounts = [account() as unknown as Row];
+    tables.linkedin_campaigns = [{ id: "n1", account_id: "a1", status: "ready", approved_at: "2026-11-01", wording_hash: "h", invite_variants: [], connected_message_text: "Hi {first_name}", audience: { source: "linkedin_network", filters: { industry: "Venture Capital and Private Equity", sort: "recent" } }, ...over }];
+    tables.linkedin_targets = [];
+    tables.linkedin_events = [];
+  };
+
+  it("asks the sender to read page 1 with the filters when no one is waiting", async () => {
+    network();
+    expect(await nextForSender(account(), { dryRun: true, now: MON_10AM_LA })).toMatchObject({ action: "read", campaignId: "n1", page: 1, searchUrl: null, filters: { industry: "Venture Capital and Private Equity", sort: "recent" } });
+  });
+  it("does not read while enough people are still waiting, or after the daily pages are used", async () => {
+    network();
+    for (let i = 0; i < 10; i++) tables.linkedin_targets.push({ id: `w${i}`, campaign_id: "n1", route: "message", status: "queued", linkedin_slug: `w${i}`, display_name: "W", next_action_at: "2099-01-01", updated_at: "2026-11-01" });
+    expect(await nextForSender(account(), { dryRun: true, now: MON_10AM_LA })).toMatchObject({ action: "wait" });
+    network();
+    const day = new Date("2026-11-09T08:00:00Z").toISOString(); // start of Monday in Los Angeles
+    (tables.linkedin_campaigns[0].audience as Record<string, unknown>).progress = { page: 4, done: false, found: 30, searchUrl: null, readDay: day, readToday: 3, readAt: "2026-11-09T10:00:00Z" };
+    expect(await nextForSender(account(), { dryRun: true, now: MON_10AM_LA })).toMatchObject({ action: "wait" });
+  });
+  it("keeps new people as message targets, skips repeats and yourself, and moves to the next page", async () => {
+    network();
+    tables.linkedin_targets.push({ id: "old", campaign_id: "n1", route: "message", status: "messaged", linkedin_slug: "ana", display_name: "Ana" });
+    const r = await recordRead(account({ linkedin_slug: "me" }), {
+      campaignId: "n1", page: 1, filtersApplied: true, now: MON_10AM_LA,
+      searchUrl: "https://www.linkedin.com/search/results/people/?network=%5B%22F%22%5D&industry=%5B%22x%22%5D",
+      people: [{ slug: "ana", name: "Ana" }, { slug: "ben", name: "Ben Ray" }, { slug: "me", name: "Me" }, { slug: "ben", name: "Ben Ray" }, { slug: "ACoAAAbcdefghijklmnopqrstuv", name: "Hidden" }],
+    });
+    expect(r).toEqual({ added: 1, paused: false });
+    expect(tables.linkedin_targets.filter((t) => t.id !== "old")).toMatchObject([{ linkedin_slug: "ben", display_name: "Ben Ray", route: "message", status: "queued" }]);
+    const progress = (tables.linkedin_campaigns[0].audience as { progress: Record<string, unknown> }).progress;
+    expect(progress).toMatchObject({ page: 2, found: 1, readToday: 1, done: false });
+    expect(progress.searchUrl).toMatch(/^https:\/\/www\.linkedin\.com\/search\/results\/people/);
+  });
+  it("keeps nobody when the filters could not be applied, and tries the same page later", async () => {
+    network();
+    const r = await recordRead(account(), { campaignId: "n1", page: 1, filtersApplied: false, people: [{ slug: "ben", name: "Ben" }], now: MON_10AM_LA, detail: "Industry filter not found" });
+    expect(r.added).toBe(0);
+    expect(tables.linkedin_targets).toHaveLength(0);
+    expect((tables.linkedin_campaigns[0].audience as { progress: { page: number } }).progress.page).toBe(1);
+    expect(tables.linkedin_events.at(-1)).toMatchObject({ kind: "failed" });
+  });
+  it("ends the reading on an empty page and pauses the account on a warning", async () => {
+    network();
+    await recordRead(account(), { campaignId: "n1", page: 3, filtersApplied: true, people: [], now: MON_10AM_LA });
+    expect((tables.linkedin_campaigns[0].audience as { progress: { done: boolean } }).progress.done).toBe(true);
+    const w = await recordRead(account(), { campaignId: "n1", page: 1, filtersApplied: true, people: [], warning: true, detail: "Unusual activity", now: MON_10AM_LA });
+    expect(w.paused).toBe(true);
+    expect(tables.linkedin_accounts[0].status).toBe("warning");
+  });
+  it("ignores a campaign that is not this account's or not a network campaign", async () => {
+    network();
+    tables.linkedin_campaigns[0].account_id = "other";
+    expect(await recordRead(account(), { campaignId: "n1", page: 1, filtersApplied: true, people: [{ slug: "ben", name: "Ben" }], now: MON_10AM_LA })).toEqual({ added: 0, paused: false });
+    expect(tables.linkedin_targets).toHaveLength(0);
   });
 });

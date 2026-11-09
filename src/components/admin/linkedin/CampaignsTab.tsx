@@ -34,7 +34,7 @@ export function CampaignsTab({ campaigns, onNew, onChanged }: Readonly<{ campaig
         {campaigns.length === 0 ? <p className="px-4 py-6 text-[13px] text-slate-600">No campaigns yet. Start with New campaign.</p> : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-[13px]">
-              <thead className="text-slate-500"><tr><th className="px-4 py-2 font-medium">Campaign</th><th className="px-2 py-2 font-medium">People</th><th className="px-2 py-2 font-medium">Invited</th><th className="px-2 py-2 font-medium">Accepted</th><th className="px-2 py-2 font-medium">Status</th><th className="px-4 py-2" /></tr></thead>
+              <thead className="text-slate-500"><tr><th className="px-4 py-2 font-medium">Campaign</th><th className="px-2 py-2 font-medium">People found</th><th className="px-2 py-2 font-medium">Invited</th><th className="px-2 py-2 font-medium">Accepted</th><th className="px-2 py-2 font-medium">Messaged</th><th className="px-2 py-2 font-medium">Status</th><th className="px-4 py-2" /></tr></thead>
               <tbody>
                 {campaigns.map((c) => {
                   const s = STATUS[c.status];
@@ -45,6 +45,7 @@ export function CampaignsTab({ campaigns, onNew, onChanged }: Readonly<{ campaig
                       <td className="px-2 py-2.5">{c.people}</td>
                       <td className="px-2 py-2.5">{c.invited}</td>
                       <td className="px-2 py-2.5">{c.accepted}</td>
+                      <td className="px-2 py-2.5">{c.messaged}</td>
                       <td className="px-2 py-2.5"><Tag tone={s.tone}>{s.label}</Tag></td>
                       <td className="px-4 py-2.5">
                         <div className="flex flex-wrap justify-end gap-2">

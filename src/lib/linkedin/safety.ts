@@ -83,6 +83,20 @@ export function weeklyAutoCap(a: AccountSafety, now: Date): number {
   return Math.max(0, weekly - manualReserve(a, now) * 5);
 }
 
+/** Messages to people you are already connected with. Lower risk than invites, so counted apart from them. */
+export const MESSAGE_DAILY: Record<Exclude<SafetyLevel, "custom">, number> = { careful: 8, standard: 15 };
+export const MESSAGE_RAMP_START = 3;
+
+/** Messages to existing connections allowed today, rising over the same ramp as invites. */
+export function dailyMessageCap(a: AccountSafety, now: Date): number {
+  const day = warmUpDay(a.warmUpStartedAt, now);
+  if (day === 0) return 0;
+  const full = a.level === "custom" ? Math.min(MESSAGE_DAILY.standard, levelSpec(a).daily) : MESSAGE_DAILY[a.level];
+  const start = Math.min(MESSAGE_RAMP_START, full);
+  const progress = Math.min(day - 1, RAMP_DAYS - 1) / (RAMP_DAYS - 1);
+  return Math.round(start + (full - start) * progress);
+}
+
 export type WorkingHoursInput = { timeZone: string; start?: number; end?: number; weekdaysOnly?: boolean };
 
 /** True on a weekday inside the owner's working hours, in the owner's time zone. */
@@ -116,6 +130,20 @@ export function canSendInvite(args: {
   if (!inWorkingHours(now, { timeZone: account.timeZone })) return { ok: false, reason: "outside_hours" };
   if (args.sentToday >= dailyAutoCap(account, now)) return { ok: false, reason: "daily_cap" };
   if (args.sentLast7Days >= weeklyAutoCap(account, now)) return { ok: false, reason: "weekly_cap" };
+  return { ok: true };
+}
+
+/** May the worker send one more message to an existing connection right now? */
+export function canSendMessage(args: {
+  account: AccountSafety & { status: "not_connected" | "connected" | "paused" | "warning"; timeZone: string };
+  now: Date;
+  sentToday: number;
+}): SendDecision {
+  const { account, now } = args;
+  if (account.status !== "connected") return { ok: false, reason: "paused" };
+  if (warmUpDay(account.warmUpStartedAt, now) === 0) return { ok: false, reason: "not_started" };
+  if (!inWorkingHours(now, { timeZone: account.timeZone })) return { ok: false, reason: "outside_hours" };
+  if (args.sentToday >= dailyMessageCap(account, now)) return { ok: false, reason: "daily_cap" };
   return { ok: true };
 }
 

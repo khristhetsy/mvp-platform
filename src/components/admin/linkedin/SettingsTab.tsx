@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { HubLinkedIn, LinkedInAccount } from "@/lib/linkedin/store";
-import { LEVELS, dailyAutoCap, dailyTotalCap, levelSpec, warmUpDay, weeklyAutoCap, type AccountSafety } from "@/lib/linkedin/safety";
+import { LEVELS, dailyAutoCap, dailyMessageCap, dailyTotalCap, levelSpec, warmUpDay, weeklyAutoCap, type AccountSafety } from "@/lib/linkedin/safety";
 import { SenderCard } from "./SenderCard";
 import { Choice, ErrorLine, Field, Section, Tag, Toggle, api, btnCls, inputCls, primaryCls } from "./ui";
 
@@ -122,6 +122,7 @@ export function SettingsTab({ account, sentToday, hub, onChanged }: Readonly<{ a
             <td className="py-1">Owner&apos;s own machine and IP</td>
           </tr></tbody>
         </table>
+        <p className="mt-2 text-[13px]"><b>Messages to existing connections today:</b> {day ? dailyMessageCap(safety, now) : 0}, counted apart from invites.</p>
         <p className="mt-2 text-[12px] text-slate-500">Sequence editor, per step delays and test results live here once the sender is connected.</p>
       </details>
     </div>
