@@ -63,9 +63,9 @@ function publishedNote(error: string): string {
 const GUIDE_HIDDEN_KEY = "admin-social-schedule-guide-hidden";
 const GUIDE_STEPS: { title: string; body: string }[] = [
   { title: "Pick your dates", body: "In Compose, choose one or more days and a time, then tap Schedule. You land here with a post on every day you chose." },
-  { title: "Check the calendar", body: "Switch between Month, Week and List. Days with no posts are flagged in the amber banner, so they are easy to fill." },
-  { title: "Click a post", body: "A popup shows Posted to: every account, its status, and a link to the live post once it is published." },
-  { title: "Manage it", body: "Drag a post to another day, or drag a draft from Unscheduled onto a day. Use the popup to edit, reschedule or preview." },
+  { title: "Check the board", body: "Each post sits on the day it goes out. Drag a post to another day to move it, or drag a draft from Unscheduled onto a day. It keeps its time of day." },
+  { title: "Open a post", body: "Tap a post title to see Posted to: every account, its status, and a link to the live post once it is published." },
+  { title: "Manage repeating posts", body: "Pause, resume or end a repeating series from the list under the board. Month, Week and List views are still one tap away." },
 ];
 
 function statusMeta(status: string): { label: string; cls: string; dot: string } {
@@ -459,6 +459,11 @@ const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart
 /** Pacific date and time of an instant (the Social Hub shows PT). */
 const ptYmd = (d: Date) => toPlatformInput(d).slice(0, 10);
 const ptHm = (d: Date) => toPlatformInput(d).slice(11, 16);
+/** Pacific time of an instant as 3:00 PM PT. */
+const ptTime12 = (iso: string) => { const [h, m] = ptHm(new Date(iso)).split(":").map(Number); return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"} PT`; };
+const dayLabel = (key: string) => new Date(`${key}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
+/** Schedule surface card: soft, borderless. */
+const sCard = "rounded-2xl bg-white shadow-sm ring-1 ring-stone-200/60";
 const hhmm = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
 function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost, notice = null, onDismissNotice }: { queue: QueueItem[]; accounts: SocialAccount[]; slots: SocialSlot[]; googleReady: boolean; onAddPost: () => void; notice?: { count: number; before: string[] } | null; onDismissNotice?: () => void }) {
@@ -467,7 +472,7 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost, not
   // The guide stays open until it is hidden. Read after mount so the first render matches the server.
   useEffect(() => { const t = setTimeout(() => { try { setGuideHidden(localStorage.getItem(GUIDE_HIDDEN_KEY) === "1"); } catch { /* storage unavailable */ } }, 0); return () => clearTimeout(t); }, []);
   const toggleGuide = () => setGuideHidden((h) => { try { localStorage.setItem(GUIDE_HIDDEN_KEY, h ? "0" : "1"); } catch { /* storage unavailable */ } return !h; });
-  const [view, setView] = useState<"month" | "week" | "list">("month");
+  const [view, setView] = useState<"board" | "month" | "week" | "list">("board");
   const [anchor, setAnchor] = useState(() => new Date());
   const [selected, setSelected] = useState<QueueItem | null>(null);
   const [preview, setPreview] = useState<QueueItem | null>(null);
@@ -483,6 +488,8 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost, not
   const [selPosts, setSelPosts] = useState<Set<string>>(new Set());
   // Recurrence series summary for the selected post.
   const [recSummary, setRecSummary] = useState<{ label: string; status: string; madeCount: number; accountIds?: string[] } | null>(null);
+  // Repeating series shown under the board: summaries keyed by recurrence id.
+  const [series, setSeries] = useState<Record<string, { label: string; status: string; madeCount: number }>>({});
   // Calendar account filter: "all" or one account id.
   const [acctFilter, setAcctFilter] = useState<string>("all");
   const [acctMsg, setAcctMsg] = useState<string | null>(null);
@@ -549,6 +556,30 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost, not
     return out;
   }, [byDay]);
   const gapSet = useMemo(() => new Set(gapDays.map((g) => g.key)), [gapDays]);
+  // Board: the next 14 days (Pacific), posts past that window go under "Later".
+  const boardDays = useMemo(() => {
+    const out: string[] = []; const base = new Date();
+    for (let i = 0; i < 14; i++) out.push(ptYmd(new Date(base.getTime() + i * 86_400_000)));
+    return [...new Set(out)];
+  }, []);
+  const laterPosts = useMemo(() => {
+    const last = boardDays[boardDays.length - 1];
+    return dated.filter((q) => q.status !== "published" && ptYmd(new Date(itemISO(q)!)) > last);
+  }, [dated, boardDays]);
+  const seriesIds = useMemo(() => [...new Set(queue.map((q) => q.recurrence_id).filter((x): x is string => Boolean(x)))], [queue]);
+  useEffect(() => {
+    let live = true;
+    for (const id of seriesIds) {
+      if (series[id]) continue;
+      fetch(`/api/admin/social/recurrences/${id}`).then((r) => (r.ok ? r.json() : null)).then((d) => { if (live && d?.summary) setSeries((cur) => ({ ...cur, [id]: d.summary })); }).catch(() => {});
+    }
+    return () => { live = false; };
+  }, [seriesIds, series]);
+  async function seriesAct(id: string, action: "pause" | "resume" | "end") {
+    await recAct(id, action);
+    const d = await fetch(`/api/admin/social/recurrences/${id}`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    if (d?.summary) setSeries((cur) => ({ ...cur, [id]: d.summary }));
+  }
 
   async function reload() {
     try { const r = await fetch("/api/admin/social/queue"); if (r.ok) { const nq: QueueItem[] = (await r.json()).queue ?? []; setQueue(nq); setSelected((s) => (s ? nq.find((x) => x.id === s.id) ?? null : null)); } } catch { /* keep */ }
@@ -708,6 +739,19 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost, not
     onDrop: (e: DragEvent) => { e.preventDefault(); dropOnDay(key); },
   });
 
+  // One post on the board: title opens the detail, Change time reuses the existing reschedule dialog.
+  const boardPost = (q: QueueItem, withDate = false) => {
+    const sm = statusMeta(q.status); const iso = itemISO(q)!;
+    return (
+      <div key={q.id} {...dragProps(q)} className={`rounded-xl bg-white p-2.5 text-[12px] shadow-sm ring-1 ring-stone-200/70 ${q.status === "published" ? "" : "cursor-grab active:cursor-grabbing"} ${dragId === q.id ? "opacity-40" : ""}`}>
+        <button type="button" onClick={() => { setSelected(q); setEditing(false); }} className="block w-full truncate text-left font-semibold text-slate-800">{q.recurrence_id ? "↻ " : ""}{titleOf(q)}</button>
+        <p className="mt-0.5 truncate text-[11px] text-slate-500">{withDate ? `${dayLabel(ptYmd(new Date(iso)))} · ` : ""}{ptTime12(iso)} · {q.account_name ?? q.platform ?? "Account"}</p>
+        <p className="mt-0.5 flex items-center gap-1 text-[10.5px] text-slate-500"><span className="h-1.5 w-1.5 rounded-full" style={{ background: sm.dot }} />{sm.label}</p>
+        {q.status !== "published" ? <button type="button" onClick={() => openSchedule(q)} className="mt-1 text-[11px] font-semibold text-teal-700 hover:underline">Change time</button> : null}
+      </div>
+    );
+  };
+
   // month grid (Monday-first)
   const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
   const offset = (first.getDay() + 6) % 7;
@@ -738,16 +782,16 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost, not
       ) : null}
 
       {/* how to use */}
-      <div className="mb-4 rounded-xl border border-indigo-100 bg-indigo-50/40 px-4 py-3">
+      <div className="mb-4 rounded-2xl bg-teal-50 px-4 py-3">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-[13px] font-semibold text-indigo-900">How to use Schedule</p>
+          <p className="text-[13px] font-semibold text-teal-900">How to use Schedule</p>
           <button type="button" aria-expanded={!guideHidden} onClick={toggleGuide} className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-[12px] text-slate-600 hover:bg-slate-50">{guideHidden ? "Show guide" : "Hide guide"}</button>
         </div>
         {!guideHidden ? (
           <ol className="mt-3 grid gap-3 md:grid-cols-2">
             {GUIDE_STEPS.map((g, i) => (
               <li key={g.title} className="flex gap-2.5">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-[11px] font-semibold text-white">{i + 1}</span>
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-teal-600 text-[11px] font-semibold text-white">{i + 1}</span>
                 <div><p className="text-[12.5px] font-semibold text-slate-800">{g.title}</p><p className="text-[11.5px] text-slate-600">{g.body}</p></div>
               </li>
             ))}
@@ -758,17 +802,17 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost, not
       {/* toolbar */}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          {view !== "list" ? (
+          {view === "month" || view === "week" ? (
             <>
               <span className="text-[15px] font-semibold text-slate-800">{label}</span>
               <button type="button" onClick={() => shift(-1)} className="rounded-md border border-slate-200 px-2 py-0.5 text-slate-500 hover:bg-slate-50"><i className="ti ti-chevron-left" aria-hidden="true" /></button>
               <button type="button" onClick={() => shift(1)} className="rounded-md border border-slate-200 px-2 py-0.5 text-slate-500 hover:bg-slate-50"><i className="ti ti-chevron-right" aria-hidden="true" /></button>
               <button type="button" onClick={() => setAnchor(new Date())} className="rounded-md border border-slate-200 px-2.5 py-0.5 text-[12px] text-slate-500 hover:bg-slate-50">Today</button>
             </>
-          ) : <span className="text-[15px] font-semibold text-slate-800">All posts</span>}
+          ) : <span className="text-[15px] font-semibold text-slate-800">{view === "board" ? "Next 14 days" : "All posts"}</span>}
           <span className="ml-1 inline-flex overflow-hidden rounded-lg border border-slate-200 text-[12px]">
-            {(["month", "week", "list"] as const).map((v) => (
-              <button key={v} type="button" onClick={() => setView(v)} className={`px-2.5 py-1 capitalize ${view === v ? "bg-indigo-600 text-white" : "text-slate-500"}`}>{v}</button>
+            {(["board", "month", "week", "list"] as const).map((v) => (
+              <button key={v} type="button" onClick={() => setView(v)} className={`px-2.5 py-1 capitalize ${view === v ? "bg-teal-600 text-white" : "text-slate-500"}`}>{v}</button>
             ))}
           </span>
         </div>
@@ -776,7 +820,7 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost, not
           <span className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] ${googleReady ? "border-emerald-200 text-emerald-700" : "border-slate-200 text-slate-400"}`}>
             <span className={`h-1.5 w-1.5 rounded-full ${googleReady ? "bg-emerald-500" : "bg-slate-300"}`} />{googleReady ? "Google Calendar synced" : "Calendar not connected"}
           </span>
-          <button type="button" onClick={onAddPost} className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-[13px] font-medium text-white hover:bg-indigo-700"><i className="ti ti-plus" aria-hidden="true" /> Add post</button>
+          <button type="button" onClick={onAddPost} className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-3.5 py-2 text-[13px] font-medium text-white hover:bg-teal-700"><i className="ti ti-plus" aria-hidden="true" /> Add post</button>
         </div>
       </div>
 
@@ -785,7 +829,7 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost, not
         gapDays.length > 0 ? (
           <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-800">
             <span><b>{gapDays.length} weekday{gapDays.length === 1 ? "" : "s"} with no posts</b> in the next 14 days ({gapDays.map((g) => g.label).join(", ")}).</span>
-            <button type="button" onClick={onAddPost} className="font-semibold text-indigo-600 hover:underline">Add post</button>
+            <button type="button" onClick={onAddPost} className="font-semibold text-teal-600 hover:underline">Add post</button>
           </div>
         ) : <p className="mb-3 text-[11.5px] text-emerald-700">Every weekday in the next 14 days has a post.</p>
       ) : null}
@@ -802,7 +846,7 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost, not
           {[{ id: "all", name: "All accounts", platform: null as string | null, n: publishedOn(null) },
             ...accounts.map((a) => ({ id: a.id, name: accountName(a), platform: a.platform as string | null, n: publishedOn(a.id) }))].map((c) => (
             <button key={c.id} type="button" aria-pressed={acctFilter === c.id} onClick={() => setAcctFilter(c.id)}
-              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11.5px] ${acctFilter === c.id ? "border-indigo-600 bg-indigo-600 text-white" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11.5px] ${acctFilter === c.id ? "border-teal-600 bg-teal-600 text-white" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
               title={`${c.n} published`}>
               {c.platform ? <i className={`ti ti-brand-${c.platform}`} aria-hidden="true" /> : null}{c.name}<span className="tabular-nums opacity-70">{c.n}</span>
             </button>
@@ -812,7 +856,7 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost, not
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-[200px_1fr]">
         {/* unscheduled rail */}
-        <div className={`${card} h-max overflow-hidden`}>
+        <div className={`${sCard} h-max overflow-hidden`}>
           <div className="border-b border-slate-100 bg-slate-50 px-3 py-2">
             <p className="text-[12px] font-semibold text-slate-700">Unscheduled · {rail.length}</p>
             <p className="text-[10.5px] text-slate-400">{view === "list" ? "Approved & drafts awaiting a date" : "Drag onto a day to schedule"}</p>
@@ -821,7 +865,7 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost, not
             {rail.length === 0 ? <p className="px-1 py-3 text-center text-[11.5px] text-slate-400">Nothing parked.</p> : rail.map((q) => {
               const sm = statusMeta(q.status);
               return (
-                <div key={q.id} {...dragProps(q)} onClick={() => { setSelected(q); setEditing(false); }} className={`cursor-grab rounded-lg border px-2.5 py-2 text-left active:cursor-grabbing ${selected?.id === q.id ? "border-indigo-400 bg-indigo-50" : "border-slate-200 bg-white hover:bg-slate-50"} ${dragId === q.id ? "opacity-40" : ""}`}>
+                <div key={q.id} {...dragProps(q)} onClick={() => { setSelected(q); setEditing(false); }} className={`cursor-grab rounded-lg border px-2.5 py-2 text-left active:cursor-grabbing ${selected?.id === q.id ? "border-teal-400 bg-teal-50" : "border-slate-200 bg-white hover:bg-slate-50"} ${dragId === q.id ? "opacity-40" : ""}`}>
                   <p className="truncate text-[11.5px] font-medium text-slate-800"><i className="ti ti-grip-vertical mr-0.5 text-slate-300" aria-hidden="true" />{titleOf(q)}</p>
                   <p className="mt-1 flex items-center gap-1 text-[9.5px] text-slate-400"><span className="h-1.5 w-1.5 rounded-full" style={{ background: sm.dot }} />{sm.label} · {q.account_name ?? q.platform ?? "—"}</p>
                 </div>
@@ -831,9 +875,59 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost, not
         </div>
 
         {/* calendar / week / list */}
-        {view === "month" ? (
+        {view === "board" ? (
           <div className="min-w-0">
-          <div className={`${card} overflow-hidden`}>
+            <p className="mb-2 text-[11.5px] text-slate-500">Drag a post to another day to reschedule it. It keeps its time of day. All times are Pacific (PT).</p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {boardDays.map((key) => {
+                const items = byDay.get(key) ?? [];
+                const over = overKey === key && dragId;
+                return (
+                  <div key={key} {...dropProps(key)} className={`min-h-[96px] rounded-2xl p-3 ${over ? "bg-teal-50 ring-2 ring-teal-400" : gapSet.has(key) ? "bg-amber-50 outline outline-1 -outline-offset-1 outline-dashed outline-amber-300" : "bg-stone-50"}`}>
+                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-stone-500">{dayLabel(key)}</p>
+                    {items.length === 0 ? <p className="text-[11px] text-stone-400">{dragId ? "Drop here" : "No posts"}</p> : (
+                      <div className="space-y-2">{items.map((q) => boardPost(q))}</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            {laterPosts.length > 0 ? (
+              <div className="mt-5">
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-stone-500">Later</p>
+                <div className="grid gap-2 sm:grid-cols-2">{laterPosts.map((q) => boardPost(q, true))}</div>
+              </div>
+            ) : null}
+            {seriesIds.length > 0 ? (
+              <div className={`${sCard} mt-5 p-4`}>
+                <h3 className="text-[15px] font-semibold text-slate-800">Repeating posts</h3>
+                <div className="mt-2 space-y-2">
+                  {seriesIds.map((id) => {
+                    const sm = series[id]; const first = queue.find((q) => q.recurrence_id === id);
+                    return (
+                      <div key={id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-stone-50 px-3 py-2.5">
+                        <div className="min-w-0">
+                          <p className="truncate text-[13px] font-semibold text-slate-800">{first ? titleOf(first) : "Repeating post"}</p>
+                          <p className="text-[11.5px] text-slate-500">{sm ? `${sm.label} · ${sm.madeCount} made${sm.status === "active" ? "" : ` · ${sm.status}`}` : "Loading"}</p>
+                        </div>
+                        {sm && sm.status !== "ended" ? (
+                          <div className="flex items-center gap-2">
+                            {sm.status === "paused"
+                              ? <button type="button" disabled={busy} onClick={() => void seriesAct(id, "resume")} className="rounded-lg bg-white px-3 py-1.5 text-[12px] font-semibold text-teal-700 shadow-sm ring-1 ring-stone-200">Resume</button>
+                              : <button type="button" disabled={busy} onClick={() => void seriesAct(id, "pause")} className="rounded-lg bg-white px-3 py-1.5 text-[12px] font-semibold text-teal-700 shadow-sm ring-1 ring-stone-200">Pause</button>}
+                            <button type="button" disabled={busy} onClick={() => void seriesAct(id, "end")} className="rounded-lg bg-white px-3 py-1.5 text-[12px] font-semibold text-rose-600 shadow-sm ring-1 ring-stone-200">End series</button>
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : view === "month" ? (
+          <div className="min-w-0">
+          <div className={`${sCard} overflow-hidden`}>
             <div className="grid grid-cols-7 bg-slate-50 text-center text-[10px] text-slate-400">
               {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map((d) => <div key={d} className="py-1.5">{d}</div>)}
             </div>
@@ -847,7 +941,7 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost, not
                 const over = overKey === key && dragId;
                 return (
                   <div key={i} {...(inMonth ? dropProps(key) : {})} onClick={inMonth ? () => setSelDay(key) : undefined} className={`min-h-[56px] border-b border-l border-slate-100 p-1 md:min-h-[76px] ${i % 7 === 0 ? "border-l-0" : ""} ${!inMonth ? "bg-slate-50/60" : ""} ${inMonth && gapSet.has(key) && !over ? "bg-[repeating-linear-gradient(45deg,rgba(251,191,36,0.10)_0_8px,transparent_8px_16px)]" : ""} ${over ? "bg-emerald-50 ring-1 ring-inset ring-emerald-400" : ""}`}>
-                    <div className={`text-[9.5px] ${key === todayKey ? "font-semibold text-indigo-600" : "text-slate-400"} ${inMonth && key === selDay ? "underline decoration-indigo-400 underline-offset-2 md:no-underline" : ""}`}>{inMonth ? dayNum : ""}</div>
+                    <div className={`text-[9.5px] ${key === todayKey ? "font-semibold text-teal-600" : "text-slate-400"} ${inMonth && key === selDay ? "underline decoration-teal-400 underline-offset-2 md:no-underline" : ""}`}>{inMonth ? dayNum : ""}</div>
                     {items.length > 0 ? (
                       <div className="mt-0.5 flex flex-wrap gap-0.5 md:hidden" aria-hidden="true">
                         {items.slice(0, 4).map((q) => <span key={q.id} className="h-1.5 w-1.5 rounded-full" style={{ background: q.event_color ?? statusMeta(q.status).dot }} />)}
@@ -872,10 +966,10 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost, not
             const dayItems = byDay.get(selDay) ?? [];
             const dayLabel = new Date(`${selDay}T12:00:00`).toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
             return (
-              <div className={`${card} mt-3 p-3 md:hidden`}>
+              <div className={`${sCard} mt-3 p-3 md:hidden`}>
                 <p className="text-[12.5px] font-semibold text-slate-800">{dayLabel} <span className="font-normal text-slate-400">· {dayItems.length} post{dayItems.length === 1 ? "" : "s"}</span></p>
                 {dayItems.length === 0 ? (
-                  <p className="mt-1 text-[11.5px] text-slate-400">No posts planned. <button type="button" onClick={onAddPost} className="font-medium text-indigo-600">Add post</button></p>
+                  <p className="mt-1 text-[11.5px] text-slate-400">No posts planned. <button type="button" onClick={onAddPost} className="font-medium text-teal-600">Add post</button></p>
                 ) : dayItems.map((q) => {
                   const sm = statusMeta(q.status);
                   return (
@@ -892,12 +986,12 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost, not
           })()}
           </div>
         ) : view === "week" ? (
-          <div className={`${card} grid grid-cols-2 overflow-hidden sm:grid-cols-4 lg:grid-cols-7`}>
+          <div className={`${sCard} grid grid-cols-2 overflow-hidden sm:grid-cols-4 lg:grid-cols-7`}>
             {weekDays.map((d) => {
               const key = ymd(d); const items = byDay.get(key) ?? []; const over = overKey === key && dragId;
               return (
                 <div key={key} {...dropProps(key)} className={`min-h-[160px] border-b border-l border-slate-100 first:border-l-0 ${over ? "bg-emerald-50 ring-1 ring-inset ring-emerald-400" : ""}`}>
-                  <div className={`border-b border-slate-100 px-2 py-1.5 text-[10.5px] ${key === todayKey ? "font-semibold text-indigo-600" : "text-slate-500"}`}>{WD[d.getDay()]} {d.getDate()}</div>
+                  <div className={`border-b border-slate-100 px-2 py-1.5 text-[10.5px] ${key === todayKey ? "font-semibold text-teal-600" : "text-slate-500"}`}>{WD[d.getDay()]} {d.getDate()}</div>
                   <div className="flex flex-col gap-1 p-1.5">
                     {items.length === 0 ? <span className="px-1 text-[9.5px] text-slate-300">{dragId ? "drop here" : "—"}</span> : items.map((q) => {
                       const sm = statusMeta(q.status); const iso = itemISO(q)!;
@@ -916,18 +1010,18 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost, not
         ) : (
           <div>
             {selPosts.size > 0 ? (
-              <div className="mb-2 flex flex-wrap items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-[13px] text-indigo-800">
+              <div className="mb-2 flex flex-wrap items-center gap-2 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-[13px] text-teal-800">
                 <b>{selPosts.size} selected</b>
                 <span>Assign to campaign</span>
-                <select value={assignTo} onChange={(e) => setAssignTo(e.target.value)} className="rounded-md border border-indigo-200 bg-white px-2 py-1 text-[12.5px]">
+                <select value={assignTo} onChange={(e) => setAssignTo(e.target.value)} className="rounded-md border border-teal-200 bg-white px-2 py-1 text-[12.5px]">
                   <option value="">None (clear)</option>
                   {camps.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
-                <button type="button" onClick={() => void assignCampaign()} disabled={busy} className="rounded-md bg-indigo-600 px-3 py-1 text-[12.5px] font-medium text-white disabled:opacity-50">Apply</button>
-                <button type="button" onClick={() => setSelPosts(new Set())} className="ml-auto text-[12px] text-indigo-500">Clear</button>
+                <button type="button" onClick={() => void assignCampaign()} disabled={busy} className="rounded-md bg-teal-600 px-3 py-1 text-[12.5px] font-medium text-white disabled:opacity-50">Apply</button>
+                <button type="button" onClick={() => setSelPosts(new Set())} className="ml-auto text-[12px] text-teal-500">Clear</button>
               </div>
             ) : null}
-            <div className={`${card} divide-y divide-slate-100`}>
+            <div className={`${sCard} divide-y divide-slate-100`}>
             {dated.length === 0 ? <p className="px-4 py-8 text-center text-[13px] text-slate-400">No scheduled or published posts yet.</p> : [...dated].sort((a, b) => (itemISO(a)! < itemISO(b)! ? 1 : -1)).map((q) => {
               const sm = statusMeta(q.status); const iso = itemISO(q)!;
               return (
@@ -935,7 +1029,7 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost, not
                   {q.post_id ? <input type="checkbox" checked={selPosts.has(q.post_id)} onChange={() => toggleSel(q.post_id!)} className="h-3.5 w-3.5 shrink-0" aria-label="Select post" /> : <span className="w-3.5" />}
                   <button type="button" onClick={() => { setSelected(q); setEditing(false); }} className="flex min-w-0 flex-1 items-center gap-3 text-left">
                     <span className="min-w-0 flex-1 truncate text-[12.5px] text-slate-800">{titleOf(q)}</span>
-                    {q.campaign_name ? <span className="shrink-0 rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] text-indigo-700">{q.campaign_name}</span> : null}
+                    {q.campaign_name ? <span className="shrink-0 rounded-full bg-teal-50 px-2 py-0.5 text-[10px] text-teal-700">{q.campaign_name}</span> : null}
                     <span className="shrink-0 text-[11.5px] text-slate-500">{new Date(iso).toLocaleDateString([], { month: "short", day: "numeric" })} · {hhmm(iso)}</span>
                     <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${sm.cls}`}>● {sm.label}</span>
                   </button>
@@ -956,7 +1050,7 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost, not
         const go = (d: number) => { if (order.length < 2 || pos < 0) return; setSelected(order[(pos + d + order.length) % order.length]); setEditing(false); };
         return (
           <div onClick={() => { setSelected(null); setEditing(false); }} className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-black/40 p-4 pt-16">
-          <div role="dialog" aria-modal="true" aria-label="Post details" onClick={(e) => e.stopPropagation()} className={`${card} relative w-full max-w-2xl p-4 pr-12 shadow-2xl`}>
+          <div role="dialog" aria-modal="true" aria-label="Post details" onClick={(e) => e.stopPropagation()} className={`${sCard} relative w-full max-w-2xl p-4 pr-12 shadow-2xl`}>
             <button type="button" aria-label="Close" onClick={() => { setSelected(null); setEditing(false); }} className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-500 hover:bg-slate-50"><i className="ti ti-x" aria-hidden="true" /></button>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
@@ -982,8 +1076,8 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost, not
                 </div>
                 </details>
                 {q.recurrence_id && recSummary ? (
-                  <div className="mt-2 rounded-lg border border-indigo-200 bg-indigo-50/50 px-2.5 py-2">
-                    <div className="text-[11.5px] text-indigo-700"><i className="ti ti-repeat" aria-hidden="true" /> <b className="font-semibold">{recSummary.label}</b> {recSummary.status !== "active" ? <span className="text-slate-500">· {recSummary.status}</span> : null}</div>
+                  <div className="mt-2 rounded-lg border border-teal-200 bg-teal-50/50 px-2.5 py-2">
+                    <div className="text-[11.5px] text-teal-700"><i className="ti ti-repeat" aria-hidden="true" /> <b className="font-semibold">{recSummary.label}</b> {recSummary.status !== "active" ? <span className="text-slate-500">· {recSummary.status}</span> : null}</div>
                     <div className="mt-1.5 flex flex-wrap gap-1.5">
                       {recSummary.status === "active"
                         ? <button type="button" disabled={busy} onClick={() => void recAct(q.recurrence_id!, "pause")} className="rounded-md border border-amber-300 bg-amber-50 px-2.5 py-1 text-[10.5px] text-amber-700">Pause series</button>
@@ -1000,7 +1094,7 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost, not
                             const on = recSummary.accountIds!.includes(a.id);
                             return <button key={a.id} type="button" disabled={busy} aria-pressed={on}
                               onClick={() => void setSeriesAccounts(q.recurrence_id!, on ? recSummary.accountIds!.filter((x) => x !== a.id) : [...recSummary.accountIds!, a.id])}
-                              className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10.5px] ${on ? "border-indigo-600 bg-indigo-600 text-white" : "border-slate-200 bg-white text-slate-600"}`}><i className={`ti ti-brand-${a.platform}`} aria-hidden="true" />{accountName(a)}</button>;
+                              className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10.5px] ${on ? "border-teal-600 bg-teal-600 text-white" : "border-slate-200 bg-white text-slate-600"}`}><i className={`ti ti-brand-${a.platform}`} aria-hidden="true" />{accountName(a)}</button>;
                           })}
                         </div>
                         <p className="mt-1 text-[10px] text-slate-500">Every future post in the series goes to each ticked account. Posts already published stay as they are.</p>
@@ -1010,10 +1104,10 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost, not
                 ) : null}
 
                 {!q.recurrence_id && q.post_id ? (
-                  <div className="mt-2 rounded-lg border border-indigo-200 bg-indigo-50/50 px-2.5 py-2">
+                  <div className="mt-2 rounded-lg border border-teal-200 bg-teal-50/50 px-2.5 py-2">
                     <button type="button" onClick={() => { setMrOpen((v) => !v); setMrPreview(null); }} className="flex w-full items-center gap-2 text-left">
-                      <span className="text-[11.5px] font-semibold text-indigo-700"><i className="ti ti-repeat" aria-hidden="true" /> Make recurring</span>
-                      <span className={`ml-auto relative inline-flex h-4 w-8 items-center rounded-full ${mrOpen ? "bg-indigo-600" : "bg-slate-300"}`}><span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${mrOpen ? "translate-x-4" : "translate-x-0.5"}`} /></span>
+                      <span className="text-[11.5px] font-semibold text-teal-700"><i className="ti ti-repeat" aria-hidden="true" /> Make recurring</span>
+                      <span className={`ml-auto relative inline-flex h-4 w-8 items-center rounded-full ${mrOpen ? "bg-teal-600" : "bg-slate-300"}`}><span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${mrOpen ? "translate-x-4" : "translate-x-0.5"}`} /></span>
                     </button>
                     {mrOpen ? (
                       <div className="mt-2">
@@ -1023,7 +1117,7 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost, not
                           <input value={mrInterval} onChange={(e) => { setMrInterval(e.target.value.replace(/[^0-9]/g, "")); setMrPreview(null); }} className="w-11 rounded-md border border-slate-200 px-2 py-0.5 text-[11.5px]" />
                           <div className="inline-flex overflow-hidden rounded-lg border border-slate-200 text-[10.5px]">
                             {(["daily", "weekly", "monthly"] as const).map((f) => (
-                              <button key={f} type="button" onClick={() => { setMrFreq(f); setMrPreview(null); }} className={`px-2 py-0.5 ${mrFreq === f ? "bg-indigo-600 text-white" : "border-l border-slate-200 text-slate-600 first:border-l-0"}`}>{f === "daily" ? "Day" : f === "weekly" ? "Week" : "Month"}</button>
+                              <button key={f} type="button" onClick={() => { setMrFreq(f); setMrPreview(null); }} className={`px-2 py-0.5 ${mrFreq === f ? "bg-teal-600 text-white" : "border-l border-slate-200 text-slate-600 first:border-l-0"}`}>{f === "daily" ? "Day" : f === "weekly" ? "Week" : "Month"}</button>
                             ))}
                           </div>
                         </div>
@@ -1032,22 +1126,22 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost, not
                             <span className="mr-1 text-[10px] text-slate-400">On</span>
                             {MR_WEEKDAYS.map((w, i) => {
                               const on = mrWeekdays.includes(w.d);
-                              return <button key={i} type="button" onClick={() => { setMrWeekdays((p) => on ? p.filter((x) => x !== w.d) : [...p, w.d]); setMrPreview(null); }} className={`h-5 w-5 rounded-full text-[10px] ${on ? "bg-indigo-600 text-white" : "border border-slate-200 text-slate-600"}`}>{w.l}</button>;
+                              return <button key={i} type="button" onClick={() => { setMrWeekdays((p) => on ? p.filter((x) => x !== w.d) : [...p, w.d]); setMrPreview(null); }} className={`h-5 w-5 rounded-full text-[10px] ${on ? "bg-teal-600 text-white" : "border border-slate-200 text-slate-600"}`}>{w.l}</button>;
                             })}
                           </div>
                         ) : null}
                         <div className="mt-2 flex flex-wrap items-center gap-1.5">
                           <span className="text-[10.5px] text-slate-500">Ends</span>
                           {([["never", "Never"], ["on_date", "On date"], ["after", "After N"]] as const).map(([v, lbl]) => (
-                            <button key={v} type="button" onClick={() => { setMrEndType(v); setMrPreview(null); }} className={`rounded-full px-2 py-0.5 text-[10.5px] ${mrEndType === v ? "border-[1.5px] border-indigo-400 text-indigo-700" : "border border-slate-200 text-slate-600"}`}>{lbl}</button>
+                            <button key={v} type="button" onClick={() => { setMrEndType(v); setMrPreview(null); }} className={`rounded-full px-2 py-0.5 text-[10.5px] ${mrEndType === v ? "border-[1.5px] border-teal-400 text-teal-700" : "border border-slate-200 text-slate-600"}`}>{lbl}</button>
                           ))}
                           {mrEndType === "on_date" && <input type="date" value={mrEndDate} onChange={(e) => { setMrEndDate(e.target.value); setMrPreview(null); }} className="rounded-md border border-slate-200 px-2 py-0.5 text-[11.5px]" />}
                           {mrEndType === "after" && <input value={mrEndCount} onChange={(e) => { setMrEndCount(e.target.value.replace(/[^0-9]/g, "")); setMrPreview(null); }} className="w-11 rounded-md border border-slate-200 px-2 py-0.5 text-[11.5px]" />}
                         </div>
                         <div className="mt-2.5 flex items-center gap-2">
-                          <button type="button" onClick={() => void mrPreviewFor(q)} className="rounded-md border border-slate-300 px-2 py-1 text-[10.5px] text-indigo-600">Preview</button>
+                          <button type="button" onClick={() => void mrPreviewFor(q)} className="rounded-md border border-slate-300 px-2 py-1 text-[10.5px] text-teal-600">Preview</button>
                           {mrPreview ? <span className="text-[10.5px] text-slate-500">{mrPreview.upcoming.slice(0, 3).map((ms) => new Date(ms).toLocaleDateString([], { month: "short", day: "numeric" })).join(" · ")}{mrPreview.total ? ` … ${mrPreview.total} total` : ""}</span> : null}
-                          <button type="button" disabled={busy} onClick={() => void startSeries(q)} className="ml-auto rounded-md bg-indigo-600 px-3 py-1 text-[10.5px] font-medium text-white disabled:opacity-50">Start series</button>
+                          <button type="button" disabled={busy} onClick={() => void startSeries(q)} className="ml-auto rounded-md bg-teal-600 px-3 py-1 text-[10.5px] font-medium text-white disabled:opacity-50">Start series</button>
                         </div>
                       </div>
                     ) : null}
@@ -1099,7 +1193,7 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost, not
                         {v && vm ? <span className={`rounded px-2 py-0.5 text-[10.5px] ${vm.cls}`}>{vm.label}{v.status === "published" ? when : ""}</span> : <span className="rounded bg-slate-100 px-2 py-0.5 text-[10.5px] text-slate-500">Not in this post</span>}
                         {v?.url
                           ? <a href={v.url} target="_blank" rel="noopener noreferrer" className="text-[11.5px] text-blue-600 hover:underline">View on {net(a.platform)} <i className="ti ti-external-link" aria-hidden="true" /></a>
-                          : !v ? <button type="button" disabled={busy} onClick={() => void addAccount(q.post_id!, a.id)} className="text-[11.5px] text-indigo-700 hover:underline disabled:opacity-50">Post here too</button> : null}
+                          : !v ? <button type="button" disabled={busy} onClick={() => void addAccount(q.post_id!, a.id)} className="text-[11.5px] text-teal-700 hover:underline disabled:opacity-50">Post here too</button> : null}
                       </div>
                     );
                   })}
@@ -1118,7 +1212,7 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost, not
                   </label>
                 ) : null}
                 <div className="mt-1.5 flex gap-2">
-                  <button type="button" onClick={() => saveEdit(q)} disabled={busy} className="rounded-md bg-indigo-600 px-3 py-1 text-[11.5px] font-medium text-white">Save</button>
+                  <button type="button" onClick={() => saveEdit(q)} disabled={busy} className="rounded-md bg-teal-600 px-3 py-1 text-[11.5px] font-medium text-white">Save</button>
                   <button type="button" onClick={() => setEditing(false)} className="rounded-md border border-slate-200 px-3 py-1 text-[11.5px] text-slate-600">Cancel</button>
                 </div>
               </div>
@@ -1165,8 +1259,8 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost, not
               ))}
             </div>
             <div className="mt-3 flex items-center justify-end gap-3">
-              <button type="button" onClick={() => setRecDelete(null)} className="text-[12.5px] font-medium text-indigo-600">Cancel</button>
-              <button type="button" disabled={busy} onClick={() => void deleteRecurring(recDelete, recDeleteScope)} className="rounded-full bg-indigo-600 px-5 py-1.5 text-[12.5px] font-medium text-white disabled:opacity-50">OK</button>
+              <button type="button" onClick={() => setRecDelete(null)} className="text-[12.5px] font-medium text-teal-600">Cancel</button>
+              <button type="button" disabled={busy} onClick={() => void deleteRecurring(recDelete, recDeleteScope)} className="rounded-full bg-teal-600 px-5 py-1.5 text-[12.5px] font-medium text-white disabled:opacity-50">OK</button>
             </div>
           </div>
         </div>
@@ -1186,8 +1280,8 @@ function Schedule({ queue: initial, accounts, slots, googleReady, onAddPost, not
             </div>
             <p className="mt-1 text-[10.5px] text-slate-400">Posts already published stay as they are. Future posts in the series use the new version unless you pick This post.</p>
             <div className="mt-3 flex items-center justify-end gap-3">
-              <button type="button" onClick={() => setRecEdit(null)} className="text-[12.5px] font-medium text-indigo-600">Cancel</button>
-              <button type="button" disabled={busy} onClick={() => void editRecurring(recEdit, recEditScope)} className="rounded-full bg-indigo-600 px-5 py-1.5 text-[12.5px] font-medium text-white disabled:opacity-50">OK</button>
+              <button type="button" onClick={() => setRecEdit(null)} className="text-[12.5px] font-medium text-teal-600">Cancel</button>
+              <button type="button" disabled={busy} onClick={() => void editRecurring(recEdit, recEditScope)} className="rounded-full bg-teal-600 px-5 py-1.5 text-[12.5px] font-medium text-white disabled:opacity-50">OK</button>
             </div>
           </div>
         </div>

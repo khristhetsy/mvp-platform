@@ -6,7 +6,7 @@
  * the next task on each card. Tasks are completed with the same handler as the All view.
  */
 import Link from "next/link";
-import { groupByStage, groupTasksByOpportunity, type GroupOpp, type GroupTask, type OppTaskGroup } from "@/lib/sales/contact-task-groups";
+import { groupByStage, groupTasksByOpportunity, type GroupOpp, type GroupTask } from "@/lib/sales/contact-task-groups";
 import { ptToday } from "@/lib/reminders/pt";
 
 const money = (c: number | null) => (c == null ? "" : `$${Math.round(c / 100).toLocaleString("en-US")}`);

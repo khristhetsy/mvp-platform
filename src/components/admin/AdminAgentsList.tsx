@@ -54,6 +54,7 @@ export function AdminAgentsList({ onNew, onEdit, onRemoved }: { onNew: () => voi
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- load the list on mount
     void load();
   }, [load]);
 

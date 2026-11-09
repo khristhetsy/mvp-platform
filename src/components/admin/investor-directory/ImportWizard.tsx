@@ -259,7 +259,7 @@ export function ImportWizard({ onClose, onDone }: Readonly<{ onClose: () => void
     if (editSig !== sig) { setRowEdits({}); setExcluded(new Set()); setPage(0); setFilter("all"); setUndoGuess(null); setGuessInfo(null); setEditSig(sig); }
     setStep(5);
   }
-  const cleaned = result?.rows ?? [];
+  const cleaned = useMemo(() => result?.rows ?? [], [result]);
   const cell = (i: number, f: EditField) => rowEdits[i]?.[f] ?? cellText(cleaned[i], f);
   const editedCount = Object.entries(rowEdits).reduce((n, [, e]) => n + Object.keys(e).length, 0);
   const visible = useMemo(() => cleaned.map((_, i) => i).filter((i) => {

@@ -215,9 +215,9 @@ export async function startActOnBehalf(founderId: string): Promise<StartResult> 
 
   // Best-effort audit — attributed to the acting staff member.
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     // event_category, entity_type, title and source_module are required columns. Without
     // them this insert was rejected and the session start was never recorded.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error: eventError } = await (admin as unknown as SupabaseClient<any>).from("operational_activity_events").insert({
       event_type: "act_on_behalf_started",
       event_category: "founder",

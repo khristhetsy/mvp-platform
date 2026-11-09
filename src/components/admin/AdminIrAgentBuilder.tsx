@@ -114,6 +114,7 @@ export function AdminIrAgentBuilder({
   useEffect(() => {
     const text = q.trim();
     if (text.length < 2) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear results when the query is too short
       setHits(null);
       return;
     }
