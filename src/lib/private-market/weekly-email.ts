@@ -5,6 +5,7 @@
  * market numbers and the recipient's own rating or matches.
  */
 import { bandKeyForScore } from "@/lib/marketplace/readiness-board";
+import { DEFAULT_THEME, THEME_PRESETS } from "@/lib/marketing/template-theme";
 import { ordinal, BAND_LABEL, hasIntroActivity, type DigestMarket, type DigestViewer, type FounderRating, type IntroActivity, type NewCompanyLine } from "./weekly-digest";
 
 export type Audience = "founder" | "investor";
@@ -89,6 +90,8 @@ export type WeeklyEmailConfig = {
   bannerStrip: boolean;
   /** Name printed under the note as "Written by NAME". Null prints nothing. */
   signOff: string | null;
+  /** One of the template editor theme presets. "navy" is the current weekly look. */
+  themeId: string;
 };
 
 export const DEFAULT_SUBJECT: Record<Version, string> = {
@@ -106,6 +109,10 @@ export const DEFAULT_BUTTON: Record<Version, string> = {
   intros: "Open your introductions",
   monthly: "Open the Private Market board",
 };
+
+export const DEFAULT_WEEKLY_THEME = "navy";
+export const WEEKLY_THEMES = THEME_PRESETS;
+export const isWeeklyThemeId = (id: unknown): id is string => typeof id === "string" && THEME_PRESETS.some((p) => p.id === id);
 
 export function defaultConfig(version: Version): WeeklyEmailConfig {
   const audience = versionAudience(version);
@@ -126,6 +133,7 @@ export function defaultConfig(version: Version): WeeklyEmailConfig {
     bannerUrl: null,
     bannerStrip: true,
     signOff: null,
+    themeId: DEFAULT_WEEKLY_THEME,
   };
 }
 
@@ -305,6 +313,24 @@ function monthlyRows(on: (k: SectionKey) => boolean, market: DigestMarket, text:
   return rows;
 }
 
+const swap = (html: string, from: string, to: string) => html.split(from).join(to);
+
+/**
+ * Recolours the finished email with a template editor theme preset: header band,
+ * button and link accent, page tint, and the serif font for Plain letter.
+ * "navy" is the existing weekly look and returns the html untouched. Rating
+ * band colors (green, amber, red) are never changed because they carry meaning.
+ */
+export function applyWeeklyTheme(html: string, themeId: string | null | undefined): string {
+  const preset = THEME_PRESETS.find((p) => p.id === themeId);
+  if (!preset || preset.id === DEFAULT_WEEKLY_THEME) return html;
+  let out = swap(html, `background:${NAVY}`, `background:${preset.sectionBg}`);
+  out = swap(out, BLUE, preset.accent);
+  out = swap(out, "#e9eef7", preset.theme.pageBg);
+  if (preset.theme.fontFamily !== DEFAULT_THEME.fontFamily) out = swap(out, FONT, preset.theme.fontFamily);
+  return out;
+}
+
 export function renderWeeklyEmail(input: RenderInput): RenderedEmail {
   const { config, market, viewer, links } = input;
   const a = config.audience;
@@ -425,5 +451,5 @@ ${rows.join("\n")}
 <tr><td style="padding:18px 28px;font:400 11px/1.7 ${FONT};color:${MUT};background:#f7f9fd;">${footer}</td></tr>
 </table></td></tr></table></body></html>`;
 
-  return { subject, preheader, html, text: text.join("\n") };
+  return { subject, preheader, html: applyWeeklyTheme(html, config.themeId), text: text.join("\n") };
 }

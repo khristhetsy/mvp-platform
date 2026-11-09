@@ -135,3 +135,36 @@ describe("sign off under the note", () => {
     expect(renderWeeklyEmail({ config: { ...cfg, signOff: "A <b>Co</b>" }, market, viewer: scored, links }).html).toContain("Written by A &lt;b&gt;Co&lt;/b&gt;");
   });
 });
+
+describe("theme presets", () => {
+  const render = (themeId: string) => renderWeeklyEmail({ config: { ...defaultConfig("founder"), themeId }, market, viewer: scored, links });
+  it("defaults to navy and leaves the existing look unchanged", () => {
+    expect(defaultConfig("founder").themeId).toBe("navy");
+    const base = renderWeeklyEmail({ config: defaultConfig("founder"), market, viewer: scored, links });
+    expect(render("navy").html).toBe(base.html);
+    expect(base.html).toContain("background:#0f1b3d");
+    expect(base.html).toContain("background:#1d4ed8");
+  });
+  it("recolours the header band, button and links for a preset", () => {
+    const out = render("violet").html;
+    expect(out).toContain("background:#5B4BE0");
+    expect(out).not.toContain("#1d4ed8");
+    expect(out).not.toContain("background:#0f1b3d");
+    expect(out).toContain("#f4f2fe");
+  });
+  it("uses the serif font for Plain letter", () => {
+    expect(render("letter").html).toContain("Georgia");
+    expect(render("teal").html).not.toContain("Georgia");
+  });
+  it("keeps the rating band colors and the text version unchanged", () => {
+    const base = renderWeeklyEmail({ config: defaultConfig("founder"), market, viewer: scored, links });
+    const themed = render("teal");
+    expect(themed.html).toContain("#0e9f6e");
+    expect(themed.text).toBe(base.text);
+    expect(themed.subject).toBe(base.subject);
+  });
+  it("falls back to the current look for an unknown preset id", () => {
+    const base = renderWeeklyEmail({ config: defaultConfig("founder"), market, viewer: scored, links });
+    expect(render("nope").html).toBe(base.html);
+  });
+});

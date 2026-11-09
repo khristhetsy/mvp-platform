@@ -21,6 +21,10 @@ describe("validateWeekly", () => {
     expect(validateWeekly(input({ signOff: "iCFO Capital" }))).toBeNull();
     expect(validateWeekly(input({ signOff: "x".repeat(81) }))).toMatch(/sign off/i);
   });
+  it("accepts a template theme preset and rejects an unknown one", () => {
+    expect(validateWeekly(input({ themeId: "violet" }))).toBeNull();
+    expect(validateWeekly(input({ themeId: "neon" }))).toMatch(/theme preset/i);
+  });
   it("needs recipients and a subject", () => {
     expect(validateWeekly(input({ groups: [], listIds: [] }))).toMatch(/who to send to/i);
     expect(validateWeekly(input({ subject: " " }))).toMatch(/subject/i);
