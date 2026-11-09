@@ -103,7 +103,7 @@ async function runOnce(s, dryRun) {
     return;
   }
   const gapMin = dryRun ? 1 : 4 + Math.random() * 14;
-  await setStatus(`Last: ${next.contactName ?? next.slug}, ${result.outcome}.`, { nextAt: Date.now() + gapMin * 60_000 });
+  await setStatus(`Last: ${next.contactName ?? next.slug}, ${result.outcome}${result.outcome === "failed" && result.detail ? ` (${result.detail})` : ""}.`, { nextAt: Date.now() + gapMin * 60_000 });
 }
 
 // Runs inside the LinkedIn profile page. Must be self contained.
@@ -116,6 +116,7 @@ async function doInvite({ text, dryRun }) {
     const m = WARN_TEXT.exec(document.body?.innerText ?? "");
     return m ? `LinkedIn said: ${m[0]}` : null;
   };
+  const getDialog = () => document.querySelector("[role=dialog]") ?? document.querySelector("#interop-outlet")?.shadowRoot?.querySelector("[role=dialog]") ?? null;
   const label = (el) => `${el.getAttribute("aria-label") ?? ""} ${el.textContent ?? ""}`.replace(/\s+/g, " ").trim();
   const find = (root, re, sel = "button, a, [role=button], [role=menuitem], div[role=button]") =>
     [...root.querySelectorAll(sel)].find((el) => re.test(label(el)) && el.offsetParent !== null);
@@ -125,7 +126,15 @@ async function doInvite({ text, dryRun }) {
   if (w) return { outcome: "warning", detail: w };
   if (/page isn.?t available|profile is not available/i.test(document.title)) return { outcome: "not_found", detail: "Profile not found" };
 
-  const top = document.querySelector("main section") ?? document.body;
+  let top = document.body;
+  const h1 = document.querySelector("h1");
+  if (h1) {
+    let el = h1;
+    for (let i = 0; i < 10 && el.parentElement; i++) {
+      el = el.parentElement;
+      if (find(el, /^(connect$|invite .* to connect|message$|follow$)/i)) { top = el; break; }
+    }
+  }
   const CONNECT = /^(connect$|invite .* to connect)/i;
   let connect = find(top, CONNECT);
   if (!connect) {
@@ -134,12 +143,13 @@ async function doInvite({ text, dryRun }) {
   }
   if (!connect) {
     if (find(top, /^message$/i)) return { outcome: "already_connected", detail: "No Connect button, Message is shown" };
-    return { outcome: "failed", detail: "Could not find a Connect button" };
+    const seen = [...top.querySelectorAll("button, a[role=button]")].map(label).filter(Boolean).slice(0, 8).join(" | ");
+    return { outcome: "failed", detail: `No Connect button. Saw: ${seen}`.slice(0, 190) };
   }
   connect.click();
   await sleep(1200 + Math.random() * 800);
 
-  const dialog = document.querySelector("[role=dialog]") ?? document;
+  const dialog = getDialog() ?? document;
   const addNote = find(dialog, /add a note/i);
   if (!addNote) return { outcome: "failed", detail: "Invite box did not offer Add a note" };
   addNote.click();
@@ -161,9 +171,10 @@ async function doInvite({ text, dryRun }) {
   if (w) return { outcome: "warning", detail: w };
 
   if (dryRun) {
-    const dismiss = find(document, /^(dismiss|close)$/i);
+    const dRoot = getDialog() ?? document;
+    const dismiss = find(dRoot, /^(dismiss|close)$/i) ?? find(document, /^(dismiss|close)$/i);
     if (dismiss) { dismiss.click(); await sleep(600); }
-    const discard = find(document, /^discard$/i);
+    const discard = find(getDialog() ?? document, /^discard$/i) ?? find(document, /^discard$/i);
     if (discard) discard.click();
     return { outcome: "dry_run", detail: "Note filled in, not sent" };
   }
