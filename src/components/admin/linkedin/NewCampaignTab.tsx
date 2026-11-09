@@ -4,7 +4,16 @@ import { useState } from "react";
 import { MAX_RESULT_PAGES, MESSAGE_LIMIT, READ_PAGES_PER_DAY } from "@/lib/linkedin/limits";
 import { Choice, ErrorLine, Field, Section, api, btnCls, inputCls, primaryCls } from "./ui";
 
-const FIRST_CONNECTED = "Hi {first_name}, it has been a while. I now run iCapOS, which helps founders measure capital readiness and meet the right investors. Click to chat with our AI assistant, it takes 2 minutes and can book a call with our team: {link}";
+type Who = "founder" | "investor";
+// Drafts for you to read and edit. Nothing sends until you approve the exact text.
+const MESSAGES: Record<Who, string> = {
+  founder: "Hi {first_name}, it has been a while. I now run iCapOS, which helps founders measure how ready they are for investors and meet the right ones. Our AI assistant Jessica can give you a readiness check in 2 minutes and book a call with our team: {link}",
+  investor: "Hi {first_name}, it has been a while. I now run iCapOS, where founders are rated for capital readiness before they reach investors. Our AI assistant Johnny can explain how it works and book a call with our team: {link}",
+};
+const AGENT: Record<Who, { id: "jessica" | "johnny"; name: string; label: string }> = {
+  founder: { id: "jessica", name: "Jessica", label: "Jessica (founders)" },
+  investor: { id: "johnny", name: "Johnny", label: "Johnny (investors)" },
+};
 
 // Examples only. The sender types what you pick into LinkedIn's own filter and takes LinkedIn's closest match.
 const INDUSTRIES = ["Venture Capital and Private Equity Principals", "Investment Management", "Investment Banking", "Capital Markets", "Financial Services", "Banking", "Insurance", "Software Development", "Technology, Information and Internet", "Real Estate"];
@@ -23,9 +32,11 @@ export function NewCampaignTab({ onSaved }: Readonly<{ onSaved: () => void }>) {
   const [profileLanguage, setProfileLanguage] = useState("");
   const [person, setPerson] = useState("");
   const [sort, setSort] = useState<Sort>("recent");
-  const [connectedMessage, setConnectedMessage] = useState(FIRST_CONNECTED);
+  const [who, setWho] = useState<Who>("founder");
+  const [connectedMessage, setConnectedMessage] = useState(MESSAGES.founder);
+  const [edited, setEdited] = useState(false);
   const [handoff, setHandoff] = useState<"web_chat" | "linkedin">("web_chat");
-  const [agent, setAgent] = useState<"johnny" | "jessica">("johnny");
+  const agent = AGENT[who];
   const [busy, setBusy] = useState<"save" | "start" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,13 +46,31 @@ export function NewCampaignTab({ onSaved }: Readonly<{ onSaved: () => void }>) {
     ...set("school", school), ...set("profileLanguage", profileLanguage), ...set("name", person), sort,
   };
 
+  function pickWho(next: Who) {
+    if (next === who) return;
+    if (edited && !window.confirm(`Replace your edited message with the ${next === "founder" ? "founders" : "investors"} version?`)) return;
+    setWho(next); setEdited(false); setConnectedMessage(MESSAGES[next]);
+  }
+
+  const link = handoff === "web_chat" ? `icapos.com/${agent.id}` : null;
+  const previewText = (() => {
+    const t = connectedMessage.replaceAll("{first_name}", "Sam");
+    if (!link) return t.replaceAll("{link}", "").trim();
+    return t.includes("{link}") ? t.replaceAll("{link}", link) : `${t.trim()} ${link}`;
+  })();
+  const filterTags = [
+    who === "founder" ? "Founders" : "Investors", "1st connections", industry && `Industry: ${industry}`, locations && `Locations: ${locations}`,
+    currentCompany && `Current company: ${currentCompany}`, pastCompany && `Past company: ${pastCompany}`, school && `School: ${school}`,
+    profileLanguage && `Language: ${profileLanguage}`, person && `Name: ${person}`, SORTS.find((x) => x.id === sort)?.label,
+  ].filter((x): x is string => !!x);
+
   async function save(thenStart: boolean) {
     if (!name.trim()) { setError("Give the campaign a name."); return; }
     if (!connectedMessage.trim()) { setError("Write the message people get."); return; }
     setBusy(thenStart ? "start" : "save"); setError(null);
     const created = await api<{ campaign: { id: string } }>("/api/admin/linkedin/campaigns", "POST", {
-      name: name.trim(), audience: { source: "linkedin_network", filters }, invite_variants: [], message_text: null,
-      connected_message_text: connectedMessage, handoff_mode: handoff, agent,
+      name: name.trim(), audience: { source: "linkedin_network", filters: { ...filters, module: who } }, invite_variants: [], message_text: null,
+      connected_message_text: connectedMessage, handoff_mode: handoff, agent: agent.id,
     });
     if (!created.ok) { setBusy(null); setError(created.error); return; }
     if (thenStart) {
@@ -58,10 +87,20 @@ export function NewCampaignTab({ onSaved }: Readonly<{ onSaved: () => void }>) {
   const pickClass = (on: boolean) => `rounded-full border px-3.5 py-1.5 text-[13px] ${on ? "border-blue-600 bg-blue-600 text-white" : "border-slate-300 bg-white text-slate-700"}`;
 
   return (
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
     <div className="space-y-4">
       <Section title="1. Who do you want to reach?" icon="ti-users">
         <div className="space-y-3 px-4 py-3">
           <Field label="Campaign name"><input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} maxLength={120} placeholder="Reconnect with my network" /></Field>
+
+          <div>
+            <p className="mb-1.5 text-[12px] text-slate-500">I am reaching out to</p>
+            <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Who you are reaching out to">
+              <button type="button" role="radio" aria-checked={who === "founder"} className={pickClass(who === "founder")} onClick={() => pickWho("founder")}>Founders</button>
+              <button type="button" role="radio" aria-checked={who === "investor"} className={pickClass(who === "investor")} onClick={() => pickWho("investor")}>Investors</button>
+            </div>
+            <p className="mt-1.5 text-[12px] text-slate-500">This sets the message below and the AI assistant they chat with: Jessica for founders, Johnny for investors. LinkedIn has no founder or investor filter, so you narrow the group with the filters below.</p>
+          </div>
 
           <div>
             <p className="mb-1.5 text-[12px] text-slate-500">Audience</p>
@@ -107,7 +146,7 @@ export function NewCampaignTab({ onSaved }: Readonly<{ onSaved: () => void }>) {
       <Section title="2. What should we say?" icon="ti-message">
         <div className="space-y-3 px-4 py-3">
           <Field label="Message people get" hint={`Sent as a normal LinkedIn message, no invite. {first_name} and {link} work. ${connectedMessage.length} of ${MESSAGE_LIMIT} characters. {link} becomes the link to our web chat and is added at the end if you leave it out.`}>
-            <textarea className={inputCls} rows={4} value={connectedMessage} onChange={(e) => setConnectedMessage(e.target.value)} />
+            <textarea className={inputCls} rows={5} value={connectedMessage} onChange={(e) => { setConnectedMessage(e.target.value); setEdited(true); }} />
           </Field>
           <p className="text-[13px]"><b>Sending as:</b> your connected LinkedIn account. People see that name.</p>
           <div role="radiogroup" aria-label="Where the chat continues" className="space-y-2">
@@ -119,11 +158,7 @@ export function NewCampaignTab({ onSaved }: Readonly<{ onSaved: () => void }>) {
               The AI answers inside LinkedIn through your account. Not active until the pilot shows the account stays healthy.
             </Choice>
           </div>
-          <Field label="Chat agent">
-            <select className={inputCls} value={agent} onChange={(e) => setAgent(e.target.value as "johnny" | "jessica")}>
-              <option value="johnny">Johnny (investors)</option><option value="jessica">Jessica (founders)</option>
-            </select>
-          </Field>
+          <Field label="Chat agent" hint="Follows your choice of founders or investors in step 1."><input className={inputCls} value={agent.label} readOnly /></Field>
         </div>
       </Section>
 
@@ -137,6 +172,26 @@ export function NewCampaignTab({ onSaved }: Readonly<{ onSaved: () => void }>) {
           </div>
         </div>
       </Section>
+    </div>
+    <aside className="space-y-4 lg:sticky lg:top-4" aria-label="Preview">
+      <Section title="Preview" icon="ti-eye">
+        <div className="space-y-2 px-4 py-3">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-[13px] font-semibold text-white">K</span>
+            <div><p className="text-[13px] font-semibold text-slate-900">Khris Thetsy</p><p className="text-[11.5px] text-slate-500">Sent from your LinkedIn account</p></div>
+          </div>
+          <p className="text-[11.5px] text-slate-500">Preview for a sample person named Sam</p>
+          <div className="whitespace-pre-wrap break-words rounded-xl rounded-bl-sm bg-blue-50 px-3 py-2.5 text-[13px] leading-relaxed text-slate-800">{previewText || "Your message appears here."}</div>
+          <p className="text-[11.5px] text-slate-500">{link ? `The link opens our web chat with ${agent.name}, our AI assistant.` : "No link: the chat stays inside LinkedIn."}</p>
+        </div>
+      </Section>
+      <Section title="Who this reaches" icon="ti-users">
+        <div className="space-y-2 px-4 py-3">
+          <div className="flex flex-wrap gap-1.5">{filterTags.map((t) => <span key={t} className="rounded-md bg-slate-100 px-2 py-0.5 text-[11.5px] text-slate-700">{t}</span>)}</div>
+          <p className="text-[11.5px] text-slate-500">Message length: {connectedMessage.length} characters. The number of people shows as &quot;found so far&quot; once the sender has read pages.</p>
+        </div>
+      </Section>
+    </aside>
     </div>
   );
 }
