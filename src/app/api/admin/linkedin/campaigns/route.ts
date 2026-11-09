@@ -27,6 +27,7 @@ const campaignSchema = z.object({
         school: z.string().trim().max(80).optional(),
         profileLanguage: z.string().trim().max(80).optional(),
         name: z.string().trim().max(80).optional(),
+        module: z.enum(["investor", "founder"]).optional(),
         sort: z.enum(["recent", "first", "last"]).default("recent"),
       }).default({ sort: "recent" }),
     }),
