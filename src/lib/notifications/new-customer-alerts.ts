@@ -63,6 +63,22 @@ export function buildNewCustomerAlert(input: NewCustomerAlertInput): { title: st
   return { title: "New customer signup", message };
 }
 
+/**
+ * A database trigger creates the profile row the moment an auth user is
+ * inserted, so "no profile yet" can never identify a new signup. A profile
+ * created within the last few minutes does. Repeats are harmless: the alert
+ * is deduped per company.
+ */
+export const FRESH_SIGNUP_MINUTES = 30;
+
+export function isFreshSignup(createdAt: string | null | undefined, now: Date = new Date()): boolean {
+  if (!createdAt) return false;
+  const created = Date.parse(createdAt);
+  if (!Number.isFinite(created)) return false;
+  const age = now.getTime() - created;
+  return age >= 0 && age <= FRESH_SIGNUP_MINUTES * 60 * 1000;
+}
+
 /** Where staff land: the company workspace, else the companies list. */
 export function newCustomerLink(companyId?: string | null): string {
   return companyId ? `/admin/companies/${companyId}` : "/admin/companies";

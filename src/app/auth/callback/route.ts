@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { dashboardForRole } from "@/lib/supabase/auth";
 import { ensureUserOnboarding } from "@/lib/onboarding/ensure-founder-setup";
+import { alertStaffNewCustomer, isFreshSignup } from "@/lib/notifications/new-customer-alerts";
 import { parseRequestedPlan } from "@/lib/subscriptions/plans";
 import { profileRoleFromPublicMetadata } from "@/lib/auth/signup-role";
 
@@ -33,13 +34,31 @@ export async function GET(request: Request) {
 
       const isNewProfile = !existingProfile;
 
-      const { profile } = await ensureUserOnboarding({
+      const { profile, company } = await ensureUserOnboarding({
         userId: user.id,
         email: user.email ?? null,
         fullName,
         role,
         requestedPlan: parseRequestedPlan(user.user_metadata?.requested_plan),
       });
+
+      // Staff alert for a new founder who signed up through Google, LinkedIn or a
+      // magic link. A database trigger creates the profile row before this runs,
+      // so freshness decides, not "no profile yet". Deduped per company, so a
+      // repeat login inside the window does not alert twice. Never throws.
+      if (profile.role === "founder" && (isNewProfile || isFreshSignup((profile as { created_at?: string | null }).created_at))) {
+        const requestedPlan = parseRequestedPlan(user.user_metadata?.requested_plan);
+        await alertStaffNewCustomer({
+          event: "signup",
+          founderId: user.id,
+          founderEmail: user.email ?? null,
+          founderName: fullName,
+          companyId: (company as { id?: string } | null)?.id ?? null,
+          companyName: (company as { company_name?: string | null } | null)?.company_name ?? null,
+          plan: requestedPlan,
+          paymentPending: Boolean(requestedPlan && requestedPlan !== "founder_free" && requestedPlan !== "founder_trial"),
+        });
+      }
 
       // Capture the profile photo an OAuth provider (Google / LinkedIn) returns,
       // so the avatar shows automatically. Best-effort — never block the login.

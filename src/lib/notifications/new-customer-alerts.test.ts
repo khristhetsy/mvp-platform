@@ -4,7 +4,7 @@ vi.mock("@/lib/supabase/admin", () => ({ createServiceRoleClient: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createServerSupabaseClient: vi.fn() }));
 vi.mock("@/lib/email/send-email", () => ({ sendEmail: vi.fn() }));
 
-import { buildNewCustomerAlert, newCustomerLink, NEW_CUSTOMER_TYPES } from "./new-customer-alerts";
+import { buildNewCustomerAlert, isFreshSignup, newCustomerLink, NEW_CUSTOMER_TYPES } from "./new-customer-alerts";
 import { mapNotificationTypeToEvent } from "./preferences";
 
 describe("buildNewCustomerAlert", () => {
@@ -33,5 +33,24 @@ describe("buildNewCustomerAlert", () => {
     for (const type of Object.values(NEW_CUSTOMER_TYPES)) {
       expect(mapNotificationTypeToEvent(type)).toBe("new_founder_signup");
     }
+  });
+});
+
+describe("isFreshSignup", () => {
+  const now = new Date("2026-11-06T11:40:00Z");
+
+  it("is true for a profile created moments ago (the database trigger already made it)", () => {
+    expect(isFreshSignup("2026-11-06T11:34:31.074Z", now)).toBe(true);
+  });
+
+  it("is false for an older profile, so a later login does not alert again", () => {
+    expect(isFreshSignup("2026-11-05T20:45:57Z", now)).toBe(false);
+  });
+
+  it("is false for missing, invalid or future timestamps", () => {
+    expect(isFreshSignup(null, now)).toBe(false);
+    expect(isFreshSignup(undefined, now)).toBe(false);
+    expect(isFreshSignup("not a date", now)).toBe(false);
+    expect(isFreshSignup("2026-11-06T12:00:00Z", now)).toBe(false);
   });
 });

@@ -6,7 +6,7 @@ import { ensureUserOnboarding } from "@/lib/onboarding/ensure-founder-setup";
 import { parseRequestedPlan } from "@/lib/subscriptions/plans";
 import { sanitizePublicSignupRole } from "@/lib/auth/signup-role";
 import { track } from "@/lib/analytics/posthog";
-import { alertStaffNewCustomer } from "@/lib/notifications/new-customer-alerts";
+import { alertStaffNewCustomer, isFreshSignup } from "@/lib/notifications/new-customer-alerts";
 
 export async function POST(request: Request) {
   const supabase = await createServerSupabaseClient();
@@ -64,18 +64,25 @@ export async function POST(request: Request) {
           companyId: (company as { id?: string } | null)?.id ?? null,
           metadata: user.user_metadata,
         });
-        // Never throws, so a failed alert can't fail the signup.
-        await alertStaffNewCustomer({
-          event: "signup",
-          founderId: user.id,
-          founderEmail: user.email ?? null,
-          founderName: (body.fullName as string | undefined) ?? (user.user_metadata?.full_name as string | undefined) ?? null,
-          companyId: (company as { id?: string } | null)?.id ?? null,
-          companyName: (company as { company_name?: string | null } | null)?.company_name ?? null,
-          plan: requestedPlan,
-          paymentPending: Boolean(requestedPlan && requestedPlan !== "founder_free" && requestedPlan !== "founder_trial"),
-        });
       }
+    }
+
+    // Staff alert for a new founder. This cannot hang off isNewSignup: a database
+    // trigger creates the profile row when the auth user is inserted, so that
+    // check is always false by the time this runs. A just created profile is the
+    // real signal, and the alert dedupes per company if this endpoint repeats.
+    // Never throws, so a failed alert can't fail the signup.
+    if (role === "founder" && (isNewSignup || isFreshSignup((profile as { created_at?: string | null }).created_at))) {
+      await alertStaffNewCustomer({
+        event: "signup",
+        founderId: user.id,
+        founderEmail: user.email ?? null,
+        founderName: (body.fullName as string | undefined) ?? (user.user_metadata?.full_name as string | undefined) ?? null,
+        companyId: (company as { id?: string } | null)?.id ?? null,
+        companyName: (company as { company_name?: string | null } | null)?.company_name ?? null,
+        plan: requestedPlan,
+        paymentPending: Boolean(requestedPlan && requestedPlan !== "founder_free" && requestedPlan !== "founder_trial"),
+      });
     }
 
     return NextResponse.json({ profile, company }, { status: 201 });
