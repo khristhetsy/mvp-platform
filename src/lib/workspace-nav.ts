@@ -505,7 +505,6 @@ export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
           { href: "/founder/investor-directory", label: "Investor directory", minStage: "deploy" },
           { href: "/founder/investor-pipeline", label: "Investor CRM", minStage: "deploy" },
           { href: "/founder/events/present", label: "Present at event", minStage: "deploy" },
-          { href: "/founder/private-market", label: "Marketplace", minStage: "deploy", requiresRegCf: true },
         ],
       },
       {
@@ -524,18 +523,6 @@ export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
           { href: "/founder/analytics", label: "Analytics", minStage: "optimize" },
         ],
       },
-    ],
-  },
-  {
-    // Everything about investors in one place. The Stage 3 menu keeps its own links to the
-    // same pages, so nothing moves out of the stage.
-    title: "Investors",
-    items: [
-      { href: "/founder/investor-interest", label: "Investor interest" },
-      { href: "/founder/matches", label: "Investor matches", minStage: "deploy" },
-      { href: "/founder/deploy", label: "Outreach", minStage: "deploy" },
-      { href: "/founder/investor-directory", label: "Investor directory", minStage: "deploy" },
-      { href: "/founder/investor-pipeline", label: "Investor CRM", minStage: "deploy" },
     ],
   },
   {
