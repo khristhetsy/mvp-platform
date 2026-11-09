@@ -371,25 +371,35 @@ function Composer({ accounts, googleReady, onScheduled }: { accounts: SocialAcco
             <input value={comment} onChange={(e) => setComment(e.target.value)} placeholder="CTA text (first comment)" className="rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-indigo-400 focus:outline-none" />
             <input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="CTA link (https://…)" className="rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-indigo-400 focus:outline-none" />
           </div>
-          {/* Agent link: Johnny or a live founder IR agent, with its tracked link. */}
+          {/* Attachments: an agent link (Johnny or a live founder IR agent) posts as the first comment with its tracked link. */}
           {agentLinks.length ? (
-            <div className="mt-2 flex items-center gap-2 text-[12px] text-slate-500">
-              <span>Agent link</span>
-              <select
-                value={agentLinks.find((a) => a.url === linkUrl)?.key ?? ""}
-                onChange={(e) => {
-                  const a = agentLinks.find((x) => x.key === e.target.value);
-                  if (!a) return;
-                  setLinkUrl(a.url);
-                  if (!comment.trim()) setComment("Talk to our investor relations agent, any time →");
-                }}
-                className="rounded-lg border border-slate-200 px-2 py-1 text-[12px] text-slate-700 focus:border-indigo-400 focus:outline-none"
-              >
-                <option value="">Pick an agent…</option>
-                {agentLinks.map((a) => (
-                  <option key={a.key} value={a.key}>{a.label}</option>
-                ))}
-              </select>
+            <div className="mt-2">
+              <p className="text-[12px] font-semibold text-slate-700">Attachments <span className="ml-1 rounded-full bg-teal-50 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-teal-700">NEW</span></p>
+              <div className="mt-1.5 flex flex-col gap-2">
+                {agentLinks.map((a) => {
+                  const on = a.url === linkUrl;
+                  return (
+                    <button
+                      key={a.key}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => {
+                        if (on) { setLinkUrl(""); return; }
+                        setLinkUrl(a.url);
+                        if (!comment.trim()) setComment("Talk to our investor relations agent, any time →");
+                      }}
+                      className={`flex items-center justify-between rounded-xl border-2 px-3.5 py-2.5 text-left ${on ? "border-teal-600 bg-teal-50/40" : "border-slate-200 bg-white hover:border-slate-300"}`}
+                    >
+                      <span>
+                        <span className="block text-[13px] font-semibold text-slate-800">{a.label}</span>
+                        <span className="block text-[11.5px] text-slate-500">Tracks the social channel</span>
+                      </span>
+                      {on ? <i className="ti ti-circle-check text-[20px] text-teal-600" aria-hidden="true" /> : null}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-1.5 text-[11px] text-slate-400">Posts as the first comment, tracked to this network. Clicks and chats count toward this post in Attribution.</p>
             </div>
           ) : null}
           {/* Instagram has no text-only posts: a public image URL is required for any Instagram variant. */}
