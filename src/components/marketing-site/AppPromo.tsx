@@ -8,8 +8,9 @@ import { Reveal } from "@/components/marketing-site/Reveal";
 /**
  * Homepage app promotion. Sits directly after the network figures and before "How it works".
  * Store badges link out only when the listing URL is set in app-links.ts; until then a badge
- * shows "Coming soon". The phone image links to Google Play (or /install while that is unset),
- * and the QR code encodes the Google Play link. Copy lives in content/home.ts.
+ * shows "Coming soon". Each live badge has its own QR code underneath, encoding that store's
+ * link. The phone image links to Google Play (or /install while that is unset). Copy lives in
+ * content/home.ts.
  */
 
 function StoreBadge({ href, small, name, label }: { href: string | null; small: string; name: string; label: string }) {
@@ -24,9 +25,27 @@ function StoreBadge({ href, small, name, label }: { href: string | null; small: 
   return <a href={href} target="_blank" rel="noopener noreferrer" className={`${cls} transition-opacity hover:opacity-90`} aria-label={label}>{body}</a>;
 }
 
+function storeQr(url: string | null): Promise<string | null> {
+  return url ? QRCode.toDataURL(url, { margin: 1, width: 224, color: { dark: "#0a1a40", light: "#ffffff" } }) : Promise.resolve(null);
+}
+
+function StoreColumn({ badge, qr, caption, alt }: { badge: React.ReactNode; qr: string | null; caption: string; alt: string }) {
+  return (
+    <div className="flex flex-col items-center gap-2">
+      {badge}
+      {qr && (
+        <figure className="hidden flex-col items-center gap-1 md:flex">
+          <Image src={qr} alt={alt} width={88} height={88} unoptimized className="rounded-md border border-site-line bg-white" />
+          <figcaption className="text-[11px] font-semibold text-site-muted">{caption}</figcaption>
+        </figure>
+      )}
+    </div>
+  );
+}
+
 export async function AppPromo() {
   const a = home.app;
-  const qr = PLAY_STORE_URL ? await QRCode.toDataURL(PLAY_STORE_URL, { margin: 1, width: 224, color: { dark: "#0a1a40", light: "#ffffff" } }) : null;
+  const [playQr, appQr] = await Promise.all([storeQr(PLAY_STORE_URL), storeQr(APP_STORE_URL)]);
   const shot = (
     <Image
       src="/marketing/app/app-screens.webp"
@@ -49,12 +68,19 @@ export async function AppPromo() {
               <li key={pt} className="flex gap-2 text-sm text-site-ink"><span className="text-site-blue"><i className="ti ti-check" aria-hidden="true" /></span>{pt}</li>
             ))}
           </ul>
-          <div className="mt-6 flex flex-wrap items-center gap-3">
-            <StoreBadge href={PLAY_STORE_URL} small="Get it on" name="Google Play" label="Get iCapOS on Google Play" />
-            <StoreBadge href={APP_STORE_URL} small="Download on the" name="App Store" label="Download iCapOS on the App Store" />
-            {qr && (
-              <Image src={qr} alt="QR code for the iCapOS app on Google Play" width={56} height={56} unoptimized className="hidden rounded-md border border-site-line bg-white md:block" />
-            )}
+          <div className="mt-6 flex flex-wrap items-start gap-4">
+            <StoreColumn
+              badge={<StoreBadge href={PLAY_STORE_URL} small="Get it on" name="Google Play" label="Get iCapOS on Google Play" />}
+              qr={playQr}
+              caption="Scan for Android"
+              alt="QR code for the iCapOS app on Google Play"
+            />
+            <StoreColumn
+              badge={<StoreBadge href={APP_STORE_URL} small="Available on the" name="App Store" label="iCapOS is available on the App Store" />}
+              qr={appQr}
+              caption="Scan for iPhone"
+              alt="QR code for the iCapOS app on the App Store"
+            />
           </div>
           <p className="mt-3 text-[13px] text-site-muted">{a.installPrompt}{" "}
             <Link href={a.installLink.href} className="font-semibold text-site-blue underline hover:text-site-blue-hi">{a.installLink.label}</Link>
