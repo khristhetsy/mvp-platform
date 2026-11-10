@@ -1,10 +1,10 @@
 // Audience read from your own LinkedIn 1st connections. No CRM and no import: the sender reads
 // a few pages of LinkedIn's own connection search each day and iCapOS keeps the people it finds.
 // Pure helpers only, so every rule is unit tested.
-import { DEFAULT_TITLES, MAX_RESULT_PAGES, MAX_TITLES, READ_PAGES_PER_DAY } from "./limits";
+import { DEFAULT_TITLES, MATCH_CHECK_MAX_MINUTES, MAX_RESULT_PAGES, MAX_TITLES, READ_PAGES_PER_DAY, matchKey } from "./limits";
 import { startOfLocalDay } from "./worker";
 
-export { DEFAULT_TITLES, MAX_RESULT_PAGES, MAX_TITLES, READ_PAGES_PER_DAY };
+export { DEFAULT_TITLES, MATCH_CHECK_MAX_MINUTES, MAX_RESULT_PAGES, MAX_TITLES, READ_PAGES_PER_DAY, matchKey };
 /** Minutes between two page reads. */
 export const READ_GAP_MINUTES = 10;
 /** Read more people only when fewer than this many are still waiting for a message. */
@@ -143,4 +143,30 @@ export function afterRead(p: NetworkProgress, r: { page: number; added: number; 
 export function afterFailedRead(p: NetworkProgress, now: Date, timeZone: string): NetworkProgress {
   const day = startOfLocalDay(now, timeZone).toISOString();
   return { ...p, readDay: day, readToday: (p.readDay === day ? p.readToday : 0) + 1, readAt: now.toISOString() };
+}
+
+/** One "how many of my connections match" count, asked for on the New campaign form and answered by the sender. */
+export type MatchCheck = {
+  id: string; status: "pending" | "done" | "failed"; requestedAt: string; key: string; filters: NetworkFilters;
+  total: number | null; detail: string | null; doneAt: string | null;
+};
+export type MatchState = "none" | "pending" | "done" | "failed" | "unanswered";
+
+export function readMatchCheck(raw: unknown): MatchCheck | null {
+  const r = raw as Partial<MatchCheck> | null;
+  if (!r || typeof r !== "object" || typeof r.id !== "string" || typeof r.requestedAt !== "string") return null;
+  if (r.status !== "pending" && r.status !== "done" && r.status !== "failed") return null;
+  const total = typeof r.total === "number" && Number.isFinite(r.total) && r.total >= 0 ? Math.floor(r.total) : null;
+  return {
+    id: r.id, status: r.status, requestedAt: r.requestedAt, key: typeof r.key === "string" ? r.key : "",
+    filters: readNetworkFilters({ filters: r.filters ?? {} }), total,
+    detail: typeof r.detail === "string" ? r.detail.slice(0, 300) : null, doneAt: typeof r.doneAt === "string" ? r.doneAt : null,
+  };
+}
+
+/** A request the sender has not answered in 10 minutes counts as unanswered (extension closed, Chrome off). */
+export function matchState(mc: MatchCheck | null, now: Date): MatchState {
+  if (!mc) return "none";
+  if (mc.status !== "pending") return mc.status;
+  return now.getTime() - new Date(mc.requestedAt).getTime() > MATCH_CHECK_MAX_MINUTES * 60_000 ? "unanswered" : "pending";
 }

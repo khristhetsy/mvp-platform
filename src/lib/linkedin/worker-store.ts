@@ -4,7 +4,7 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { event, pauseIfAcceptanceLow, type LinkedInAccount } from "./store";
 import { handoffLink, pickVariant, renderConnectedMessage, renderInvite, type InviteVariant } from "./wording";
-import { afterFailedRead, afterRead, canReadNow, cleanSlug, isNetworkAudience, matchesTitles, readNetworkFilters, readProgress } from "./network";
+import { afterFailedRead, afterRead, canReadNow, cleanSlug, isNetworkAudience, matchState, matchesTitles, matchKey, readMatchCheck, readNetworkFilters, readProgress, type MatchCheck, type NetworkFilters } from "./network";
 import { canSendInvite, canSendMessage, warmUpDay, type AccountSafety } from "./safety";
 import { DRY_RUN_HOLD_HOURS, LEASE_MINUTES, MIN_GAP_MINUTES, hashSenderKey, generateSenderKey, startOfLocalDay, retryMinutesFor, waitFromDecision, type WorkerNext } from "./worker";
 
@@ -333,3 +333,38 @@ export async function recordResult(account: LinkedInAccount, input: { targetId: 
 }
 
 export { warmUpDay };
+
+/** The admin asks for a count. Replaces any earlier request. */
+export async function requestMatchCheck(accountId: string, filters: NetworkFilters, now: Date = new Date()): Promise<MatchCheck> {
+  const check: MatchCheck = { id: globalThis.crypto.randomUUID(), status: "pending", requestedAt: now.toISOString(), key: matchKey(filters), filters, total: null, detail: null, doneAt: null };
+  await db().from("linkedin_accounts").update({ match_check: check }).eq("id", accountId);
+  return check;
+}
+
+export async function getMatchCheck(accountId: string): Promise<MatchCheck | null> {
+  const { data } = await db().from("linkedin_accounts").select("match_check").eq("id", accountId).maybeSingle();
+  return readMatchCheck((data as { match_check?: unknown } | null)?.match_check);
+}
+
+/** What the sender should count now, or null. A paused or warned account is never asked. */
+export async function pendingMatchCheck(account: LinkedInAccount, now: Date = new Date()): Promise<{ id: string; filters: NetworkFilters } | null> {
+  if (account.status === "warning" || account.status === "paused") return null;
+  await db().from("linkedin_accounts").update({ worker_last_seen_at: now.toISOString() }).eq("id", account.id);
+  const mc = await getMatchCheck(account.id);
+  return mc && matchState(mc, now) === "pending" ? { id: mc.id, filters: mc.filters } : null;
+}
+
+/** The sender reports the total LinkedIn showed. A warning pauses the account like everywhere else. */
+export async function recordMatchCount(account: LinkedInAccount, input: { checkId: string; total?: number | null; failed?: boolean; warning?: boolean; detail?: string | null; now?: Date }): Promise<{ paused: boolean }> {
+  const now = input.now ?? new Date();
+  const mc = await getMatchCheck(account.id);
+  if (!mc || mc.id !== input.checkId || mc.status !== "pending") return { paused: false };
+  const detail = (input.detail ?? "").slice(0, 300) || null;
+  if (input.warning) {
+    await db().from("linkedin_accounts").update({ status: "warning", paused_reason: detail ?? "LinkedIn showed a warning", updated_at: now.toISOString() }).eq("id", account.id);
+  }
+  const ok = !input.warning && !input.failed && typeof input.total === "number" && input.total >= 0;
+  const next: MatchCheck = { ...mc, status: ok ? "done" : "failed", total: ok ? Math.floor(input.total as number) : null, detail: ok ? null : detail ?? "Could not count on LinkedIn", doneAt: now.toISOString() };
+  await db().from("linkedin_accounts").update({ match_check: next }).eq("id", account.id);
+  return { paused: input.warning === true };
+}

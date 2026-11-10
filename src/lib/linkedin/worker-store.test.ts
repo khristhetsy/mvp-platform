@@ -45,7 +45,7 @@ vi.mock("@/lib/supabase/admin", () => ({ createServiceRoleClient: () => ({ from:
 vi.mock("@/lib/sales/tasks", () => ({ createTask: vi.fn() }));
 vi.mock("@/lib/notes-log", () => ({ logCommunication: vi.fn(), toInsertRow: vi.fn() }));
 
-import { nextForSender, recordRead, recordResult } from "./worker-store";
+import { nextForSender, recordRead, recordResult, getMatchCheck, pendingMatchCheck, recordMatchCount, requestMatchCheck } from "./worker-store";
 import type { LinkedInAccount } from "./store";
 
 const MON_10AM_LA = new Date("2026-11-09T18:00:00Z"); // Monday 10:00 in Los Angeles
@@ -269,5 +269,36 @@ describe("reading your own LinkedIn connections", () => {
     tables.linkedin_campaigns[0].account_id = "other";
     expect(await recordRead(account(), { campaignId: "n1", page: 1, filtersApplied: true, people: [{ slug: "ben", name: "Ben" }], now: MON_10AM_LA })).toEqual({ added: 0, paused: false });
     expect(tables.linkedin_targets).toHaveLength(0);
+  });
+});
+
+describe("matches on LinkedIn count", () => {
+  const NOW = new Date("2026-11-10T10:00:00Z");
+  beforeEach(() => { tables.linkedin_accounts = [account() as unknown as Row]; });
+
+  it("hands the pending count to the sender once, with its filters", async () => {
+    const mc = await requestMatchCheck("a1", { industry: "Venture Capital", sort: "recent" }, NOW);
+    expect(await pendingMatchCheck(account(), new Date("2026-11-10T10:01:00Z"))).toEqual({ id: mc.id, filters: { industry: "Venture Capital", sort: "recent" } });
+    expect(await pendingMatchCheck(account(), new Date("2026-11-10T10:30:00Z"))).toBeNull();
+  });
+  it("never asks a paused or warned account", async () => {
+    await requestMatchCheck("a1", { sort: "recent" }, NOW);
+    expect(await pendingMatchCheck(account({ status: "paused" }), NOW)).toBeNull();
+    expect(await pendingMatchCheck(account({ status: "warning" }), NOW)).toBeNull();
+  });
+  it("stores the total, and ignores an answer for an old request", async () => {
+    const mc = await requestMatchCheck("a1", { sort: "recent" }, NOW);
+    await recordMatchCount(account(), { checkId: "old", total: 9, now: NOW });
+    expect((await getMatchCheck("a1"))?.status).toBe("pending");
+    await recordMatchCount(account(), { checkId: mc.id, total: 240, now: NOW });
+    expect(await getMatchCheck("a1")).toMatchObject({ status: "done", total: 240 });
+  });
+  it("records a failed count and a warning that pauses the account", async () => {
+    const a = await requestMatchCheck("a1", { sort: "recent" }, NOW);
+    await recordMatchCount(account(), { checkId: a.id, failed: true, detail: "Industry filter not found", now: NOW });
+    expect(await getMatchCheck("a1")).toMatchObject({ status: "failed", total: null, detail: "Industry filter not found" });
+    const b = await requestMatchCheck("a1", { sort: "recent" }, NOW);
+    expect(await recordMatchCount(account(), { checkId: b.id, warning: true, detail: "Unusual activity", now: NOW })).toEqual({ paused: true });
+    expect(tables.linkedin_accounts[0].status).toBe("warning");
   });
 });

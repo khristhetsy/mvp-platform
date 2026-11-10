@@ -16,3 +16,11 @@ export const DEFAULT_TITLES = {
   founder: ["Founder", "Co-founder", "Cofounder", "CEO", "Owner"],
   investor: ["Investor", "Partner", "Angel", "Managing director", "Venture"],
 } as const;
+
+/** Minutes a count request waits for the extension before it counts as unanswered. */
+export const MATCH_CHECK_MAX_MINUTES = 10;
+/** The filters LinkedIn itself uses to count people. Titles and sort do not change LinkedIn's total. */
+export function matchKey(f: Record<string, unknown>): string {
+  const keys = ["industry", "locations", "currentCompany", "pastCompany", "school", "profileLanguage", "name"];
+  return JSON.stringify(keys.map((k) => (typeof f[k] === "string" ? (f[k] as string).trim().toLowerCase() : "")));
+}

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { DEFAULT_TITLES, MAX_RESULT_PAGES, MAX_TITLES, MESSAGE_LIMIT, READ_PAGES_PER_DAY } from "@/lib/linkedin/limits";
+import { useEffect, useState } from "react";
+import { DEFAULT_TITLES, MAX_RESULT_PAGES, MAX_TITLES, MESSAGE_LIMIT, READ_PAGES_PER_DAY, matchKey } from "@/lib/linkedin/limits";
 import { Choice, ErrorLine, Field, Section, api, btnCls, inputCls, primaryCls } from "./ui";
 
 type Who = "founder" | "investor";
+type MatchView = { state: "none" | "pending" | "done" | "failed" | "unanswered"; key: string | null; total: number | null; detail: string | null };
 // Drafts for you to read and edit. Nothing sends until you approve the exact text.
 const MESSAGES: Record<Who, string> = {
   founder: "Hi {first_name}, it has been a while. I now run iCapOS, which helps founders measure how ready they are for investors and meet the right ones. Our AI assistant Jessica can give you a readiness check in 2 minutes and book a call with our team: {link}",
@@ -35,6 +36,8 @@ export function NewCampaignTab({ onSaved }: Readonly<{ onSaved: () => void }>) {
   const [who, setWho] = useState<Who>("founder");
   const [titles, setTitles] = useState<string[]>([...DEFAULT_TITLES.founder]);
   const [titleDraft, setTitleDraft] = useState("");
+  const [match, setMatch] = useState<MatchView | null>(null);
+  const [asking, setAsking] = useState(false);
   const [connectedMessage, setConnectedMessage] = useState(MESSAGES.founder);
   const [edited, setEdited] = useState(false);
   const [handoff, setHandoff] = useState<"web_chat" | "linkedin">("web_chat");
@@ -48,6 +51,25 @@ export function NewCampaignTab({ onSaved }: Readonly<{ onSaved: () => void }>) {
     ...set("school", school), ...set("profileLanguage", profileLanguage), ...set("name", person), sort,
     ...(titles.length > 0 ? { titles } : {}),
   };
+
+  const key = matchKey({ industry, locations, currentCompany, pastCompany, school, profileLanguage, name: person });
+  const waiting = match?.state === "pending";
+  useEffect(() => {
+    if (!waiting) return;
+    const t = setInterval(async () => {
+      const r = await api<MatchView>("/api/admin/linkedin/matches");
+      if (r.ok) setMatch(r.data);
+    }, 4000);
+    return () => clearInterval(t);
+  }, [waiting]);
+  async function checkMatches() {
+    setAsking(true);
+    const r = await api<MatchView>("/api/admin/linkedin/matches", "POST", { filters: Object.fromEntries(Object.entries(filters).filter(([k]) => k !== "sort" && k !== "titles")) });
+    setAsking(false);
+    if (r.ok) setMatch(r.data); else setError(r.error);
+  }
+  // A count belongs to the filters it was made for. Change one and the number is cleared.
+  const shown = match && match.key === key ? match : null;
 
   function pickWho(next: Who) {
     if (next === who) return;
@@ -205,6 +227,21 @@ export function NewCampaignTab({ onSaved }: Readonly<{ onSaved: () => void }>) {
           <p className="text-[11.5px] text-slate-500">Preview for a sample person named Sam</p>
           <div className="whitespace-pre-wrap break-words rounded-xl rounded-bl-sm bg-blue-50 px-3 py-2.5 text-[13px] leading-relaxed text-slate-800">{previewText || "Your message appears here."}</div>
           <p className="text-[11.5px] text-slate-500">{link ? `The link opens our web chat with ${agent.name}, our AI assistant.` : "No link: the chat stays inside LinkedIn."}</p>
+        </div>
+      </Section>
+      <Section title="Matches on LinkedIn" icon="ti-brand-linkedin">
+        <div className="space-y-2 px-4 py-3">
+          {shown?.state === "done" ? (
+            <div className="rounded-lg bg-emerald-50 px-3 py-2.5">
+              <p className="text-[22px] font-semibold text-emerald-800">{shown.total === 0 ? "0 matches" : `About ${(shown.total ?? 0).toLocaleString("en-US")}`}</p>
+              <p className="text-[12px] text-emerald-800">{shown.total === 0 ? "No connections match. Loosen a filter." : "of your 1st connections match these filters. Titles to keep will narrow this further."}</p>
+            </div>
+          ) : null}
+          {shown?.state === "pending" ? <p className="text-[12.5px] text-slate-600">Checking on LinkedIn, usually under 2 minutes. Keep Chrome open with the extension and a LinkedIn tab.</p> : null}
+          {shown?.state === "failed" ? <p className="text-[12.5px] text-red-700">Could not count: {shown.detail ?? "unknown reason"}.</p> : null}
+          {shown?.state === "unanswered" ? <p className="text-[12.5px] text-amber-800">The extension did not answer. Open Chrome with the extension and a LinkedIn tab, then check again.</p> : null}
+          <button type="button" className={btnCls} disabled={asking || shown?.state === "pending"} onClick={checkMatches}>{shown?.state === "done" ? "Check again" : "Check how many match"}</button>
+          <p className="text-[11.5px] text-slate-500">Your extension runs the search on LinkedIn and reports back. Nothing is saved or sent. It uses one LinkedIn search.</p>
         </div>
       </Section>
       <Section title="Who this reaches" icon="ti-users">
