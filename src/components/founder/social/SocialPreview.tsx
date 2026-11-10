@@ -21,8 +21,8 @@ const FOOTERS: Record<Network, string[]> = {
  * Live preview of the post as each network shows it. Approximate by design: it never
  * claims to match a network's exact rendering. Works with no connected account.
  */
-export function SocialPreview({ body, network, onNetwork, name, company, linkUrl, firstComment = null }: {
-  body: string; network: Network; onNetwork: (n: Network) => void; name: string; company: string | null; linkUrl: string; firstComment?: string | null;
+export function SocialPreview({ body, network, onNetwork, name, company, linkUrl, firstComment = null, imageUrl = null }: {
+  body: string; network: Network; onNetwork: (n: Network) => void; name: string; company: string | null; linkUrl: string; firstComment?: string | null; imageUrl?: string | null;
 }) {
   const { title, text, limit, note } = previewParts(network, body, Boolean(linkUrl.trim()));
   const shown = network === "linkedin" && text.length > MORE_AFTER ? `${text.slice(0, MORE_AFTER).trimEnd()}... more` : text;
@@ -52,7 +52,9 @@ export function SocialPreview({ body, network, onNetwork, name, company, linkUrl
             <div className="truncate text-xs text-slate-500">{subtitle}</div>
           </div>
         </div>
-        {network === "instagram" && (
+        {/* eslint-disable-next-line @next/next/no-img-element -- admin-uploaded or pasted image, not a known host */}
+        {imageUrl ? <img src={imageUrl} alt="" className="mt-2 max-h-72 w-full rounded-lg border border-slate-200 object-cover" /> : null}
+        {network === "instagram" && !imageUrl && (
           <div className="mt-2 flex h-28 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 text-xs text-slate-500">Instagram posts need an image</div>
         )}
         {title && <div className="mt-2 text-sm font-semibold text-slate-900">{title}</div>}

@@ -163,6 +163,11 @@ function Composer({ accounts, googleReady, onScheduled }: { accounts: SocialAcco
   const [linkUrl, setLinkUrl] = useState("");
   const [agentLinks, setAgentLinks] = useState<Array<{ key: string; label: string; url: string }>>([]);
   const [imageUrl, setImageUrl] = useState("");
+  const [imageTab, setImageTab] = useState<"upload" | "link">("upload");
+  const [imageMeta, setImageMeta] = useState<{ name: string; size: number; dims: string } | null>(null);
+  const [imageErr, setImageErr] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
   const [comment, setComment] = useState("");
   const [schedDates, setSchedDates] = useState<string[]>([]);   // one or more days, one post per day
   const [schedTime, setSchedTime] = useState("08:15");
@@ -196,7 +201,9 @@ function Composer({ accounts, googleReady, onScheduled }: { accounts: SocialAcco
   ];
 
   async function draft() {
-    if (brief.trim().length < 10 || selected.length === 0) { setMsg("Add a brief and pick at least one account."); return; }
+    // An image alone is a valid post: skip the AI rewrite and leave the text empty.
+    if (!brief.trim() && imageUrl.trim() && selected.length > 0) { setVariants(selected.map((id) => ({ accountId: id, body: "" }))); setMsg(null); return; }
+    if (brief.trim().length < 10 || selected.length === 0) { setMsg("Add a brief (10+ characters) or an image, and pick at least one account."); return; }
     setBusy(true); setMsg(null);
     try {
       const res = await fetch("/api/admin/social/draft", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ brief, archetype, accounts: selected.map((id) => ({ id, displayName: nameOf(id) })) }) });
@@ -205,6 +212,27 @@ function Composer({ accounts, googleReady, onScheduled }: { accounts: SocialAcco
       setVariants(j.variants ?? []);
     } finally { setBusy(false); }
   }
+
+  async function uploadImage(file: File) {
+    setImageErr(null);
+    if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type)) { setImageErr("Use a JPG, PNG, WebP or GIF image."); return; }
+    if (file.size > 5 * 1024 * 1024) { setImageErr("Image must be 5 MB or smaller."); return; }
+    setUploading(true);
+    try {
+      const dims = await new Promise<string>((resolve) => {
+        const u = URL.createObjectURL(file); const im = new Image();
+        im.onload = () => { resolve(`${im.naturalWidth} x ${im.naturalHeight}`); URL.revokeObjectURL(u); };
+        im.onerror = () => { resolve(""); URL.revokeObjectURL(u); };
+        im.src = u;
+      });
+      const fd = new FormData(); fd.append("file", file);
+      const r = await fetch("/api/marketing/assets/upload", { method: "POST", body: fd });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.url) { setImageErr(j.error ?? "Upload failed."); return; }
+      setImageUrl(j.url); setImageMeta({ name: file.name, size: file.size, dims });
+    } finally { setUploading(false); }
+  }
+  function clearImage() { setImageUrl(""); setImageMeta(null); setImageErr(null); }
 
   function loadLibraryPost(p: (typeof POST_LIBRARY)[number]) {
     if (selected.length === 0) { setMsg("Pick at least one account, then load a post."); return; }
@@ -221,6 +249,7 @@ function Composer({ accounts, googleReady, onScheduled }: { accounts: SocialAcco
 
   async function save(mode: "draft" | "park" | "schedule" | "now") {
     if (variants.length === 0) return;
+    if (imageUrl.trim() && variants.some((v) => platformOf(v.accountId) === "linkedin" && !v.body.trim())) { setMsg("LinkedIn needs some text with the image. Add a line, or untick the LinkedIn account."); return; }
     // One post per picked day. Anything else saves a single post.
     const targets: (string | null)[] = mode === "schedule" ? schedDates.map(isoFor) : mode === "now" ? [new Date().toISOString()] : [null];
     if (mode === "schedule" && targets.length === 0) { setMsg("Pick at least one date and a time to schedule."); return; }
@@ -262,8 +291,9 @@ function Composer({ accounts, googleReady, onScheduled }: { accounts: SocialAcco
         <p className="mt-0.5 text-[12px] text-slate-500">Draft once, publish to every connected account. AI writes a per-account variant from your notes — you review before anything goes out.</p>
       </div>
 
+      <div className="mt-4 flex flex-col gap-4">
       {/* 1 · What to post */}
-      <div className="mt-4">
+      <div className={`${card} p-5`}>
         <StepHead n={1} title="What to post" hint="your raw notes + the angle" />
         <textarea value={brief} onChange={(e) => setBrief(e.target.value)} rows={3} placeholder="A founder told me she'd pitched 11 investors, 9 were the wrong fit entirely…" className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none" />
         <p className="mt-1 text-[11px] text-slate-400">Raw notes, not a topic — a specific moment produces a specific post.</p>
@@ -283,7 +313,7 @@ function Composer({ accounts, googleReady, onScheduled }: { accounts: SocialAcco
       </div>
 
       {/* 2 · Where it belongs */}
-      <div className="mt-5">
+      <div className={`${card} p-5`}>
         <StepHead n={2} title="Where it belongs" hint="for goals & attribution" />
       <div className="mt-2 flex flex-wrap gap-6">
         <div>
@@ -317,7 +347,7 @@ function Composer({ accounts, googleReady, onScheduled }: { accounts: SocialAcco
       </div>
 
       {/* 3 · Accounts & author */}
-      <div className="mt-5">
+      <div className={`${card} p-5`}>
         <StepHead n={3} title="Accounts & author" hint="who this publishes to" />
         <div className="mt-2 flex flex-wrap gap-2">
           {accounts.length === 0 ? <span className="text-[12px] text-slate-400">No accounts connected.</span> : accounts.map((a) => {
@@ -328,12 +358,11 @@ function Composer({ accounts, googleReady, onScheduled }: { accounts: SocialAcco
       </div>
 
       {/* 4 · Attachments */}
-      <div className="mt-5">
+      <div className={`${card} p-5`}>
         <StepHead n={4} title="Attachments" hint="posts as the first comment" />
     {/* Attachments: an agent link (Johnny or a live founder IR agent) posts as the first comment with its tracked link. */}
     {agentLinks.length ? (
       <div className="mt-2">
-        <p className="text-[12px] font-semibold text-slate-700">Attachments <span className="ml-1 rounded-full bg-teal-50 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-teal-700">NEW</span></p>
         <div className="mt-1.5 flex flex-col gap-2">
           {agentLinks.map((a) => {
             const on = a.url === linkUrl;
@@ -376,9 +405,81 @@ function Composer({ accounts, googleReady, onScheduled }: { accounts: SocialAcco
     </div>
       </div>
 
-      {/* 5 · Dates and time */}
-      <div className="mt-5">
-        <StepHead n={5} title="Dates and time (PT)" hint="pick one or more days" />
+      {/* 5 · Image */}
+      <div className={`${card} p-5`}>
+        <StepHead n={5} title="Image" hint="optional, posts with the text" />
+        <div className="mt-2 inline-flex gap-1 rounded-lg bg-slate-100 p-1" role="tablist" aria-label="Image source">
+          {([["upload", "Upload"], ["link", "Paste a link"]] as const).map(([k, label]) => (
+            <button key={k} type="button" role="tab" aria-selected={imageTab === k} onClick={() => setImageTab(k)} className={`rounded-md px-3.5 py-1.5 text-[12.5px] font-semibold ${imageTab === k ? "bg-white text-teal-700 shadow-sm" : "text-slate-500"}`}>{label}</button>
+          ))}
+        </div>
+        {imageTab === "upload" ? (
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) void uploadImage(f); }}
+            className={`mt-3 rounded-xl border-2 border-dashed px-4 py-6 text-center ${dragOver ? "border-teal-500 bg-teal-50" : "border-teal-200 bg-teal-50/40"}`}
+          >
+            <p className="text-[14px] font-semibold text-teal-900">{uploading ? "Uploading…" : "Drag an image here"}</p>
+            <p className="text-[11.5px] text-slate-500">or</p>
+            <label className="mt-1 inline-block cursor-pointer rounded-lg border border-teal-200 bg-white px-3 py-1.5 text-[12.5px] font-semibold text-teal-700">
+              Choose a file
+              <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) void uploadImage(f); e.target.value = ""; }} />
+            </label>
+            <p className="mt-2 text-[11px] text-slate-500">JPG, PNG, WebP or GIF, up to 5 MB. Instagram accepts JPG and PNG only.</p>
+          </div>
+        ) : (
+          <input value={imageUrl} onChange={(e) => { setImageUrl(e.target.value); setImageMeta(null); }} placeholder="https://… direct link to a .jpg or .png" aria-label="Image link" className="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-indigo-400 focus:outline-none" />
+        )}
+        {imageErr ? <p className="mt-2 text-[11.5px] text-rose-600">{imageErr}</p> : null}
+        {imageUrl.trim() ? (
+          <div className="mt-3 flex items-center gap-3 rounded-xl border border-slate-200 p-2.5">
+            {/* eslint-disable-next-line @next/next/no-img-element -- uploaded or pasted image, not a known host */}
+            <img src={imageUrl.trim()} alt="" className="h-16 w-16 flex-none rounded-lg border border-slate-200 object-cover" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[13px] font-semibold text-slate-800">{imageMeta?.name ?? imageUrl.trim()}</p>
+              {imageMeta ? <p className="text-[11.5px] text-slate-500">{imageMeta.dims ? `${imageMeta.dims} · ` : ""}{Math.max(1, Math.round(imageMeta.size / 1024))} KB · uploaded</p> : null}
+            </div>
+            <button type="button" onClick={clearImage} className="text-[12.5px] font-semibold text-rose-700">Remove</button>
+          </div>
+        ) : null}
+        {(() => {
+          const url = imageUrl.trim();
+          const hasIg = selected.some((id) => platformOf(id) === "instagram");
+          const plats = Array.from(new Set(selected.map(platformOf)));
+          const notHttps = url !== "" && !/^https:\/\//i.test(url);
+          const igBad = hasIg && url !== "" && !notHttps && !/\.(jpe?g|png)(\?\S*)?$/i.test(url);
+          return (
+            <>
+              {notHttps ? <p className="mt-2 rounded-lg bg-amber-50 px-2.5 py-1.5 text-[12px] text-amber-800">The image link must start with https://.</p> : null}
+              {igBad ? <p className="mt-2 rounded-lg bg-amber-50 px-2.5 py-1.5 text-[12px] text-amber-800">Instagram only accepts JPG or PNG. Replace this file or untick the Instagram account. LinkedIn and Facebook can use it.</p> : null}
+              {hasIg && !url ? <p className="mt-2 rounded-lg bg-amber-50 px-2.5 py-1.5 text-[12px] text-amber-800">Instagram only publishes image posts. Add an image or the Instagram post will fail.</p> : null}
+              <p className="mt-3 text-[11px] font-bold uppercase tracking-wide text-slate-400">Size guide (recommended, not required)</p>
+              <div className="mt-1.5 grid grid-cols-3 gap-2">
+                {[["Landscape 1.91:1", "Best for LinkedIn. Fine on Facebook and Instagram."], ["Portrait 4:5", "Best for Instagram and Facebook. LinkedIn accepts it."], ["Square 1:1", "Works on all three."]].map(([t, d]) => (
+                  <div key={t} className="rounded-lg border border-slate-200 px-2.5 py-2"><p className="text-[12.5px] font-semibold text-slate-800">{t}</p><p className="text-[11px] text-slate-500">{d}</p></div>
+                ))}
+              </div>
+              {plats.length ? (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {plats.map((pl) => {
+                    const ok = pl === "linkedin" || pl === "facebook" || pl === "instagram";
+                    const label = pl === "linkedin" ? "LinkedIn" : pl === "facebook" ? "Facebook" : pl === "instagram" ? "Instagram" : pl.charAt(0).toUpperCase() + pl.slice(1);
+                    return ok
+                      ? <span key={pl} className={`rounded-full px-2.5 py-1 text-[11.5px] font-semibold ${pl === "instagram" && !url ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>{label} {pl === "instagram" ? (url ? "✓ image (required)" : "needs an image") : "✓ image"}</span>
+                      : <span key={pl} className="rounded-full border border-slate-200 px-2.5 py-1 text-[11.5px] text-slate-500">{label}: text only</span>;
+                  })}
+                </div>
+              ) : null}
+              <p className="mt-2 text-[11px] text-slate-400">A post can be text, an image, or both. LinkedIn needs some text with an image.</p>
+            </>
+          );
+        })()}
+      </div>
+
+      {/* 6 · Dates and time */}
+      <div className={`${card} p-5`}>
+        <StepHead n={6} title="Dates and time (PT)" hint="pick one or more days" />
         <div className="mt-2">
           <MultiDatePicker dates={schedDates} onDates={setSchedDates} time={schedTime} onTime={setSchedTime} variant="teal" />
         </div>
@@ -395,8 +496,10 @@ function Composer({ accounts, googleReady, onScheduled }: { accounts: SocialAcco
         {googleReady ? <p className="mt-2 inline-flex items-center gap-1 text-[11px] text-slate-400"><i className="ti ti-brand-google" aria-hidden="true" /> Scheduled posts mirror to Google Calendar</p> : null}
       </div>
 
+      </div>
+
       {/* Actions: Draft it first; the rest turn on once drafts exist */}
-      <div className="mt-5 flex flex-wrap items-center gap-2">
+      <div className={`${card} mt-4 flex flex-wrap items-center gap-2 p-4`}>
         <button type="button" onClick={draft} disabled={busy} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">{busy ? "Drafting…" : "Draft it"}</button>
         <button type="button" onClick={() => setLibOpen((v) => !v)} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-600"><i className="ti ti-books" aria-hidden="true" /> Post library ({POST_LIBRARY.length})</button>
         <span className="flex-1" />
@@ -431,26 +534,9 @@ function Composer({ accounts, googleReady, onScheduled }: { accounts: SocialAcco
           {variants.map((v, i) => (
             <div key={v.accountId} className={`${card} p-3`}>
               <p className="mb-1.5 text-[12px] font-medium text-slate-600">{nameOf(v.accountId)}</p>
-              <textarea value={v.body} onChange={(e) => setVariants((p) => p.map((x, j) => j === i ? { ...x, body: e.target.value } : x))} rows={5} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-indigo-400 focus:outline-none" />
+              <textarea value={v.body} onChange={(e) => setVariants((p) => p.map((x, j) => j === i ? { ...x, body: e.target.value } : x))} rows={5} placeholder={imageUrl.trim() ? "No text. This account posts the image alone." : undefined} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-indigo-400 focus:outline-none" />
             </div>
           ))}
-          {/* Instagram has no text-only posts: a public image URL is required for any Instagram variant. */}
-          {(() => {
-            const hasIg = selected.some((id) => platformOf(id) === "instagram");
-            const badUrl = imageUrl.trim() !== "" && !/^https:\/\/\S+\.(jpe?g|png)(\?\S*)?$/i.test(imageUrl.trim());
-            return (
-              <div className="mt-2">
-                <div className="flex items-center gap-2">
-                  <input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder={hasIg ? "Image URL — required for Instagram (public https JPEG/PNG)" : "Image URL (optional; public https JPEG/PNG)"} className={`flex-1 rounded-lg border px-3 py-2 text-[13px] focus:outline-none ${hasIg && !imageUrl.trim() ? "border-amber-300 bg-amber-50/40 focus:border-amber-400" : "border-slate-200 focus:border-indigo-400"}`} />
-                  {/* eslint-disable-next-line @next/next/no-img-element -- user supplied URL, not a known image host */}
-                  {imageUrl.trim() && !badUrl ? <img src={imageUrl.trim()} alt="" className="h-9 w-9 rounded-md border border-slate-200 object-cover" /> : null}
-                </div>
-                {badUrl ? <p className="mt-1 text-[11.5px] text-rose-600">Instagram needs a direct https link to a .jpg or .png file.</p>
-                  : hasIg && !imageUrl.trim() ? <p className="mt-1 text-[11.5px] text-amber-700">Instagram only publishes image posts — add an image URL or the Instagram variant will fail.</p> : null}
-              </div>
-            );
-          })()}
-
         </div>
       ) : null}
       {msg ? <p className="mt-3 text-[12px] text-slate-500">{msg}</p> : null}
@@ -464,7 +550,7 @@ function Composer({ accounts, googleReady, onScheduled }: { accounts: SocialAcco
       </div>
     </div>
     <aside className="min-w-0 xl:sticky xl:top-4" aria-label="Post preview">
-      <SocialPreview body={variants[0]?.body ?? brief} network={previewNetwork} onNetwork={setPreviewNet} name={previewAccountId ? nameOf(previewAccountId) : "Your account"} company={null} linkUrl={linkUrl} firstComment={comment.trim() || null} />
+      <SocialPreview body={variants[0]?.body ?? brief} network={previewNetwork} onNetwork={setPreviewNet} name={previewAccountId ? nameOf(previewAccountId) : "Your account"} company={null} linkUrl={linkUrl} firstComment={comment.trim() || null} imageUrl={imageUrl.trim() || null} />
     </aside>
     </div>
   );

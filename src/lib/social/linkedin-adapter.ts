@@ -54,6 +54,29 @@ function headers(token: string): Record<string, string> {
   };
 }
 
+/**
+ * Upload the post image to LinkedIn and return its image URN. Three steps: register the
+ * upload, download the public image, PUT the bytes to the upload URL.
+ */
+async function uploadImage(imageUrl: string, owner: string, token: string): Promise<string> {
+  const init = await fetch(`${REST_BASE}/images?action=initializeUpload`, {
+    method: "POST",
+    headers: headers(token),
+    body: JSON.stringify({ initializeUploadRequest: { owner } }),
+  });
+  if (!init.ok) throw new Error(`LinkedIn image init ${init.status}: ${await init.text().catch(() => init.statusText)}`);
+  const { value } = (await init.json()) as { value?: { uploadUrl?: string; image?: string } };
+  if (!value?.uploadUrl || !value.image) throw new Error("LinkedIn did not return an image upload URL.");
+
+  const src = await fetch(imageUrl);
+  if (!src.ok) throw new Error(`Could not download the post image (${src.status}).`);
+  const bytes = await src.arrayBuffer();
+
+  const put = await fetch(value.uploadUrl, { method: "PUT", headers: { Authorization: `Bearer ${token}` }, body: bytes });
+  if (!put.ok) throw new Error(`LinkedIn image upload ${put.status}: ${await put.text().catch(() => put.statusText)}`);
+  return value.image;
+}
+
 export const linkedInAdapter: SocialAdapter = {
   supportsComments: linkedInCommentsEnabled,
 
@@ -64,6 +87,9 @@ export const linkedInAdapter: SocialAdapter = {
     // (socialActions) is partner-gated (403 without Community Management access),
     // so the body is the only reliable place to deliver the link self-serve.
     const commentary = linkedInCommentary(v, linkedInCommentsEnabled());
+    // LinkedIn's Posts API requires commentary, so an image needs some text with it.
+    if (v.imageUrl && !commentary.trim()) throw new Error("LinkedIn needs some text with the image. Add a line to the post.");
+    const imageUrn = v.imageUrl ? await uploadImage(v.imageUrl, a.externalMemberId, a.accessToken) : null;
     const res = await fetch(`${REST_BASE}/posts`, {
       method: "POST",
       headers: headers(a.accessToken),
@@ -72,6 +98,7 @@ export const linkedInAdapter: SocialAdapter = {
         commentary,
         visibility: "PUBLIC",
         distribution: { feedDistribution: "MAIN_FEED", targetEntities: [], thirdPartyDistributionChannels: [] },
+        ...(imageUrn ? { content: { media: { id: imageUrn } } } : {}),
         lifecycleState: "PUBLISHED",
         isReshareDisabledByAuthor: false,
       }),
