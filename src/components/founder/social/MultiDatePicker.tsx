@@ -9,11 +9,15 @@ const PT = "America/Los_Angeles";
 const WD = ["S", "M", "T", "W", "T", "F", "S"];
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const quick = "rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50";
+// Soft teal look used by Admin Compose. The Founder calendar keeps the default look above.
+const tealQuick = "rounded-full border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-700 hover:bg-stone-50";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const key = (y: number, m: number, d: number) => `${y}-${pad(m + 1)}-${pad(d)}`;
 
-export function MultiDatePicker({ dates, onDates, time, onTime }: { dates: string[]; onDates: (d: string[]) => void; time: string; onTime: (t: string) => void }) {
+export function MultiDatePicker({ dates, onDates, time, onTime, variant = "default" }: { dates: string[]; onDates: (d: string[]) => void; time: string; onTime: (t: string) => void; variant?: "default" | "teal" }) {
+  const teal = variant === "teal";
+  const q = teal ? tealQuick : quick;
   // The clock is read after mount so the first render never depends on the time it runs.
   const [today, setToday] = useState<string | null>(null);
   const [view, setView] = useState<{ y: number; m: number } | null>(null);
@@ -51,12 +55,12 @@ export function MultiDatePicker({ dates, onDates, time, onTime }: { dates: strin
   const weekday = (d: number) => new Date(Date.UTC(view.y, view.m, d)).getUTCDay();
 
   return (
-    <div className="mt-1 rounded-lg border border-slate-300 bg-white p-3">
+    <div className={teal ? "mt-1 rounded-2xl bg-[#faf8f5] p-3.5" : "mt-1 rounded-lg border border-slate-300 bg-white p-3"}>
       <div className="flex flex-wrap items-center gap-2">
-        <button type="button" aria-label="Previous month" className={quick} onClick={() => move(-1)}>‹</button>
+        <button type="button" aria-label="Previous month" className={q} onClick={() => move(-1)}>‹</button>
         <span className="min-w-[8.5rem] text-center text-sm font-semibold text-slate-900">{MONTHS[view.m]} {view.y}</span>
-        <button type="button" aria-label="Next month" className={quick} onClick={() => move(1)}>›</button>
-        <span className="ml-auto rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-800" aria-live="polite">
+        <button type="button" aria-label="Next month" className={q} onClick={() => move(1)}>›</button>
+        <span className={`ml-auto rounded-full px-2.5 py-1 text-xs font-semibold ${teal ? "bg-teal-100 text-teal-800" : "bg-blue-50 text-blue-800"}`} aria-live="polite">
           {dates.length === 0 ? "No dates selected" : `${dates.length} date${dates.length === 1 ? "" : "s"} selected`}
         </span>
       </div>
@@ -70,7 +74,7 @@ export function MultiDatePicker({ dates, onDates, time, onTime }: { dates: strin
           const ok = selectable(d);
           return (
             <button key={k} type="button" disabled={!ok} aria-pressed={on} aria-label={`${MONTHS[view.m]} ${d}, ${view.y}`} onClick={() => toggle(d)}
-              className={`h-9 rounded-lg text-sm ${on ? "bg-[#1A6CE4] font-semibold text-white" : ok ? "text-slate-900 hover:bg-blue-50" : "cursor-default text-slate-300"}`}>
+              className={`h-9 text-sm ${teal ? "rounded-[10px]" : "rounded-lg"} ${on ? `${teal ? "bg-teal-600" : "bg-[#1A6CE4]"} font-semibold text-white` : ok ? `text-slate-900 ${teal ? "hover:bg-teal-50" : "hover:bg-blue-50"}` : "cursor-default text-slate-300"}`}>
               {d}
             </button>
           );
@@ -78,12 +82,12 @@ export function MultiDatePicker({ dates, onDates, time, onTime }: { dates: strin
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <button type="button" className={quick} onClick={() => commit([...dates, ...monthDays.map((d) => key(view.y, view.m, d))])}>Select all dates</button>
-        <button type="button" className={quick} onClick={() => commit([...dates, ...monthDays.filter((d) => weekday(d) >= 1 && weekday(d) <= 5).map((d) => key(view.y, view.m, d))])}>Weekdays only</button>
-        <button type="button" className={quick} onClick={() => commit(dates.filter((k) => !inMonth(k)))}>Clear month</button>
-        <button type="button" className={quick} onClick={() => commit([])}>Clear all</button>
-        <label className="ml-auto flex items-center gap-2 text-xs text-slate-500">Time (PT)
-          <input type="time" value={time} onChange={(e) => onTime(e.target.value)} className="rounded-lg border border-slate-300 px-2 py-1 text-sm text-slate-900" />
+        <button type="button" className={q} onClick={() => commit([...dates, ...monthDays.map((d) => key(view.y, view.m, d))])}>Select all dates</button>
+        <button type="button" className={q} onClick={() => commit([...dates, ...monthDays.filter((d) => weekday(d) >= 1 && weekday(d) <= 5).map((d) => key(view.y, view.m, d))])}>Weekdays only</button>
+        <button type="button" className={q} onClick={() => commit(dates.filter((k) => !inMonth(k)))}>Clear month</button>
+        <button type="button" className={q} onClick={() => commit([])}>Clear all</button>
+        <label className={`ml-auto flex items-center gap-2 text-xs ${teal ? "rounded-full border border-stone-200 bg-white py-1 pl-3 pr-1 text-stone-600" : "text-slate-500"}`}>Time (PT)
+          <input type="time" value={time} onChange={(e) => onTime(e.target.value)} className={teal ? "rounded-full bg-stone-100 px-2 py-0.5 text-sm font-semibold text-slate-900" : "rounded-lg border border-slate-300 px-2 py-1 text-sm text-slate-900"} />
         </label>
       </div>
     </div>
