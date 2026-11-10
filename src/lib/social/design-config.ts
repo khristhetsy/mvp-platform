@@ -7,10 +7,11 @@ export const DESIGN_SIZES = {
 } as const;
 export type DesignSize = keyof typeof DESIGN_SIZES;
 
+// Colors follow the site palette in globals.css (site-navy, site-blue, site-amber).
 export const DESIGN_STYLES = {
-  brand: { label: "iCapOS brand (teal)", colors: { bg1: "#0d9488", bg2: "#164e63", text: "#ffffff", accent: "#fde68a", btnText: "#0f2f3a" } },
-  dark: { label: "Dark", colors: { bg1: "#0f172a", bg2: "#1e293b", text: "#ffffff", accent: "#5eead4", btnText: "#0f172a" } },
-  light: { label: "Light", colors: { bg1: "#faf8f5", bg2: "#e7e5e4", text: "#1e293b", accent: "#0d9488", btnText: "#ffffff" } },
-  gold: { label: "Gold accent", colors: { bg1: "#1e1b4b", bg2: "#312e81", text: "#ffffff", accent: "#fbbf24", btnText: "#1e1b4b" } },
+  brand: { label: "iCapOS brand (navy and blue)", colors: { bg1: "#0a1a40", bg2: "#16336b", text: "#ffffff", accent: "#4f94ff", btnText: "#0a1a40" } },
+  dark: { label: "Dark", colors: { bg1: "#0f172a", bg2: "#1e293b", text: "#ffffff", accent: "#f2a93b", btnText: "#0f172a" } },
+  light: { label: "Light", colors: { bg1: "#f5f7fb", bg2: "#eaf1fe", text: "#0a1a40", accent: "#1a6ce4", btnText: "#ffffff" } },
+  amber: { label: "Amber accent", colors: { bg1: "#0a1a40", bg2: "#0f2555", text: "#ffffff", accent: "#f2a93b", btnText: "#0a1a40" } },
 } as const;
 export type DesignStyle = keyof typeof DESIGN_STYLES;
