@@ -21,6 +21,7 @@ import { Finder, type RedditPrefill } from "./Finder";
 import { SiteAuditCard } from "./SiteAuditCard";
 import { fromPlatformInput, toPlatformInput } from "@/lib/time/platform-input";
 import { OdooPager } from "@/components/admin/OdooPager";
+import { DESIGN_SIZES, DESIGN_STYLES, type DesignSize, type DesignStyle } from "@/lib/social/design-config";
 import { MultiDatePicker } from "@/components/founder/social/MultiDatePicker";
 
 const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -163,7 +164,12 @@ function Composer({ accounts, googleReady, onScheduled }: { accounts: SocialAcco
   const [linkUrl, setLinkUrl] = useState("");
   const [agentLinks, setAgentLinks] = useState<Array<{ key: string; label: string; url: string }>>([]);
   const [imageUrl, setImageUrl] = useState("");
-  const [imageTab, setImageTab] = useState<"upload" | "link">("upload");
+  const [imageTab, setImageTab] = useState<"upload" | "design" | "link">("upload");
+  const [designReq, setDesignReq] = useState("");
+  const [designStyle, setDesignStyle] = useState<DesignStyle>("brand");
+  const [designSize, setDesignSize] = useState<DesignSize>("banner");
+  const [designing, setDesigning] = useState(false);
+  const [designOpts, setDesignOpts] = useState<string[]>([]);
   const [imageMeta, setImageMeta] = useState<{ name: string; size: number; dims: string } | null>(null);
   const [imageErr, setImageErr] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -233,6 +239,21 @@ function Composer({ accounts, googleReady, onScheduled }: { accounts: SocialAcco
     } finally { setUploading(false); }
   }
   function clearImage() { setImageUrl(""); setImageMeta(null); setImageErr(null); }
+  async function designImage() {
+    setImageErr(null);
+    if (designReq.trim().length < 10) { setImageErr("Describe the banner in at least 10 characters."); return; }
+    setDesigning(true); setDesignOpts([]);
+    try {
+      const r = await fetch("/api/admin/social/design-image", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ request: designReq.trim(), style: designStyle, size: designSize }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !Array.isArray(j.options)) { setImageErr(j.error ?? "Design failed. Try again."); return; }
+      setDesignOpts((j.options as { url: string }[]).map((o) => o.url));
+    } catch { setImageErr("Design failed. Check your connection and try again."); } finally { setDesigning(false); }
+  }
+  function pickDesign(url: string) {
+    const { w, h } = DESIGN_SIZES[designSize];
+    setImageUrl(url); setImageMeta({ name: "Designed with Claude.png", size: 0, dims: `${w} x ${h}` });
+  }
 
   function loadLibraryPost(p: (typeof POST_LIBRARY)[number]) {
     if (selected.length === 0) { setMsg("Pick at least one account, then load a post."); return; }
@@ -409,7 +430,7 @@ function Composer({ accounts, googleReady, onScheduled }: { accounts: SocialAcco
       <div className={`${card} p-5`}>
         <StepHead n={5} title="Image" hint="optional, posts with the text" />
         <div className="mt-2 inline-flex gap-1 rounded-lg bg-slate-100 p-1" role="tablist" aria-label="Image source">
-          {([["upload", "Upload"], ["link", "Paste a link"]] as const).map(([k, label]) => (
+          {([["upload", "Upload"], ["design", "Design with Claude"], ["link", "Paste a link"]] as const).map(([k, label]) => (
             <button key={k} type="button" role="tab" aria-selected={imageTab === k} onClick={() => setImageTab(k)} className={`rounded-md px-3.5 py-1.5 text-[12.5px] font-semibold ${imageTab === k ? "bg-white text-teal-700 shadow-sm" : "text-slate-500"}`}>{label}</button>
           ))}
         </div>
@@ -428,6 +449,49 @@ function Composer({ accounts, googleReady, onScheduled }: { accounts: SocialAcco
             </label>
             <p className="mt-2 text-[11px] text-slate-500">JPG, PNG, WebP or GIF, up to 5 MB. Instagram accepts JPG and PNG only.</p>
           </div>
+        ) : imageTab === "design" ? (
+          <div className="mt-3">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">What should the banner say</p>
+            <textarea value={designReq} onChange={(e) => setDesignReq(e.target.value)} rows={3} placeholder="Banner for our fit quiz. Headline about matching investors by stage and sector. Button: Take the fit quiz." className="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-indigo-400 focus:outline-none" />
+            <div className="mt-1 flex flex-wrap items-center gap-3 text-[11.5px]">
+              <button type="button" onClick={() => setDesignReq(brief.trim())} disabled={!brief.trim()} className="font-semibold text-teal-700 disabled:opacity-40">Write this from my post text</button>
+              <span className="text-slate-400">Claude writes short on-image text from your request. Check it before you post.</span>
+            </div>
+            <p className="mt-3 text-[11px] font-bold uppercase tracking-wide text-slate-400">Style</p>
+            <div className="mt-1.5 flex flex-wrap gap-2">
+              {(Object.keys(DESIGN_STYLES) as DesignStyle[]).map((k) => (
+                <button key={k} type="button" onClick={() => setDesignStyle(k)} className={`rounded-full border px-3 py-1 text-[12.5px] ${designStyle === k ? "border-teal-600 bg-teal-50 font-semibold text-teal-700" : "border-slate-200 text-slate-600"}`}>{DESIGN_STYLES[k].label}</button>
+              ))}
+            </div>
+            <p className="mt-3 text-[11px] font-bold uppercase tracking-wide text-slate-400">Size</p>
+            <div className="mt-1.5 grid grid-cols-3 gap-2">
+              {(Object.keys(DESIGN_SIZES) as DesignSize[]).map((k) => (
+                <button key={k} type="button" onClick={() => setDesignSize(k)} className={`rounded-lg border px-2.5 py-2 text-left ${designSize === k ? "border-teal-600 bg-teal-50" : "border-slate-200"}`}>
+                  <span className="block text-[12.5px] font-semibold text-slate-800">{DESIGN_SIZES[k].label}</span>
+                  <span className="block text-[11px] text-slate-500">{DESIGN_SIZES[k].note}</span>
+                </button>
+              ))}
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <button type="button" onClick={() => void designImage()} disabled={designing} className="rounded-lg bg-teal-600 px-4 py-2 text-[13px] font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{designing ? "Designing…" : designOpts.length ? "Redesign 3 options" : "Design 3 options"}</button>
+              <span className="text-[11.5px] text-slate-500">Uses your existing Claude connection. No new account.</span>
+            </div>
+            {designOpts.length ? (
+              <div className="mt-3">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Pick one</p>
+                <div className="mt-1.5 flex flex-col gap-2.5">
+                  {designOpts.map((u, i) => (
+                    <button key={u} type="button" onClick={() => pickDesign(u)} aria-pressed={imageUrl === u} aria-label={`Use option ${i + 1}`} className={`relative overflow-hidden rounded-xl border text-left ${imageUrl === u ? "border-teal-600 outline outline-[3px] outline-offset-2 outline-teal-600" : "border-slate-200"}`}>
+                      {/* eslint-disable-next-line @next/next/no-img-element -- generated image from our own storage */}
+                      <img src={u} alt={`Option ${i + 1}`} className="block h-auto w-full" />
+                      <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[11px] font-semibold text-slate-700">Option {i + 1}</span>
+                      {imageUrl === u ? <span className="absolute right-2 top-2 flex h-[22px] w-[22px] items-center justify-center rounded-full bg-teal-600 text-[12px] text-white">✓</span> : null}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
         ) : (
           <input value={imageUrl} onChange={(e) => { setImageUrl(e.target.value); setImageMeta(null); }} placeholder="https://… direct link to a .jpg or .png" aria-label="Image link" className="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-indigo-400 focus:outline-none" />
         )}
@@ -438,7 +502,7 @@ function Composer({ accounts, googleReady, onScheduled }: { accounts: SocialAcco
             <img src={imageUrl.trim()} alt="" className="h-16 w-16 flex-none rounded-lg border border-slate-200 object-cover" />
             <div className="min-w-0 flex-1">
               <p className="truncate text-[13px] font-semibold text-slate-800">{imageMeta?.name ?? imageUrl.trim()}</p>
-              {imageMeta ? <p className="text-[11.5px] text-slate-500">{imageMeta.dims ? `${imageMeta.dims} · ` : ""}{Math.max(1, Math.round(imageMeta.size / 1024))} KB · uploaded</p> : null}
+              {imageMeta ? <p className="text-[11.5px] text-slate-500">{imageMeta.dims ? `${imageMeta.dims} · ` : ""}{imageMeta.size > 0 ? `${Math.max(1, Math.round(imageMeta.size / 1024))} KB · uploaded` : "designed with Claude"}</p> : null}
             </div>
             <button type="button" onClick={clearImage} className="text-[12.5px] font-semibold text-rose-700">Remove</button>
           </div>
