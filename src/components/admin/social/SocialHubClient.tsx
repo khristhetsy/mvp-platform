@@ -164,7 +164,6 @@ function Composer({ accounts, googleReady, onScheduled }: { accounts: SocialAcco
   const [agentLinks, setAgentLinks] = useState<Array<{ key: string; label: string; url: string }>>([]);
   const [imageUrl, setImageUrl] = useState("");
   const [comment, setComment] = useState("");
-  const [schedOn, setSchedOn] = useState(true);
   const [schedDates, setSchedDates] = useState<string[]>([]);   // one or more days, one post per day
   const [schedTime, setSchedTime] = useState("08:15");
   const [repeat, setRepeat] = useState<"none" | "daily" | "weekly" | "monthly">("none");   // series from the one picked date
@@ -326,11 +325,88 @@ function Composer({ accounts, googleReady, onScheduled }: { accounts: SocialAcco
             return <button type="button" key={a.id} onClick={() => setSelected((p) => on ? p.filter((x) => x !== a.id) : [...p, a.id])} className={`${chip} inline-flex items-center gap-1.5 ${on ? "border-indigo-400 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-600"}`}><i className={`ti ti-brand-${a.platform}`} aria-hidden="true" />{accountName(a)}{a.is_default ? <span className="text-[10px] opacity-60">default</span> : null}</button>;
           })}
         </div>
-        <div className="mt-3 flex items-center gap-3">
-          <button type="button" onClick={draft} disabled={busy} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">{busy ? "Drafting…" : "Draft it"}</button>
-          <button type="button" onClick={() => setLibOpen((v) => !v)} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-600"><i className="ti ti-books" aria-hidden="true" /> Post library ({POST_LIBRARY.length})</button>
-        </div>
       </div>
+
+      {/* 4 · Attachments */}
+      <div className="mt-5">
+        <StepHead n={4} title="Attachments" hint="posts as the first comment" />
+    {/* Attachments: an agent link (Johnny or a live founder IR agent) posts as the first comment with its tracked link. */}
+    {agentLinks.length ? (
+      <div className="mt-2">
+        <p className="text-[12px] font-semibold text-slate-700">Attachments <span className="ml-1 rounded-full bg-teal-50 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-teal-700">NEW</span></p>
+        <div className="mt-1.5 flex flex-col gap-2">
+          {agentLinks.map((a) => {
+            const on = a.url === linkUrl;
+            return (
+              <button
+                key={a.key}
+                type="button"
+                aria-pressed={on}
+                onClick={() => {
+                  if (on) { setLinkUrl(""); return; }
+                  setLinkUrl(a.url);
+                  if (!comment.trim()) setComment("Talk to our investor relations agent, any time →");
+                }}
+                className={`flex items-center justify-between rounded-xl border-2 px-3.5 py-2.5 text-left ${on ? "border-teal-600 bg-teal-50/40" : "border-slate-200 bg-white hover:border-slate-300"}`}
+              >
+                <span>
+                  <span className="block text-[13px] font-semibold text-slate-800">{a.label}</span>
+                  <span className="block text-[11.5px] text-slate-500">Tracks the social channel</span>
+                </span>
+                {on ? <i className="ti ti-circle-check text-[20px] text-teal-600" aria-hidden="true" /> : null}
+              </button>
+            );
+          })}
+        </div>
+        <p className="mt-1.5 text-[11px] text-slate-400">Posts as the first comment, tracked to this network. Clicks and chats count toward this post in Attribution.</p>
+      </div>
+    ) : null}
+    <div>
+      <p className="mt-4 text-[12px] font-semibold text-slate-700">Call-to-action <span className="font-normal text-slate-400">posts as the first comment</span></p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {CTAS.map((c) => (
+          <button key={c.key} type="button" onClick={() => { setComment(c.text); setLinkUrl(c.url); }} className={`${chip} ${comment === c.text ? "border-indigo-400 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-600"}`}>{c.label}</button>
+        ))}
+        <button type="button" onClick={() => { setComment(""); setLinkUrl(""); }} className={`${chip} border-slate-200 text-slate-600`}>Custom</button>
+      </div>
+    </div>
+    <div className="grid grid-cols-2 gap-3">
+      <input value={comment} onChange={(e) => setComment(e.target.value)} placeholder="CTA text (first comment)" className="rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-indigo-400 focus:outline-none" />
+      <input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="Tracked link (https://…)" aria-label="Tracked link, posts as the first comment" className="rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-indigo-400 focus:outline-none" />
+    </div>
+      </div>
+
+      {/* 5 · Dates and time */}
+      <div className="mt-5">
+        <StepHead n={5} title="Dates and time (PT)" hint="pick one or more days" />
+        <div className="mt-2">
+          <MultiDatePicker dates={schedDates} onDates={setSchedDates} time={schedTime} onTime={setSchedTime} variant="teal" />
+        </div>
+        <div className="mt-3">
+          <label htmlFor="admin-compose-repeat" className="text-[12px] font-medium text-slate-700">Repeat</label>
+          <select id="admin-compose-repeat" value={schedDates.length === 1 ? repeat : "none"} disabled={schedDates.length !== 1} onChange={(e) => setRepeat(e.target.value as typeof repeat)} className="mt-1 block rounded-lg border border-slate-200 px-2.5 py-1.5 text-[12.5px] disabled:opacity-50">
+            <option value="none">Does not repeat</option>
+            <option value="daily">Every day</option>
+            <option value="weekly">Every week</option>
+            <option value="monthly">Every month</option>
+          </select>
+          {schedDates.length !== 1 ? <p className="mt-1 text-[11px] text-slate-400">Repeat works when exactly one date is picked.</p> : null}
+        </div>
+        {googleReady ? <p className="mt-2 inline-flex items-center gap-1 text-[11px] text-slate-400"><i className="ti ti-brand-google" aria-hidden="true" /> Scheduled posts mirror to Google Calendar</p> : null}
+      </div>
+
+      {/* Actions: Draft it first; the rest turn on once drafts exist */}
+      <div className="mt-5 flex flex-wrap items-center gap-2">
+        <button type="button" onClick={draft} disabled={busy} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">{busy ? "Drafting…" : "Draft it"}</button>
+        <button type="button" onClick={() => setLibOpen((v) => !v)} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-600"><i className="ti ti-books" aria-hidden="true" /> Post library ({POST_LIBRARY.length})</button>
+        <span className="flex-1" />
+        <button type="button" onClick={() => setShowPreview(true)} disabled={variants.length === 0} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 disabled:opacity-45"><i className="ti ti-eye" aria-hidden="true" /> Preview</button>
+        <button type="button" onClick={() => save("draft")} disabled={busy || variants.length === 0} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 disabled:opacity-45">Save draft</button>
+        <button type="button" onClick={() => save("park")} disabled={busy || variants.length === 0} className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 disabled:opacity-45">Park in Queue</button>
+        <button type="button" onClick={() => { if (confirm("Post now? It goes out to every selected account within 5 minutes.")) void save("now"); }} disabled={busy || variants.length === 0} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 disabled:opacity-45">Post now</button>
+        <button type="button" onClick={() => save("schedule")} disabled={busy || variants.length === 0 || schedDates.length === 0} className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-45">{schedDates.length > 1 ? `Schedule ${schedDates.length} posts` : "Schedule post"}</button>
+      </div>
+      {variants.length === 0 ? <p className="mt-1.5 text-right text-[11px] text-slate-400">Save draft, Park, Post now and Schedule turn on once the drafts exist.</p> : null}
 
       {libOpen ? (
         <div className={`${card} mt-3 divide-y divide-slate-100`}>
@@ -358,50 +434,6 @@ function Composer({ accounts, googleReady, onScheduled }: { accounts: SocialAcco
               <textarea value={v.body} onChange={(e) => setVariants((p) => p.map((x, j) => j === i ? { ...x, body: e.target.value } : x))} rows={5} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-indigo-400 focus:outline-none" />
             </div>
           ))}
-          <div>
-            <StepHead n={4} title="Link & call-to-action" hint="posts as the first comment" />
-            <div className="mt-2 flex flex-wrap gap-2">
-              {CTAS.map((c) => (
-                <button key={c.key} type="button" onClick={() => { setComment(c.text); setLinkUrl(c.url); }} className={`${chip} ${comment === c.text ? "border-indigo-400 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-600"}`}>{c.label}</button>
-              ))}
-              <button type="button" onClick={() => { setComment(""); setLinkUrl(""); }} className={`${chip} border-slate-200 text-slate-600`}>Custom</button>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <input value={comment} onChange={(e) => setComment(e.target.value)} placeholder="CTA text (first comment)" className="rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-indigo-400 focus:outline-none" />
-            <input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="CTA link (https://…)" className="rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-indigo-400 focus:outline-none" />
-          </div>
-          {/* Attachments: an agent link (Johnny or a live founder IR agent) posts as the first comment with its tracked link. */}
-          {agentLinks.length ? (
-            <div className="mt-2">
-              <p className="text-[12px] font-semibold text-slate-700">Attachments <span className="ml-1 rounded-full bg-teal-50 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-teal-700">NEW</span></p>
-              <div className="mt-1.5 flex flex-col gap-2">
-                {agentLinks.map((a) => {
-                  const on = a.url === linkUrl;
-                  return (
-                    <button
-                      key={a.key}
-                      type="button"
-                      aria-pressed={on}
-                      onClick={() => {
-                        if (on) { setLinkUrl(""); return; }
-                        setLinkUrl(a.url);
-                        if (!comment.trim()) setComment("Talk to our investor relations agent, any time →");
-                      }}
-                      className={`flex items-center justify-between rounded-xl border-2 px-3.5 py-2.5 text-left ${on ? "border-teal-600 bg-teal-50/40" : "border-slate-200 bg-white hover:border-slate-300"}`}
-                    >
-                      <span>
-                        <span className="block text-[13px] font-semibold text-slate-800">{a.label}</span>
-                        <span className="block text-[11.5px] text-slate-500">Tracks the social channel</span>
-                      </span>
-                      {on ? <i className="ti ti-circle-check text-[20px] text-teal-600" aria-hidden="true" /> : null}
-                    </button>
-                  );
-                })}
-              </div>
-              <p className="mt-1.5 text-[11px] text-slate-400">Posts as the first comment, tracked to this network. Clicks and chats count toward this post in Attribution.</p>
-            </div>
-          ) : null}
           {/* Instagram has no text-only posts: a public image URL is required for any Instagram variant. */}
           {(() => {
             const hasIg = selected.some((id) => platformOf(id) === "instagram");
@@ -419,43 +451,6 @@ function Composer({ accounts, googleReady, onScheduled }: { accounts: SocialAcco
             );
           })()}
 
-          {/* schedule row */}
-          <div>
-          <StepHead n={5} title="When to publish" />
-          <div className={`${card} mt-2 p-3`}>
-            <div className="flex flex-wrap items-center gap-3">
-              <button type="button" onClick={() => setSchedOn((v) => !v)} className="inline-flex items-center gap-2 text-[13px] font-medium text-slate-700">
-                <span className={`relative inline-flex h-5 w-9 items-center rounded-full ${schedOn ? "bg-emerald-600" : "bg-slate-300"}`}>
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${schedOn ? "translate-x-4" : "translate-x-1"}`} />
-                </span>
-                Schedule
-              </button>
-              {googleReady ? <span className="inline-flex items-center gap-1 text-[11px] text-slate-400"><i className="ti ti-brand-google" aria-hidden="true" /> mirrors to Google Calendar</span> : null}
-            </div>
-            {schedOn ? <div className="mt-2"><MultiDatePicker dates={schedDates} onDates={setSchedDates} time={schedTime} onTime={setSchedTime} /></div> : null}
-            {schedOn ? (
-              <div className="mt-3">
-                <label htmlFor="admin-compose-repeat" className="text-[12px] font-medium text-slate-700">Repeat</label>
-                <select id="admin-compose-repeat" value={schedDates.length === 1 ? repeat : "none"} disabled={schedDates.length !== 1} onChange={(e) => setRepeat(e.target.value as typeof repeat)} className="mt-1 block rounded-lg border border-slate-200 px-2.5 py-1.5 text-[12.5px] disabled:opacity-50">
-                  <option value="none">Does not repeat</option>
-                  <option value="daily">Every day</option>
-                  <option value="weekly">Every week</option>
-                  <option value="monthly">Every month</option>
-                </select>
-                {schedDates.length !== 1 ? <p className="mt-1 text-[11px] text-slate-400">Repeat works when exactly one date is picked.</p> : null}
-              </div>
-            ) : null}
-            <p className="mt-1.5 text-[11px] text-slate-400">Toggle off to park the post in the queue without a date — you can schedule it later from the Schedule tab.</p>
-          </div>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => setShowPreview(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600"><i className="ti ti-eye" aria-hidden="true" /> Preview</button>
-            <button type="button" onClick={() => save("draft")} disabled={busy} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 disabled:opacity-50">Save draft</button>
-            <button type="button" onClick={() => save("park")} disabled={busy} className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 disabled:opacity-50">Park in Queue</button>
-            <button type="button" onClick={() => { if (confirm("Post now? It goes out to every selected account within 5 minutes.")) void save("now"); }} disabled={busy} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 disabled:opacity-50">Post now</button>
-            <button type="button" onClick={() => save("schedule")} disabled={busy || !schedOn || schedDates.length === 0} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">{schedDates.length > 1 ? `Schedule ${schedDates.length} posts` : "Schedule post"}</button>
-          </div>
         </div>
       ) : null}
       {msg ? <p className="mt-3 text-[12px] text-slate-500">{msg}</p> : null}
