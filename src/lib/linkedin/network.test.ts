@@ -70,3 +70,30 @@ describe("after a read", () => {
     expect(p.readAt).toBe(NOW.toISOString());
   });
 });
+
+import { matchesTitles, readNetworkFilters as readF, readTitles } from "./network";
+
+describe("titles to keep", () => {
+  it("keeps everyone when no titles are set", () => {
+    expect(matchesTitles("Plumber", undefined)).toBe(true);
+    expect(matchesTitles(null, [])).toBe(true);
+  });
+  it("matches whole words in the headline, ignoring case", () => {
+    expect(matchesTitles("Co-Founder at Acme", ["Founder"])).toBe(true);
+    expect(matchesTitles("ceo and owner", ["CEO"])).toBe(true);
+    expect(matchesTitles("Foundersville mayor", ["Founder"])).toBe(false);
+    expect(matchesTitles("Senior Engineer", ["Founder", "CEO"])).toBe(false);
+  });
+  it("skips people with no headline when titles are set", () => {
+    expect(matchesTitles(null, ["Founder"])).toBe(false);
+  });
+  it("cleans the list: trims, drops duplicates, caps length and count", () => {
+    expect(readTitles([" Founder ", "founder", "", 5, "CEO"])).toEqual(["Founder", "CEO"]);
+    expect(readTitles(Array.from({ length: 30 }, (_, i) => `t${i}`))).toHaveLength(12);
+    expect(readTitles("x")).toEqual([]);
+  });
+  it("reads titles from the campaign filters", () => {
+    expect(readF({ filters: { titles: ["CEO"] } }).titles).toEqual(["CEO"]);
+    expect(readF({ filters: { titles: [] } }).titles).toBeUndefined();
+  });
+});

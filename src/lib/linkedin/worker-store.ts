@@ -4,7 +4,7 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { event, pauseIfAcceptanceLow, type LinkedInAccount } from "./store";
 import { handoffLink, pickVariant, renderConnectedMessage, renderInvite, type InviteVariant } from "./wording";
-import { afterFailedRead, afterRead, canReadNow, cleanSlug, isNetworkAudience, readNetworkFilters, readProgress } from "./network";
+import { afterFailedRead, afterRead, canReadNow, cleanSlug, isNetworkAudience, matchesTitles, readNetworkFilters, readProgress } from "./network";
 import { canSendInvite, canSendMessage, warmUpDay, type AccountSafety } from "./safety";
 import { DRY_RUN_HOLD_HOURS, LEASE_MINUTES, MIN_GAP_MINUTES, hashSenderKey, generateSenderKey, startOfLocalDay, retryMinutesFor, waitFromDecision, type WorkerNext } from "./worker";
 
@@ -203,7 +203,7 @@ async function nextRead(a: LinkedInAccount, live: string[], now: Date): Promise<
 }
 
 export type ReadReport = {
-  campaignId: string; page: number; people: Array<{ slug: string; name: string | null }>; searchUrl?: string | null;
+  campaignId: string; page: number; people: Array<{ slug: string; name: string | null; headline?: string | null }>; searchUrl?: string | null;
   /** False when the sender could not set the filters, so the page shows people outside them. Nothing is kept then. */
   filtersApplied: boolean; failed?: boolean; warning?: boolean; detail?: string | null; now?: Date;
 };
@@ -231,10 +231,20 @@ export async function recordRead(account: LinkedInAccount, input: ReadReport): P
   }
 
   const own = cleanSlug(account.linkedin_slug);
+  const titles = readNetworkFilters(camp.audience).titles;
+  // Titles are set but no headline could be read on this page: the page looks different, so keep nobody and try again later.
+  if (titles && input.people.length > 0 && input.people.every((p) => !p.headline)) {
+    await save(afterFailedRead(progress, now, account.timezone));
+    await event({ ...base, kind: "failed", detail: "Could not read the headlines on this page, so titles could not be checked" });
+    return { added: 0, paused: false };
+  }
   const seen = new Map<string, string | null>();
+  let skippedByTitle = 0;
   for (const p of input.people) {
     const slug = cleanSlug(p.slug);
-    if (slug && slug !== own && !seen.has(slug)) seen.set(slug, p.name?.trim().slice(0, 120) || null);
+    if (!slug || slug === own || seen.has(slug)) continue;
+    if (!matchesTitles(p.headline, titles)) { skippedByTitle++; continue; }
+    seen.set(slug, p.name?.trim().slice(0, 120) || null);
   }
   const slugs = [...seen.keys()];
   const skip = new Set<string>();
@@ -253,7 +263,7 @@ export async function recordRead(account: LinkedInAccount, input: ReadReport): P
     }
   }
   await save(afterRead(progress, { page: input.page, added: fresh.length, seen: input.people.length, searchUrl: input.searchUrl, now, timeZone: account.timezone }));
-  await event({ ...base, kind: "queued", detail: `Read page ${input.page} of your connections: ${fresh.length} new people` });
+  await event({ ...base, kind: "queued", detail: `Read page ${input.page} of your connections: ${fresh.length} new people${titles ? `, ${skippedByTitle} skipped by title` : ""}` });
   return { added: fresh.length, paused: false };
 }
 
