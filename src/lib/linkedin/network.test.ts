@@ -97,3 +97,28 @@ describe("titles to keep", () => {
     expect(readF({ filters: { titles: [] } }).titles).toBeUndefined();
   });
 });
+
+import { matchKey as mk, matchState, readMatchCheck } from "./network";
+
+describe("matches on LinkedIn count", () => {
+  const base = { id: "c1", status: "pending", requestedAt: "2026-11-10T10:00:00Z", key: "k", filters: { industry: "Venture", sort: "recent" }, total: null, detail: null, doneAt: null };
+  it("keys only the filters LinkedIn counts with, ignoring case and spaces", () => {
+    expect(mk({ industry: " Venture ", titles: ["CEO"], sort: "first" })).toBe(mk({ industry: "venture" }));
+    expect(mk({ industry: "a" })).not.toBe(mk({ industry: "b" }));
+    expect(mk({ name: "Ann" })).not.toBe(mk({ school: "Ann" }));
+  });
+  it("reads a stored check safely", () => {
+    expect(readMatchCheck(null)).toBeNull();
+    expect(readMatchCheck({ id: 1 })).toBeNull();
+    expect(readMatchCheck({ ...base, status: "weird" })).toBeNull();
+    expect(readMatchCheck({ ...base, status: "done", total: 240.7 })?.total).toBe(240);
+    expect(readMatchCheck({ ...base, total: -3 })?.total).toBeNull();
+  });
+  it("is pending for 10 minutes, then unanswered", () => {
+    const mc = readMatchCheck(base);
+    expect(matchState(null, new Date("2026-11-10T10:01:00Z"))).toBe("none");
+    expect(matchState(mc, new Date("2026-11-10T10:09:00Z"))).toBe("pending");
+    expect(matchState(mc, new Date("2026-11-10T10:11:00Z"))).toBe("unanswered");
+    expect(matchState(readMatchCheck({ ...base, status: "done", total: 5 }), new Date("2026-11-10T12:00:00Z"))).toBe("done");
+  });
+});

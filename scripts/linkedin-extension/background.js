@@ -56,6 +56,8 @@ async function tick() {
   if (!s.base || !s.key) return;
   const now = Date.now();
   if (s.busyUntil && now < s.busyUntil) return;
+  // A count asked for on the New campaign form is answered at once, even between two actions.
+  if (await answerCount(s)) return;
   if (s.nextAt && now < s.nextAt) return;
   await chrome.storage.local.set({ busyUntil: now + LEASE_GUARD_MS });
   try {
@@ -292,6 +294,54 @@ async function doMessage({ text, dryRun }) {
 // Reads one page of YOUR OWN LinkedIn 1st connections (LinkedIn's connection search, same as typing in its search box).
 // The first page sets the filters through LinkedIn's filter panel and saves LinkedIn's own address for them; later
 // pages open that address with a page number. If a filter cannot be set, nothing is reported as read.
+async function answerCount(s) {
+  const r = await api(s, "matches", {}).catch(() => null);
+  const check = r?.check;
+  if (!check?.id) return false;
+  await chrome.storage.local.set({ busyUntil: Date.now() + LEASE_GUARD_MS });
+  try {
+    await countMatches(s, check);
+  } catch (e) {
+    await api(s, "matches", { checkId: check.id, failed: true, detail: String(e?.message ?? e).slice(0, 200) }).catch(() => {});
+  } finally {
+    await chrome.storage.local.set({ busyUntil: 0 });
+  }
+  return true;
+}
+
+async function countMatches(s, check) {
+  const f = check.filters ?? {};
+  const needPanel = !!(f.industry || f.locations || f.currentCompany || f.pastCompany || f.school || f.profileLanguage);
+  const u = new URL("https://www.linkedin.com/search/results/people/");
+  u.searchParams.set("network", JSON.stringify(["F"]));
+  u.searchParams.set("origin", "FACETED_SEARCH");
+  if (f.name) u.searchParams.set("keywords", f.name);
+  await setStatus("Counting how many of your connections match");
+  const tab = await chrome.tabs.create({ url: u.toString(), active: false });
+  let result;
+  try {
+    await waitForLoad(tab.id);
+    const loaded = await chrome.tabs.get(tab.id);
+    if (/\/(login|checkpoint|authwall|uas\/login)/i.test(loaded.url ?? "")) {
+      await api(s, "matches", { checkId: check.id, failed: true, detail: "Sign in to LinkedIn in Chrome, then check again" });
+      return;
+    }
+    const [{ result: r } = {}] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: doRead, args: [{ filters: f, needPanel, countOnly: true }] });
+    result = r ?? { failed: true, detail: "No answer from the LinkedIn page" };
+  } catch (e) {
+    result = { failed: true, detail: String(e?.message ?? e).slice(0, 200) };
+  } finally {
+    chrome.tabs.remove(tab.id).catch(() => {});
+  }
+  const ok = typeof result.total === "number" && !result.failed && !result.warning;
+  const ack = await api(s, "matches", { checkId: check.id, total: ok ? result.total : null, failed: !ok && !result.warning, warning: result.warning === true, detail: result.detail ?? null }).catch(() => null);
+  if (result.warning || ack?.paused) {
+    await setStatus("LinkedIn showed a warning. iCapOS paused everything. Leave the account alone and check it in LinkedIn.", { nextAt: Date.now() + 30 * 60_000 });
+    return;
+  }
+  await setStatus(ok ? `Counted: about ${result.total} of your connections match.` : `Count failed (${result.detail ?? "unknown"}).`);
+}
+
 async function readConnections(s, next) {
   const needPanel = !!(next.filters.industry || next.filters.locations || next.filters.currentCompany || next.filters.pastCompany || next.filters.school || next.filters.profileLanguage) || (next.filters.sort && next.filters.sort !== "recent");
   const saved = typeof next.searchUrl === "string" && /^https:\/\/www\.linkedin\.com\/search\/results\/people/.test(next.searchUrl) ? next.searchUrl : null;
@@ -338,7 +388,7 @@ async function readConnections(s, next) {
 }
 
 // Runs inside the LinkedIn search page. Must be self contained.
-async function doRead({ filters, needPanel }) {
+async function doRead({ filters, needPanel, countOnly }) {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const WARN_URL = /\/(checkpoint|challenge|uas\/login|authwall|login)/i;
   const WARN_TEXT = /(unusual activity|verify (that )?you('| a)re (not )?a (robot|human)|temporarily (limited|restricted)|security verification)/i;
@@ -411,6 +461,16 @@ async function doRead({ filters, needPanel }) {
   const w1 = warning();
   if (w1) return { warning: true, filtersApplied: false, detail: w1 };
   if (LIMIT_TEXT.test(document.body?.innerText ?? "")) return fail("LinkedIn says the monthly search limit is reached");
+
+  if (countOnly) {
+    // LinkedIn prints the total above the results, for example "About 240 results" or "1,204 results".
+    const text = () => document.body?.innerText ?? "";
+    await waitFor(() => /\d[\d,.\u202f\u00a0 ]*\s+results?/i.test(text()) || /no results found/i.test(text()), 15_000);
+    const m = /(?:about\s+)?(\d[\d,.\u202f\u00a0 ]*)\s+results?/i.exec(text());
+    if (m) return { filtersApplied: true, total: parseInt(m[1].replace(/\D/g, ""), 10), searchUrl: location.href };
+    if (/no results found/i.test(text())) return { filtersApplied: true, total: 0, searchUrl: location.href };
+    return fail("Could not find the number of results on the page");
+  }
 
   const linksNow = () => [...document.querySelectorAll("a[href*='/in/']")].filter(visible);
   // The line under the name in a result card, for example "Founder at Acme". Null when the card cannot be read.
