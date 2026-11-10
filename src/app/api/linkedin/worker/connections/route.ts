@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 const schema = z.object({
   campaignId: z.string().uuid(),
   page: z.number().int().min(1).max(100),
-  people: z.array(z.object({ slug: z.string().max(200), name: z.string().max(200).nullable().optional() })).max(50).default([]),
+  people: z.array(z.object({ slug: z.string().max(200), name: z.string().max(200).nullable().optional(), headline: z.string().max(300).nullable().optional() })).max(50).default([]),
   searchUrl: z.string().max(2000).nullable().optional(),
   filtersApplied: z.boolean(),
   failed: z.boolean().optional(),
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid report." }, { status: 400 });
   try {
-    return NextResponse.json(await recordRead(auth.account, { ...parsed.data, people: parsed.data.people.map((p) => ({ slug: p.slug, name: p.name ?? null })) }));
+    return NextResponse.json(await recordRead(auth.account, { ...parsed.data, people: parsed.data.people.map((p) => ({ slug: p.slug, name: p.name ?? null, headline: p.headline ?? null })) }));
   } catch (e) {
     console.error("[linkedin] worker connections failed", e);
     return NextResponse.json({ error: "Could not record the page." }, { status: 500 });

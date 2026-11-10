@@ -413,6 +413,18 @@ async function doRead({ filters, needPanel }) {
   if (LIMIT_TEXT.test(document.body?.innerText ?? "")) return fail("LinkedIn says the monthly search limit is reached");
 
   const linksNow = () => [...document.querySelectorAll("a[href*='/in/']")].filter(visible);
+  // The line under the name in a result card, for example "Founder at Acme". Null when the card cannot be read.
+  const headlineOf = (a, name) => {
+    let card = a.closest("li");
+    for (let el = a, i = 0; !card && el && i < 5; i++, el = el.parentElement) if ((el.innerText ?? "").length > name.length + 10) card = el;
+    if (!card) return null;
+    const skip = /^(message|connect|follow|pending|view|send|save|\u2022|·|1st|2nd|3rd\+?|status is)/i;
+    for (const line of (card.innerText ?? "").split("\n").map((l) => l.replace(/\s+/g, " ").trim())) {
+      if (!line || line.length < 3 || line.includes(name) || skip.test(line)) continue;
+      return line.slice(0, 200);
+    }
+    return null;
+  };
   await waitFor(() => linksNow().length > 0 || /no results found/i.test(document.body?.innerText ?? ""), 15_000);
   for (let i = 0; i < 4; i++) { window.scrollBy(0, Math.max(400, window.innerHeight * 0.8)); await sleep(700 + Math.random() * 500); }
 
@@ -424,11 +436,11 @@ async function doRead({ filters, needPanel }) {
     const raw = (a.querySelector("span[aria-hidden=true]")?.textContent ?? a.textContent ?? "").replace(/\s+/g, " ").trim();
     const name = raw.replace(/^view\s+/i, "").replace(/['\u2019]s profile.*$/i, "").replace(/\s*[\u2022\u00b7]\s*(1st|2nd|3rd).*$/i, "").replace(/\s+(1st|2nd|3rd)\+?$/i, "").trim();
     if (!name || /^linkedin member$/i.test(name)) continue;
-    if (!people.has(slug)) people.set(slug, name.slice(0, 120));
+    if (!people.has(slug)) people.set(slug, { name: name.slice(0, 120), headline: headlineOf(a, name) });
   }
   if (people.size === 0) {
     if (/no results found/i.test(document.body?.innerText ?? "")) return { filtersApplied: true, people: [], searchUrl: location.href };
     return fail("Results did not load or the page looks different");
   }
-  return { filtersApplied: true, people: [...people].map(([slug, name]) => ({ slug, name })), searchUrl: location.href };
+  return { filtersApplied: true, people: [...people].map(([slug, v]) => ({ slug, name: v.name, headline: v.headline })), searchUrl: location.href };
 }

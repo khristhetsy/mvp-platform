@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MAX_RESULT_PAGES, MESSAGE_LIMIT, READ_PAGES_PER_DAY } from "@/lib/linkedin/limits";
+import { DEFAULT_TITLES, MAX_RESULT_PAGES, MAX_TITLES, MESSAGE_LIMIT, READ_PAGES_PER_DAY } from "@/lib/linkedin/limits";
 import { Choice, ErrorLine, Field, Section, api, btnCls, inputCls, primaryCls } from "./ui";
 
 type Who = "founder" | "investor";
@@ -33,6 +33,8 @@ export function NewCampaignTab({ onSaved }: Readonly<{ onSaved: () => void }>) {
   const [person, setPerson] = useState("");
   const [sort, setSort] = useState<Sort>("recent");
   const [who, setWho] = useState<Who>("founder");
+  const [titles, setTitles] = useState<string[]>([...DEFAULT_TITLES.founder]);
+  const [titleDraft, setTitleDraft] = useState("");
   const [connectedMessage, setConnectedMessage] = useState(MESSAGES.founder);
   const [edited, setEdited] = useState(false);
   const [handoff, setHandoff] = useState<"web_chat" | "linkedin">("web_chat");
@@ -44,12 +46,18 @@ export function NewCampaignTab({ onSaved }: Readonly<{ onSaved: () => void }>) {
   const filters = {
     ...set("industry", industry), ...set("locations", locations), ...set("currentCompany", currentCompany), ...set("pastCompany", pastCompany),
     ...set("school", school), ...set("profileLanguage", profileLanguage), ...set("name", person), sort,
+    ...(titles.length > 0 ? { titles } : {}),
   };
 
   function pickWho(next: Who) {
     if (next === who) return;
     if (edited && !window.confirm(`Replace your edited message with the ${next === "founder" ? "founders" : "investors"} version?`)) return;
-    setWho(next); setEdited(false); setConnectedMessage(MESSAGES[next]);
+    setWho(next); setEdited(false); setConnectedMessage(MESSAGES[next]); setTitles([...DEFAULT_TITLES[next]]);
+  }
+  function addTitle() {
+    const t = titleDraft.replace(/\s+/g, " ").trim().slice(0, 30);
+    setTitleDraft("");
+    if (t && titles.length < MAX_TITLES && !titles.some((x) => x.toLowerCase() === t.toLowerCase())) setTitles([...titles, t]);
   }
 
   const link = handoff === "web_chat" ? `icapos.com/${agent.id}` : null;
@@ -61,7 +69,7 @@ export function NewCampaignTab({ onSaved }: Readonly<{ onSaved: () => void }>) {
   const filterTags = [
     who === "founder" ? "Founders" : "Investors", "1st connections", industry && `Industry: ${industry}`, locations && `Locations: ${locations}`,
     currentCompany && `Current company: ${currentCompany}`, pastCompany && `Past company: ${pastCompany}`, school && `School: ${school}`,
-    profileLanguage && `Language: ${profileLanguage}`, person && `Name: ${person}`, SORTS.find((x) => x.id === sort)?.label,
+    profileLanguage && `Language: ${profileLanguage}`, person && `Name: ${person}`, titles.length > 0 && `Headline: ${titles.join(", ")}`, SORTS.find((x) => x.id === sort)?.label,
   ].filter((x): x is string => !!x);
 
   async function save(thenStart: boolean) {
@@ -128,6 +136,20 @@ export function NewCampaignTab({ onSaved }: Readonly<{ onSaved: () => void }>) {
           </div>
 
           <Field label="Search by name (optional)"><input className={inputCls} value={person} onChange={(e) => setPerson(e.target.value)} placeholder="Name" /></Field>
+
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+            <p className="text-[13px] font-medium text-blue-900">Titles to keep</p>
+            <p className="mb-2 text-[12px] text-slate-600">Only message people whose LinkedIn headline says one of these words. Filled in for you, edit freely. Remove them all to message everyone the filters find.</p>
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              {titles.map((t) => (
+                <span key={t} className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-white px-2.5 py-0.5 text-[12px] text-blue-800">
+                  {t}
+                  <button type="button" aria-label={`Remove ${t}`} className="text-blue-500 hover:text-blue-800" onClick={() => setTitles(titles.filter((x) => x !== t))}>×</button>
+                </span>
+              ))}
+            </div>
+            <input className={inputCls} value={titleDraft} onChange={(e) => setTitleDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTitle(); } }} onBlur={addTitle} placeholder="Add a word, press Enter" />
+          </div>
 
           <div>
             <p className="mb-1.5 text-[12px] text-slate-500">Order, the same as LinkedIn&apos;s Sort by</p>

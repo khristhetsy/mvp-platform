@@ -230,6 +230,24 @@ describe("reading your own LinkedIn connections", () => {
     expect(progress).toMatchObject({ page: 2, found: 1, readToday: 1, done: false });
     expect(progress.searchUrl).toMatch(/^https:\/\/www\.linkedin\.com\/search\/results\/people/);
   });
+  it("keeps only people whose headline has a chosen title, and says how many it skipped", async () => {
+    network({ audience: { source: "linkedin_network", filters: { sort: "recent", titles: ["Founder", "CEO"] } } });
+    const r = await recordRead(account(), { campaignId: "n1", page: 1, filtersApplied: true, now: MON_10AM_LA, people: [
+      { slug: "ana", name: "Ana", headline: "Co-founder at Acme" }, { slug: "ben", name: "Ben", headline: "Software engineer" }, { slug: "cy", name: "Cy", headline: null },
+    ] });
+    expect(r.added).toBe(1);
+    expect(tables.linkedin_targets).toMatchObject([{ linkedin_slug: "ana" }]);
+    expect(tables.linkedin_events.at(-1)?.detail).toMatch(/2 skipped by title/);
+    expect((tables.linkedin_campaigns[0].audience as { progress: { page: number } }).progress.page).toBe(2);
+  });
+  it("keeps nobody and retries when titles are set but no headline could be read", async () => {
+    network({ audience: { source: "linkedin_network", filters: { sort: "recent", titles: ["Founder"] } } });
+    const r = await recordRead(account(), { campaignId: "n1", page: 1, filtersApplied: true, now: MON_10AM_LA, people: [{ slug: "ana", name: "Ana" }, { slug: "ben", name: "Ben" }] });
+    expect(r.added).toBe(0);
+    expect(tables.linkedin_targets).toHaveLength(0);
+    expect((tables.linkedin_campaigns[0].audience as { progress: { page: number } }).progress.page).toBe(1);
+    expect(tables.linkedin_events.at(-1)).toMatchObject({ kind: "failed" });
+  });
   it("keeps nobody when the filters could not be applied, and tries the same page later", async () => {
     network();
     const r = await recordRead(account(), { campaignId: "n1", page: 1, filtersApplied: false, people: [{ slug: "ben", name: "Ben" }], now: MON_10AM_LA, detail: "Industry filter not found" });

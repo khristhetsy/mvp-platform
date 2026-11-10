@@ -1,10 +1,10 @@
 // Audience read from your own LinkedIn 1st connections. No CRM and no import: the sender reads
 // a few pages of LinkedIn's own connection search each day and iCapOS keeps the people it finds.
 // Pure helpers only, so every rule is unit tested.
-import { MAX_RESULT_PAGES, READ_PAGES_PER_DAY } from "./limits";
+import { DEFAULT_TITLES, MAX_RESULT_PAGES, MAX_TITLES, READ_PAGES_PER_DAY } from "./limits";
 import { startOfLocalDay } from "./worker";
 
-export { MAX_RESULT_PAGES, READ_PAGES_PER_DAY };
+export { DEFAULT_TITLES, MAX_RESULT_PAGES, MAX_TITLES, READ_PAGES_PER_DAY };
 /** Minutes between two page reads. */
 export const READ_GAP_MINUTES = 10;
 /** Read more people only when fewer than this many are still waiting for a message. */
@@ -15,6 +15,8 @@ export type NetworkSort = (typeof SORTS)[number];
 export type NetworkFilters = {
   industry?: string; locations?: string; currentCompany?: string; pastCompany?: string; school?: string;
   profileLanguage?: string; name?: string; sort: NetworkSort;
+  /** Only people whose headline has one of these words are kept. Empty or missing keeps everyone. */
+  titles?: string[];
 };
 
 export type NetworkProgress = {
@@ -41,7 +43,35 @@ export function readNetworkFilters(audience: Record<string, unknown>): NetworkFi
     const v = f[k];
     if (typeof v === "string" && v.trim()) out[k] = v.trim().slice(0, 80);
   }
+  if (Array.isArray(f.titles)) {
+    const t = readTitles(f.titles);
+    if (t.length > 0) out.titles = t;
+  }
   return out;
+}
+
+/** Clean list of title words: trimmed, unique ignoring case, at most 12, each at most 30 characters. */
+export function readTitles(v: unknown): string[] {
+  if (!Array.isArray(v)) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const x of v) {
+    const t = typeof x === "string" ? x.replace(/\s+/g, " ").trim().slice(0, 30) : "";
+    if (t && !seen.has(t.toLowerCase())) { seen.add(t.toLowerCase()); out.push(t); }
+    if (out.length >= MAX_TITLES) break;
+  }
+  return out;
+}
+
+/** True when the headline contains one of the words as a whole word, ignoring case. No titles set keeps everyone. */
+export function matchesTitles(headline: string | null | undefined, titles: string[] | undefined): boolean {
+  if (!titles || titles.length === 0) return true;
+  if (!headline) return false;
+  const h = headline.toLowerCase();
+  return titles.some((t) => {
+    const w = t.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp(`(^|[^a-z0-9])${w}($|[^a-z0-9])`, "i").test(h);
+  });
 }
 
 /** True when any filter that LinkedIn applies through its filter panel is set (a name goes in the address instead). */
