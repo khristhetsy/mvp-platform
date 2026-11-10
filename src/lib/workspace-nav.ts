@@ -531,12 +531,14 @@ export const investorWorkspaceNavSections: WorkspaceNavSection[] = [
   {
     title: "Stage 1 · Onboarding",
     items: [
+      { href: "/investor/stages/onboarding", label: "Stage guide" },
       { href: "/investor/onboarding", label: "Profile" },
     ],
   },
   {
     title: "Stage 2 · Verification",
     items: [
+      { href: "/investor/stages/verification", label: "Stage guide" },
       { href: "/investor/verification", label: "Identity & accreditation" },
     ],
   },
@@ -546,6 +548,7 @@ export const investorWorkspaceNavSections: WorkspaceNavSection[] = [
     // Learning, Analytics) live in the Workspace group below so the stage reads
     // as a clean funnel step.
     items: [
+      { href: "/investor/stages/access", label: "Stage guide" },
       {
         href: "/investor/opportunities",
         label: "Private Market",
@@ -567,6 +570,7 @@ export const investorWorkspaceNavSections: WorkspaceNavSection[] = [
   {
     title: "Stage 4 · Manage deals",
     items: [
+      { href: "/investor/stages/manage", label: "Stage guide" },
       { href: "/investor/portfolio", label: "Portfolio" },
       { href: "/investor/spvs", label: "SPVs & closings" },
       { href: "/investor/activity", label: "Recent Activity" },
@@ -597,6 +601,7 @@ export const investorWorkspaceNavSections: WorkspaceNavSection[] = [
       { href: "/investor/analytics", label: "Analytics" },
       { href: "/credits", label: "iCFO Points" },
       { href: "/notifications", label: "Notifications" },
+      { href: "/investor/help", label: "Help & guides" },
       { href: "/investor/settings", label: "Settings" },
     ],
   },

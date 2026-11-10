@@ -23,6 +23,10 @@ const patchSchema = z.object({
   membership: z.string().max(120).nullable().optional(),
   job_position: z.string().max(120).nullable().optional(),
   language: z.string().max(60).nullable().optional(),
+  ein: z.string().max(40).nullable().optional(),
+  operator_licence: z.string().max(80).nullable().optional(),
+  curp: z.string().max(40).nullable().optional(),
+  member_portal_plan: z.string().max(80).nullable().optional(),
   street: z.string().max(200).nullable().optional(),
   street2: z.string().max(200).nullable().optional(),
   city: z.string().max(120).nullable().optional(),
@@ -40,9 +44,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const parsed = patchSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid update." }, { status: 400 });
   const scope = await getSalesScope(profile);
-  // Non-admins may only edit contacts they own or are assigned to.
+  // Non-admins may only edit contacts they own or are assigned to. Anyone with team view
+  // (manage_crm, e.g. Client Manager) is exempt: their scope.ownerId is null, so the
+  // assignee check below could never pass for them, even on contacts they own.
   const update = { ...parsed.data };
-  if (!scope.isManager) {
+  if (!scope.isManager && !scope.canViewTeam) {
     const existing = await getContactProfile(id);
     const c = existing?.contact;
     if (!c || !c.assignee_ids.includes(scope.ownerId ?? "")) return NextResponse.json({ error: "Not found." }, { status: 404 });
@@ -82,7 +88,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const parsed = noteSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "A note is required." }, { status: 400 });
   const scope = await getSalesScope(profile);
-  if (!scope.isManager) {
+  if (!scope.isManager && !scope.canViewTeam) {
     const existing = await getContactProfile(id);
     const c = existing?.contact;
     if (!c || !c.assignee_ids.includes(scope.ownerId ?? "")) return NextResponse.json({ error: "Not found." }, { status: 404 });
