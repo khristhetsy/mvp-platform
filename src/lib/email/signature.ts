@@ -30,8 +30,8 @@ export async function saveSignature(
 // ── Default iCFO signature ───────────────────────────────────────────────────
 
 // Self-contained, email-safe (inline styles only, no external image — a styled
-// "iCFO" monogram badge). Returned as the effective signature when a user hasn't
-// saved their own, and offered as a one-click template in the settings editor.
+// "iCFO" monogram badge). The default only for the accounts in
+// LEGACY_ICFO_SIGNATURE_OWNERS; everyone else gets buildOwnSignature().
 export const DEFAULT_ICFO_SIGNATURE = [
   '<div style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#1e3a5f;line-height:1.5;">',
   '<div style="font-weight:bold;color:#0f2147;">KHRIS THETSY</div>',
@@ -50,10 +50,87 @@ export const DEFAULT_ICFO_SIGNATURE = [
   "</div>",
 ].join("");
 
-/** The signature to use for a given saved value — falls back to the iCFO default. */
-export function effectiveSignature(saved: string | null | undefined): string {
-  const s = (saved ?? "").trim();
-  return s.length > 0 ? s : DEFAULT_ICFO_SIGNATURE;
+// ── Per-user default signature ───────────────────────────────────────────────
+
+/** Accounts that keep the original iCFO signature as their default. Everyone else
+ *  gets a default built from their own profile and company details. */
+const LEGACY_ICFO_SIGNATURE_OWNERS = new Set(["kthetsy@myicfos.com"]);
+
+export type SignatureIdentity = {
+  fullName?: string | null;
+  email?: string | null;
+  companyName?: string | null;
+  website?: string | null;
+};
+
+function escHtml(v: string): string {
+  return v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function httpUrl(v: string): string | null {
+  const t = v.trim();
+  if (!t) return null;
+  const u = /^https?:\/\//i.test(t) ? t : `https://${t}`;
+  try {
+    const parsed = new URL(u);
+    return parsed.protocol === "http:" || parsed.protocol === "https:" ? parsed.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+/** A signature from the user's own details. Lines with no data are left out. */
+export function buildOwnSignature(i: SignatureIdentity): string {
+  const rows: string[] = [];
+  const name = (i.fullName ?? "").trim();
+  const company = (i.companyName ?? "").trim();
+  const email = (i.email ?? "").trim();
+  const site = httpUrl(i.website ?? "");
+  if (name) rows.push(`<div style="font-weight:bold;color:#0f2147;">${escHtml(name)}</div>`);
+  if (company) rows.push(`<div style="color:#0c447c;font-weight:bold;">${escHtml(company)}</div>`);
+  if (email) rows.push(`<div><a href="mailto:${escHtml(email)}" style="color:#185fa5;">${escHtml(email)}</a></div>`);
+  if (site) rows.push(`<div><a href="${escHtml(site)}" style="color:#185fa5;">${escHtml((i.website ?? "").trim().replace(/^https?:\/\//i, "").replace(/\/$/, ""))}</a></div>`);
+  if (rows.length === 0) return "";
+  return `<div style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#1e3a5f;line-height:1.5;">${rows.join("")}</div>`;
+}
+
+/** The profile and company details a default signature is built from. */
+export async function loadSignatureIdentity(
+  supabase: SupabaseClient<Database>,
+  profile: { id: string; full_name?: string | null; email?: string | null },
+): Promise<SignatureIdentity> {
+  const db = raw(supabase);
+  type Co = { company_name: string | null; website: string | null };
+  let co = null as Co | null;
+  const own = await db.from("companies").select("company_name, website").eq("founder_id", profile.id).limit(1).maybeSingle();
+  co = (own.data as Co | null) ?? null;
+  if (!co) {
+    const m = await db.from("company_members").select("company_id").eq("user_id", profile.id).limit(1).maybeSingle();
+    const companyId = (m.data as { company_id: string } | null)?.company_id;
+    if (companyId) {
+      const c = await db.from("companies").select("company_name, website").eq("id", companyId).maybeSingle();
+      co = (c.data as Co | null) ?? null;
+    }
+  }
+  return { fullName: profile.full_name, email: profile.email, companyName: co?.company_name, website: co?.website };
+}
+
+/** The default signature for a user who has not saved their own. */
+export async function resolveDefaultSignature(
+  supabase: SupabaseClient<Database>,
+  profile: { id: string; full_name?: string | null; email?: string | null },
+): Promise<string> {
+  if (LEGACY_ICFO_SIGNATURE_OWNERS.has((profile.email ?? "").trim().toLowerCase())) return DEFAULT_ICFO_SIGNATURE;
+  return buildOwnSignature(await loadSignatureIdentity(supabase, profile));
+}
+
+/** The user's saved signature, or their own default when none is saved. */
+export async function resolveSignature(
+  supabase: SupabaseClient<Database>,
+  profile: { id: string; full_name?: string | null; email?: string | null },
+): Promise<string> {
+  const saved = (await loadSignature(supabase, profile.id)).trim();
+  return saved.length > 0 ? saved : resolveDefaultSignature(supabase, profile);
 }
 
 // ── Rich-signature helpers ──────────────────────────────────────────────────

@@ -42,7 +42,7 @@ export function SignatureSettings() {
         defaultRef.current = typeof data.default === "string" ? data.default : "";
         if (active) setHasTemplate(Boolean(defaultRef.current));
         // The editor div is always mounted now, so ref.current is available here.
-        // When nothing is saved yet, pre-fill with the iCFO template so it's visible.
+        // When nothing is saved yet, pre-fill with their own details so it's visible.
         const initial = sig ? (looksHtml(sig) ? sig : textToHtml(sig)) : defaultRef.current;
         if (active && ref.current) ref.current.innerHTML = initial;
       } finally {
@@ -55,7 +55,7 @@ export function SignatureSettings() {
   const loadTemplate = () => {
     if (ref.current && defaultRef.current) {
       ref.current.innerHTML = defaultRef.current;
-      setMsg({ text: "Loaded the iCFO template — edit, then save.", ok: true });
+      setMsg({ text: "Loaded your details. Edit, then save.", ok: true });
     }
   };
 
@@ -184,7 +184,7 @@ export function SignatureSettings() {
             </button>
             {hasTemplate ? (
               <button type="button" onClick={loadTemplate} disabled={loading} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50">
-                Load iCFO template
+                Reset to my details
               </button>
             ) : null}
             {loading ? <span className="text-xs text-slate-400">{t("loading_2")}</span> : null}

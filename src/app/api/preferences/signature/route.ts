@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireApiProfile } from "@/lib/api/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { loadSignature, saveSignature, sanitizeSignatureHtml, effectiveSignature, DEFAULT_ICFO_SIGNATURE } from "@/lib/email/signature";
+import { loadSignature, saveSignature, sanitizeSignatureHtml, resolveDefaultSignature } from "@/lib/email/signature";
 
 export const dynamic = "force-dynamic";
 
@@ -13,15 +13,16 @@ export async function GET(): Promise<Response> {
   const db = createServiceRoleClient();
   const signature = await loadSignature(db, auth.profile.id);
   // Founders and investors get NO iCFO template: their signature defaults blank
-  // and compose never falls back to the template. Staff/admin keep the template.
+  // and compose never falls back to the template. Staff/admin get a default built from their own details.
   const noTemplate = auth.profile.role === "founder" || auth.profile.role === "investor";
-  // `signature` = what the user saved (may be empty). `effective` = what compose
-  // should show (falls back to the iCFO default for staff only). `default` lets
-  // the settings editor offer a one-click reset to the template (staff only).
+  // `signature` = what the user saved (may be empty). `default` = a signature built
+  // from the user's own details (staff only). `effective` = what compose should show:
+  // the saved signature, else that default.
+  const own = noTemplate ? "" : await resolveDefaultSignature(db, auth.profile);
   return NextResponse.json({
     signature,
-    effective: noTemplate ? signature : effectiveSignature(signature),
-    default: noTemplate ? "" : DEFAULT_ICFO_SIGNATURE,
+    effective: noTemplate ? signature : signature.trim() || own,
+    default: own,
   });
 }
 

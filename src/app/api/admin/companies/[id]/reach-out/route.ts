@@ -5,7 +5,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { claudeComplete, isClaudeConfigured } from "@/lib/claude";
 import { createGmailDraft } from "@/lib/integrations/gmail-drafts";
-import { loadSignature, effectiveSignature } from "@/lib/email/signature";
+import { resolveSignature } from "@/lib/email/signature";
 import { deliverReachOut, gmailError, logOutreach } from "@/lib/founder-outreach/deliver-reach-out";
 import {
   cancelScheduledReachOut,
@@ -187,7 +187,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const supabase = await createServerSupabaseClient();
   let html = esc(input.body).replace(/\n/g, "<br>");
   if (input.appendSignature) {
-    const sig = effectiveSignature(await loadSignature(supabase, profile.id));
+    const sig = await resolveSignature(supabase, profile);
     html += `<br><br>${sig}`;
   }
 
