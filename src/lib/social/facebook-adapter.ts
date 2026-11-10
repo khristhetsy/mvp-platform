@@ -25,16 +25,20 @@ export const facebookAdapter: SocialAdapter = {
   async publish(v: Variant, a: Account): Promise<{ externalId: string; url: string }> {
     requireConfigured();
     if (!a.accessToken || !a.externalMemberId) throw new Error("Facebook account is missing a Page token or Page id.");
-    const res = await fetch(`${GRAPH_BASE}/${encodeURIComponent(a.externalMemberId)}/feed`, {
+    // With an image the post goes to /photos (the caption is the text); otherwise /feed.
+    const hasImage = Boolean(v.imageUrl);
+    const res = await fetch(`${GRAPH_BASE}/${encodeURIComponent(a.externalMemberId)}/${hasImage ? "photos" : "feed"}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: v.body, access_token: a.accessToken }),
+      body: JSON.stringify(hasImage ? { url: v.imageUrl, caption: v.body, access_token: a.accessToken } : { message: v.body, access_token: a.accessToken }),
     });
-    const data = (await res.json().catch(() => ({}))) as { id?: string; error?: { message?: string } };
-    if (!res.ok || !data.id) throw new Error(`Facebook publish ${res.status}: ${data.error?.message ?? res.statusText}`);
+    const data = (await res.json().catch(() => ({}))) as { id?: string; post_id?: string; error?: { message?: string } };
+    // A photo returns the photo id plus post_id (the feed story). Comments attach to the post.
+    const externalId = data.post_id ?? data.id;
+    if (!res.ok || !externalId) throw new Error(`Facebook publish ${res.status}: ${data.error?.message ?? res.statusText}`);
     // Page feed post id is `{pageId}_{postId}`.
-    const url = `https://www.facebook.com/${data.id}`;
-    return { externalId: data.id, url };
+    const url = `https://www.facebook.com/${externalId}`;
+    return { externalId, url };
   },
 
   async comment(externalId: string, text: string, a: Account): Promise<void> {

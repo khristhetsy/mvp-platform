@@ -19,8 +19,8 @@ const schema = z.object({
   // ISO datetime. When present the post is scheduled (queued to publish at that time)
   // and mirrored to Google Calendar; when absent + approved it's parked (undated).
   scheduledAt: z.string().datetime().nullish(),
-  variants: z.array(z.object({ accountId: z.string().uuid(), body: z.string().min(1).max(4000) })).min(1).max(6),
-});
+  variants: z.array(z.object({ accountId: z.string().uuid(), body: z.string().max(4000) })).min(1).max(6),
+}).refine((d) => Boolean(d.imageUrl) || d.variants.every((v) => v.body.trim().length > 0), { message: "Each variant needs text unless the post has an image." });
 
 // Create a post + its per-account variants. Variants land 'queued' only when the
 // post is approved (v1 rule: approve before publishing); otherwise the post stays
