@@ -69,7 +69,7 @@ export default async function TalkShowPage({ params }: { params: Promise<{ slug:
   // Meeting SDK isn't configured yet (no Client Secret), the stage component
   // falls back to the Join Zoom link below — no build-time flag needed.
 
-  // The stage renders in the shared Main-Stage player: an embeddable link
+  // An embeddable external link skips the Zoom stage and plays inline. The stage renders in the shared Main-Stage player: an embeddable link
   // (Vimeo/YouTube/Whereby) plays inline; otherwise the Talk Show joins on the
   // host's fixed Zoom room. `joinUrl` also drives the call-in room below.
   const externalEmbed =
@@ -126,7 +126,7 @@ export default async function TalkShowPage({ params }: { params: Promise<{ slug:
                 <div>
                   {stage ? (
                     <>
-                      {isLive ? (
+                      {isLive && !externalEmbed ? (
                         <TalkShowMeetingStage
                           sessionId={stage.id}
                           fallback={
@@ -179,7 +179,7 @@ export default async function TalkShowPage({ params }: { params: Promise<{ slug:
                         eventId={event.id}
                         me={me}
                         isStaff={isStaffViewer}
-                        roomUrl={joinUrl ?? stage.videoRef}
+                        roomUrl={joinUrl ?? (externalEmbed ? null : stage.videoRef)}
                         initialQueue={queue}
                       />
                     ) : (
