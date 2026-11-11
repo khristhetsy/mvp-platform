@@ -1,5 +1,5 @@
 "use client";
-import { formatPhone, telHref } from "@/lib/phone";
+import { formatPhone, smsHref, telHref } from "@/lib/phone";
 
 import { useState, useEffect } from "react";
 import { OdooStageBar } from "@/components/ui/OdooStageBar";
@@ -27,6 +27,10 @@ const menuHead: React.CSSProperties = { fontSize: 10, textTransform: "uppercase"
 const menuNote: React.CSSProperties = { marginLeft: "auto", paddingLeft: 8, fontSize: 11, color: "var(--muted-foreground)", maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" };
 const menuOff: React.CSSProperties = { ...menuItem, color: "var(--muted-foreground)", cursor: "default", opacity: 0.6 };
 const menuRule: React.CSSProperties = { borderTop: "0.5px solid #eef1f5", margin: "4px 0" };
+
+// Header action buttons (same look as the Contact page).
+const actBtn: React.CSSProperties = { fontSize: 11.5, fontWeight: 600, borderRadius: 7, padding: "7px 13px", textDecoration: "none" };
+const actOff: React.CSSProperties = { fontSize: 11.5, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 7, padding: "7px 13px", opacity: 0.5, cursor: "not-allowed" };
 
 const money = (c: number | null) => (c == null ? "—" : `$${(c / 100).toLocaleString()}`);
 function mrr(o: Pick<Opp, "value_cents" | "billing">): string {
@@ -359,8 +363,24 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
                     </div>
                   )}
                 </div>
-                <div style={{ display: "flex", gap: 2, color: "#EF9F27", fontSize: 16, cursor: "pointer" }}>
-                  {[1, 2, 3].map((n) => <span key={n} onClick={() => patch({ priority: o.priority === n ? 0 : n })} style={{ color: n <= o.priority ? "#EF9F27" : "var(--muted-foreground)" }}><i className="ti ti-star-filled" aria-hidden="true" /></span>)}
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 12, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {o.contact_phone
+                      ? <a href={telHref(o.contact_phone) ?? `tel:${o.contact_phone.replace(/[^+\d]/g, "")}`} target="_blank" rel="noopener noreferrer" onClick={() => logTouch("call")} style={{ ...actBtn, color: "#fff", background: "#0F6E56", border: "none" }}><i className="ti ti-phone" aria-hidden="true" /> Call</a>
+                      : <span title="No phone number on this contact" style={actOff}><i className="ti ti-phone" aria-hidden="true" /> Call</span>}
+                    {o.contact_email
+                      ? <a href={`/admin/inbox?compose=1&to=${encodeURIComponent(o.contact_email)}`} target="_blank" rel="noopener noreferrer" onClick={() => logTouch("email")} style={{ ...actBtn, color: "#4338CA", background: "#EEF2FF", border: "0.5px solid #C7D2FE" }}><i className="ti ti-mail" aria-hidden="true" /> Email</a>
+                      : <span title="No email on this contact" style={actOff}><i className="ti ti-mail" aria-hidden="true" /> Email</span>}
+                    {o.contact_phone
+                      ? <a href={smsHref(o.contact_phone) ?? `sms:${o.contact_phone.replace(/[^+\d]/g, "")}`} target="_blank" rel="noopener noreferrer" onClick={() => logTouch("message")} style={{ ...actBtn, color: "#854F0B", background: "#FAEEDA", border: "0.5px solid #F4D9A0" }}><i className="ti ti-message" aria-hidden="true" /> Message</a>
+                      : <span title="No phone number on this contact" style={actOff}><i className="ti ti-message" aria-hidden="true" /> Message</span>}
+                    {o.contact_crm_id
+                      ? <Link href={`/admin/sales/contracts/send?contact=${o.contact_crm_id}`} style={{ ...actBtn, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4" }}><i className="ti ti-signature" aria-hidden="true" /> Contracts</Link>
+                      : <span title="No linked contact" style={actOff}><i className="ti ti-signature" aria-hidden="true" /> Contracts</span>}
+                  </div>
+                  <div style={{ display: "flex", gap: 2, color: "#EF9F27", fontSize: 16, cursor: "pointer" }}>
+                    {[1, 2, 3].map((n) => <span key={n} onClick={() => patch({ priority: o.priority === n ? 0 : n })} style={{ color: n <= o.priority ? "#EF9F27" : "var(--muted-foreground)" }}><i className="ti ti-star-filled" aria-hidden="true" /></span>)}
+                  </div>
                 </div>
               </div>
 
