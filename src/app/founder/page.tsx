@@ -29,6 +29,7 @@ import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { loadBusinessPlanInputs } from "@/lib/ai/business-plan-inputs";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
 import { requireRole } from "@/lib/supabase/auth";
 import { getJourneyOverview } from "@/lib/founder/stage-gate-status";
 import { FounderNextActionHero } from "@/components/founder/FounderNextActionHero";
@@ -81,6 +82,8 @@ export default async function FounderDashboardPage() {
 
   const supabase = await createServerSupabaseClient();
   const serviceSupabase = createServiceRoleClient();
+  // Admin switch (Feature Controls, Pledged amounts). Off hides every pledge figure below.
+  const pledgesOn = isFeatureEnabled(await loadFeatureFlags(supabase), "founder", "pledged");
   // Funding tile falls back to the business plan raise amount, like the public one-pager.
   const planRaiseAmount =
     company && !company.funding_amount
@@ -112,7 +115,7 @@ export default async function FounderDashboardPage() {
   const learning = learningAccess.allowed ? await loadFounderLearningWorkspace(profile) : null;
 
   let pledgeSummary = { totalPledged: 0, investorCount: 0, currency: "USD" };
-  if (company) {
+  if (company && pledgesOn) {
     const pledgeCompanyId = await getFounderPledgeCompanyId(serviceSupabase, profile.id, company.id);
     pledgeSummary = await getCompanyPledgeSummary(serviceSupabase, pledgeCompanyId);
   }
@@ -221,7 +224,9 @@ export default async function FounderDashboardPage() {
         },
         { label: "Documents", value: `${readinessScore}%`, valueClass: readinessScore >= 75 ? "text-emerald-600" : undefined, sub: readinessDetail, href: "/founder/readiness" },
         { label: "Matched investors", value: String(matchedInvestorCount), sub: "View pipeline →", href: "/founder/matches" },
-        { label: "Pledged", value: formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency), sub: company?.funding_amount ? `of ${formatPledgeTotal(Number(company.funding_amount))}` : undefined, href: "/founder/deal-room" },
+        ...(pledgesOn
+          ? [{ label: "Pledged", value: formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency), sub: company?.funding_amount ? `of ${formatPledgeTotal(Number(company.funding_amount))}` : undefined, href: "/founder/deal-room" }]
+          : []),
         { label: "Investor activity", value: String(investorActivityTotal), sub: "Signals & intros", href: "/founder/matches" },
       ]
     : [];
@@ -341,9 +346,11 @@ export default async function FounderDashboardPage() {
           </div>
 
           {/* Round close tracker */}
-          <div className="mb-8">
-            <RoundCloseTracker />
-          </div>
+          {pledgesOn ? (
+            <div className="mb-8">
+              <RoundCloseTracker />
+            </div>
+          ) : null}
 
           <TipOfTheDay profileId={profile.id} audience="founder" />
 
@@ -432,15 +439,17 @@ export default async function FounderDashboardPage() {
           <section className="mb-8 grid gap-5 xl:grid-cols-2">
             <WorkspacePanel title={t("capital_raise_overview_2")} subtitle={t("non_binding_marketplace_interest")}>
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-lg px-4 py-3 ring-1 ring-[#EEEDFE]" style={{ background: "#EEEDFE" }}>
-                  <p className="text-xs font-medium" style={{ color: "#2E78F5" }}>{t("total_pledged")}</p>
-                  <p className="mt-1.5 font-mono text-2xl font-semibold" style={{ color: "#1A6CE4" }}>
-                    {formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)}
-                  </p>
-                  <p className="mt-1 text-[11px]" style={{ color: "#2E78F5" }}>
-                    {pledgeSummary.investorCount} investor{pledgeSummary.investorCount === 1 ? "" : "s"}
-                  </p>
-                </div>
+                {pledgesOn ? (
+                  <div className="rounded-lg px-4 py-3 ring-1 ring-[#EEEDFE]" style={{ background: "#EEEDFE" }}>
+                    <p className="text-xs font-medium" style={{ color: "#2E78F5" }}>{t("total_pledged")}</p>
+                    <p className="mt-1.5 font-mono text-2xl font-semibold" style={{ color: "#1A6CE4" }}>
+                      {formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)}
+                    </p>
+                    <p className="mt-1 text-[11px]" style={{ color: "#2E78F5" }}>
+                      {pledgeSummary.investorCount} investor{pledgeSummary.investorCount === 1 ? "" : "s"}
+                    </p>
+                  </div>
+                ) : null}
                 <div className="rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
                   <p className="text-xs font-medium text-slate-600">{t("funding_target")}</p>
                   <p className="mt-1.5 font-mono text-2xl font-semibold text-slate-950">
@@ -451,7 +460,7 @@ export default async function FounderDashboardPage() {
                   </p>
                 </div>
               </div>
-              {company?.funding_amount && Number(company.funding_amount) > 0 ? (
+              {pledgesOn && company?.funding_amount && Number(company.funding_amount) > 0 ? (
                 <div className="mt-4">
                   <div className="mb-1 flex items-center justify-between">
                     <span className="text-[11px] text-slate-500">{t("raise_progress")}</span>
@@ -470,9 +479,11 @@ export default async function FounderDashboardPage() {
                   </div>
                 </div>
               ) : null}
-              <p className="mt-4 text-xs leading-5 text-slate-500">
-                Indications of interest are indicative and not legally committed investment.
-              </p>
+              {pledgesOn ? (
+                <p className="mt-4 text-xs leading-5 text-slate-500">
+                  Indications of interest are indicative and not legally committed investment.
+                </p>
+              ) : null}
             </WorkspacePanel>
 
             {investorActivity ? (

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireInvestorApprovedApi } from "@/lib/api/investor";
 import { writeAuditLog } from "@/lib/data/audit";
+import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
 import { recordInvestorCrmActivity } from "@/lib/data/investor-crm";
 import { submitInvestorPledge } from "@/lib/data/investor-pledges";
 import { notifyFounderInvestorPledge } from "@/lib/notifications/investor-events";
@@ -11,6 +12,12 @@ export async function POST(request: Request) {
 
   if ("error" in auth) {
     return auth.error;
+  }
+
+  // Admin switch (Feature Controls, Pledged amounts): off refuses new indicated amounts.
+  const flags = await loadFeatureFlags(auth.serviceSupabase);
+  if (!isFeatureEnabled(flags, "investor", "pledged")) {
+    return NextResponse.json({ error: "Indicated amounts are not available right now." }, { status: 403 });
   }
 
   const body = await request.json().catch(() => null);
