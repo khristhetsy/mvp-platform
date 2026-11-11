@@ -10,7 +10,6 @@ import { PLAN_LABELS } from "@/lib/subscriptions/plans";
 import { claudeComplete, isClaudeConfigured, CLAUDE_HAIKU, type ClaudeMessage } from "@/lib/claude";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
-import { priceLabel, type PricingCatalog } from "@/lib/subscriptions/pricing-catalog";
 import { loadPricing } from "@/lib/subscriptions/pricing-server";
 import { getSupportSettings } from "@/lib/support/settings";
 import { submitSupportRequest } from "@/lib/support/submit";
@@ -18,7 +17,9 @@ import { getInvestorProfileByProfileId } from "@/lib/investor/profile";
 import { loadInvestorStageView } from "@/lib/investor-journey/load";
 import { INVESTOR_STAGE_META } from "@/lib/investor-journey/stages";
 import { logSupportEvent, type AiCost } from "@/lib/support/events";
-import { premiumCheckoutReady } from "@/lib/billing/buy-links";
+import { taughtAnswerFor } from "@/lib/ir-agent/scripted";
+import { EMPTY_TRAINING, HANDOFF_TAG, buildSystem } from "@/lib/support/assistant-prompt";
+import { loadAssistantTraining } from "@/lib/support/assistant-training";
 
 export const dynamic = "force-dynamic";
 
@@ -33,15 +34,6 @@ const schema = z.object({
     .min(1)
     .max(20),
 });
-
-/** The model's signal that a person should answer. Never shown to the founder. */
-const HANDOFF_TAG = "[HANDOFF]";
-
-// Grounds the assistant in what iCapOS actually is, so it doesn't invent
-// features. Kept short and honest; account-specific facts come from context.
-const productBrief = (catalog: PricingCatalog) => `iCapOS is a capital-readiness and investor-distribution platform for founders. A founder's raise moves through four stages, in order: Stage 1 Onboarding, Stage 2 Preparation, Stage 3 Marketing, Stage 4 Closing. The tools — Capital Readiness Rating (CRR), valuation, data room/documents, and e-learning — are included on every paid plan. What the paid plans add is distribution: your matched investors are revealed and your materials are sent to them. Plans are Basic (${priceLabel(catalog, "founder_basic")}/mo, up to 5 matched investors, Investor Conference Virtual Event access, DIY outreach), Professional (${priceLabel(catalog, "founder_professional")}/mo, up to 50, monthly live presentation slot, investor intro requests), ${premiumCheckoutReady() ? `Premium (${priceLabel(catalog, "founder_premium")}/mo, everything in Professional with the iCFO team running the investor outreach for the founder), ` : ""}and the SPV Program (done-for-you, 3-month minimum, pricing discussed on a call — never quote a figure). Investor accounts are free. There are no success fees, no carry, and no commission on an introduction. Investor interest shown on the platform is a non-binding indication of interest, not a commitment.
-
-The Market Claim Grader IS the platform's market research tool. If a founder asks where to find "market research", "market analysis", "market sizing", "TAM/SAM/SOM", or anything similar, point them to the Market Claim Grader, located under Stage 2 — Preparation in the left menu (Market claim grader). It grades the market claims in their materials and shows where to tighten them.`;
 
 // The investor side of the same assistant. Grounded only in what the investor
 // workspace actually does, drawn from the four stage guides.
@@ -67,40 +59,6 @@ function buildInvestorSystem(ctx: { name: string; stage: string | null }): strin
     "",
     "Hand off instead of answering:",
     `- If the investor asks about a specific deal's terms or documents, their own verification or accreditation status or documents, their commitments or SPV paperwork, reports a bug or error, or asks anything specific to their account, do NOT answer. Reply with exactly ${HANDOFF_TAG} followed by a 3 to 6 word topic, and nothing else. Example: ${HANDOFF_TAG} Accreditation document review`,
-    "- Only answer how-to questions about using iCapOS from the product facts above. If you'd have to guess, hand off.",
-  ]
-    .filter(Boolean)
-    .join("\n");
-}
-
-function buildSystem(ctx: {
-  name: string;
-  company: string | null;
-  stage: string | null;
-  plan: string | null;
-  pricing: PricingCatalog;
-}): string {
-  return [
-    "You are the iCapOS in-app support assistant, helping a founder use the platform to run their raise.",
-    "",
-    "About the product:",
-    productBrief(ctx.pricing),
-    "",
-    "Who you're talking to:",
-    `- Name: ${ctx.name}`,
-    ctx.company ? `- Company: ${ctx.company}` : "",
-    ctx.stage ? `- Current stage: ${ctx.stage}` : "",
-    ctx.plan ? `- Plan: ${ctx.plan}` : "",
-    "",
-    "How to help:",
-    "- Be concise, warm, and plain-spoken. Prefer 2-5 sentences. Use the founder's stage and plan to make answers specific.",
-    "- Point them to the right place in the app by name (e.g. Stage 2 — Preparation, the Documents area, Settings → Billing & subscription, the How it works guides).",
-    "- You can explain how features work, what unlocks a stage, what a plan includes, and what to do next. You cannot see private data you weren't given here, and you cannot take actions on their account — say so plainly when relevant.",
-    "- Do NOT give legal, tax, securities, or investment advice. iCapOS is not a broker-dealer, placement agent, or investment adviser. For those questions, suggest they consult a qualified professional.",
-    "- If you don't know, or the request needs a human (billing changes, something account-specific, or anything you can't resolve), say so and tell them to use “Hand off to the iCapOS team” below the chat.",
-    "",
-    "Hand off instead of answering:",
-    `- If the founder asks about their own numbers, financial model, projections, valuation or raise terms, asks for a review of their documents, wants a billing or plan change or refund, reports a bug or error, or asks anything specific to their account, do NOT answer. Reply with exactly ${HANDOFF_TAG} followed by a 3 to 6 word topic, and nothing else. Example: ${HANDOFF_TAG} Financial model review`,
     "- Only answer how-to questions about using iCapOS from the product facts above. If you'd have to guess, hand off.",
   ]
     .filter(Boolean)
@@ -196,6 +154,23 @@ export async function POST(req: NextRequest): Promise<Response> {
   // Support queue, Notifications, AI: "Answer founders directly" off sends every question to a person.
   if (!settings.ai.answerFounders) return handOff("", null);
 
+  // Founders only. What an admin taught it (Admin, Support, Train assistant); the investor
+  // assistant is untouched. Best effort: a miss means the assistant answers as it did before.
+  const training = isInvestor ? EMPTY_TRAINING : await loadAssistantTraining();
+  const taughtHit = isInvestor ? null : taughtAnswerFor(lastQuestion, training.taught);
+  if (taughtHit) {
+    await logSupportEvent({
+      requestId: null,
+      founderId: profile.id,
+      actor: "ai",
+      kind: "ai_answer",
+      summary: "Assistant gave a taught answer",
+      detail: lastQuestion,
+      meta: { source: "taught", answerId: taughtHit.id },
+    });
+    return NextResponse.json({ reply: taughtHit.answer, answered: true });
+  }
+
   if (!isClaudeConfigured()) {
     return NextResponse.json({
       reply:
@@ -203,7 +178,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     });
   }
 
-  const system = isInvestor ? buildInvestorSystem({ name, stage }) : buildSystem({ name, company, stage, plan, pricing: await loadPricing() });
+  const system = isInvestor ? buildInvestorSystem({ name, stage }) : buildSystem({ name, company, stage, plan, pricing: await loadPricing(), training });
   const messages: ClaudeMessage[] = parsed.data.messages.map((m) => ({ role: m.role, content: m.content }));
 
   try {
