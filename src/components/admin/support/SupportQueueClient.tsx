@@ -221,6 +221,9 @@ export function SupportQueueClient({
             <Link href="/admin/support/log" className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-slate-600 hover:bg-slate-50">
               <i className="ti ti-list-details" aria-hidden="true" /> Support log
             </Link>
+            <Link href="/admin/support/train" className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-slate-600 hover:bg-slate-50">
+              <i className="ti ti-sparkles" aria-hidden="true" /> Train assistant
+            </Link>
           </div>
         </nav>
 
@@ -265,6 +268,9 @@ export function SupportQueueClient({
                   </button>
                   <Link href="/admin/support/log" className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-slate-700 hover:bg-slate-50">
                     <i className="ti ti-list-details" aria-hidden="true" /> Support log
+                  </Link>
+                  <Link href="/admin/support/train" className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-slate-700 hover:bg-slate-50">
+                    <i className="ti ti-sparkles" aria-hidden="true" /> Train assistant
                   </Link>
                 </div>
               ) : null}
