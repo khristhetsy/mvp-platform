@@ -15,6 +15,8 @@ export interface FeatureDef {
   group: string;
   /** Nav hrefs this feature governs, per audience. Disjoint within an audience. */
   hrefs: Partial<Record<FeatureAudience, string[]>>;
+  /** Audiences that get a switch for a feature that governs no nav href (an in-page feature such as Pledged). */
+  audiences?: FeatureAudience[];
 }
 
 /**
@@ -64,6 +66,8 @@ export const FEATURES: FeatureDef[] = [
   } },
   { key: "events", label: "Events", group: "Fundraising & market", hrefs: { founder: ["/events", "/founder/events"], investor: ["/events"], admin: ["/admin/events", "/admin/events/applications", "/admin/events/sponsors", "/admin/events/analytics", "/admin/events/gamification"] } },
   { key: "partner_score", label: "Partner Score", group: "Fundraising & market", hrefs: { investor: ["/investor/partner-score"] } },
+  // In-page feature, no nav href. Off hides pledge amounts and totals wherever a screen checks it.
+  { key: "pledged", label: "Pledged amounts", group: "Fundraising & market", hrefs: {}, audiences: ["founder", "investor", "admin"] },
 
   // ── Readiness & documents ──────────────────────────────────────────────
   { key: "readiness", label: "Readiness", group: "Readiness & documents", hrefs: { founder: ["/founder/readiness", "/founder/readiness/wizard", "/founder/readiness/diligence", "/founder/readiness/documents", "/founder/report"] } },
@@ -133,14 +137,15 @@ for (const f of FEATURES) {
   }
 }
 
-/** Features that exist for an audience (have at least one governed href). */
+/** Features that exist for an audience (a governed href, or listed in the feature's `audiences`). */
 export function featuresForAudience(audience: FeatureAudience): FeatureKey[] {
-  return FEATURE_KEYS.filter((f) => (FEATURE_HREFS[audience][f]?.length ?? 0) > 0);
+  return FEATURE_KEYS.filter((f) => appliesTo(audience, f));
 }
 
 /** Whether a feature applies to an audience (drives the matrix UI). */
 export function appliesTo(audience: FeatureAudience, feature: FeatureKey): boolean {
-  return (FEATURE_HREFS[audience][feature]?.length ?? 0) > 0;
+  if ((FEATURE_HREFS[audience][feature]?.length ?? 0) > 0) return true;
+  return FEATURES.some((f) => f.key === feature && (f.audiences ?? []).includes(audience));
 }
 
 /** Flat map keyed `${audience}:${feature}` → enabled. Missing key = enabled. */
