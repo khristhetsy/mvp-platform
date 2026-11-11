@@ -2,7 +2,6 @@
 // sender should wait for each reason. No database here, so every rule is unit tested.
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import type { SendDecision } from "./safety";
-import type { NetworkFilters } from "./network";
 
 /** At least this long between two actions on the account, whatever the sender asks. */
 export const MIN_GAP_MINUTES = 4;
@@ -62,7 +61,7 @@ export type WaitReason = "paused" | "not_started" | "outside_hours" | "daily_cap
 export type WorkerNext =
   | { action: "invite"; targetId: string; slug: string; text: string; variantId: string; contactName: string | null }
   | { action: "message"; targetId: string; slug: string; text: string; contactName: string | null }
-  | { action: "read"; campaignId: string; page: number; searchUrl: string | null; filters: NetworkFilters }
+  | { action: "read"; campaignId: string; page: number; searchUrl: string | null; filters: Record<string, unknown> }
   | { action: "wait"; reason: WaitReason; retryMinutes: number }
   | { action: "stop"; reason: string };
 

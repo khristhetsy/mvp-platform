@@ -1,10 +1,10 @@
 // Audience read from your own LinkedIn 1st connections. No CRM and no import: the sender reads
 // a few pages of LinkedIn's own connection search each day and iCapOS keeps the people it finds.
 // Pure helpers only, so every rule is unit tested.
-import { DEFAULT_TITLES, MATCH_CHECK_MAX_MINUTES, MAX_RESULT_PAGES, MAX_TITLES, READ_PAGES_PER_DAY, matchKey } from "./limits";
+import { DEFAULT_TITLES, EXTENSION_FRESH_MINUTES, FACET_KEYS, MATCH_CHECK_MAX_MINUTES, MAX_RESULT_PAGES, MAX_TITLES, READ_PAGES_PER_DAY, cleanValues, matchKey } from "./limits";
 import { startOfLocalDay } from "./worker";
 
-export { DEFAULT_TITLES, MATCH_CHECK_MAX_MINUTES, MAX_RESULT_PAGES, MAX_TITLES, READ_PAGES_PER_DAY, matchKey };
+export { DEFAULT_TITLES, EXTENSION_FRESH_MINUTES, MATCH_CHECK_MAX_MINUTES, MAX_RESULT_PAGES, MAX_TITLES, READ_PAGES_PER_DAY, matchKey };
 /** Minutes between two page reads. */
 export const READ_GAP_MINUTES = 10;
 /** Read more people only when fewer than this many are still waiting for a message. */
@@ -13,8 +13,9 @@ export const SORTS = ["recent", "first", "last"] as const;
 export type NetworkSort = (typeof SORTS)[number];
 
 export type NetworkFilters = {
-  industry?: string; locations?: string; currentCompany?: string; pastCompany?: string; school?: string;
-  profileLanguage?: string; name?: string; sort: NetworkSort;
+  /** Each of these takes several values. A person matches when they fit any one value of a filter. */
+  industry?: string[]; locations?: string[]; currentCompany?: string[]; pastCompany?: string[]; school?: string[];
+  profileLanguage?: string[]; name?: string; sort: NetworkSort;
   /** Only people whose headline has one of these words are kept. Empty or missing keeps everyone. */
   titles?: string[];
 };
@@ -34,20 +35,40 @@ export function isNetworkAudience(audience: Record<string, unknown> | null | und
   return audience?.source === "linkedin_network";
 }
 
-const TEXT_KEYS = ["industry", "locations", "currentCompany", "pastCompany", "school", "profileLanguage", "name"] as const;
-
+/** Reads saved filters. Campaigns saved before several values existed hold one text per filter, and that still reads as a list of one. */
 export function readNetworkFilters(audience: Record<string, unknown>): NetworkFilters {
   const f = (audience.filters ?? {}) as Record<string, unknown>;
   const out: NetworkFilters = { sort: (SORTS as readonly string[]).includes(f.sort as string) ? (f.sort as NetworkSort) : "recent" };
-  for (const k of TEXT_KEYS) {
-    const v = f[k];
-    if (typeof v === "string" && v.trim()) out[k] = v.trim().slice(0, 80);
+  for (const k of FACET_KEYS) {
+    const v = cleanValues(f[k]);
+    if (v.length > 0) out[k] = v;
   }
+  if (typeof f.name === "string" && f.name.trim()) out.name = f.name.trim().slice(0, 80);
   if (Array.isArray(f.titles)) {
     const t = readTitles(f.titles);
     if (t.length > 0) out.titles = t;
   }
   return out;
+}
+
+/**
+ * The shape sent to the extension. A filter with one value goes as plain text, the shape every installed extension already reads.
+ * Only a filter with several values goes as a list, and that needs extension 0.2.0 or newer.
+ */
+export function forExtension(f: NetworkFilters): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...f };
+  for (const k of FACET_KEYS) {
+    const v = f[k];
+    if (v && v.length === 1) out[k] = v[0];
+  }
+  return out;
+}
+
+/** True when the extension asked iCapOS for work recently enough to count as running. */
+export function isExtensionFresh(lastSeenAt: string | null | undefined, senderKeySet: boolean, now: Date): boolean {
+  if (!senderKeySet || !lastSeenAt) return false;
+  const t = new Date(lastSeenAt).getTime();
+  return Number.isFinite(t) && now.getTime() - t <= EXTENSION_FRESH_MINUTES * 60_000;
 }
 
 /** Clean list of title words: trimmed, unique ignoring case, at most 12, each at most 30 characters. */
@@ -76,7 +97,7 @@ export function matchesTitles(headline: string | null | undefined, titles: strin
 
 /** True when any filter that LinkedIn applies through its filter panel is set (a name goes in the address instead). */
 export function needsFilterPanel(f: NetworkFilters): boolean {
-  return !!(f.industry || f.locations || f.currentCompany || f.pastCompany || f.school || f.profileLanguage) || f.sort !== "recent";
+  return FACET_KEYS.some((k) => (f[k]?.length ?? 0) > 0) || f.sort !== "recent";
 }
 
 export function readProgress(audience: Record<string, unknown>): NetworkProgress {

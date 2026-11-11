@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "iCapOS LinkedIn Connect",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Connects your own LinkedIn session to iCapOS so approved invitations can be filled in on your computer. Your LinkedIn password never leaves LinkedIn.",
   "permissions": ["alarms", "storage", "tabs", "scripting"],
   "host_permissions": ["https://www.linkedin.com/*", "https://icapos.com/*", "https://*.icapos.com/*"],

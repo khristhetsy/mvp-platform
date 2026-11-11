@@ -8,12 +8,12 @@ describe("network audience", () => {
   it("recognises it and reads filters safely", () => {
     expect(isNetworkAudience({ source: "linkedin_network" })).toBe(true);
     expect(isNetworkAudience({ source: "crm" })).toBe(false);
-    expect(readNetworkFilters({ filters: { industry: " Banking ", school: "", sort: "bogus", name: 5 } })).toEqual({ industry: "Banking", sort: "recent" });
+    expect(readNetworkFilters({ filters: { industry: " Banking ", school: "", sort: "bogus", name: 5 } })).toEqual({ industry: ["Banking"], sort: "recent" });
     expect(readNetworkFilters({ filters: { sort: "last" } }).sort).toBe("last");
   });
   it("needs the filter panel only for facets or a sort", () => {
     expect(needsFilterPanel({ sort: "recent", name: "Ana" })).toBe(false);
-    expect(needsFilterPanel({ sort: "recent", school: "MIT" })).toBe(true);
+    expect(needsFilterPanel({ sort: "recent", school: ["MIT"] })).toBe(true);
     expect(needsFilterPanel({ sort: "first" })).toBe(true);
   });
   it("only follows LinkedIn people search addresses", () => {
@@ -101,11 +101,16 @@ describe("titles to keep", () => {
 import { matchKey as mk, matchState, readMatchCheck } from "./network";
 
 describe("matches on LinkedIn count", () => {
-  const base = { id: "c1", status: "pending", requestedAt: "2026-11-10T10:00:00Z", key: "k", filters: { industry: "Venture", sort: "recent" }, total: null, detail: null, doneAt: null };
+  const base = { id: "c1", status: "pending", requestedAt: "2026-11-10T10:00:00Z", key: "k", filters: { industry: ["Venture"], sort: "recent" }, total: null, detail: null, doneAt: null };
   it("keys only the filters LinkedIn counts with, ignoring case and spaces", () => {
     expect(mk({ industry: " Venture ", titles: ["CEO"], sort: "first" })).toBe(mk({ industry: "venture" }));
     expect(mk({ industry: "a" })).not.toBe(mk({ industry: "b" }));
     expect(mk({ name: "Ann" })).not.toBe(mk({ school: "Ann" }));
+  });
+  it("keys several values the same whatever their order, and one value the same as the old single text", () => {
+    expect(mk({ industry: ["Banking", "Insurance"] })).toBe(mk({ industry: ["insurance", " Banking "] }));
+    expect(mk({ industry: ["Banking"] })).toBe(mk({ industry: "Banking" }));
+    expect(mk({ industry: ["Banking", "Insurance"] })).not.toBe(mk({ industry: ["Banking"] }));
   });
   it("reads a stored check safely", () => {
     expect(readMatchCheck(null)).toBeNull();
@@ -120,5 +125,42 @@ describe("matches on LinkedIn count", () => {
     expect(matchState(mc, new Date("2026-11-10T10:09:00Z"))).toBe("pending");
     expect(matchState(mc, new Date("2026-11-10T10:11:00Z"))).toBe("unanswered");
     expect(matchState(readMatchCheck({ ...base, status: "done", total: 5 }), new Date("2026-11-10T12:00:00Z"))).toBe("done");
+  });
+});
+
+import { forExtension, isExtensionFresh } from "./network";
+import { MAX_FILTER_VALUES } from "./limits";
+
+describe("filters with several values", () => {
+  it("reads a list, an old single text, and cleans both", () => {
+    const f = readNetworkFilters({ filters: { industry: [" Banking ", "banking", "", "Insurance"], locations: "France", school: [] } });
+    expect(f.industry).toEqual(["Banking", "Insurance"]);
+    expect(f.locations).toEqual(["France"]);
+    expect(f.school).toBeUndefined();
+  });
+  it("keeps at most 10 values of 80 characters per filter", () => {
+    const many = Array.from({ length: 15 }, (_, i) => `Company ${i}`);
+    expect(readNetworkFilters({ filters: { currentCompany: many } }).currentCompany).toHaveLength(MAX_FILTER_VALUES);
+    expect(readNetworkFilters({ filters: { school: ["x".repeat(200)] } }).school?.[0]).toHaveLength(80);
+  });
+  it("opens the filter panel for a list too", () => {
+    expect(needsFilterPanel({ sort: "recent", industry: ["Banking", "Insurance"] })).toBe(true);
+    expect(needsFilterPanel({ sort: "recent", industry: [] })).toBe(false);
+  });
+  it("sends one value as plain text, so extensions installed before 0.2.0 keep working, and several as a list", () => {
+    expect(forExtension({ sort: "recent", industry: ["Banking"], locations: ["France", "United States"] })).toEqual({ sort: "recent", industry: "Banking", locations: ["France", "United States"] });
+  });
+});
+
+describe("extension detected", () => {
+  const now = new Date("2026-11-11T10:00:00Z");
+  it("is connected when it asked within 15 minutes", () => {
+    expect(isExtensionFresh("2026-11-11T09:50:00Z", true, now)).toBe(true);
+    expect(isExtensionFresh("2026-11-11T09:44:00Z", true, now)).toBe(false);
+  });
+  it("is not detected without a key or a first visit", () => {
+    expect(isExtensionFresh("2026-11-11T09:59:00Z", false, now)).toBe(false);
+    expect(isExtensionFresh(null, true, now)).toBe(false);
+    expect(isExtensionFresh("not a date", true, now)).toBe(false);
   });
 });

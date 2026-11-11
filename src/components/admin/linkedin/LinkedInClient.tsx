@@ -62,7 +62,7 @@ export function LinkedInClient() {
       {!data ? (error ? null : <p className="text-[13px] text-slate-500">Loading…</p>) : (
         <>
           {tab === "campaigns" ? <CampaignsTab campaigns={data.campaigns} onNew={() => setTab("new")} onChanged={load} /> : null}
-          {tab === "new" ? <NewCampaignTab onSaved={() => { void load(); setTab("campaigns"); }} /> : null}
+          {tab === "new" ? <NewCampaignTab onSaved={() => { void load(); setTab("campaigns"); }} onOpenSettings={() => setTab("settings")} /> : null}
           {tab === "inbox" ? <LinkedInInbox threads={data.threads} onChanged={load} /> : null}
           {tab === "activity" ? <ActivityTab campaigns={data.campaigns} timeZone={data.account.timezone} /> : null}
           {tab === "settings" ? <SettingsTab account={data.account} sentToday={data.sentToday} hub={data.hub} onChanged={(account) => setData({ ...data, account })} /> : null}

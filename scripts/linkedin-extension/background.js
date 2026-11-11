@@ -3,6 +3,9 @@
 // It never reads or sends your LinkedIn password, and it stops on any LinkedIn warning.
 const ALARM = "icapos-linkedin-tick";
 const LEASE_GUARD_MS = 10 * 60_000;
+// A filter arrives as one text (an older campaign) or as a list of values (version 0.2.0 and newer).
+const valuesOf = (v) => (Array.isArray(v) ? v : v ? [v] : []).filter((x) => typeof x === "string" && x.trim());
+const hasPanelFilters = (f) => ["industry", "locations", "currentCompany", "pastCompany", "school", "profileLanguage"].some((k) => valuesOf(f?.[k]).length > 0);
 
 async function setStatus(status, extra = {}) {
   await chrome.storage.local.set({ status, statusAt: Date.now(), ...extra });
@@ -311,7 +314,7 @@ async function answerCount(s) {
 
 async function countMatches(s, check) {
   const f = check.filters ?? {};
-  const needPanel = !!(f.industry || f.locations || f.currentCompany || f.pastCompany || f.school || f.profileLanguage);
+  const needPanel = hasPanelFilters(f);
   const u = new URL("https://www.linkedin.com/search/results/people/");
   u.searchParams.set("network", JSON.stringify(["F"]));
   u.searchParams.set("origin", "FACETED_SEARCH");
@@ -343,7 +346,7 @@ async function countMatches(s, check) {
 }
 
 async function readConnections(s, next) {
-  const needPanel = !!(next.filters.industry || next.filters.locations || next.filters.currentCompany || next.filters.pastCompany || next.filters.school || next.filters.profileLanguage) || (next.filters.sort && next.filters.sort !== "recent");
+  const needPanel = hasPanelFilters(next.filters) || (next.filters.sort && next.filters.sort !== "recent");
   const saved = typeof next.searchUrl === "string" && /^https:\/\/www\.linkedin\.com\/search\/results\/people/.test(next.searchUrl) ? next.searchUrl : null;
   let url;
   if (saved) {
@@ -420,29 +423,33 @@ async function doRead({ filters, needPanel, countOnly }) {
     await sleep(900);
 
     const facets = [["Industry", filters.industry], ["Locations", filters.locations], ["Current company", filters.currentCompany], ["Past company", filters.pastCompany], ["School", filters.school], ["Profile language", filters.profileLanguage]];
-    for (const [name, value] of facets) {
-      if (!value) continue;
+    for (const [name, raw] of facets) {
+      // Several values of one filter are added one after the other. LinkedIn treats them as "any of these".
+      const values = (Array.isArray(raw) ? raw : raw ? [raw] : []).filter((x) => typeof x === "string" && x.trim());
+      if (values.length === 0) continue;
       const heading = [...panel.querySelectorAll("h3, h4, legend, span, div")].find((el) => visible(el) && el.children.length === 0 && new RegExp(`^${name}$`, "i").test((el.textContent ?? "").trim()));
       if (!heading) return fail(`${name} filter not found`);
       let section = heading;
       for (let i = 0; i < 6 && section.parentElement; i++) { section = section.parentElement; if (section.querySelector("input, button")) break; }
-      const add = find(section, new RegExp(`^(add a|\\+ add)`, "i"), "button, [role=button]");
-      if (add) { add.click(); await sleep(600); }
-      const input = [...section.querySelectorAll("input[type=text], input[type=search], input:not([type])")].find(visible);
-      if (input) {
-        input.focus();
-        for (const ch of value) { document.execCommand("insertText", false, ch); await sleep(40 + Math.random() * 50); }
-        await sleep(1500);
-        const opt = [...document.querySelectorAll("[role=option], [role=listbox] li")].find((el) => visible(el) && rx(value.slice(0, Math.min(value.length, 12))).test(label(el)));
-        if (!opt) return fail(`LinkedIn has no ${name} match for ${value}`);
-        opt.click();
-      } else {
-        // Short lists such as language are shown as ticks, not a box.
-        const tick = find(section, rx(value), "label, button, [role=checkbox], span");
-        if (!tick) return fail(`LinkedIn has no ${name} option for ${value}`);
-        tick.click();
+      for (const value of values) {
+        const add = find(section, new RegExp(`^(add a|\\+ add)`, "i"), "button, [role=button]");
+        if (add) { add.click(); await sleep(600); }
+        const input = [...section.querySelectorAll("input[type=text], input[type=search], input:not([type])")].find(visible);
+        if (input) {
+          input.focus();
+          for (const ch of value) { document.execCommand("insertText", false, ch); await sleep(40 + Math.random() * 50); }
+          await sleep(1500);
+          const opt = [...document.querySelectorAll("[role=option], [role=listbox] li")].find((el) => visible(el) && rx(value.slice(0, Math.min(value.length, 12))).test(label(el)));
+          if (!opt) return fail(`LinkedIn has no ${name} match for ${value}`);
+          opt.click();
+        } else {
+          // Short lists such as language are shown as ticks, not a box.
+          const tick = find(section, rx(value), "label, button, [role=checkbox], span");
+          if (!tick) return fail(`LinkedIn has no ${name} option for ${value}`);
+          tick.click();
+        }
+        await sleep(700 + Math.random() * 500);
       }
-      await sleep(700 + Math.random() * 500);
     }
     if (filters.sort && filters.sort !== "recent") {
       const sortName = filters.sort === "first" ? "First name" : "Last name";
