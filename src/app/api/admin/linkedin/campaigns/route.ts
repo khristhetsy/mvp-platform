@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireStaffApi } from "@/lib/api/admin";
+import { MAX_FILTER_VALUES } from "@/lib/linkedin/limits";
 import { createCampaign, getOrCreateAccount } from "@/lib/linkedin/store";
 
 export const dynamic = "force-dynamic";
+
+/** One text (campaigns saved earlier) or a list of up to 10 values. */
+const many = z.union([z.string().trim().max(80), z.array(z.string().trim().max(80)).max(MAX_FILTER_VALUES)]).optional();
 
 const campaignSchema = z.object({
   name: z.string().trim().min(1).max(120),
@@ -20,12 +24,12 @@ const campaignSchema = z.object({
     z.object({
       source: z.literal("linkedin_network"),
       filters: z.object({
-        industry: z.string().trim().max(80).optional(),
-        locations: z.string().trim().max(80).optional(),
-        currentCompany: z.string().trim().max(80).optional(),
-        pastCompany: z.string().trim().max(80).optional(),
-        school: z.string().trim().max(80).optional(),
-        profileLanguage: z.string().trim().max(80).optional(),
+        industry: many,
+        locations: many,
+        currentCompany: many,
+        pastCompany: many,
+        school: many,
+        profileLanguage: many,
         name: z.string().trim().max(80).optional(),
         titles: z.array(z.string().trim().min(1).max(30)).max(12).optional(),
         module: z.enum(["investor", "founder"]).optional(),

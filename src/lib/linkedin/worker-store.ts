@@ -4,7 +4,7 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { event, pauseIfAcceptanceLow, type LinkedInAccount } from "./store";
 import { handoffLink, pickVariant, renderConnectedMessage, renderInvite, type InviteVariant } from "./wording";
-import { afterFailedRead, afterRead, canReadNow, cleanSlug, isNetworkAudience, matchState, matchesTitles, matchKey, readMatchCheck, readNetworkFilters, readProgress, type MatchCheck, type NetworkFilters } from "./network";
+import { afterFailedRead, afterRead, canReadNow, cleanSlug, forExtension, isNetworkAudience, matchState, matchesTitles, matchKey, readMatchCheck, readNetworkFilters, readProgress, type MatchCheck, type NetworkFilters } from "./network";
 import { canSendInvite, canSendMessage, warmUpDay, type AccountSafety } from "./safety";
 import { DRY_RUN_HOLD_HOURS, LEASE_MINUTES, MIN_GAP_MINUTES, hashSenderKey, generateSenderKey, startOfLocalDay, retryMinutesFor, waitFromDecision, type WorkerNext } from "./worker";
 
@@ -197,7 +197,7 @@ async function nextRead(a: LinkedInAccount, live: string[], now: Date): Promise<
     const progress = readProgress(c.audience);
     const { count } = await db().from("linkedin_targets").select("id", { count: "exact", head: true }).eq("campaign_id", c.id).eq("route", "message").eq("status", "queued");
     if (!canReadNow({ progress, queued: count ?? 0, now, timeZone: a.timezone }).ok) continue;
-    return { action: "read", campaignId: c.id, page: progress.page, searchUrl: progress.searchUrl, filters: readNetworkFilters(c.audience) };
+    return { action: "read", campaignId: c.id, page: progress.page, searchUrl: progress.searchUrl, filters: forExtension(readNetworkFilters(c.audience)) };
   }
   return null;
 }
@@ -347,11 +347,12 @@ export async function getMatchCheck(accountId: string): Promise<MatchCheck | nul
 }
 
 /** What the sender should count now, or null. A paused or warned account is never asked. */
-export async function pendingMatchCheck(account: LinkedInAccount, now: Date = new Date()): Promise<{ id: string; filters: NetworkFilters } | null> {
-  if (account.status === "warning" || account.status === "paused") return null;
+export async function pendingMatchCheck(account: LinkedInAccount, now: Date = new Date()): Promise<{ id: string; filters: Record<string, unknown> } | null> {
+  // Record the visit first, so a paused account whose extension is running still shows as connected on the form.
   await db().from("linkedin_accounts").update({ worker_last_seen_at: now.toISOString() }).eq("id", account.id);
+  if (account.status === "warning" || account.status === "paused") return null;
   const mc = await getMatchCheck(account.id);
-  return mc && matchState(mc, now) === "pending" ? { id: mc.id, filters: mc.filters } : null;
+  return mc && matchState(mc, now) === "pending" ? { id: mc.id, filters: forExtension(mc.filters) } : null;
 }
 
 /** The sender reports the total LinkedIn showed. A warning pauses the account like everywhere else. */

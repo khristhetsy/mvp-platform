@@ -277,9 +277,18 @@ describe("matches on LinkedIn count", () => {
   beforeEach(() => { tables.linkedin_accounts = [account() as unknown as Row]; });
 
   it("hands the pending count to the sender once, with its filters", async () => {
-    const mc = await requestMatchCheck("a1", { industry: "Venture Capital", sort: "recent" }, NOW);
+    const mc = await requestMatchCheck("a1", { industry: ["Venture Capital"], sort: "recent" }, NOW);
     expect(await pendingMatchCheck(account(), new Date("2026-11-10T10:01:00Z"))).toEqual({ id: mc.id, filters: { industry: "Venture Capital", sort: "recent" } });
     expect(await pendingMatchCheck(account(), new Date("2026-11-10T10:30:00Z"))).toBeNull();
+  });
+  it("sends one value as plain text and several as a list", async () => {
+    const mc = await requestMatchCheck("a1", { industry: ["Banking", "Insurance"], locations: ["France"], sort: "recent" }, NOW);
+    expect(await pendingMatchCheck(account(), new Date("2026-11-10T10:01:00Z"))).toEqual({ id: mc.id, filters: { industry: ["Banking", "Insurance"], locations: "France", sort: "recent" } });
+  });
+  it("still records that the extension was seen when the account is paused", async () => {
+    await requestMatchCheck("a1", { sort: "recent" }, NOW);
+    await pendingMatchCheck(account({ status: "paused" }), NOW);
+    expect(tables.linkedin_accounts[0].worker_last_seen_at).toBe(NOW.toISOString());
   });
   it("never asks a paused or warned account", async () => {
     await requestMatchCheck("a1", { sort: "recent" }, NOW);

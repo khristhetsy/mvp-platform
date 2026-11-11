@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { DEFAULT_TITLES, MAX_RESULT_PAGES, MAX_TITLES, MESSAGE_LIMIT, READ_PAGES_PER_DAY, matchKey } from "@/lib/linkedin/limits";
+import { DEFAULT_TITLES, FACET_KEYS, MAX_RESULT_PAGES, MAX_TITLES, MESSAGE_LIMIT, READ_PAGES_PER_DAY, matchKey, type FacetKey } from "@/lib/linkedin/limits";
+import { MultiField } from "./MultiField";
 import { Choice, ErrorLine, Field, Section, api, btnCls, inputCls, primaryCls } from "./ui";
 
 type Who = "founder" | "investor";
-type MatchView = { state: "none" | "pending" | "done" | "failed" | "unanswered"; key: string | null; total: number | null; detail: string | null };
+type MatchView = { state: "none" | "pending" | "done" | "failed" | "unanswered"; key: string | null; total: number | null; detail: string | null; requestedAt: string | null; extensionOk: boolean };
 // Drafts for you to read and edit. Nothing sends until you approve the exact text.
 const MESSAGES: Record<Who, string> = {
   founder: "Hi {first_name}, it has been a while. I now run iCapOS, which helps founders measure how ready they are for investors and meet the right ones. Our AI assistant Jessica can give you a readiness check in 2 minutes and book a call with our team: {link}",
@@ -19,18 +20,23 @@ const AGENT: Record<Who, { id: "jessica" | "johnny"; name: string; label: string
 // Examples only. The sender types what you pick into LinkedIn's own filter and takes LinkedIn's closest match.
 const INDUSTRIES = ["Venture Capital and Private Equity Principals", "Investment Management", "Investment Banking", "Capital Markets", "Financial Services", "Banking", "Insurance", "Software Development", "Technology, Information and Internet", "Real Estate"];
 const LANGUAGES = ["English", "French", "Spanish", "German", "Portuguese", "Italian"];
+/** The six filters that take several values, in the order LinkedIn lists them. */
+const FACETS: Array<{ key: FacetKey; label: string; tag: string; list?: string; placeholder?: string }> = [
+  { key: "industry", label: "Industry", tag: "Industry", list: "li-industries" },
+  { key: "locations", label: "Locations", tag: "Locations", placeholder: "Paris, France" },
+  { key: "currentCompany", label: "Current company", tag: "Current company" },
+  { key: "pastCompany", label: "Past company", tag: "Past company" },
+  { key: "school", label: "School", tag: "School" },
+  { key: "profileLanguage", label: "Profile language", tag: "Language", list: "li-languages" },
+];
+const NO_FACETS: Record<FacetKey, string[]> = { industry: [], locations: [], currentCompany: [], pastCompany: [], school: [], profileLanguage: [] };
 const SORTS = [{ id: "recent", label: "Recently added" }, { id: "first", label: "First name" }, { id: "last", label: "Last name" }] as const;
 
 type Sort = (typeof SORTS)[number]["id"];
 
-export function NewCampaignTab({ onSaved }: Readonly<{ onSaved: () => void }>) {
+export function NewCampaignTab({ onSaved, onOpenSettings }: Readonly<{ onSaved: () => void; onOpenSettings: () => void }>) {
   const [name, setName] = useState("");
-  const [industry, setIndustry] = useState("");
-  const [locations, setLocations] = useState("");
-  const [currentCompany, setCurrentCompany] = useState("");
-  const [pastCompany, setPastCompany] = useState("");
-  const [school, setSchool] = useState("");
-  const [profileLanguage, setProfileLanguage] = useState("");
+  const [facets, setFacets] = useState<Record<FacetKey, string[]>>(NO_FACETS);
   const [person, setPerson] = useState("");
   const [sort, setSort] = useState<Sort>("recent");
   const [who, setWho] = useState<Who>("founder");
@@ -46,27 +52,36 @@ export function NewCampaignTab({ onSaved }: Readonly<{ onSaved: () => void }>) {
   const [error, setError] = useState<string | null>(null);
 
   const set = (k: string, v: string): Record<string, string> => (v.trim() ? { [k]: v.trim() } : {});
+  const facetFilters = Object.fromEntries(FACET_KEYS.filter((k) => facets[k].length > 0).map((k) => [k, facets[k]]));
   const filters = {
-    ...set("industry", industry), ...set("locations", locations), ...set("currentCompany", currentCompany), ...set("pastCompany", pastCompany),
-    ...set("school", school), ...set("profileLanguage", profileLanguage), ...set("name", person), sort,
+    ...facetFilters, ...set("name", person), sort,
     ...(titles.length > 0 ? { titles } : {}),
   };
 
-  const key = matchKey({ industry, locations, currentCompany, pastCompany, school, profileLanguage, name: person });
+  const key = matchKey({ ...facets, name: person });
   const waiting = match?.state === "pending";
+  // Whether the extension has been asking iCapOS for work lately. Read on its own, so it also works from a phone while Chrome runs elsewhere.
+  const [extensionOk, setExtensionOk] = useState<boolean | null>(null);
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    let alive = true;
+    void api<MatchView>("/api/admin/linkedin/matches").then((r) => { if (alive && r.ok) setExtensionOk(r.data.extensionOk); });
+    return () => { alive = false; };
+  }, []);
   useEffect(() => {
     if (!waiting) return;
     const t = setInterval(async () => {
       const r = await api<MatchView>("/api/admin/linkedin/matches");
-      if (r.ok) setMatch(r.data);
+      if (r.ok) { setMatch(r.data); setExtensionOk(r.data.extensionOk); }
     }, 4000);
-    return () => clearInterval(t);
+    const clock = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => { clearInterval(t); clearInterval(clock); };
   }, [waiting]);
   async function checkMatches() {
     setAsking(true);
     const r = await api<MatchView>("/api/admin/linkedin/matches", "POST", { filters: Object.fromEntries(Object.entries(filters).filter(([k]) => k !== "sort" && k !== "titles")) });
     setAsking(false);
-    if (r.ok) setMatch(r.data); else setError(r.error);
+    if (r.ok) { setMatch(r.data); setExtensionOk(r.data.extensionOk); setNowMs(Date.now()); } else setError(r.error);
   }
   // A count belongs to the filters it was made for. Change one and the number is cleared.
   const shown = match && match.key === key ? match : null;
@@ -89,9 +104,9 @@ export function NewCampaignTab({ onSaved }: Readonly<{ onSaved: () => void }>) {
     return t.includes("{link}") ? t.replaceAll("{link}", link) : `${t.trim()} ${link}`;
   })();
   const filterTags = [
-    who === "founder" ? "Founders" : "Investors", "1st connections", industry && `Industry: ${industry}`, locations && `Locations: ${locations}`,
-    currentCompany && `Current company: ${currentCompany}`, pastCompany && `Past company: ${pastCompany}`, school && `School: ${school}`,
-    profileLanguage && `Language: ${profileLanguage}`, person && `Name: ${person}`, titles.length > 0 && `Headline: ${titles.join(", ")}`, SORTS.find((x) => x.id === sort)?.label,
+    who === "founder" ? "Founders" : "Investors", "1st connections",
+    ...FACETS.filter((f) => facets[f.key].length > 0).map((f) => `${f.tag}: ${facets[f.key].join(" or ")}`),
+    person && `Name: ${person}`, titles.length > 0 && `Headline: ${titles.join(", ")}`, SORTS.find((x) => x.id === sort)?.label,
   ].filter((x): x is string => !!x);
 
   async function save(thenStart: boolean) {
@@ -145,16 +160,13 @@ export function NewCampaignTab({ onSaved }: Readonly<{ onSaved: () => void }>) {
           <div>
             <p className="mb-1.5 text-[12px] text-slate-500">Filters, the same ones as &quot;Search with filters&quot; on LinkedIn (optional)</p>
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Industry"><input className={inputCls} list="li-industries" value={industry} onChange={(e) => setIndustry(e.target.value)} /></Field>
-              <Field label="Locations"><input className={inputCls} value={locations} onChange={(e) => setLocations(e.target.value)} placeholder="Paris, France" /></Field>
-              <Field label="Current company"><input className={inputCls} value={currentCompany} onChange={(e) => setCurrentCompany(e.target.value)} /></Field>
-              <Field label="Past company"><input className={inputCls} value={pastCompany} onChange={(e) => setPastCompany(e.target.value)} /></Field>
-              <Field label="School"><input className={inputCls} value={school} onChange={(e) => setSchool(e.target.value)} /></Field>
-              <Field label="Profile language"><input className={inputCls} list="li-languages" value={profileLanguage} onChange={(e) => setProfileLanguage(e.target.value)} /></Field>
+              {FACETS.map((f) => (
+                <MultiField key={f.key} label={f.label} values={facets[f.key]} listId={f.list} placeholder={f.placeholder} onChange={(v) => setFacets((cur) => ({ ...cur, [f.key]: v }))} />
+              ))}
             </div>
             <datalist id="li-industries">{INDUSTRIES.map((x) => <option key={x} value={x} />)}</datalist>
             <datalist id="li-languages">{LANGUAGES.map((x) => <option key={x} value={x} />)}</datalist>
-            <p className="mt-1.5 text-[12px] text-slate-500">Type the first letters. The sender enters it into LinkedIn and takes LinkedIn&apos;s closest match. If LinkedIn has no match, nothing is read and nobody is messaged.</p>
+            <p className="mt-1.5 text-[12px] text-slate-500">Type the first letters and press Enter to add a value. Add several to any filter: a person matches if they fit any one value of a filter, and every filter you fill in. The sender enters each value into LinkedIn and takes LinkedIn&apos;s closest match. If LinkedIn has no match, nothing is read and nobody is messaged. Several values in one filter need extension version 0.2.0 or newer.</p>
           </div>
 
           <Field label="Search by name (optional)"><input className={inputCls} value={person} onChange={(e) => setPerson(e.target.value)} placeholder="Name" /></Field>
@@ -187,6 +199,7 @@ export function NewCampaignTab({ onSaved }: Readonly<{ onSaved: () => void }>) {
         </div>
       </Section>
 
+      <div id="li-step-2" className="scroll-mt-4">
       <Section title="2. What should we say?" icon="ti-message">
         <div className="space-y-3 px-4 py-3">
           <Field label="Message people get" hint={`Sent as a normal LinkedIn message, no invite. {first_name} and {link} work. ${connectedMessage.length} of ${MESSAGE_LIMIT} characters. {link} becomes the link to our web chat and is added at the end if you leave it out.`}>
@@ -205,6 +218,7 @@ export function NewCampaignTab({ onSaved }: Readonly<{ onSaved: () => void }>) {
           <Field label="Chat agent" hint="Follows your choice of founders or investors in step 1."><input className={inputCls} value={agent.label} readOnly /></Field>
         </div>
       </Section>
+      </div>
 
       <Section title="3. Start" icon="ti-player-play">
         <div className="space-y-3 px-4 py-3">
@@ -237,10 +251,27 @@ export function NewCampaignTab({ onSaved }: Readonly<{ onSaved: () => void }>) {
               <p className="text-[12px] text-emerald-800">{shown.total === 0 ? "No connections match. Loosen a filter." : "of your 1st connections match these filters. Titles to keep will narrow this further."}</p>
             </div>
           ) : null}
-          {shown?.state === "pending" ? <p className="text-[12.5px] text-slate-600">Checking on LinkedIn, usually under 2 minutes. Keep Chrome open with the extension and a LinkedIn tab.</p> : null}
+          {shown?.state === "pending" ? <CheckingCard elapsed={elapsedSince(shown.requestedAt, nowMs)} /> : null}
           {shown?.state === "failed" ? <p className="text-[12.5px] text-red-700">Could not count: {shown.detail ?? "unknown reason"}.</p> : null}
           {shown?.state === "unanswered" ? <p className="text-[12.5px] text-amber-800">The extension did not answer. Open Chrome with the extension and a LinkedIn tab, then check again.</p> : null}
-          <button type="button" className={btnCls} disabled={asking || shown?.state === "pending"} onClick={checkMatches}>{shown?.state === "done" ? "Check again" : "Check how many match"}</button>
+          {shown?.state !== "pending" && extensionOk === true ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[12px] font-medium text-emerald-800"><i className="ti ti-circle-check" aria-hidden="true" />LinkedIn extension connected</span>
+          ) : null}
+          {shown?.state !== "pending" && extensionOk === false ? (
+            <div className="space-y-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[12px] font-medium text-amber-900"><i className="ti ti-alert-triangle" aria-hidden="true" />Extension not detected</span>
+              <p className="text-[12.5px] text-slate-700">Open Chrome with the extension to see how many people match. You can still start the campaign without a count.</p>
+              <div className="flex flex-wrap items-center gap-3">
+                <button type="button" className={primaryCls} onClick={onOpenSettings}>Get the extension</button>
+                <a href="#li-step-2" className="text-[12.5px] font-medium text-[#1A6CE4] underline">Continue without a count</a>
+              </div>
+            </div>
+          ) : null}
+          {extensionOk !== false || shown?.state === "pending" ? (
+            <button type="button" className={btnCls} disabled={asking || shown?.state === "pending"} aria-busy={asking || shown?.state === "pending"} onClick={checkMatches}>
+              {asking || shown?.state === "pending" ? <><Spinner className="h-4 w-4" />Checking, please wait</> : shown?.state === "done" ? "Check again" : "Check how many match"}
+            </button>
+          ) : null}
           <p className="text-[11.5px] text-slate-500">Your extension runs the search on LinkedIn and reports back. Nothing is saved or sent. It uses one LinkedIn search.</p>
         </div>
       </Section>
@@ -251,6 +282,52 @@ export function NewCampaignTab({ onSaved }: Readonly<{ onSaved: () => void }>) {
         </div>
       </Section>
     </aside>
+    </div>
+  );
+}
+
+/** Whole seconds since the check was asked for, never below zero. */
+function elapsedSince(iso: string | null, nowMs: number): number {
+  const t = iso ? new Date(iso).getTime() : NaN;
+  return Number.isFinite(t) ? Math.max(0, Math.floor((nowMs - t) / 1000)) : 0;
+}
+
+function Spinner({ className }: Readonly<{ className: string }>) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className={`${className} motion-safe:animate-spin`}>
+      <circle cx="12" cy="12" r="9" fill="none" stroke="#cfdcfb" strokeWidth="3.5" />
+      <path d="M12 3a9 9 0 0 1 9 9" fill="none" stroke="#1A6CE4" strokeWidth="3.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/** Shown while the extension counts. A framed, moving card so it cannot be mistaken for an idle one. */
+function CheckingCard({ elapsed }: Readonly<{ elapsed: number }>) {
+  const mm = Math.floor(elapsed / 60);
+  const ss = String(elapsed % 60).padStart(2, "0");
+  return (
+    <div role="status" aria-live="polite" className="li-checking space-y-2.5 rounded-xl border-2 border-[#1A6CE4] bg-[#F1F6FF] p-3">
+      <style>{`
+        @media (prefers-reduced-motion: no-preference) {
+          @keyframes li-ring { 0%, 100% { box-shadow: 0 0 0 0 rgba(26,108,228,.35); } 50% { box-shadow: 0 0 0 6px rgba(26,108,228,0); } }
+          @keyframes li-slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(320%); } }
+          .li-checking { animation: li-ring 1.8s ease-in-out infinite; }
+          .li-bar { animation: li-slide 1.4s ease-in-out infinite; }
+        }
+      `}</style>
+      <div className="flex items-center gap-2.5">
+        <Spinner className="h-6 w-6" />
+        <div className="min-w-0 flex-1">
+          <p className="text-[14px] font-semibold text-blue-900">Checking LinkedIn now</p>
+          <p className="text-[12px] text-slate-600">Usually under 2 minutes</p>
+        </div>
+        <span className="text-[16px] font-semibold tabular-nums text-blue-900">{mm}:{ss}</span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-blue-100"><div className="li-bar h-2 w-1/3 rounded-full bg-[#1A6CE4]" /></div>
+      <ul className="space-y-1 text-[12.5px] text-slate-700">
+        <li className="flex items-center gap-2"><i className="ti ti-circle-check text-emerald-700" aria-hidden="true" />Request sent to your extension</li>
+        <li className="flex items-center gap-2 font-medium"><Spinner className="h-4 w-4" />Waiting for LinkedIn&apos;s count</li>
+      </ul>
     </div>
   );
 }
