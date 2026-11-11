@@ -11,6 +11,7 @@ import { CompanyLinkedRecordEditor } from "./CompanyLinkedRecordEditor";
 import { NoteLogEntries } from "./NoteLogEntries";
 import { TaskEditRow } from "@/components/sales/TaskEditRow";
 import { ContactTaskViews } from "./ContactTaskViews";
+import { NextTaskBar } from "./NextTaskBar";
 import { RatingRing } from "@/components/investor-rating/RatingRing";
 import { SalesChatter } from "@/components/sales/SalesChatter";
 import { TaskTitleInput } from "@/components/sales/TaskTitleInput";
@@ -1182,6 +1183,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                       {fromReminders && (
                         <button type="button" onClick={() => router.back()} style={{ background: "none", border: "none", padding: 0, marginBottom: 8, color: "#185FA5", fontSize: 12, cursor: "pointer" }}>← Back to previous page</button>
                       )}
+                      <NextTaskBar />
                       <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", marginBottom: 8 }}><i className="ti ti-link" aria-hidden="true" /> New tasks auto-link to {contact.name}.</div>
                       <div role="group" aria-label="Tasks view" style={{ display: "inline-flex", border: "0.5px solid #d7dbe3", borderRadius: 8, overflow: "hidden", marginBottom: 10 }}>
                         {([["all", "All"], ["opps", "Opportunities"], ["pipeline", "Pipeline"]] as const).map(([k, label], i) => (
