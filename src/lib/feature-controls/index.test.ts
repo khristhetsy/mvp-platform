@@ -60,6 +60,16 @@ describe("feature flag semantics", () => {
     expect(hidden).not.toContain("/founder/financial-model");
   });
 
+  it("pledged is an in-page switch for every audience and governs no nav link", () => {
+    for (const audience of FEATURE_AUDIENCES) {
+      expect(appliesTo(audience, "pledged")).toBe(true);
+      expect(FEATURE_HREFS[audience].pledged).toBeUndefined();
+      expect(disabledHrefsFor({ [`${audience}:pledged`]: false }, audience)).toEqual(disabledHrefsFor({}, audience));
+    }
+    expect(isFeatureEnabled({ "founder:pledged": false }, "founder", "pledged")).toBe(false);
+    expect(isFeatureEnabled({}, "founder", "pledged")).toBe(true);
+  });
+
   it("disables nothing for an audience with no flags", () => {
     expect(disabledHrefsFor({}, "investor")).toHaveLength(0);
   });

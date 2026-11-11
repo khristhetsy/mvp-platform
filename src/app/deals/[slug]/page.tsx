@@ -7,6 +7,7 @@ import { ComplianceNotice } from "@/components/ComplianceNotice";
 import { InvestorDealActions } from "@/components/InvestorDealActions";
 import { getPitchDeckDocumentId } from "@/lib/data/investor-actions";
 import { getCompanyPledgeSummary } from "@/lib/data/investor-pledges";
+import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
 import { getMarketplaceListingBySlug } from "@/lib/data/marketplace";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getCurrentUserProfile } from "@/lib/supabase/auth";
@@ -32,9 +33,11 @@ export default async function DealDetailPage({
   const viewerRole = viewerRoleFromProfile(profile?.role ?? null);
   const shellRole = toShellRole(profile?.role);
   const isOwnCompany = profile?.id === deal.founderId;
+  // Admin switch (Feature Controls, Pledged amounts): off hides the pledge summary from every visitor.
+  const pledgesOn = isFeatureEnabled(await loadFeatureFlags(supabase), "investor", "pledged");
   const [pitchDeckDocumentId, pledgeSummary] = await Promise.all([
     getPitchDeckDocumentId(supabase, deal.id),
-    getCompanyPledgeSummary(supabase, deal.id),
+    pledgesOn ? getCompanyPledgeSummary(supabase, deal.id) : Promise.resolve(null),
   ]);
 
   const sections = [
@@ -90,9 +93,11 @@ export default async function DealDetailPage({
         </div>
       </section>
 
-      <section className="mt-6">
-        <CompanyPledgeSummaryBlock summary={pledgeSummary} />
-      </section>
+      {pledgeSummary ? (
+        <section className="mt-6">
+          <CompanyPledgeSummaryBlock summary={pledgeSummary} />
+        </section>
+      ) : null}
 
       <section className="mt-6 grid gap-6 lg:grid-cols-[1fr_0.42fr]">
         <div className="grid gap-4">
