@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireStaffApi } from "@/lib/api/admin";
-import { approveCampaign, getCampaign, setCampaignStatus, startCampaign, updateCampaign } from "@/lib/linkedin/store";
+import { approveCampaign, deleteCampaign, getCampaign, setCampaignArchived, setCampaignStatus, startCampaign, updateCampaign } from "@/lib/linkedin/store";
 
 export const dynamic = "force-dynamic";
 
@@ -32,9 +32,9 @@ export async function PATCH(request: Request, ctx: Ctx) {
   }
 }
 
-const actionSchema = z.object({ action: z.enum(["approve", "start", "pause", "resume", "stop"]) });
+const actionSchema = z.object({ action: z.enum(["approve", "start", "pause", "resume", "stop", "archive", "restore"]) });
 
-/** POST { action }: approve the wording, start, pause, resume or stop. */
+/** POST { action }: approve the wording, start, pause, resume, stop, archive or restore. */
 export async function POST(request: Request, ctx: Ctx) {
   const auth = await requireStaffApi();
   if ("error" in auth) return auth.error;
@@ -57,7 +57,28 @@ export async function POST(request: Request, ctx: Ctx) {
       case "pause": await setCampaignStatus(id, "paused", userId); break;
       case "resume": await setCampaignStatus(id, "ready", userId); break;
       case "stop": await setCampaignStatus(id, "stopped", userId); break;
+      case "archive":
+      case "restore": {
+        const r = await setCampaignArchived(id, parsed.data.action === "archive");
+        if (!r.ok) return NextResponse.json({ error: r.error }, { status: 400 });
+        break;
+      }
     }
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : "Something went wrong." }, { status: 500 });
+  }
+}
+
+/** DELETE: remove a stopped, draft or finished campaign for good. */
+export async function DELETE(_request: Request, ctx: Ctx) {
+  const auth = await requireStaffApi();
+  if ("error" in auth) return auth.error;
+  const { id } = await ctx.params;
+  if (!UUID.test(id)) return NextResponse.json({ error: "Invalid campaign id." }, { status: 400 });
+  try {
+    const r = await deleteCampaign(id);
+    if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.error === "Campaign not found." ? 404 : 400 });
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "Something went wrong." }, { status: 500 });

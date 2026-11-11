@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { toInsertRow } from "@/lib/notes-log";
-import { linkedInLogInput } from "./store";
+import { canRemoveCampaign, linkedInLogInput } from "./store";
 
 describe("linkedInLogInput", () => {
   it("makes a Notes log row for a sent LinkedIn message", () => {
@@ -19,5 +19,14 @@ describe("linkedInLogInput", () => {
     const a = toInsertRow(linkedInLogInput({ contactCrmId: "c1", direction: "outbound", text: "x", targetId: "t1", externalId: "m1" }));
     const b = toInsertRow(linkedInLogInput({ contactCrmId: "c1", direction: "outbound", text: "x", targetId: "t1", externalId: "m2" }));
     expect(a.meta?.external_id).not.toBe(b.meta?.external_id);
+  });
+});
+
+describe("canRemoveCampaign", () => {
+  it("lets a draft, waiting for approval, stopped or finished campaign be archived or deleted", () => {
+    for (const status of ["draft", "pending_approval", "stopped", "completed"] as const) expect(canRemoveCampaign(status)).toBe(true);
+  });
+  it("blocks a campaign that is queued, running or paused until it is stopped", () => {
+    for (const status of ["ready", "running", "paused"] as const) expect(canRemoveCampaign(status)).toBe(false);
   });
 });

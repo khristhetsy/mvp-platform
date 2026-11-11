@@ -92,6 +92,24 @@ describe("linkedin outreach migration", () => {
     await pg.exec(`delete from linkedin_accounts where id = '${a}'`);
   });
 
+  it("adds archived_at, applies twice, and keeps a campaign active until archived", async () => {
+    const sql = readFileSync(join(process.cwd(), "supabase/migrations/20261111100000_linkedin_campaign_archive.sql"), "utf8");
+    await pg.exec(sql);
+    await pg.exec(sql);
+    const a = await account();
+    const camp = (await pg.query<{ id: string }>(`insert into linkedin_campaigns (account_id, name, created_by) values ('${a}', 'Archive me', '${OWNER}') returning id`)).rows[0].id;
+    const before = await pg.query<{ archived_at: string | null }>(`select archived_at from linkedin_campaigns where id = '${camp}'`);
+    expect(before.rows[0].archived_at).toBeNull();
+    await pg.exec(`update linkedin_campaigns set archived_at = now() where id = '${camp}'`);
+    const after = await pg.query<{ archived_at: string | null }>(`select archived_at from linkedin_campaigns where id = '${camp}'`);
+    expect(after.rows[0].archived_at).not.toBeNull();
+    await pg.exec(`insert into linkedin_targets (campaign_id, linkedin_slug, route) values ('${camp}', 'dee', 'message')`);
+    await pg.exec(`delete from linkedin_campaigns where id = '${camp}'`);
+    const left = await pg.query<{ n: number }>(`select count(*)::int as n from linkedin_targets where campaign_id = '${camp}'`);
+    expect(left.rows[0].n).toBe(0);
+    await pg.exec(`delete from linkedin_accounts where id = '${a}'`);
+  });
+
   it("turns row level security on for every table", async () => {
     const r = await pg.query<{ relname: string; relrowsecurity: boolean }>(`select relname, relrowsecurity from pg_class where relname like 'linkedin\\_%' and relkind = 'r' order by relname`);
     expect(r.rows.map((x) => x.relname)).toEqual(["linkedin_accounts", "linkedin_campaigns", "linkedin_events", "linkedin_messages", "linkedin_targets", "linkedin_threads"]);

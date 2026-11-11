@@ -53,9 +53,11 @@ export type CampaignRow = {
   connected_message_text: string | null;
   wording_hash: string | null; approved_by: string | null; approved_at: string | null;
   handoff_mode: "web_chat" | "linkedin"; agent: "johnny" | "jessica"; created_at: string;
+  /** Set when the campaign is archived. Null while it is active. */
+  archived_at: string | null;
 };
 
-const CAMPAIGN_COLS = "id, account_id, name, status, audience, invite_variants, message_text, connected_message_text, wording_hash, approved_by, approved_at, handoff_mode, agent, created_at";
+const CAMPAIGN_COLS = "id, account_id, name, status, audience, invite_variants, message_text, connected_message_text, wording_hash, approved_by, approved_at, handoff_mode, agent, created_at, archived_at";
 
 export type CampaignWithStats = CampaignRow & { people: number; invited: number; accepted: number; messaged: number; needs_approval: boolean };
 
@@ -259,6 +261,32 @@ export async function setCampaignStatus(id: string, status: "paused" | "ready" |
   if (!c) throw new Error("Campaign not found.");
   await db().from("linkedin_campaigns").update({ status, updated_at: new Date().toISOString() }).eq("id", id);
   await event({ account_id: c.account_id, campaign_id: id, kind: status === "paused" ? "paused" : status === "stopped" ? "stopped" : "resumed", created_by: userId });
+}
+
+/** Only a campaign that is not working or waiting to send can be archived or deleted. Stop it first. */
+export function canRemoveCampaign(status: CampaignRow["status"]): boolean {
+  return status === "draft" || status === "pending_approval" || status === "stopped" || status === "completed";
+}
+
+export type RemoveResult = { ok: true } | { ok: false; error: string };
+
+/** Archive keeps the campaign and its people. Restore brings it back to the list. */
+export async function setCampaignArchived(id: string, archived: boolean): Promise<RemoveResult> {
+  const c = await getCampaign(id);
+  if (!c) return { ok: false, error: "Campaign not found." };
+  if (archived && !canRemoveCampaign(c.status)) return { ok: false, error: "Stop the campaign before archiving it." };
+  const now = new Date().toISOString();
+  const { error } = await db().from("linkedin_campaigns").update({ archived_at: archived ? now : null, updated_at: now }).eq("id", id);
+  return error ? { ok: false, error: error.message } : { ok: true };
+}
+
+/** Delete removes the campaign, its people and its activity for good. Tasks already made stay. */
+export async function deleteCampaign(id: string): Promise<RemoveResult> {
+  const c = await getCampaign(id);
+  if (!c) return { ok: false, error: "Campaign not found." };
+  if (!canRemoveCampaign(c.status)) return { ok: false, error: "Stop the campaign before deleting it." };
+  const { error } = await db().from("linkedin_campaigns").delete().eq("id", id);
+  return error ? { ok: false, error: error.message } : { ok: true };
 }
 
 /** Pause a running campaign when too few invites were accepted. Called by the sender (Step 2). */

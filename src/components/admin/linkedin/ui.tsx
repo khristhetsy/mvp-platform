@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 
 export { Tag, Section } from "@/components/admin/investor-directory/ui";
-export { ErrorLine, Field, api, btnCls, dangerCls, inputCls, primaryCls } from "@/components/admin/accounting/ui";
+export { ErrorLine, Field, Modal, api, btnCls, dangerCls, inputCls, primaryCls } from "@/components/admin/accounting/ui";
 
 /** An on/off switch with a visible label for screen readers. */
 export function Toggle({ on, onChange, label, disabled }: Readonly<{ on: boolean; onChange: (v: boolean) => void; label: string; disabled?: boolean }>) {
