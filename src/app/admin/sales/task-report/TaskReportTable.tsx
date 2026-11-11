@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { NewButton, downloadCsv } from "@/components/admin/ToolbarGear";
+import { buildQueue, saveQueue } from "@/lib/task-report/next-task";
 import { OdooSearchBar, EMPTY_SEARCH, textMatch, type SearchState } from "@/components/admin/OdooSearchBar";
 
 export type Row = {
@@ -117,6 +118,8 @@ export function TaskReportTable({ rows, isSuper, meId, today, initialQuick = "no
     return [...map.entries()];
   }, [visible, search.groupBy, today]);
 
+  // Remember the open tasks in the order shown, so a contact page can offer "Next task".
+  const rememberQueue = () => saveQueue(buildQueue(groups ? groups.flatMap(([, rs]) => rs) : visible));
   const shown = COLS.filter((c) => cols[c.key]);
   const minWidth = shown.reduce((n, c) => n + c.w, 0);
 
@@ -150,7 +153,7 @@ export function TaskReportTable({ rows, isSuper, meId, today, initialQuick = "no
               <td key={c.key} style={cellBase}>
                 <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", alignItems: "center" }}>
                   {!done && r.source === "sales" && <button type="button" onClick={() => markDone(r.id)} disabled={busy} style={{ fontSize: 10.5, color: "#0F6E56", background: "none", border: "none", cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /> Done</button>}
-                  <Link href={r.href} style={{ fontSize: 10.5, color: "#4338CA", textDecoration: "none", fontWeight: 600, whiteSpace: "nowrap" }}>Open to view</Link>
+                  <Link href={r.href} onClick={rememberQueue} style={{ fontSize: 10.5, color: "#4338CA", textDecoration: "none", fontWeight: 600, whiteSpace: "nowrap" }}>Open to view</Link>
                 </div>
               </td>);
           }
