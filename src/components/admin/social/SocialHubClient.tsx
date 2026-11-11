@@ -336,21 +336,21 @@ function Composer({ accounts, googleReady, onScheduled }: { accounts: SocialAcco
       {/* 2 · Where it belongs */}
       <div className={`${card} p-5`}>
         <StepHead n={2} title="Where it belongs" hint="for goals & attribution" />
-      <div className="mt-2 flex flex-wrap gap-6">
-        <div>
+      <div className="mt-2 flex flex-wrap gap-x-6 gap-y-3">
+        <div className="min-w-0">
           <p className="text-[12px] font-medium text-slate-700">Department</p>
           <select value={department} onChange={(e) => setDepartment(e.target.value)} className="mt-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[12.5px]">
             {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
           </select>
         </div>
-        <div>
-          <p className="text-[13px] font-medium text-slate-700">Campaign</p>
+        <div className="min-w-0 flex-1 basis-56">
+          <p className="text-[12px] font-medium text-slate-700">Campaign</p>
           <div className="mt-1.5 flex items-center gap-2">
-            <select value={campaignId} onChange={(e) => setCampaignId(e.target.value)} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-[12.5px]">
+            <select value={campaignId} onChange={(e) => setCampaignId(e.target.value)} className="min-w-0 flex-1 truncate rounded-lg border border-slate-200 px-2.5 py-1.5 text-[12.5px]">
               <option value="">None</option>
               {campaigns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
-            <button type="button" onClick={() => setNewCampaign((p) => ({ ...p, open: !p.open }))} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-[12px] text-slate-600 hover:bg-slate-50">＋ New</button>
+            <button type="button" onClick={() => setNewCampaign((p) => ({ ...p, open: !p.open }))} className="shrink-0 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[12px] text-slate-600 hover:bg-slate-50">＋ New</button>
           </div>
           {newCampaign.open ? (
             <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2">
