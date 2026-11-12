@@ -175,7 +175,8 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
   const [previewKey, setPreviewKey] = useState(0);
   const [ackChecked, setAckChecked] = useState(false);
   const [noticeOpen, setNoticeOpen] = useState(false);
-  const acknowledged = Boolean(a.compliance_acknowledged_at);
+  // Admin builds for any company and is not asked to confirm the founder compliance notice.
+  const acknowledged = admin || Boolean(a.compliance_acknowledged_at);
   const fileRef = useRef<HTMLInputElement>(null);
   const checkTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -633,7 +634,7 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
         </section>
 
         {/* Compliance notice: confirmed once before going live */}
-        {!acknowledged || noticeOpen ? (
+        {admin ? null : !acknowledged || noticeOpen ? (
           <section className="rounded-xl border border-amber-300 bg-amber-50 p-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-base font-semibold text-slate-950">Compliance notice</h2>

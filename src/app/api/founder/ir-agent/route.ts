@@ -54,7 +54,7 @@ const patchSchema = z.object({
 export async function PUT(req: Request) {
   const auth = await requireFounderAgentApi(req);
   if ("error" in auth) return auth.error;
-  const { agent, profile } = auth.ctx;
+  const { agent, profile, actingAdmin } = auth.ctx;
   const parsed = patchSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   const { compliance_acknowledged, ...rest } = parsed.data;
@@ -66,7 +66,7 @@ export async function PUT(req: Request) {
   if (patch.status === "live" && !agent.organization_id) {
     return NextResponse.json({ error: "Link a company in your account before going live. An agent without a company stays a Draft." }, { status: 400 });
   }
-  if (patch.status === "live" && !agent.compliance_acknowledged_at && !compliance_acknowledged) {
+  if (patch.status === "live" && !actingAdmin && !agent.compliance_acknowledged_at && !compliance_acknowledged) {
     return NextResponse.json({ error: "Confirm the compliance notice before going live." }, { status: 400 });
   }
   if (patch.ending !== undefined) {
