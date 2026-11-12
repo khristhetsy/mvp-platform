@@ -5,6 +5,9 @@ import { DEFAULT_TITLES, FACET_KEYS, MAX_RESULT_PAGES, MAX_TITLES, MESSAGE_LIMIT
 import { MultiField } from "./MultiField";
 import { Choice, ErrorLine, Field, Section, api, btnCls, inputCls, primaryCls } from "./ui";
 
+/** The match count is switched off for now: LinkedIn changes its filter panel often and the count is only a preview. Turn it on to show it again. */
+const SHOW_MATCH_COUNT = false;
+
 type Who = "founder" | "investor";
 type MatchView = { state: "none" | "pending" | "done" | "failed" | "unanswered"; key: string | null; total: number | null; detail: string | null; requestedAt: string | null; extensionOk: boolean };
 // Drafts for you to read and edit. Nothing sends until you approve the exact text.
@@ -243,36 +246,35 @@ export function NewCampaignTab({ onSaved, onOpenSettings }: Readonly<{ onSaved: 
           <p className="text-[11.5px] text-slate-500">{link ? `The link opens our web chat with ${agent.name}, our AI assistant.` : "No link: the chat stays inside LinkedIn."}</p>
         </div>
       </Section>
-      <Section title="Matches on LinkedIn" icon="ti-brand-linkedin">
+      <Section title={SHOW_MATCH_COUNT ? "Matches on LinkedIn" : "LinkedIn connection"} icon="ti-brand-linkedin">
         <div className="space-y-2 px-4 py-3">
-          {shown?.state === "done" ? (
+          {SHOW_MATCH_COUNT && shown?.state === "done" ? (
             <div className="rounded-lg bg-emerald-50 px-3 py-2.5">
               <p className="text-[22px] font-semibold text-emerald-800">{shown.total === 0 ? "0 matches" : `About ${(shown.total ?? 0).toLocaleString("en-US")}`}</p>
               <p className="text-[12px] text-emerald-800">{shown.total === 0 ? "No connections match. Loosen a filter." : "of your 1st connections match these filters. Titles to keep will narrow this further."}</p>
             </div>
           ) : null}
-          {shown?.state === "pending" ? <CheckingCard elapsed={elapsedSince(shown.requestedAt, nowMs)} /> : null}
-          {shown?.state === "failed" ? <p className="text-[12.5px] text-red-700">Could not count: {shown.detail ?? "unknown reason"}.</p> : null}
-          {shown?.state === "unanswered" ? <p className="text-[12.5px] text-amber-800">The extension did not answer. Open Chrome with the extension and a LinkedIn tab, then check again.</p> : null}
+          {SHOW_MATCH_COUNT && shown?.state === "pending" ? <CheckingCard elapsed={elapsedSince(shown.requestedAt, nowMs)} /> : null}
+          {SHOW_MATCH_COUNT && shown?.state === "failed" ? <p className="text-[12.5px] text-red-700">Could not count: {shown.detail ?? "unknown reason"}.</p> : null}
+          {SHOW_MATCH_COUNT && shown?.state === "unanswered" ? <p className="text-[12.5px] text-amber-800">The extension did not answer. Open Chrome with the extension and a LinkedIn tab, then check again.</p> : null}
           {shown?.state !== "pending" && extensionOk === true ? (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[12px] font-medium text-emerald-800"><i className="ti ti-circle-check" aria-hidden="true" />LinkedIn extension connected</span>
           ) : null}
           {shown?.state !== "pending" && extensionOk === false ? (
             <div className="space-y-2">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[12px] font-medium text-amber-900"><i className="ti ti-alert-triangle" aria-hidden="true" />Extension not detected</span>
-              <p className="text-[12.5px] text-slate-700">Open Chrome with the extension to see how many people match. You can still start the campaign without a count.</p>
+              <p className="text-[12.5px] text-slate-700">Open Chrome with the extension so the sender can message your connections.</p>
               <div className="flex flex-wrap items-center gap-3">
                 <button type="button" className={primaryCls} onClick={onOpenSettings}>Get the extension</button>
-                <a href="#li-step-2" className="text-[12.5px] font-medium text-[#1A6CE4] underline">Continue without a count</a>
               </div>
             </div>
           ) : null}
-          {extensionOk !== false || shown?.state === "pending" ? (
+          {SHOW_MATCH_COUNT && (extensionOk !== false || shown?.state === "pending") ? (
             <button type="button" className={btnCls} disabled={asking || shown?.state === "pending"} aria-busy={asking || shown?.state === "pending"} onClick={checkMatches}>
               {asking || shown?.state === "pending" ? <><Spinner className="h-4 w-4" />Checking, please wait</> : shown?.state === "done" ? "Check again" : "Check how many match"}
             </button>
           ) : null}
-          <p className="text-[11.5px] text-slate-500">Your extension runs the search on LinkedIn and reports back. Nothing is saved or sent. It uses one LinkedIn search.</p>
+          {SHOW_MATCH_COUNT ? <p className="text-[11.5px] text-slate-500">Your extension runs the search on LinkedIn and reports back. Nothing is saved or sent. It uses one LinkedIn search.</p> : null}
         </div>
       </Section>
       <Section title="Who this reaches" icon="ti-users">

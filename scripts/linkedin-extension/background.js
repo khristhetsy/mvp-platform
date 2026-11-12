@@ -418,17 +418,32 @@ async function doRead({ filters, needPanel, countOnly }) {
     const all = await waitFor(() => find(document, /^all filters$/i, "button, [role=button]"), 15_000);
     if (!all) return fail("All filters button not found");
     all.click();
-    const panel = await waitFor(() => document.querySelector("[role=dialog]"), 8_000);
+    // LinkedIn's filter panel is a plain aside (div#SearchResults_AllFilters) with no dialog role on some layouts, so look for both.
+    const shown = (el) => el.getClientRects().length > 0;
+    const getPanel = () => {
+      const byId = document.querySelector("#SearchResults_AllFilters");
+      if (byId && shown(byId)) return byId;
+      const aside = [...document.querySelectorAll("aside")].find((a) => shown(a) && /(people|all) filters/i.test(a.querySelector("h2, h1")?.textContent ?? ""));
+      return aside ?? document.querySelector("[role=dialog]") ?? document.querySelector("#interop-outlet")?.shadowRoot?.querySelector("[role=dialog]") ?? null;
+    };
+    const panel = await waitFor(getPanel, 8_000);
     if (!panel) return fail("Filter panel did not open");
     await sleep(900);
 
-    const facets = [["Industry", filters.industry], ["Locations", filters.locations], ["Current company", filters.currentCompany], ["Past company", filters.pastCompany], ["School", filters.school], ["Profile language", filters.profileLanguage]];
-    for (const [name, raw] of facets) {
+    // LinkedIn words some headings in the plural ("Current companies"), so each facet carries the pattern for its heading.
+    const facets = [["Industry", "Industr(?:y|ies)", filters.industry], ["Locations", "Locations?", filters.locations], ["Current company", "Current compan(?:y|ies)", filters.currentCompany], ["Past company", "Past compan(?:y|ies)", filters.pastCompany], ["School", "Schools?", filters.school], ["Profile language", "Profile languages?", filters.profileLanguage]];
+    const norm = (t) => (t ?? "").replace(/\s+/g, " ").trim();
+    for (const [name, headingPattern, raw] of facets) {
       // Several values of one filter are added one after the other. LinkedIn treats them as "any of these".
       const values = (Array.isArray(raw) ? raw : raw ? [raw] : []).filter((x) => typeof x === "string" && x.trim());
       if (values.length === 0) continue;
-      const heading = [...panel.querySelectorAll("h3, h4, legend, span, div")].find((el) => visible(el) && el.children.length === 0 && new RegExp(`^${name}$`, "i").test((el.textContent ?? "").trim()));
-      if (!heading) return fail(`${name} filter not found`);
+      // The heading is the deepest element in the panel whose whole text is the facet name, whatever its tag.
+      const headRx = new RegExp(`^${headingPattern}$`, "i");
+      const heading = [...panel.querySelectorAll("*")].find((el) => shown(el) && headRx.test(norm(el.textContent)) && ![...el.children].some((c) => headRx.test(norm(c.textContent))));
+      if (!heading) {
+        const seen = [...panel.querySelectorAll("h1, h2, h3, h4, legend, label, p, span")].filter((el) => shown(el) && el.children.length === 0 && norm(el.textContent).length < 28).slice(0, 12).map((el) => `${el.tagName.toLowerCase()}:${norm(el.textContent)}`);
+        return fail(`${name} filter not found. Panel shows ${seen.join(", ")}`);
+      }
       let section = heading;
       for (let i = 0; i < 6 && section.parentElement; i++) { section = section.parentElement; if (section.querySelector("input, button")) break; }
       for (const value of values) {
@@ -458,8 +473,17 @@ async function doRead({ filters, needPanel, countOnly }) {
       opt.click();
       await sleep(600);
     }
-    const show = find(panel, /^show (\d+\+? )?results$/i, "button, [role=button]");
-    if (!show) return fail("Show results button not found");
+    // The button may sit outside the panel's own box and may carry an aria label, so look in the aside, then the whole page, and read its text and label apart.
+    const showRx = /^show\s+[\d.,\u202f\u00a0 ]*\+?\s*results?$/i;
+    const buttonsIn = (root) => [...root.querySelectorAll("button, [role=button], a")].filter(shown);
+    const isShow = (el) => showRx.test(norm(el.textContent)) || showRx.test(norm(el.getAttribute("aria-label")));
+    const scopes = [panel.closest("aside"), panel, document].filter(Boolean);
+    let show = null;
+    for (const scope of scopes) { show = buttonsIn(scope).find(isShow); if (show) break; }
+    if (!show) {
+      const seen = buttonsIn(document).map((b) => norm(b.textContent) || norm(b.getAttribute("aria-label"))).filter((t) => t && t.length < 24).slice(-8);
+      return fail(`Show results button not found. Buttons seen: ${seen.join(" | ")}`);
+    }
     show.click();
     await sleep(4000);
     if (!/network=/.test(location.search) || !/F/.test(decodeURIComponent(location.search))) return fail("Results are not limited to 1st connections");
