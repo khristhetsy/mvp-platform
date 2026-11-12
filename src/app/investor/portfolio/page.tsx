@@ -8,6 +8,8 @@ import { InvestorPortfolioPageClient } from "@/components/investor/InvestorPortf
 import { InvestorFacilitatedIntrosPanel } from "@/components/investor/InvestorFacilitatedIntrosPanel";
 import { canInvestorPerformSensitiveActions } from "@/lib/investor/access";
 import { loadInvestorWorkspaceContext } from "@/lib/investor/load-investor-workspace";
+import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
 import { redirect } from "next/navigation";
 
@@ -22,6 +24,12 @@ export default async function InvestorPortfolioPage() {
     redirect("/investor/dashboard");
   }
 
+  const pledgesOn = isFeatureEnabled(
+    await loadFeatureFlags(createServiceRoleClient()),
+    "investor",
+    "pledged",
+  );
+
   return (
     <AppShell
       role="INVESTOR"
@@ -33,7 +41,11 @@ export default async function InvestorPortfolioPage() {
         <PageHeader
           eyebrow={t("investor_workspace_2")}
           title={t("portfolio")}
-          description={t("track_your_pledges_investments_and_returns_acr")}
+          description={
+            pledgesOn
+              ? t("track_your_pledges_investments_and_returns_acr")
+              : "Track your investments and returns across your portfolio."
+          }
         />
         <InvestorFeatureGate>
           {/* Facilitated intro connections — server-rendered */}
@@ -42,7 +54,7 @@ export default async function InvestorPortfolioPage() {
           </Suspense>
           {/* Full investment tracker — client-rendered */}
           <Suspense fallback={null}>
-            <InvestorPortfolioPageClient />
+            <InvestorPortfolioPageClient showPledges={pledgesOn} />
           </Suspense>
         </InvestorFeatureGate>
       </WorkspacePageContainer>

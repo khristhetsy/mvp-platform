@@ -339,6 +339,7 @@ export default async function FounderDashboardPage() {
               companyStatus={company?.status ?? null}
               companyFundingAmount={company?.funding_amount ? Number(company.funding_amount) : null}
               pledgeSummary={pledgeSummary}
+              showPledges={pledgesOn}
               investorActivityTotal={investorActivityTotal}
               investorActivity={investorActivity}
               documents={documents ?? []}

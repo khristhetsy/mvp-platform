@@ -7,6 +7,8 @@ import { MetricCard } from "@/components/MetricCard";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { loadInvestorAnalytics } from "@/lib/analytics/investor-analytics";
+import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +19,11 @@ export default async function InvestorAnalyticsPage() {
   const [analytics] = await Promise.all([
     loadInvestorAnalytics(investorId, 30),
   ]);
+  const pledgesOn = isFeatureEnabled(
+    await loadFeatureFlags(createServiceRoleClient()),
+    "investor",
+    "pledged",
+  );
 
   return (
     <AppShell
@@ -100,13 +107,15 @@ export default async function InvestorAnalyticsPage() {
         </section>
 
         <section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <MetricCard
-            label={t("pledged_total")}
-            value={analytics.pledgeTotalDisplay}
-            detail={`${analytics.indicativeTotalDisplay} indicative interest`}
-            accent="slate"
-            href="/investor/portfolio"
-          />
+          {pledgesOn ? (
+            <MetricCard
+              label={t("pledged_total")}
+              value={analytics.pledgeTotalDisplay}
+              detail={`${analytics.indicativeTotalDisplay} indicative interest`}
+              accent="slate"
+              href="/investor/portfolio"
+            />
+          ) : null}
           <MetricCard
             label={t("pending_indicative")}
             value={String(analytics.pendingInterestCount)}
@@ -140,9 +149,11 @@ export default async function InvestorAnalyticsPage() {
               <span className="font-medium text-slate-900">{analytics.portfolioInterestCount}</span> companies with
               interest or indicative amounts tracked.
             </p>
-            <p className="mt-2 text-sm text-slate-600">
-              Pledged: {analytics.pledgeTotalDisplay} · Indicative: {analytics.indicativeTotalDisplay}
-            </p>
+            {pledgesOn ? (
+              <p className="mt-2 text-sm text-slate-600">
+                Pledged: {analytics.pledgeTotalDisplay} · Indicative: {analytics.indicativeTotalDisplay}
+              </p>
+            ) : null}
             <Link href="/investor/portfolio" className="mt-4 inline-block text-sm font-semibold text-indigo-700">
               View portfolio
             </Link>

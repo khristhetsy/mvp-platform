@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
+import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
 import { getCompanyPledgeSummary, getFounderPledgeCompanyId } from "@/lib/data/investor-pledges";
 
 export const dynamic = "force-dynamic";
@@ -35,6 +36,9 @@ export async function GET() {
   const { company } = await getActiveCompanyForUser(profile);
   if (!company) {
     return NextResponse.json({ error: "Company not found" }, { status: 404 });
+  }
+  if (!isFeatureEnabled(await loadFeatureFlags(admin), "founder", "pledged")) {
+    return NextResponse.json({ error: "Not available" }, { status: 403 });
   }
 
   // Pledge summary from investor_interests (platform-linked investors)

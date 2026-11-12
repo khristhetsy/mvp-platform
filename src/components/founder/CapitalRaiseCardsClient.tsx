@@ -33,6 +33,8 @@ interface Props {
   company: CompanyProps;
   investorActivity: ActivityProps | null;
   raiseStatus: string;
+  /** False when an admin has switched Pledged amounts off. */
+  showPledges?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -134,6 +136,7 @@ function DrawerContent({
   company,
   investorActivity,
   raiseStatus,
+  showPledges = true,
   onClose,
 }: Props & { drawerKey: DrawerKey; onClose: () => void }) {
   const t = useTranslations("founderCmp");
@@ -342,10 +345,10 @@ function DrawerContent({
         {closeBtn}
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className={`grid gap-3 ${showPledges ? "grid-cols-3" : "grid-cols-1"}`}>
         <DStatBox label={t("target")} value={target > 0 ? formatPledgeTotal(target, pledgeSummary.currency) : "TBD"} />
-        <DStatBox label={t("pledged")} value={formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)} />
-        <DStatBox label={t("filled")} value={target > 0 ? `${fillPct}%` : "—"} />
+        {showPledges ? <DStatBox label={t("pledged")} value={formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)} /> : null}
+        {showPledges ? <DStatBox label={t("filled")} value={target > 0 ? `${fillPct}%` : "—"} /> : null}
       </div>
 
       <p className="mt-5 text-xs font-semibold text-slate-900">{t("target_breakdown")}</p>
@@ -435,6 +438,7 @@ export function CapitalRaiseCardsClient({
   company,
   investorActivity,
   raiseStatus,
+  showPledges = true,
 }: Props) {
   const t = useTranslations("founderCmp");
   const [open, setOpen] = useState<DrawerKey | null>(null);
@@ -449,15 +453,17 @@ export function CapitalRaiseCardsClient({
 
   return (
     <>
-      <section className="grid gap-3 md:grid-cols-3">
-        <RaiseCard
-          label={t("indicative_interest")}
-          value={formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)}
-          sub={`From ${pledgeSummary.investorCount} ${pledgeSummary.investorCount === 1 ? "investor" : "investors"}`}
-          cta={t("view_breakdown")}
-          accentColor="#4338CA"
-          onClick={() => setOpen("interest")}
-        />
+      <section className={`grid gap-3 ${showPledges ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
+        {showPledges ? (
+          <RaiseCard
+            label={t("indicative_interest")}
+            value={formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)}
+            sub={`From ${pledgeSummary.investorCount} ${pledgeSummary.investorCount === 1 ? "investor" : "investors"}`}
+            cta={t("view_breakdown")}
+            accentColor="#4338CA"
+            onClick={() => setOpen("interest")}
+          />
+        ) : null}
         <RaiseCard
           label={t("raise_status")}
           value={raiseStatus}
@@ -469,7 +475,7 @@ export function CapitalRaiseCardsClient({
         <RaiseCard
           label={t("funding_target")}
           value={target > 0 ? formatPledgeTotal(target, pledgeSummary.currency) : "TBD"}
-          sub={target > 0 ? `${fillPct}% filled` : "Company funding goal"}
+          sub={target > 0 && showPledges ? `${fillPct}% filled` : "Company funding goal"}
           cta={t("view_breakdown")}
           accentColor="#4338CA"
           onClick={() => setOpen("target")}
@@ -510,6 +516,7 @@ export function CapitalRaiseCardsClient({
               company={company}
               investorActivity={investorActivity}
               raiseStatus={raiseStatus}
+              showPledges={showPledges}
               onClose={() => setOpen(null)}
             />
           )}

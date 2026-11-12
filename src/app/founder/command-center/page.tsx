@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { computeReadinessScore, getLatestDiligenceReport } from "@/lib/data/founder-readiness";
@@ -56,6 +57,8 @@ export default async function CommandCenterPage() {
 
   const supabase = await createServerSupabaseClient();
   const serviceSupabase = createServiceRoleClient();
+  // Admin switch (Feature Controls, Pledged amounts).
+  const pledgesOn = isFeatureEnabled(await loadFeatureFlags(supabase), "founder", "pledged");
 
   // Fetch all data in parallel
   const [
@@ -135,7 +138,7 @@ export default async function CommandCenterPage() {
   const readinessScore = diligenceReport?.readiness_score ?? computeReadinessScore(uploadedTypeCodes);
 
   let pledgedAmount = 0;
-  if (company) {
+  if (company && pledgesOn) {
     const pledgeCompanyId = await getFounderPledgeCompanyId(serviceSupabase, profile.id, company.id);
     const summary = await getCompanyPledgeSummary(serviceSupabase, pledgeCompanyId);
     pledgedAmount = summary.totalPledged;
@@ -158,6 +161,7 @@ export default async function CommandCenterPage() {
             investors={commandInvestors}
             readinessScore={readinessScore}
             pledgedAmount={pledgedAmount}
+            showPledges={pledgesOn}
             fundingTarget={company?.funding_amount ? Number(company.funding_amount) : null}
             companyName={company?.company_name ?? "Your company"}
           />

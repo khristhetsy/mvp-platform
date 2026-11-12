@@ -5,6 +5,7 @@ import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { InvestorPartnerScorePanel } from "@/components/investor/InvestorPartnerScorePanel";
 import { loadPartnerScore } from "@/lib/investor-rating/load";
 import { buildPartnerCoaching } from "@/lib/investor-rating/coaching";
+import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
 
@@ -18,6 +19,7 @@ export default async function InvestorPartnerScorePage() {
   // interests, deal rooms, threads and profile — all keyed to their own id.
   const supabase = createServiceRoleClient();
   const score = await loadPartnerScore(supabase, profile.id);
+  const pledgesOn = isFeatureEnabled(await loadFeatureFlags(supabase), "investor", "pledged");
   const coaching = await buildPartnerCoaching(score);
 
   return (
@@ -34,7 +36,7 @@ export default async function InvestorPartnerScorePage() {
           description={t("how_you_show_up_as_a_partner_to_founders_based")}
         />
         <div className="max-w-2xl">
-          <InvestorPartnerScorePanel score={score} coaching={coaching} />
+          <InvestorPartnerScorePanel score={score} coaching={coaching} showPledges={pledgesOn} />
         </div>
       </WorkspacePageContainer>
     </AppShell>

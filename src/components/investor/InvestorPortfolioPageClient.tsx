@@ -103,7 +103,7 @@ const inputCls =
   "w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[13px] text-slate-900 focus:outline-none";
 
 /* ════════════════════════════════════════════════════════ */
-export function InvestorPortfolioPageClient() {
+export function InvestorPortfolioPageClient({ showPledges = true }: Readonly<{ showPledges?: boolean }>) {
   const t = useTranslations("investorCmp");
   const searchParams = useSearchParams();
 
@@ -129,7 +129,9 @@ export function InvestorPortfolioPageClient() {
   useEffect(() => {
     Promise.all([
       fetch("/api/investor/portfolio-investments").then((r) => r.json()),
-      fetch("/api/investor/portfolio-investments/pledges").then((r) => r.json()),
+      showPledges
+        ? fetch("/api/investor/portfolio-investments/pledges").then((r) => r.json())
+        : Promise.resolve([]),
       fetch("/api/investor/deal-room").then((r) => r.json()),
     ])
       .then(([inv, pl, dr]) => {
@@ -139,7 +141,7 @@ export function InvestorPortfolioPageClient() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, []);
+  }, [showPledges]);
 
   /* handle ?add_company_id=&company_name=&slug=&interest_id=&pledge_amount= from Opportunities page */
   useEffect(() => {

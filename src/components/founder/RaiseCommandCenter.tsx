@@ -36,6 +36,8 @@ export type CommandCenterProps = {
   pledgedAmount: number;
   fundingTarget: number | null;
   companyName: string;
+  /** False when an admin has switched Pledged amounts off: hides the Indicated tile. */
+  showPledges?: boolean;
 };
 
 // ---------------------------------------------------------------------------
@@ -216,12 +218,14 @@ function FollowUpsSection({ investors }: { investors: CommandCenterInvestor[] })
 function MetricsStrip({
   readinessScore,
   pledgedAmount,
+  showPledges,
   fundingTarget,
   roomCount,
   overdueFollowUps,
 }: {
   readinessScore: number;
   pledgedAmount: number;
+  showPledges: boolean;
   fundingTarget: number | null;
   roomCount: number;
   overdueFollowUps: number;
@@ -259,8 +263,8 @@ function MetricsStrip({
   ];
 
   return (
-    <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-      {metrics.map((m) => (
+    <div className={`mb-6 grid grid-cols-2 gap-3 ${showPledges ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
+      {metrics.filter((m) => showPledges || m.label !== "Indicated").map((m) => (
         <div
           key={m.label}
           className="rounded-xl px-4 py-3 text-center"
@@ -289,6 +293,7 @@ export function RaiseCommandCenter({
   readinessScore,
   pledgedAmount,
   fundingTarget,
+  showPledges = true,
 }: CommandCenterProps) {
   const t = useTranslations("founderCmp");
   const [tab, setTab] = useState<TabKey>("rooms");
@@ -331,6 +336,7 @@ export function RaiseCommandCenter({
       <MetricsStrip
         readinessScore={readinessScore}
         pledgedAmount={pledgedAmount}
+        showPledges={showPledges}
         fundingTarget={fundingTarget}
         roomCount={rooms.length}
         overdueFollowUps={overdueInvs.length}
