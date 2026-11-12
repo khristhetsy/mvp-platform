@@ -41,7 +41,7 @@ function RowsPanel({ title, rows, onOpen }: Readonly<{ title: string; rows: Boar
     <div className={`${CARD} px-5 py-5`}>
       <h3 className="mb-1 font-[family-name:var(--font-site-archivo)] text-xl font-bold tracking-tight text-[var(--navy)]">{title}</h3>
       <p className="text-[13px] text-slate-500">CRR change since first reading</p>
-      <div className="grid grid-cols-[1.35fr_0.8fr_0.8fr_1fr] gap-1.5 mt-3 border-b border-site-line pb-2 font-mono text-[10.5px] tracking-[0.12em] text-slate-500">
+      <div className="grid grid-cols-[1.35fr_0.8fr_0.8fr_1fr] gap-1.5 mt-3 border-b border-site-line pb-2 pr-1.5 font-mono text-[10.5px] tracking-[0.12em] text-slate-500">
         <span>SYMBOL</span>
         <span className="text-right">CRR</span>
         <span className="text-right">CHG</span>
@@ -84,7 +84,7 @@ function SectorPanel({ sectors, active, onPick, windowDays }: Readonly<{ sectors
     <div className={`${CARD} px-5 py-5`}>
       <h3 className="mb-1 font-[family-name:var(--font-site-archivo)] text-xl font-bold tracking-tight text-[var(--navy)]">Sector board</h3>
       <p className="text-[13px] text-slate-500">Click a sector to filter</p>
-      <div className="grid grid-cols-[3fr_0.5fr_0.5fr] gap-1.5 mt-3 border-b border-site-line pb-2 font-mono text-[10.5px] tracking-[0.12em] text-slate-500">
+      <div className="grid grid-cols-[3fr_0.5fr_0.5fr] gap-1.5 mt-3 border-b border-site-line pb-2 pr-1.5 font-mono text-[10.5px] tracking-[0.12em] text-slate-500">
         <span>SECTOR</span>
         <span className="text-right">CRR</span>
         <span className="text-right">CHG</span>
