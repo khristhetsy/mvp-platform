@@ -21,6 +21,7 @@ import { ensureSubscriptionForProfile, getSubscriptionForProfile } from "@/lib/s
 import { priceShort } from "@/lib/subscriptions/pricing-catalog";
 import { loadPricing } from "@/lib/subscriptions/pricing-server";
 import { PLATFORM_TZ } from "@/lib/time/platform-tz";
+import { findCurrentAcceptance } from "@/lib/billing/premium-agreement";
 import { loadFounderWireState } from "@/lib/billing/wire";
 import { wireDatePT } from "@/lib/billing/wire-core";
 import { WireCheckoutPanel, WireInvoiceList } from "@/components/billing/WireCheckoutPanel";
@@ -82,6 +83,11 @@ export default async function BillingPage({
   // whether or not Lemon Squeezy checkout is enabled.
   const wire = await loadFounderWireState(profile.id);
   const params = (await searchParams) ?? {};
+  // Accepted Services Agreement copy (Premium). A lookup failure just hides the link.
+  const agreement =
+    subscription.plan_type === "founder_premium"
+      ? await findCurrentAcceptance(profile.id).catch(() => null)
+      : null;
   const premiumActive = subscription.plan_type === "founder_premium" && subscription.subscription_status === "active";
   // Premium is now a card plan. The wire panel only shows for founders who already
   // have a wire invoice, so existing wire customers keep their history.
@@ -148,6 +154,14 @@ export default async function BillingPage({
             <dd className="mt-1">{isPaymentsEnabled() ? "Enabled" : "Not connected yet"}</dd>
           </div>
         </dl>
+        {agreement ? (
+          <p className="mt-4 text-sm text-slate-700">
+            iCFO Services Agreement accepted on {wireDatePT(agreement.accepted_at)}.{" "}
+            <a className="font-medium text-blue-600 underline" href={`/api/billing/premium-agreement?acceptance=${agreement.id}`}>
+              Download a copy (PDF)
+            </a>
+          </p>
+        ) : null}
 
         {daysLeft != null ? (
           <p

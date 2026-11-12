@@ -8,6 +8,7 @@ import { BUY_LINKS } from "@/lib/billing/buy-links";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { recordFunnelEvent } from "@/lib/analytics/funnel";
 import type { PlanType } from "@/lib/subscriptions/plans";
+import { findCurrentAcceptance } from "@/lib/billing/premium-agreement";
 
 const PLAN_TO_VARIANT: Partial<Record<PlanType, string>> = {
   founder_basic: LS_VARIANT_IDS.founder_basic,
@@ -37,6 +38,22 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // — not just the UI checkbox), so no checkout proceeds without recorded consent.
     if (!refundPolicyAcceptedAt) {
       return NextResponse.json({ error: "Please accept the billing terms to continue." }, { status: 400 });
+    }
+
+    // Premium carries the iCFO Services Agreement. Enforced here as well as in the
+    // dialog, so no Premium checkout starts without a recorded acceptance of the
+    // current agreement text. Fails closed when the record cannot be read.
+    if (planType === "founder_premium") {
+      let accepted = null;
+      try {
+        accepted = await findCurrentAcceptance(profile.id);
+      } catch (e) {
+        console.error("[billing/checkout] agreement lookup failed", e);
+        return NextResponse.json({ error: "We could not confirm your agreement. Please try again, or contact us.", code: "agreement_unavailable" }, { status: 503 });
+      }
+      if (!accepted) {
+        return NextResponse.json({ error: "Please review and accept the Services Agreement to continue.", code: "agreement_required" }, { status: 400 });
+      }
     }
 
     // Funnel: a checkout was initiated (§8). Session keyed to the profile.
