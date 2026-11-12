@@ -5,6 +5,7 @@ import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { requireRole } from "@/lib/supabase/auth";
 import { loadInvestorPreferences } from "@/lib/investors/contact-preferences";
@@ -48,6 +49,7 @@ export default async function InvestorDetailPage({
   // Investor preferences from the CRM contact — resolve an email to look up by
   // (never displayed): stored contact email → member profile → prospect record.
   const admin = createServiceRoleClient();
+  const pledgesOn = isFeatureEnabled(await loadFeatureFlags(admin), "founder", "pledged");
   const { data: link } = await untyped(admin)
     .from("pipeline_investors")
     .select("contact_email, platform_investor_id, name")
@@ -115,7 +117,7 @@ export default async function InvestorDetailPage({
     >
       <FounderFeatureGate featureKey="investor_access">
         <WorkspacePageContainer>
-          <InvestorDetailClient investor={detail} preferences={preferences} />
+          <InvestorDetailClient investor={detail} preferences={preferences} showPledges={pledgesOn} />
         </WorkspacePageContainer>
       </FounderFeatureGate>
     </FounderAppShell>

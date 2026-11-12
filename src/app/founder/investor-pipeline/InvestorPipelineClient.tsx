@@ -706,6 +706,7 @@ export function InvestorPipelineClient({ initialData, showPledges = true }: { in
         <InvestorCardPanel
           key={panelInvestor.id}
           investor={panelInvestor}
+          showPledges={showPledges}
           stages={PIPELINE_STAGES}
           onClose={() => setPanelId(null)}
           onStageChange={(id, stage) => handleStageChange(id, stage as PipelineStage)}

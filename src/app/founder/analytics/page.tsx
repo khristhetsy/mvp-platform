@@ -7,6 +7,8 @@ import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { loadFounderAnalytics } from "@/lib/analytics/founder-analytics";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { requireRole } from "@/lib/supabase/auth";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
 import { AnalyticsCardsClient } from "@/components/founder/AnalyticsCardsClient";
 import { AnalyticsChartPanelsClient } from "@/components/founder/AnalyticsChartPanelsClient";
 import { FounderEmptyState } from "@/components/founder/FounderEmptyState";
@@ -21,6 +23,7 @@ function formatStatusCounts(counts: Record<string, number>) {
 
 export default async function FounderAnalyticsPage() {
   const profile = await requireRole(["founder"]);
+  const pledgesOn = isFeatureEnabled(await loadFeatureFlags(createServiceRoleClient()), "founder", "pledged");
   const t = await getTranslations("appPages");
   const { company } = await getActiveCompanyForUser(profile);
   // Profile-scoped analytics belong to the founder raise; a Deal Company shows none.
@@ -116,7 +119,7 @@ export default async function FounderAnalyticsPage() {
             </div>
 
             {/* Show the charts anyway — they'll show zeros but at least the UI is legible */}
-            <AnalyticsCardsClient analytics={analytics} />
+            <AnalyticsCardsClient analytics={analytics} showPledges={pledgesOn} />
             <div className="mt-6 grid gap-6 lg:grid-cols-3">
               <div className="lg:col-span-2">
                 <AnalyticsChartPanelsClient analytics={analytics} />
@@ -131,7 +134,7 @@ export default async function FounderAnalyticsPage() {
           </>
         ) : (
           <>
-            <AnalyticsCardsClient analytics={analytics} />
+            <AnalyticsCardsClient analytics={analytics} showPledges={pledgesOn} />
             <div className="mt-6 grid gap-6 lg:grid-cols-3">
               <div className="lg:col-span-2">
                 <AnalyticsChartPanelsClient analytics={analytics} />

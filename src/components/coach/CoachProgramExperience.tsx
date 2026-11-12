@@ -632,8 +632,12 @@ function LiveFacts({ raw, lessonSlug, phase, committed, cue, act }: Readonly<{ r
       return (
         <div className="flex flex-col gap-2">
           {row("Raise target", raw.pledges?.raise ? money(raw.pledges.raise) : na)}
-          {row("Pledged, recorded", raw.pledges ? `${money(raw.pledges.totalPledged)} from ${raw.pledges.investorCount}` : na, raw.pledges ? raw.pledges.investorCount > 0 : undefined)}
-          {row("Gap", raw.pledges?.raise ? money(Math.max(0, raw.pledges.raise - raw.pledges.totalPledged)) : na)}
+          {raw.pledges?.hidden ? null : (
+            <>
+              {row("Pledged, recorded", raw.pledges ? `${money(raw.pledges.totalPledged)} from ${raw.pledges.investorCount}` : na, raw.pledges ? raw.pledges.investorCount > 0 : undefined)}
+              {row("Gap", raw.pledges?.raise ? money(Math.max(0, raw.pledges.raise - raw.pledges.totalPledged)) : na)}
+            </>
+          )}
         </div>
       );
     case "investor-updates":

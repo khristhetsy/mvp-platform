@@ -16,6 +16,7 @@ import { listLessonProgressForCompany } from "@/lib/learning/lesson-progress";
 import { weekStartUtc } from "@/lib/matching/intro-quota";
 import { INDUSTRY_MEDIAN_MIN_FOUNDERS, OUTREACH_PROGRAM, type ProgramDefinition, type ProgramMetric } from "@/lib/learning/coach/program";
 import { getCompanyPledgeSummary, getFounderPledgeCompanyId } from "@/lib/data/investor-pledges";
+import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
 import type { Database } from "@/lib/supabase/types";
 import { splitIndustries } from "@/lib/industry/list";
 
@@ -41,7 +42,7 @@ export type DealRoomsRead = { open: number; questionsOpen: number; docRequestsOp
 export type DocumentsRead = { total: number };
 export type OfferingRead = { type: string | null; attestedAt: string | null };
 export type SpvsRead = { count: number; checklistPct: number | null; closingPct: number | null };
-export type PledgesRead = { totalPledged: number; investorCount: number; raise: number | null };
+export type PledgesRead = { totalPledged: number; investorCount: number; raise: number | null; /** True when the Pledged switch is off: amounts are not read. */ hidden?: boolean };
 export type UpdatesRead = { last30: number; lastAt: string | null; daysSince: number | null };
 
 export type ProgramRaw = {
@@ -220,10 +221,14 @@ export async function loadProgramRaw(input: { profile: Profile; company: Company
     }),
     settle(async (): Promise<PledgesRead> => {
       const typed = admin as unknown as SupabaseClient<Database>;
+      const raise = (input.company as { funding_amount?: number | string | null }).funding_amount;
+      const raiseValue = raise === null || raise === undefined ? null : Number(raise);
+      if (!isFeatureEnabled(await loadFeatureFlags(typed), "founder", "pledged")) {
+        return { totalPledged: 0, investorCount: 0, raise: raiseValue, hidden: true };
+      }
       const pledgeCompanyId = await getFounderPledgeCompanyId(typed, founderId, companyId);
       const summary = await getCompanyPledgeSummary(typed, pledgeCompanyId);
-      const raise = (input.company as { funding_amount?: number | string | null }).funding_amount;
-      return { totalPledged: summary.totalPledged, investorCount: summary.investorCount, raise: raise === null || raise === undefined ? null : Number(raise) };
+      return { totalPledged: summary.totalPledged, investorCount: summary.investorCount, raise: raiseValue };
     }),
     settle(async (): Promise<UpdatesRead> => {
       const { data, error } = await admin.from("company_updates").select("created_at").eq("company_id", companyId).order("created_at", { ascending: false }).limit(200);
@@ -334,7 +339,7 @@ export function metricValue(raw: ProgramRaw, metric: ProgramMetric): number | nu
     case "checklist":
       return raw.spvs ? (raw.spvs.count === 0 ? 0 : Math.round(((raw.spvs.checklistPct ?? 0) / 100) * 3)) : null;
     case "pledges":
-      return raw.pledges ? raw.pledges.investorCount : null;
+      return raw.pledges && !raw.pledges.hidden ? raw.pledges.investorCount : null;
     case "updates_30d":
       return raw.updates ? raw.updates.last30 : null;
     case "milestone_tasks":
@@ -404,7 +409,7 @@ function youColumn(raw: ProgramRaw, program: ProgramDefinition): Record<string, 
     questions: raw.dealRooms ? `${raw.dealRooms.questionsOpen} waiting, ${raw.dealRooms.docRequestsOpen} document requests` : na,
     updates: raw.updates ? `${raw.updates.last30}${raw.updates.daysSince !== null ? ` (last ${raw.updates.daysSince} days ago)` : " (none yet)"}` : na,
     checklist: raw.spvs ? (raw.spvs.count === 0 ? "Not started" : `${raw.spvs.checklistPct ?? 0}% ready`) : na,
-    pledged: raw.pledges ? `${money(raw.pledges.totalPledged)} from ${raw.pledges.investorCount}${raw.pledges.raise ? ` of ${money(raw.pledges.raise)}` : ""}` : na,
+    pledged: raw.pledges && !raw.pledges.hidden ? `${money(raw.pledges.totalPledged)} from ${raw.pledges.investorCount}${raw.pledges.raise ? ` of ${money(raw.pledges.raise)}` : ""}` : na,
     weeks: "Not measured here",
     meetings_ts: "Not measured here",
   };

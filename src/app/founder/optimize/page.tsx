@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/supabase/auth";
 import { getTranslations } from "next-intl/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import {
   formatPledgeTotal,
@@ -91,6 +92,7 @@ export default async function FounderOptimizePage() {
 
   const supabase = await createServerSupabaseClient();
   const serviceSupabase = createServiceRoleClient();
+  const pledgesOn = isFeatureEnabled(await loadFeatureFlags(serviceSupabase), "founder", "pledged");
 
   let totalPledged = 0;
   let investorCount = 0;
@@ -99,11 +101,13 @@ export default async function FounderOptimizePage() {
   let daysSinceUpdate: number | null = null;
 
   if (company) {
-    const pledgeCompanyId = await getFounderPledgeCompanyId(serviceSupabase, profile.id, company.id);
-    const pledgeSummary = await getCompanyPledgeSummary(serviceSupabase, pledgeCompanyId);
-    totalPledged = pledgeSummary.totalPledged;
-    investorCount = pledgeSummary.investorCount;
-    currency = pledgeSummary.currency;
+    if (pledgesOn) {
+      const pledgeCompanyId = await getFounderPledgeCompanyId(serviceSupabase, profile.id, company.id);
+      const pledgeSummary = await getCompanyPledgeSummary(serviceSupabase, pledgeCompanyId);
+      totalPledged = pledgeSummary.totalPledged;
+      investorCount = pledgeSummary.investorCount;
+      currency = pledgeSummary.currency;
+    }
 
     type CountRow = { id: string };
     const drResult = await supabase.from("deal_rooms").select("id").eq("company_id", company.id);
@@ -164,6 +168,7 @@ export default async function FounderOptimizePage() {
         />
 
         {/* Round close thermometer */}
+        {pledgesOn ? (
         <section className="rounded-2xl border border-slate-200 bg-white p-6">
           <div className="flex items-baseline justify-between">
             <h2 className="text-sm font-medium text-slate-600">{t("round_close")}</h2>
@@ -185,10 +190,11 @@ export default async function FounderOptimizePage() {
             />
           </div>
         </section>
+        ) : null}
 
         {/* Engagement metrics */}
-        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <MetricCard value={String(investorCount)} label={t("committed_investors")} />
+        <div className={`mt-5 grid grid-cols-2 gap-3 ${pledgesOn ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+          {pledgesOn ? <MetricCard value={String(investorCount)} label={t("committed_investors")} /> : null}
           <MetricCard value={String(dealRoomCount)} label={`Deal room${dealRoomCount === 1 ? "" : "s"}`} />
           <MetricCard
             value={daysSinceUpdate === null ? "—" : `${daysSinceUpdate}d`}
@@ -214,6 +220,7 @@ export default async function FounderOptimizePage() {
         ) : null}
 
         {/* Milestones */}
+        {pledgesOn ? (
         <section className="mt-6">
           <h2 className="mb-3 text-sm font-medium text-slate-900">{t("milestones")}</h2>
           <ul className="space-y-2">
@@ -241,6 +248,7 @@ export default async function FounderOptimizePage() {
             ))}
           </ul>
         </section>
+        ) : null}
 
         {/* Ongoing tools */}
         <section className="mt-6">
