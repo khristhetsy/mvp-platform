@@ -479,7 +479,7 @@ function DrawerContent({
 // ---------------------------------------------------------------------------
 // Main export
 // ---------------------------------------------------------------------------
-export function AnalyticsCardsClient({ analytics: a }: { analytics: FounderAnalyticsSnapshot }) {
+export function AnalyticsCardsClient({ analytics: a, showPledges = true }: { analytics: FounderAnalyticsSnapshot; showPledges?: boolean }) {
   const t = useTranslations("founderCmp");
   const [open, setOpen] = useState<DrawerKey | null>(null);
 
@@ -495,7 +495,9 @@ export function AnalyticsCardsClient({ analytics: a }: { analytics: FounderAnaly
         <ACard label={t("onboarding_progress")} value={`${a.onboardingPercent}%`} detail={a.onboardingCompletedAt ? `Completed ${new Date(a.onboardingCompletedAt).toLocaleDateString("en-US")}` : "Current snapshot"} icon={<IcoCheck />} iconBg="#E1F5EE" valColor="#3B6D11" onClick={() => setOpen("onboarding")} />
         <ACard label={t("readiness_score")} value={a.readinessScore != null ? `${a.readinessScore}%` : "—"} detail="Latest diligence report" icon={<IcoShield />} iconBg="#EEEDFB" valColor="#1A6CE4" onClick={() => setOpen("readiness")} />
         <ACard label={t("private_contacts")} value={String(a.privateContactCount)} detail="Founder CRM contacts" icon={<IcoUsers />} iconBg="#E0F2FE" valColor="#0369a1" onClick={() => setOpen("contacts")} />
-        <ACard label={t("investor_pledges")} value={a.pledgeTotalDisplay} detail={`${a.pledgeInvestorCount} investors · platform activity`} icon={<IcoDollar />} iconBg="#FEF3CD" valColor="#854F0B" onClick={() => setOpen("pledges")} />
+        {showPledges ? (
+          <ACard label={t("investor_pledges")} value={a.pledgeTotalDisplay} detail={`${a.pledgeInvestorCount} investors · platform activity`} icon={<IcoDollar />} iconBg="#FEF3CD" valColor="#854F0B" onClick={() => setOpen("pledges")} />
+        ) : null}
       </section>
 
       {/* Row 2 */}

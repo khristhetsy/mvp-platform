@@ -14,9 +14,11 @@ function formatCurrency(value: number) {
 export function CompanyInvestorActivityPanel({
   activity,
   companyId,
+  showPledges = true,
 }: Readonly<{
   activity: AdminCompanyWorkspaceData["investorActivity"];
   companyId: string;
+  showPledges?: boolean;
 }>) {
   const t = useTranslations("adminCmp");
   return (
@@ -27,10 +29,12 @@ export function CompanyInvestorActivityPanel({
         <MetricCard label={t("intro_requests_2")} value={String(activity.introRequests)} detail="Requested intros" accent="blue" href={buildCompanyFilteredHref("/admin/crm", companyId, { activity: "requested_intro" })} />
         <MetricCard label={t("message_threads")} value={String(activity.messageThreads)} detail={`${activity.meetingsScheduled} meetings scheduled`} accent="slate" href={buildCompanyFilteredHref("/admin/crm", companyId)} />
       </MetricGrid>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <MetricCard label={t("pledge_total")} value={formatCurrency(activity.pledgeTotal)} detail="From investor_interests" accent="indigo" href={buildCompanyFilteredHref("/admin/crm", companyId)} />
-        <MetricCard label={t("interest_amounts")} value={formatCurrency(activity.interestAmountTotal)} detail="Indicative totals" accent="slate" href={buildCompanyFilteredHref("/admin/crm", companyId)} />
-      </div>
+      {showPledges ? (
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <MetricCard label={t("pledge_total")} value={formatCurrency(activity.pledgeTotal)} detail="From investor_interests" accent="indigo" href={buildCompanyFilteredHref("/admin/crm", companyId)} />
+          <MetricCard label={t("interest_amounts")} value={formatCurrency(activity.interestAmountTotal)} detail="Indicative totals" accent="slate" href={buildCompanyFilteredHref("/admin/crm", companyId)} />
+        </div>
+      ) : null}
       <p className="mt-4 text-xs text-slate-500">
         Source: investor_interests, saved_deals, intro_requests, message_threads ·{" "}
         <Link href={buildCompanyFilteredHref("/admin/crm", companyId)} className="font-medium text-indigo-600 hover:text-indigo-800">

@@ -14,6 +14,7 @@ import { listRecentInvestorCrmActivity } from "@/lib/data/investor-crm";
 import { listAdminInvestorActivity } from "@/lib/data/investor-interests";
 import { getComplianceMetrics } from "@/lib/compliance/events";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
 import { requireRole } from "@/lib/supabase/auth";
 import { getAdminOrchestrationCounts } from "@/lib/notifications/orchestration/summaries";
 import { loadAdminOrchestrationExecutionSummary } from "@/lib/notifications/orchestration/execution-log";
@@ -164,6 +165,7 @@ async function CommandCenterSection({
   userRole: AdminProfile["role"];
   loadedAt: string;
 }>) {
+  const pledgesOn = isFeatureEnabled(await loadFeatureFlags(supabase), "admin", "pledged");
   const [
     [metrics, queueSummary, compliance, operationalFeed],
     companies,
@@ -254,7 +256,14 @@ async function CommandCenterSection({
       }}
       pendingCount={pendingCompanies.length}
       companyCards={companyCards}
-      investorActivity={investorActivity}
+      investorActivity={
+        pledgesOn
+          ? investorActivity
+          : {
+              ...investorActivity,
+              interests: investorActivity.interests.map((row) => ({ ...(row as Record<string, unknown>), pledge_amount: null })),
+            }
+      }
       crmActivity={crmActivity}
       operationalActivity={operationalFeed.items}
       queueSummary={queueSummary}

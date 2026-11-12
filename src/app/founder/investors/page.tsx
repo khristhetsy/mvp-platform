@@ -11,6 +11,7 @@ import { listFounderInvestorActivity } from "@/lib/data/investor-interests";
 import { getCompanyPledgeSummary, getFounderPledgeCompanyId } from "@/lib/data/investor-pledges";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
 
@@ -22,6 +23,7 @@ export default async function FounderInvestorsPage() {
   const { company } = await getActiveCompanyForUser(profile);
 
   let crmView: ReturnType<typeof buildFounderInvestorCrmView> | null = null;
+  const pledgesOn = isFeatureEnabled(await loadFeatureFlags(createServiceRoleClient()), "founder", "pledged");
 
   if (company) {
     const supabase = await createServerSupabaseClient();
@@ -62,7 +64,7 @@ export default async function FounderInvestorsPage() {
               </p>
             </WorkspacePanel>
           ) : (
-            <FounderInvestorsModuleViews crmView={crmView} companyName={company.company_name} />
+            <FounderInvestorsModuleViews crmView={crmView} companyName={company.company_name} showPledges={pledgesOn} />
           )}
         </WorkspacePageContainer>
       </FounderFeatureGate>

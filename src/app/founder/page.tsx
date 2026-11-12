@@ -488,7 +488,16 @@ export default async function FounderDashboardPage() {
             </WorkspacePanel>
 
             {investorActivity ? (
-              <DashboardPipelinePanel activity={investorActivity} />
+              <DashboardPipelinePanel
+                activity={
+                  pledgesOn
+                    ? investorActivity
+                    : {
+                        ...investorActivity,
+                        interests: investorActivity.interests.map((row) => ({ ...row, pledge_amount: null })),
+                      }
+                }
+              />
             ) : (
               <WorkspacePanel title={t("investor_pipeline_2")} subtitle={t("read_only_activity_on_your_listing")}>
                 <p className="text-sm text-slate-600">{t("investor_activity_will_appear_once_your_compan")}</p>
