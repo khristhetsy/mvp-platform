@@ -294,7 +294,7 @@ export type LsSubscriptionStatus =
 export interface LsWebhookPayload {
   meta: {
     event_name: LsEventName;
-    custom_data?: { profile_id?: string };
+    custom_data?: { profile_id?: string; signup_id?: string };
   };
   data: {
     id: string;
