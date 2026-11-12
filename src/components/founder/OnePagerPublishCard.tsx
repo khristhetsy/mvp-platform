@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { founderOnePagerPath } from "@/lib/listing/one-pager-link";
 
 const ACCENT = "#2E78F5";
 
@@ -29,8 +30,8 @@ export function OnePagerPublishCard({
   const href =
     state.slug
       ? (typeof window !== "undefined"
-          ? `${window.location.origin}/f/${state.slug}`
-          : `/f/${state.slug}`)
+          ? `${window.location.origin}${founderOnePagerPath(state.slug)}`
+          : founderOnePagerPath(state.slug))
       : null;
 
   async function toggle() {
@@ -205,7 +206,7 @@ export function OnePagerPublishCard({
             maxWidth: "min(300px, calc(100vw - 200px))",
             overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
           }}>
-            {href ?? `/f/${state.slug}`}
+            {href ?? founderOnePagerPath(state.slug)}
           </span>
 
           <button
@@ -230,7 +231,7 @@ export function OnePagerPublishCard({
           </button>
 
           <a
-            href={`/f/${state.slug}`}
+            href={founderOnePagerPath(state.slug)}
             target="_blank"
             rel="noopener noreferrer"
             style={{

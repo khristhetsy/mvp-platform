@@ -4,6 +4,7 @@ import { requireApiProfile } from "@/lib/api/auth";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { loadOnePagerCompany, onePagerFileName, renderOnePagerPdf } from "@/lib/outreach/one-pager-pdf";
+import { founderOnePagerPath } from "@/lib/listing/one-pager-link";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,7 @@ export async function GET() {
   if (!c) return NextResponse.json({ error: "No company found." }, { status: 404 });
 
   const appBase = (process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com").replace(/\/$/, "");
-  const pdf = await renderOnePagerPdf(c, { onlineUrl: c.is_published && c.slug ? `${appBase}/f/${c.slug}` : null });
+  const pdf = await renderOnePagerPdf(c, { onlineUrl: c.is_published && c.slug ? `${appBase}${founderOnePagerPath(c.slug)}` : null });
 
   return new NextResponse(new Uint8Array(pdf), {
     headers: {

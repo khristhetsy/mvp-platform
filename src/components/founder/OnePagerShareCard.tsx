@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { founderOnePagerPath } from "@/lib/listing/one-pager-link";
 
 const ACCENT = "#2E78F5";
 
@@ -15,8 +16,8 @@ export function OnePagerShareCard({
 
   // Build the absolute URL client-side
   const href = typeof window !== "undefined"
-    ? `${window.location.origin}/f/${slug}`
-    : `/f/${slug}`;
+    ? `${window.location.origin}${founderOnePagerPath(slug)}`
+    : founderOnePagerPath(slug);
 
   async function copy() {
     try {
@@ -92,7 +93,7 @@ export function OnePagerShareCard({
 
         {/* Open in new tab */}
         <a
-          href={`/f/${slug}`}
+          href={founderOnePagerPath(slug)}
           target="_blank"
           rel="noopener noreferrer"
           style={{

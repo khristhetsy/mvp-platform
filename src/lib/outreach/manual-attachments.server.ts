@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getStorageBucket, PITCH_DECKS_BUCKET } from "@/lib/data/documents";
 import { loadOnePagerCompany, onePagerFileName, renderOnePagerPdf } from "@/lib/outreach/one-pager-pdf";
 import { MAX_ATTACHMENT_BYTES, type ManualAttachments } from "@/lib/outreach/manual-attachments";
+import { founderOnePagerPath } from "@/lib/listing/one-pager-link";
 
 export type BuiltAttachment = { filename: string; content: string };
 
@@ -39,7 +40,7 @@ export async function buildManualAttachments(
   if (att.onePagerPdf) {
     const company = await loadOnePagerCompany(db, companyId);
     if (company) {
-      const onlineUrl = company.is_published && company.slug ? `${appBase()}/f/${company.slug}` : null;
+      const onlineUrl = company.is_published && company.slug ? `${appBase()}${founderOnePagerPath(company.slug)}` : null;
       const pdf = await renderOnePagerPdf(company, { onlineUrl });
       total += pdf.length;
       out.push({ filename: onePagerFileName(company.company_name), content: pdf.toString("base64") });
