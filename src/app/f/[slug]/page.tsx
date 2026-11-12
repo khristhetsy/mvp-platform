@@ -12,6 +12,7 @@ import { UseOfFundsText } from "@/components/founder/UseOfFundsText";
 import { isSpvClient, normalizeClientType } from "@/lib/listing/client-type";
 import { SPV_LEGEND } from "@/lib/listing/disclosures";
 import { OnePagerDisclaimer } from "@/components/founder/OnePagerDisclaimer";
+import { showSeekingAmount } from "@/lib/listing/one-pager-link";
 
 export const dynamic = "force-dynamic";
 
@@ -124,10 +125,13 @@ const ACCENT = "#2E78F5";
 
 export default async function InvestorOnePagerPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ src?: string | string[] }>;
 }) {
   const { slug } = await params;
+  const { src } = await searchParams;
   const t = await getTranslations("appPages");
   const company = await getPublishedCompanyBySlug(slug);
   if (!company) notFound();
@@ -146,7 +150,9 @@ export default async function InvestorOnePagerPage({
 
   // "Raising" falls back to the business plan's raise amount when the profile has none.
   const clientType = await loadClientType(company.id);
-  const showRaise = isSpvClient(clientType);
+  // The amount shows for SPV clients, and when the founder sent the link (?src=founder). iCapOS links hide it.
+  const isSpv = isSpvClient(clientType);
+  const showRaise = showSeekingAmount({ isSpv, source: src });
   const raiseAmount = !showRaise
     ? null
     : company.funding_amount
@@ -385,7 +391,7 @@ export default async function InvestorOnePagerPage({
           </div>
         </div>
 
-        <OnePagerDisclaimer spvLegend={showRaise ? SPV_LEGEND : undefined} />
+        <OnePagerDisclaimer spvLegend={isSpv ? SPV_LEGEND : undefined} />
       </main>
     </div>
   );

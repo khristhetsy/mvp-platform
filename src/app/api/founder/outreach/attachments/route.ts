@@ -5,6 +5,7 @@ import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { onePagerFileName } from "@/lib/outreach/one-pager-pdf";
 import { liveAgentEmailUrlForCompany } from "@/lib/ir-agent/links";
+import { founderOnePagerPath } from "@/lib/listing/one-pager-link";
 
 export const dynamic = "force-dynamic";
 
@@ -58,7 +59,7 @@ export async function GET() {
           industry: c.industry,
           fileName: onePagerFileName(c.company_name),
           published: Boolean(c.is_published && c.slug),
-          url: c.is_published && c.slug ? `${appBase}/f/${c.slug}` : null,
+          url: c.is_published && c.slug ? `${appBase}${founderOnePagerPath(c.slug)}` : null,
         }
       : null,
     documents,

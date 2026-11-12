@@ -13,6 +13,7 @@ import { UseOfFundsText } from "@/components/founder/UseOfFundsText";
 import { fetchClientType, isSpvClient } from "@/lib/listing/client-type";
 import { OnePagerDisclaimer } from "@/components/founder/OnePagerDisclaimer";
 import { SPV_LEGEND } from "@/lib/listing/disclosures";
+import { founderOnePagerPath } from "@/lib/listing/one-pager-link";
 import { OnePagerDisclaimerNudge } from "@/components/founder/OnePagerDisclaimerNudge";
 
 export const dynamic = "force-dynamic";
@@ -91,13 +92,11 @@ export default async function FounderPreviewPage({
   if (!pub) notFound();
 
   // Same rule as the public page: "Raising" falls back to the business plan's raise amount.
-  // Only SPV clients show a raise amount to investors, so the preview matches the public page.
-  const showRaise = isSpvClient(await fetchClientType(admin, company.id));
-  const raiseAmount = !showRaise
-    ? null
-    : pub.funding_amount
-      ? Number(pub.funding_amount)
-      : (await loadBusinessPlanInputs(admin, company.id)).raiseAmount;
+  // The preview shows the version investors get when the founder sends the link, so Raising always shows.
+  const isSpv = isSpvClient(await fetchClientType(admin, company.id));
+  const raiseAmount = pub.funding_amount
+    ? Number(pub.funding_amount)
+    : (await loadBusinessPlanInputs(admin, company.id)).raiseAmount;
 
   const geography = [pub.state, pub.country].filter(Boolean).join(", ") || null;
   const stageLabel = pub.revenue_stage
@@ -147,7 +146,7 @@ export default async function FounderPreviewPage({
         <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
           {hasSlug && isPublished && (
             <a
-              href={`/f/${pub.slug}`}
+              href={founderOnePagerPath(pub.slug as string)}
               target="_blank"
               rel="noopener noreferrer"
               style={{
@@ -303,7 +302,7 @@ export default async function FounderPreviewPage({
 
         {/* Key metrics */}
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 20 }}>
-          {showRaise ? <MetricCard label="Raising" value={raiseAmount ? formatFunding(raiseAmount) : "TBD"} accent /> : null}
+          <MetricCard label="Raising" value={raiseAmount ? formatFunding(raiseAmount) : "TBD"} accent />
           <MetricCard label={t("revenue_stage")} value={stageLabel ?? "—"} />
           {geography && <MetricCard label={t("location")} value={geography} />}
           {pub.website && (
@@ -369,7 +368,7 @@ export default async function FounderPreviewPage({
           </div>
         </div>
 
-        <OnePagerDisclaimer spvLegend={showRaise ? SPV_LEGEND : undefined} />
+        <OnePagerDisclaimer spvLegend={isSpv ? SPV_LEGEND : undefined} />
       </main>
     </div>
   );

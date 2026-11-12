@@ -11,6 +11,7 @@ import { buildManualAttachments, type BuiltAttachment } from "@/lib/outreach/man
 import { recordManualSend } from "@/lib/outreach/email-cap";
 import { founderLimits } from "@/lib/investor-directory/db";
 import { sendBudget } from "@/lib/investor-directory/allowance";
+import { founderOnePagerPath } from "@/lib/listing/one-pager-link";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -377,7 +378,7 @@ export async function processManualOutreach(onlyCompanyId?: string): Promise<{ s
       is_published?: boolean | null;
     };
     const appBase = (process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com").replace(/\/$/, "");
-    const previewUrl = comp.is_published && comp.slug ? `${appBase}/f/${comp.slug}` : null;
+    const previewUrl = comp.is_published && comp.slug ? `${appBase}${founderOnePagerPath(comp.slug)}` : null;
     const agentUrl = await liveAgentEmailUrlForCompany(db, campaign.company_id);
 
     const { data: recipients } = await db

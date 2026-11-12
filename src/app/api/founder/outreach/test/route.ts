@@ -8,6 +8,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { normalizeAttachments, withOnePagerLink } from "@/lib/outreach/manual-attachments";
 import { buildManualAttachments } from "@/lib/outreach/manual-attachments.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { founderOnePagerPath } from "@/lib/listing/one-pager-link";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
 
   const company = await ensureFounderCompanyForUser(auth.profile);
   const appBase = (process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com").replace(/\/$/, "");
-  const previewUrl = company?.is_published && company?.slug ? `${appBase}/f/${company.slug}` : null;
+  const previewUrl = company?.is_published && company?.slug ? `${appBase}${founderOnePagerPath(company.slug)}` : null;
   const firstName = (auth.profile.full_name ?? "").trim().split(/\s+/)[0] || null;
 
   const rendered = renderManualEmail(subject, emailBody, {

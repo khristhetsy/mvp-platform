@@ -47,6 +47,7 @@ export const dynamic = "force-dynamic";
 // The gate is the engine's, not a number typed on this page — a founder was
 // being told outreach was unlocked while the engine flag said it was not.
 import { OUTREACH_GATE as OUTREACH_THRESHOLD, crrFor } from "@/lib/crr/crr-for";
+import { founderOnePagerPath } from "@/lib/listing/one-pager-link";
 
 /** Turn the real pipeline numbers into expandable AI insight cards for the Analytics step. */
 function buildDeployInsights(input: {
@@ -236,7 +237,7 @@ export default async function FounderDeployPage({
 
   // ---- Step 1 · Public Profile (embedded live preview + publish state + links) ----
   const isPublished = company?.is_published ?? false;
-  const publicHref = company?.slug ? `/f/${company.slug}` : null;
+  const publicHref = company?.slug ? founderOnePagerPath(company.slug) : null;
 
   // Social Media tab: loaded only when that tab is open, so the other tabs add no extra queries.
   let socialNode: ReactNode = null;
