@@ -1,5 +1,6 @@
 "use client";
 
+import { PRIVATE_MARKET_DISCLOSURE, SPV_LEGEND } from "@/lib/listing/disclosures";
 import { ArrowUpRight, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { ScoreRing } from "@/components/ui/ScoreRing";
@@ -26,7 +27,7 @@ const REVENUE_LABEL: Record<string, string> = {
   scaling: "Scaling",
 };
 const TONE: Record<Direction, string> = { up: "text-[#0f7a54]", down: "text-[#d92d20]", flat: "text-slate-500" };
-const COLS = "lg:grid-cols-[80px_2fr_1fr_0.7fr_1fr_0.7fr_0.8fr_1fr_0.8fr]";
+const COLS = "lg:grid-cols-[80px_2fr_1fr_0.7fr_0.7fr_0.8fr_1fr_0.8fr]";
 
 const revenueLabel = (c: ListedCompany) => (c.revenueStage ? (REVENUE_LABEL[c.revenueStage] ?? c.revenueStage) : null);
 const seeking = (c: ListedCompany) => c.raising?.replace(/^Raising\s+/i, "") ?? null;
@@ -100,7 +101,7 @@ export function PrivateMarketListings({
         ) : (
           <div>
             <div className={`hidden items-center gap-3 border-b border-slate-200 bg-[#f3f7ff] px-5 py-2.5 font-mono text-[10.5px] tracking-[0.1em] text-slate-600 lg:grid ${COLS}`}>
-              {["SYMBOL", "COMPANY", "INDUSTRY", "STAGE", "SEEKING", "CRR", "CHG", "OUTREACH", "YOUR MATCH"].map((h) => (
+              {["SYMBOL", "COMPANY", "INDUSTRY", "STAGE", "CRR", "CHG", "OUTREACH", "YOUR MATCH"].map((h) => (
                 <span key={h}>{h}</span>
               ))}
             </div>
@@ -126,7 +127,6 @@ export function PrivateMarketListings({
                   </span>
                   <Cell label="INDUSTRY" className="text-slate-600">{c.industry ?? "n/a"}</Cell>
                   <Cell label="STAGE" className="text-slate-600">{c.stage ?? "n/a"}</Cell>
-                  <Cell label="SEEKING" className="font-mono font-semibold text-slate-700">{seeking(c) ?? "n/a"}</Cell>
                   <Cell label="CRR" className="font-mono text-[15px] font-semibold text-[var(--navy)]">{c.crr === null ? "n/a" : Math.round(c.crr)}</Cell>
                   <Cell label="CHG" className={`font-mono font-semibold ${TONE[chgDir]}`}>
                     {chg === null ? "n/a" : `${ARROW[chgDir]} ${chg === 0 ? "0" : signed(chg)}`}
@@ -149,6 +149,9 @@ export function PrivateMarketListings({
           <span><b className="text-slate-500">▬</b> no change</span>
           <span>Your match: fit with your investor profile, shown to investors only.</span>
         </div>
+        <p className="border-t border-slate-100 px-5 py-3 text-[10px] leading-snug text-slate-500">
+          <b className="font-semibold text-slate-600">Important disclosure.</b> {PRIVATE_MARKET_DISCLOSURE}
+        </p>
       </div>
 
       {selected ? (
@@ -295,7 +298,7 @@ function CompanyOnePager({
               <p className="mt-3 text-[15px] leading-relaxed text-slate-700">{company.description ?? "No description provided yet."}</p>
               <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <Fact label="STAGE" value={company.stage} />
-                <Fact label="SEEKING" value={seeking(company)} />
+                {seeking(company) ? <Fact label="SEEKING" value={seeking(company)} /> : null}
                 <Fact label="MRR" value={company.mrr ? company.mrr.replace(/^([a-z])/, (m) => m.toUpperCase()) : null} />
               </div>
             </div>
@@ -303,7 +306,7 @@ function CompanyOnePager({
               <div className="rounded-xl border border-slate-200 p-4 sm:p-5">
                 <h3 className="text-lg font-bold text-[var(--navy)]">Raise</h3>
                 <div className="mt-2.5 text-sm">
-                  <Row label="Target raise" value={seeking(company)} />
+                  {seeking(company) ? <Row label="Target raise" value={seeking(company)} /> : null}
                   <Row label="Stage" value={company.stage} />
                   <Row label="Revenue" value={revenueLabel(company)} />
                   <Row label="MRR" value={company.mrr ?? null} last />
@@ -332,6 +335,12 @@ function CompanyOnePager({
               </div>
             </div>
           </div>
+
+          {seeking(company) ? (
+            <p className="rounded-lg bg-[var(--blue-muted)] px-3 py-2 text-[9px] leading-snug text-slate-600">
+              <b className="font-semibold text-slate-800">Important disclosure.</b> {SPV_LEGEND}
+            </p>
+          ) : null}
 
           <p className="border-t border-slate-200 pt-3.5 font-mono text-[11px] leading-relaxed text-slate-600">
             Listing summary only: no documents and no score breakdown. Informational, not an investment recommendation.

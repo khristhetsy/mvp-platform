@@ -95,11 +95,22 @@ describe("toListedCompany", () => {
       {
         id: "x", company_name: " Acme ", industry: "AI", funding_stage: "Seed", state: "CA", country: "US",
         funding_amount: 500000, funding_amount_band: null, business_description: "Builds things.",
-        listing_completed_at: "2026-10-09T00:00:00Z",
+        listing_completed_at: "2026-10-09T00:00:00Z", client_type: "spv",
       },
       72,
     );
     expect(c).toMatchObject({ name: "Acme", location: "CA, US", raising: "Raising $500000", crr: 72, description: "Builds things." });
+  });
+
+  it("hides the raise amount for every client that is not an SPV client", () => {
+    const row = {
+      id: "x", company_name: "Acme", industry: "AI", funding_stage: "Seed", state: null, country: null,
+      funding_amount: 500000, funding_amount_band: null, business_description: null,
+      listing_completed_at: "2026-10-09T00:00:00Z",
+    };
+    expect(toListedCompany({ ...row, client_type: "standard" }, 72).raising).toBeNull();
+    expect(toListedCompany({ ...row, client_type: null }, 72).raising).toBeNull();
+    expect(toListedCompany(row, 72).raising).toBeNull();
   });
 });
 
@@ -115,7 +126,7 @@ describe("toApprovedCompany", () => {
     expect(toApprovedCompany({ ...base, listing_completed_at: null, listing_opt_in_at: "2026-10-10T00:00:00Z" }, 80).optedIn).toBe(false);
   });
   it("falls back to the created date and keeps traction fields and an unscored CRR", () => {
-    const c = toApprovedCompany({ ...base, listing_completed_at: null, listing_opt_in_at: null }, null);
+    const c = toApprovedCompany({ ...base, listing_completed_at: null, listing_opt_in_at: null, client_type: "spv" }, null);
     expect(c).toMatchObject({ listedAt: "2026-10-01T00:00:00Z", crr: null, revenueStage: "pre_revenue", mrr: "None", raising: "Raising $1m - $10m" });
   });
 });

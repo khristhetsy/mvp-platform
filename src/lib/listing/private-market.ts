@@ -12,6 +12,7 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { crrScoresFor } from "@/lib/crr/crr-for";
 import { raisingLabel } from "@/lib/listing/deal-notices";
+import { raiseForInvestors } from "@/lib/listing/client-type";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Db = any;
@@ -113,6 +114,8 @@ export type ListingRow = {
   listing_completed_at: string;
   revenue_stage?: string | null;
   mrr?: string | null;
+  /** "spv" or "standard". Only SPV clients show a raise amount to investors. */
+  client_type?: string | null;
 };
 
 /** Pure: one database row to the listing summary investors see. */
@@ -123,7 +126,7 @@ export function toListedCompany(row: ListingRow, crr: number | null): ListedComp
     industry: row.industry?.trim() || null,
     stage: row.funding_stage?.trim() || null,
     location: [row.state, row.country].map((s) => (s ?? "").trim()).filter(Boolean).join(", ") || null,
-    raising: raisingLabel(row.funding_amount, row.funding_amount_band),
+    raising: raiseForInvestors(row.client_type, raisingLabel(row.funding_amount, row.funding_amount_band)),
     description: truncateDescription(row.business_description),
     crr,
     listedAt: row.listing_completed_at,
@@ -133,7 +136,16 @@ export function toListedCompany(row: ListingRow, crr: number | null): ListedComp
 }
 
 const LISTING_COLUMNS =
-  "id, company_name, industry, funding_stage, state, country, funding_amount, funding_amount_band, business_description, listing_completed_at, revenue_stage, mrr";
+  "id, company_name, industry, funding_stage, state, country, funding_amount, funding_amount_band, business_description, listing_completed_at, revenue_stage, mrr, client_type";
+
+/**
+ * Until the client_type migration is applied the column does not exist and the
+ * select errors. Retry without it: every company then reads as Standard, which
+ * hides the raise amount, the safe side.
+ */
+function withoutClientType(columns: string): string {
+  return columns.replace(", client_type", "");
+}
 
 /**
  * Every diligence complete company that opted in to the listing, with its
@@ -145,14 +157,17 @@ export async function listDiligenceCompleteCompanies(
   filter: PrivateMarketFilter = {},
   db: Db = createServiceRoleClient(),
 ): Promise<ListedCompany[]> {
-  const { data, error } = await db
-    .from("companies")
-    .select(LISTING_COLUMNS)
-    .not("listing_completed_at", "is", null)
-    .not("listing_opt_in_at", "is", null)
-    .or("is_sample.is.null,is_sample.eq.false")
-    .order("listing_completed_at", { ascending: false })
-    .limit(1000);
+  const run = (columns: string) =>
+    db
+      .from("companies")
+      .select(columns)
+      .not("listing_completed_at", "is", null)
+      .not("listing_opt_in_at", "is", null)
+      .or("is_sample.is.null,is_sample.eq.false")
+      .order("listing_completed_at", { ascending: false })
+      .limit(1000);
+  let { data, error } = await run(LISTING_COLUMNS);
+  if (error) ({ data, error } = await run(withoutClientType(LISTING_COLUMNS)));
   if (error) throw new Error(`Could not load the Private Market listing: ${error.message}`);
   const rows = (data ?? []) as ListingRow[];
   const scores = await crrScoresFor(rows.map((r) => r.id));
@@ -189,15 +204,18 @@ export async function listApprovedCompanies(
   filter: PrivateMarketFilter = {},
   db: Db = createServiceRoleClient(),
 ): Promise<ListedCompany[]> {
-  const { data, error } = await db
-    .from("companies")
-    .select(APPROVED_COLUMNS)
-    .eq("review_status", "approved")
-    .eq("is_published", true)
-    .eq("marketplace_visible", true)
-    .or("is_sample.is.null,is_sample.eq.false")
-    .order("created_at", { ascending: false })
-    .limit(1000);
+  const run = (columns: string) =>
+    db
+      .from("companies")
+      .select(columns)
+      .eq("review_status", "approved")
+      .eq("is_published", true)
+      .eq("marketplace_visible", true)
+      .or("is_sample.is.null,is_sample.eq.false")
+      .order("created_at", { ascending: false })
+      .limit(1000);
+  let { data, error } = await run(APPROVED_COLUMNS);
+  if (error) ({ data, error } = await run(withoutClientType(APPROVED_COLUMNS)));
   if (error) throw new Error(`Could not load the Private Market companies: ${error.message}`);
   const rows = (data ?? []) as ApprovedRow[];
   const scores = await crrScoresFor(rows.map((r) => r.id));

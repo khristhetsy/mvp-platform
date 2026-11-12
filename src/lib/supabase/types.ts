@@ -21,6 +21,8 @@ export type Company = {
   id: string;
   founder_id: string;
   company_name: string;
+  /** SPV client type. Only SPV clients show a raise amount to investors. Absent until the migration is applied. */
+  client_type?: "standard" | "spv" | null;
   industry: string | null;
   country: string | null;
   state: string | null;

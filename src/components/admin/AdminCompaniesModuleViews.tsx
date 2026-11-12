@@ -185,11 +185,14 @@ function AdminCompaniesModuleViewsInner({
   loadError,
   pendingCount,
   allowances = {},
+  spvCompanyIds = [],
 }: Readonly<{
   companies: AdminCompanyCardData[];
   loadError: string | null;
   pendingCount: number;
   allowances?: Record<string, CompanyAllowance>;
+  /** Companies whose client type is SPV. Empty until the client_type migration is applied. */
+  spvCompanyIds?: string[];
 }>) {
   const t = useTranslations("billingCompaniesAdmin");
   const [searchState, setSearchState] = useState<SearchState>({ ...EMPTY_SEARCH, groupBy: "none" });
@@ -258,6 +261,9 @@ function AdminCompaniesModuleViewsInner({
   // Journey-stage filter + sortable score/stage columns (list view).
   const [stageFilter, setStageFilter] = useState<string>("");
   const [planFilter, setPlanFilter] = useState<PlanFilter>("");
+  const [clientFilter, setClientFilter] = useState<"" | "spv" | "standard">("");
+  const spvIds = useMemo(() => new Set(spvCompanyIds), [spvCompanyIds]);
+  const spvCount = useMemo(() => companies.filter((c) => spvIds.has(c.id)).length, [companies, spvIds]);
   const [sortKey, setSortKey] = useState<"readiness" | "investable" | "stage" | "plan" | "signed_on" | "window" | "reached" | "outreach" | "intros" | "">("");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   function toggleSort(key: "readiness" | "investable" | "stage" | "plan" | "signed_on" | "window" | "reached" | "outreach" | "intros") {
@@ -269,6 +275,8 @@ function AdminCompaniesModuleViewsInner({
     if (stageFilter === "pending") rows = rows.filter((c) => c.stage_approval_status === "pending");
     else if (stageFilter) rows = rows.filter((c) => (c.journey_stage ?? "") === stageFilter);
     if (planFilter) rows = rows.filter((c) => planView(c).group === planFilter);
+    if (clientFilter === "spv") rows = rows.filter((c) => spvIds.has(c.id));
+    else if (clientFilter === "standard") rows = rows.filter((c) => !spvIds.has(c.id));
     if (sortKey) {
       const val = (c: AdminCompanyCardData) =>
         sortKey === "stage"
@@ -289,7 +297,7 @@ function AdminCompaniesModuleViewsInner({
       rows = [...rows].sort((a, b) => (sortDir === "asc" ? val(a) - val(b) : val(b) - val(a)));
     }
     return rows;
-  }, [filtered, stageFilter, planFilter, sortKey, sortDir, allowances]);
+  }, [filtered, stageFilter, planFilter, clientFilter, spvIds, sortKey, sortDir, allowances]);
 
   // Plan summary tiles. Counted per founder subscription so a founder with two
   // companies is not counted (or billed) twice.
@@ -415,6 +423,16 @@ function AdminCompaniesModuleViewsInner({
                 { value: "free", label: "Free (legacy)" },
                 { value: "pending", label: "Payment pending" },
                 { value: "none", label: "No plan or internal" },
+              ],
+            },
+            {
+              title: "Client type",
+              value: clientFilter,
+              onChange: (v) => setClientFilter(v as "" | "spv" | "standard"),
+              options: [
+                { value: "", label: `All clients (${companies.length})` },
+                { value: "spv", label: `SPV (${spvCount})` },
+                { value: "standard", label: `Standard (${companies.length - spvCount})` },
               ],
             },
             {
@@ -640,7 +658,10 @@ function AdminCompaniesModuleViewsInner({
                         onChange={() => toggleOne(company.id)}
                       />
                     </td>
-                    <td className="px-3 py-2.5 font-medium text-slate-900 whitespace-nowrap"><Highlight text={company.company_name} query={query} /></td>
+                    <td className="px-3 py-2.5 font-medium text-slate-900 whitespace-nowrap">
+                      <Highlight text={company.company_name} query={query} />
+                      {spvIds.has(company.id) ? <span className="ml-2 rounded-md bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-[#1A6CE4]">SPV client</span> : null}
+                    </td>
                     {show("founder") && <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap"><Highlight text={company.founder_name} query={query} /></td>}
                     {show("industry") && <td className="px-3 py-2.5 text-slate-500 whitespace-nowrap">{company.industry ? <Highlight text={company.industry} query={query} /> : "—"}</td>}
                     {show("readiness") && <td className={`px-3 py-2.5 text-right tabular-nums ${scoreClass(company.readiness_score)}`}>
@@ -827,6 +848,7 @@ export function AdminCompaniesModuleViews(
     loadError: string | null;
     pendingCount: number;
     allowances?: Record<string, CompanyAllowance>;
+    spvCompanyIds?: string[];
   }>,
 ) {
   return (

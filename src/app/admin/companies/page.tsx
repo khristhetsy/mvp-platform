@@ -50,6 +50,7 @@ export default async function AdminCompaniesPage() {
   let companyCards = mapAdminCompaniesToCardData([]);
   let pendingFounders: PendingFounder[] = [];
   let allowances: Record<string, CompanyAllowance> = {};
+  let spvCompanyIds: string[] = [];
 
   try {
     const supabase = createServiceRoleClient();
@@ -158,6 +159,10 @@ export default async function AdminCompaniesPage() {
       journeyByFounderId,
       signedOnByFounderId,
     );
+    // SPV clients, read on its own so the page still loads before the client_type
+    // migration is applied (the query errors and the list shows no SPV clients).
+    const { data: spvRows } = await rawSupabase.from("companies").select("id").eq("client_type", "spv");
+    spvCompanyIds = ((spvRows ?? []) as Array<{ id: string }>).map((r) => r.id);
     // Outreach and intro allowance per paid founder (window, reached / limit, status).
     allowances = await getCompanyAllowances(
       companies.map((c) => ({
@@ -212,6 +217,7 @@ export default async function AdminCompaniesPage() {
             loadError={loadError}
             pendingCount={pendingCount}
             allowances={allowances}
+            spvCompanyIds={spvCompanyIds}
           />
         </WorkspacePageContainer>
       </AdminActionHealthProvider>
