@@ -19,6 +19,7 @@ import { formatError } from "@/lib/errors/format-error";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
 import { resolveCompanyDependencies } from "@/lib/automation/dependencies";
 import { getUserPlan } from "@/lib/subscriptions/get-subscription";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
@@ -81,6 +82,7 @@ async function WorkspaceBody({ companyId, profile }: Readonly<BodyProps>) {
   const supabase = await createServerSupabaseClient();
   const adminRole = profile.role === "analyst" ? "analyst" : "admin";
   const serviceRoleConfigured = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
+  const pledgesOn = isFeatureEnabled(await loadFeatureFlags(createServiceRoleClient()), "admin", "pledged");
 
   let loadError: string | null = null;
   let workspace = null;
@@ -150,6 +152,7 @@ async function WorkspaceBody({ companyId, profile }: Readonly<BodyProps>) {
           riskSignals={companyRiskSignals}
           founderContactId={founderContactId}
           founderCanDistribute={founderCanDistribute}
+          showPledges={pledgesOn}
         />
       </FieldDisplayProvider>
     </VocabularyProvider>

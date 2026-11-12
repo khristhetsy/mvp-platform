@@ -43,7 +43,9 @@ export type InvestorPreference = { label: string; values: string[] };
 export function InvestorDetailClient({
   investor,
   preferences = [],
+  showPledges = true,
 }: {
+  showPledges?: boolean;
   investor: PipelineInvestorDetail;
   preferences?: InvestorPreference[];
 }) {
@@ -203,10 +205,10 @@ export function InvestorDetailClient({
         <p className="mt-0.5 text-sm text-slate-500">{investor.investor_type}</p>
 
         {/* Metrics */}
-        <div className="mt-5 grid grid-cols-2 gap-5 border-b border-slate-100 pb-5 sm:grid-cols-5">
+        <div className={`mt-5 grid grid-cols-2 gap-5 border-b border-slate-100 pb-5 ${showPledges ? "sm:grid-cols-5" : "sm:grid-cols-4"}`}>
           {metric("Check size", investor.investment_size ?? "—")}
           {metric("Match score", investor.match_score != null ? `${investor.match_score}%` : "—", investor.match_score != null && investor.match_score >= 70 ? "#0F6E56" : undefined)}
-          {metric("Amount pledged", investor.pledge_amount != null ? `$${investor.pledge_amount.toLocaleString()}` : "—")}
+          {showPledges ? metric("Amount pledged", investor.pledge_amount != null ? `$${investor.pledge_amount.toLocaleString()}` : "—") : null}
           <div>
             <p className="text-xs" style={{ color: "var(--text-muted)" }}>Investor rating</p>
             <div className="mt-1 flex items-center gap-2">

@@ -65,6 +65,7 @@ export function AdminCompanyWorkspace({
   riskSignals = [],
   founderContactId = null,
   founderCanDistribute = false,
+  showPledges = true,
 }: Readonly<{
   data: AdminCompanyWorkspaceData;
   nextBestActions?: NextBestAction[];
@@ -73,6 +74,7 @@ export function AdminCompanyWorkspace({
   riskSignals?: RiskSignal[];
   founderContactId?: string | null;
   founderCanDistribute?: boolean;
+  showPledges?: boolean;
 }>) {
   const founderName = data.founder?.full_name ?? data.founder?.email ?? "the founder";
   const founderEmail = data.founder?.email ?? null;
@@ -118,7 +120,7 @@ export function AdminCompanyWorkspace({
 
   const investorActivity = (
     <WorkspaceSection icon="ti-users" tone="teal" title={t("investor_activity")} subtitle={t("aggregates_only_no_message_bodies")}>
-      <CompanyInvestorActivityPanel activity={data.investorActivity} companyId={data.company.id} />
+      <CompanyInvestorActivityPanel activity={data.investorActivity} companyId={data.company.id} showPledges={showPledges} />
     </WorkspaceSection>
   );
 

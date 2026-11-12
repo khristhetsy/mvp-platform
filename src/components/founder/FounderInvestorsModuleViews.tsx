@@ -413,11 +413,35 @@ function PipelineDrawerContent({
 
 // ─── Main view component ──────────────────────────────────────────────────────
 
+/** Pledge amounts and the "indicated" grouping removed: those rows read as plain interest. */
+function withoutPledges(view: FounderInvestorCrmView): FounderInvestorCrmView {
+  const strip = (row: FounderInvestorRelationRow): FounderInvestorRelationRow =>
+    row.actionType === "pledged" || row.actionType === "indicative_interest"
+      ? { ...row, actionType: "interested", actionLabel: "Expressed interest", pledgeAmount: null, interestAmount: null }
+      : { ...row, pledgeAmount: null, interestAmount: null };
+  return {
+    ...view,
+    summary: { ...view.summary, totalPledgedDisplay: "—", totalIndicativeInterestDisplay: null },
+    sections: {
+      newInterest: view.sections.newInterest.map(strip),
+      pledged: [],
+      introRequested: view.sections.introRequested.map(strip),
+      followUpNeeded: view.sections.followUpNeeded.map(strip),
+      recentActivity: view.sections.recentActivity.map(strip),
+    },
+  };
+}
+
 function FounderInvestorsModuleViewsInner({
-  crmView,
+  crmView: crmViewProp,
   companyName,
-}: Readonly<{ crmView: FounderInvestorCrmView; companyName: string }>) {
+  showPledges = true,
+}: Readonly<{ crmView: FounderInvestorCrmView; companyName: string; showPledges?: boolean }>) {
   const t = useTranslations("founderCmp");
+  const crmView = useMemo(
+    () => (showPledges ? crmViewProp : withoutPledges(crmViewProp)),
+    [crmViewProp, showPledges],
+  );
   const [query, setQuery] = useState<SearchState>({ ...EMPTY_SEARCH, groupBy: "none" });
   const [view, setView] = useState<ViewMode>("kanban");
   const [drawerGroup, setDrawerGroup] = useState<DrawerGroup | null>(null);
@@ -490,11 +514,13 @@ function FounderInvestorsModuleViewsInner({
     }
     return [
       { id: "interested", title: "Interested", items: groups.interested.map((r) => <FounderInvestorRelationCard key={r.id} row={r} />) },
-      { id: "pledged", title: "Indications", items: groups.pledged.map((r) => <FounderInvestorRelationCard key={r.id} row={r} />) },
+      ...(showPledges
+        ? [{ id: "pledged", title: "Indications", items: groups.pledged.map((r) => <FounderInvestorRelationCard key={r.id} row={r} />) }]
+        : []),
       { id: "intro", title: "Intro Requested", items: groups.intro_requested.map((r) => <FounderInvestorRelationCard key={r.id} row={r} />) },
       { id: "follow_up", title: "Follow-up", items: groups.follow_up.map((r) => <FounderInvestorRelationCard key={r.id} row={r} />) },
     ];
-  }, [filteredRows]);
+  }, [filteredRows, showPledges]);
 
   const groupedForGrid = useMemo(() => {
     return PIPELINE_GROUPS.map((group) => ({
@@ -516,11 +542,11 @@ function FounderInvestorsModuleViewsInner({
           placeholder={t("search_investors_status_or_activity")}
           quick={[
             { key: "interested", label: "Interested or saved" },
-            { key: "pledged", label: "Pledged or indicated" },
+            ...(showPledges ? [{ key: "pledged", label: "Pledged or indicated" }] : []),
             { key: "intro_requested", label: "Intro requested" },
             { key: "follow_up", label: "Follow-up" },
             { key: "has_email", label: "Has an email", sep: true },
-            { key: "has_amount", label: "Has an amount" },
+            ...(showPledges ? [{ key: "has_amount", label: "Has an amount" }] : []),
           ]}
           fields={[
             { key: "relationship", label: "Relationship", options: [...new Set(allRows.map((r) => r.actionType))] },
@@ -572,14 +598,16 @@ function FounderInvestorsModuleViewsInner({
                 accentBg="#EEEDFE"
                 onClick={() => setDrawerGroup("interested")}
               />
-              <PipelineClickCard
-                label={t("pledged")}
-                value={crmView.summary.totalPledgedDisplay}
-                sub={cardSubs.pledged}
-                accentColor="#0F6E56"
-                accentBg="#E1F5EE"
-                onClick={() => setDrawerGroup("pledged")}
-              />
+              {showPledges ? (
+                <PipelineClickCard
+                  label={t("pledged")}
+                  value={crmView.summary.totalPledgedDisplay}
+                  sub={cardSubs.pledged}
+                  accentColor="#0F6E56"
+                  accentBg="#E1F5EE"
+                  onClick={() => setDrawerGroup("pledged")}
+                />
+              ) : null}
               <PipelineClickCard
                 label={t("intro_requested")}
                 value={String(donutCounts[2])}
@@ -688,7 +716,7 @@ function FounderInvestorsModuleViewsInner({
   );
 }
 
-export function FounderInvestorsModuleViews(props: Readonly<{ crmView: FounderInvestorCrmView; companyName: string }>) {
+export function FounderInvestorsModuleViews(props: Readonly<{ crmView: FounderInvestorCrmView; companyName: string; showPledges?: boolean }>) {
   const t = useTranslations("founderCmp");
   return (
     <Suspense fallback={<p className="text-sm text-slate-500">{t("loading_view_options")}</p>}>

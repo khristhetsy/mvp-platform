@@ -59,8 +59,9 @@ function initials(name: string): string {
 }
 
 export function InvestorCardPanel({
-  investor, stages, onClose, onStageChange,
+  investor, stages, onClose, onStageChange, showPledges = true,
 }: {
+  showPledges?: boolean;
   investor: PanelInvestor;
   stages: PanelStage[];
   onClose: () => void;
@@ -111,7 +112,9 @@ export function InvestorCardPanel({
   const prospect = investor.source === "platform_match" && !investor.platform_investor_id;
   const rows: Array<[string, string]> = [
     ["Investment size", investor.investment_size ?? "Not set"],
-    ["Pledged", investor.pledge_amount != null ? `$${investor.pledge_amount.toLocaleString()}` : "None yet"],
+    ...(showPledges
+      ? ([["Pledged", investor.pledge_amount != null ? `$${investor.pledge_amount.toLocaleString()}` : "None yet"]] as Array<[string, string]>)
+      : []),
     ["Source", investor.source === "platform_match" ? "Platform match" : "Added by you"],
     ["Location", investor.location ?? "Not set"],
     ["Last contact", formatDay(investor.last_contact_date)],
