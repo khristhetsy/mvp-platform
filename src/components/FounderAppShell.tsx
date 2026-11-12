@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { SubscriptionPlanBadge } from "@/components/SubscriptionPanel";
 import { getCurrentUserProfile } from "@/lib/supabase/auth";
@@ -12,6 +13,8 @@ import { AccountSwitcherServer } from "@/components/account/AccountSwitcherServe
 import { ActingAsBanner } from "@/components/admin/ActingAsBanner";
 import { PastDueBanner } from "@/components/billing/PastDueBanner";
 import { pastDueState } from "@/lib/billing/past-due";
+import { PAYMENT_PAGE } from "@/lib/billing/payment-gate";
+import { mustPayFirst } from "@/lib/billing/payment-gate-server";
 
 type FounderAppShellProps = Readonly<{
   children: React.ReactNode;
@@ -32,6 +35,8 @@ export async function FounderAppShell({ children, profileName, profileSubtitle }
     const subscription =
       (await getSubscriptionForProfile(profile.id)) ??
       (await ensureSubscriptionForProfile({ profileId: profile.id, role: profile.role }));
+    // A paid plan that has not been paid yet: nothing else opens until it is.
+    if (await mustPayFirst(subscription, profile.id)) redirect(PAYMENT_PAGE);
     planBadge = <SubscriptionPlanBadge subscription={subscription} />;
     pastDue = pastDueState(subscription);
     pastDueEndsAt = subscription.grace_period_ends_at;

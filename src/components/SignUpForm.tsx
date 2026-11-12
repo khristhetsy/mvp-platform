@@ -15,6 +15,7 @@ import {
 import { FormField } from "@/components/ui/FormField";
 import { useFormValidation } from "@/hooks/useFormValidation";
 import { type PricingCatalog } from "@/lib/subscriptions/pricing-catalog";
+import { PAYMENT_PAGE, isPayFirstPlan } from "@/lib/billing/payment-gate";
 
 type SignupRole = "founder" | "investor";
 
@@ -257,7 +258,8 @@ export function SignUpForm({
       return;
     }
 
-    router.push(signUpDestinationByRole(role, privateBetaMode));
+    // A paid founder plan goes to payment first, never straight to onboarding.
+    router.push(role === "founder" && isPayFirstPlan(selectedPlan) ? PAYMENT_PAGE : signUpDestinationByRole(role, privateBetaMode));
     router.refresh();
   }
 

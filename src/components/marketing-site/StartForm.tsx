@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { start } from "@/content/start";
 
 /**
@@ -12,12 +13,21 @@ import { start } from "@/content/start";
 /** Monthly price labels per plan, from the live pricing set (e.g. "$49"). */
 export type StartPlanPrices = { founder_free: string; founder_basic: string; founder_professional: string; founder_premium: string };
 
+const PLAN_FROM_LINK: Record<string, string> = {
+  free: "founder_free",
+  basic: "founder_basic",
+  professional: "founder_professional",
+  premium: "founder_premium",
+};
+
 export function StartForm({ prices }: Readonly<{ prices: StartPlanPrices }>) {
   const f = start.fields;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Free due diligence is the first option and the default (Oct 9, 2026).
-  const [choice, setChoice] = useState<string>("founder_free");
+  // Free due diligence is the default (Oct 9, 2026). A plan chosen on the pricing page
+  // (/start?plan=basic) arrives already selected, and the highlight follows the choice.
+  const linkedPlan = PLAN_FROM_LINK[useSearchParams().get("plan") ?? ""];
+  const [choice, setChoice] = useState<string>(linkedPlan ?? "founder_free");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
