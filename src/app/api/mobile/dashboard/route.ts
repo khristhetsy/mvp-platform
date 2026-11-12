@@ -13,6 +13,7 @@ import { getJourneyOverview } from "@/lib/founder/stage-gate-status";
 import { loadFounderCompanyMatchContext } from "@/lib/matching/load-matching-data";
 import { listFounderInvestorActivity } from "@/lib/data/investor-interests";
 import { formatPledgeTotal, getCompanyPledgeSummary, getFounderPledgeCompanyId } from "@/lib/data/investor-pledges";
+import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
 import { loadListingChecklist } from "@/lib/listing/listing-server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -32,8 +33,13 @@ export async function GET(req: Request) {
     const investorActivity = await listFounderInvestorActivity(supabase, company.id);
     const investorFit = await loadFounderCompanyMatchContext(company).catch(() => null);
 
-    const pledgeCompanyId = await getFounderPledgeCompanyId(serviceSupabase, profile.id, company.id);
-    const pledge = await getCompanyPledgeSummary(serviceSupabase, pledgeCompanyId);
+    const pledgesOn = isFeatureEnabled(await loadFeatureFlags(serviceSupabase), "founder", "pledged");
+    const pledge = pledgesOn
+      ? await getCompanyPledgeSummary(
+          serviceSupabase,
+          await getFounderPledgeCompanyId(serviceSupabase, profile.id, company.id),
+        )
+      : null;
 
     const uploadedTypeCodes = (documents ?? []).flatMap((d) => (d.document_type ? [d.document_type] : []));
     const readinessScore = diligenceReport?.readiness_score ?? computeReadinessScore(uploadedTypeCodes);
@@ -65,12 +71,16 @@ export async function GET(req: Request) {
       },
       { label: "Documents", value: `${readinessScore}%`, sub: readinessDetail, good: readinessScore >= 75, href: "/founder/readiness" },
       { label: "Matched investors", value: String(matched), sub: "View pipeline", href: "/founder/matches" },
-      {
-        label: "Pledged",
-        value: formatPledgeTotal(pledge.totalPledged, pledge.currency),
-        sub: company.funding_amount ? `of ${formatPledgeTotal(Number(company.funding_amount))}` : undefined,
-        href: "/founder/deal-room",
-      },
+      ...(pledge
+        ? [
+            {
+              label: "Pledged",
+              value: formatPledgeTotal(pledge.totalPledged, pledge.currency),
+              sub: company.funding_amount ? `of ${formatPledgeTotal(Number(company.funding_amount))}` : undefined,
+              href: "/founder/deal-room",
+            },
+          ]
+        : []),
       { label: "Investor activity", value: String(activityTotal), sub: "Signals and intros", href: "/founder/matches" },
     ];
 

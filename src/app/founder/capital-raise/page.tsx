@@ -13,6 +13,7 @@ import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { loadBusinessPlanInputs } from "@/lib/ai/business-plan-inputs";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
 import { requireRole } from "@/lib/supabase/auth";
 import type { Company } from "@/lib/supabase/types";
 import { CapitalRaiseCardsClient } from "@/components/founder/CapitalRaiseCardsClient";
@@ -26,6 +27,8 @@ export const dynamic = "force-dynamic";
 export default async function FounderCapitalRaisePage() {
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
+  // Admin switch (Feature Controls, Pledged amounts).
+  const pledgesOn = isFeatureEnabled(await loadFeatureFlags(await createServerSupabaseClient()), "founder", "pledged");
 
   let company: Company | null = null;
   let companyError: string | null = null;
@@ -49,8 +52,10 @@ export default async function FounderCapitalRaisePage() {
       if (!company.funding_amount) {
         planRaiseAmount = (await loadBusinessPlanInputs(serviceSupabase, company.id).catch(() => null))?.raiseAmount ?? null;
       }
-      const pledgeCompanyId = await getFounderPledgeCompanyId(serviceSupabase, profile.id, company.id);
-      pledgeSummary = await getCompanyPledgeSummary(serviceSupabase, pledgeCompanyId);
+      if (pledgesOn) {
+        const pledgeCompanyId = await getFounderPledgeCompanyId(serviceSupabase, profile.id, company.id);
+        pledgeSummary = await getCompanyPledgeSummary(serviceSupabase, pledgeCompanyId);
+      }
     } catch (error) {
       pledgeError = formatError(error);
     }
@@ -76,7 +81,7 @@ export default async function FounderCapitalRaisePage() {
         <PageHeader
           eyebrow={t("founder_workspace_2")}
           title={t("capital_raise")}
-          description={t("track_indicative_interest_pledge_totals_and_ma")}
+          description={pledgesOn ? t("track_indicative_interest_pledge_totals_and_ma") : "Track your raise status and investor activity."}
         />
 
       {companyError ? (
@@ -105,6 +110,7 @@ export default async function FounderCapitalRaisePage() {
         <>
           <CapitalRaiseCardsClient
             pledgeSummary={pledgeSummary}
+            showPledges={pledgesOn}
             company={{
               funding_amount: company.funding_amount ? Number(company.funding_amount) : planRaiseAmount,
               is_published: company.is_published ?? false,
@@ -137,19 +143,21 @@ export default async function FounderCapitalRaisePage() {
           </section>
 
           <section className="mt-8 grid gap-6 xl:grid-cols-2">
-            <WorkspacePanel title={t("capital_raise_overview")} subtitle={t("non_binding_marketplace_interest")}>
-              <CapitalRaiseOverviewClient
-                pledgeSummary={pledgeSummary}
-                investorActivity={investorActivity}
-                fundingAmount={company.funding_amount ? Number(company.funding_amount) : planRaiseAmount}
-              />
-              <p className="mt-4 text-xs leading-5 text-slate-500">
-                Indications of interest are indicative and not legally committed investment.
-                {pledgeSummary.totalPledged === 0 && !pledgeError && (
-                  <>{" "}Publish your company profile to start receiving interest.</>
-                )}
-              </p>
-            </WorkspacePanel>
+            {pledgesOn ? (
+              <WorkspacePanel title={t("capital_raise_overview")} subtitle={t("non_binding_marketplace_interest")}>
+                <CapitalRaiseOverviewClient
+                  pledgeSummary={pledgeSummary}
+                  investorActivity={investorActivity}
+                  fundingAmount={company.funding_amount ? Number(company.funding_amount) : planRaiseAmount}
+                />
+                <p className="mt-4 text-xs leading-5 text-slate-500">
+                  Indications of interest are indicative and not legally committed investment.
+                  {pledgeSummary.totalPledged === 0 && !pledgeError && (
+                    <>{" "}Publish your company profile to start receiving interest.</>
+                  )}
+                </p>
+              </WorkspacePanel>
+            ) : null}
 
             <WorkspacePanel title={t("investor_pipeline_2")} subtitle={t("interest_tied_to_your_listing")}>
               {activityError ? (

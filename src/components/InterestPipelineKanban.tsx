@@ -55,10 +55,12 @@ export function InterestPipelineKanban({
   interests,
   introRequests,
   savedDeals,
+  showPledges = true,
 }: Readonly<{
   interests: InvestorInterestRecord[];
   introRequests: InvestorIntroRecord[];
   savedDeals: InvestorSavedDealRecord[];
+  showPledges?: boolean;
 }>) {
   const t = useTranslations("sharedCmp");
   const [view, setView] = useState<ViewMode>("kanban");
@@ -82,7 +84,9 @@ export function InterestPipelineKanban({
     }
 
     for (const row of interests) {
-      const amount = formatAmount(row.pledge_amount, row.interest_amount, row.pledge_currency);
+      const amount = showPledges
+        ? formatAmount(row.pledge_amount, row.interest_amount, row.pledge_currency)
+        : null;
       result.push({
         id: `interest-${row.id}`,
         company: row.companies?.company_name ?? "Unknown company",
@@ -114,7 +118,7 @@ export function InterestPipelineKanban({
     }
 
     return result;
-  }, [interests, introRequests, savedDeals]);
+  }, [interests, introRequests, savedDeals, showPledges]);
 
   const byColumn = useMemo(() => {
     const map: Record<string, PipelineCard[]> = {};
@@ -124,12 +128,13 @@ export function InterestPipelineKanban({
   }, [cards]);
 
   const totalAmount = useMemo(() => {
+    if (!showPledges) return null;
     let total = 0;
     for (const row of interests) {
       if (row.pledge_amount && row.pledge_amount > 0) total += Number(row.pledge_amount);
     }
     return total > 0 ? formatPledgeTotal(total, "USD") : null;
-  }, [interests]);
+  }, [interests, showPledges]);
 
   return (
     <div>
@@ -164,8 +169,8 @@ export function InterestPipelineKanban({
       </div>
 
       {view === "kanban" && (
-        <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-          {COLUMNS.map((col) => {
+        <div className={`grid grid-cols-2 gap-4 ${showPledges ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}>
+          {COLUMNS.filter((col) => showPledges || col.key !== "pledged").map((col) => {
             const colCards = byColumn[col.key] ?? [];
             return (
               <div key={col.key}>

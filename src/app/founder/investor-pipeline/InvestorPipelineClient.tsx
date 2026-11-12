@@ -194,7 +194,7 @@ const EMPTY_FORM = {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function InvestorPipelineClient({ initialData }: { initialData: PipelineInvestor[] }) {
+export function InvestorPipelineClient({ initialData, showPledges = true }: { initialData: PipelineInvestor[]; showPledges?: boolean }) {
   const router = useRouter();
   // Focus sectors offer the stored industry list, the same one investors pick from.
   const SECTOR_OPTIONS: string[] = useVocabulary("industry").options.map((o) => o.label);
@@ -334,7 +334,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
       location: form.location || null,
       investor_type: form.investor_type,
       investment_size: form.investment_size || null,
-      pledge_amount: form.pledge_amount ? parseFloat(form.pledge_amount) : null,
+      ...(showPledges ? { pledge_amount: form.pledge_amount ? parseFloat(form.pledge_amount) : null } : {}),
       interested: form.interested,
       meeting_requested: form.meeting_requested,
       match_score: form.match_score ? parseInt(form.match_score) : null,
@@ -436,7 +436,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
 
   // ── CSV export ────────────────────────────────────────────────────────────────
   function exportCSV() {
-    const cols: (keyof PipelineInvestor)[] = ["name", "location", "investor_type", "investment_size", "pledge_amount", "interested", "meeting_requested", "match_score", "outreach_status", "source", "preferred_stages", "focus_sectors", "notes"];
+    const cols: (keyof PipelineInvestor)[] = ["name", "location", "investor_type", "investment_size", ...(showPledges ? (["pledge_amount"] as const) : []), "interested", "meeting_requested", "match_score", "outreach_status", "source", "preferred_stages", "focus_sectors", "notes"];
     const header = cols.join(",");
     const rows = investors.map((inv) =>
       cols.map((c) => {
@@ -513,7 +513,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
           quick={[
             { key: "interested", label: "Interested" },
             { key: "has_meeting", label: "Meeting requested or booked" },
-            { key: "pledged", label: "Pledged" },
+            ...(showPledges ? [{ key: "pledged", label: "Pledged" }] : []),
             { key: "not_contacted", label: "Not yet contacted", sep: true },
             { key: "from_matches", label: "From platform matches" },
             { key: "added_by_me", label: "Added by me" },
@@ -641,7 +641,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
                     style={{ width: 14, height: 14, cursor: "pointer" }}
                   />
                 </th>
-                {["Investor", "Type", "Investment Size", "Pledged", "Interested", "Meeting", "Match", "Outreach", ""].map((h) => (
+                {["Investor", "Type", "Investment Size", ...(showPledges ? ["Pledged"] : []), "Interested", "Meeting", "Match", "Outreach", ""].map((h) => (
                   <th key={h} className="text-left px-4 py-3">{h}</th>
                 ))}
               </tr>
@@ -649,7 +649,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="text-center py-12 text-sm" style={{ color: "var(--text-muted)" }}>
+                  <td colSpan={showPledges ? 10 : 9} className="text-center py-12 text-sm" style={{ color: "var(--text-muted)" }}>
                     {investors.length === 0 ? "Add your first investor or import from platform matches." : "No investors match your search."}
                   </td>
                 </tr>
@@ -671,9 +671,11 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
                   </td>
                   <td className="px-4 py-3"><TypeBadge type={inv.investor_type} /></td>
                   <td className="px-4 py-3 text-sm whitespace-nowrap" style={{ color: "var(--text-secondary)" }}>{inv.investment_size ?? "—"}</td>
-                  <td className="px-4 py-3 text-sm font-medium tabular-nums" style={{ color: "var(--text-primary)" }}>
-                    {inv.pledge_amount != null ? `$${inv.pledge_amount.toLocaleString()}` : "—"}
-                  </td>
+                  {showPledges ? (
+                    <td className="px-4 py-3 text-sm font-medium tabular-nums" style={{ color: "var(--text-primary)" }}>
+                      {inv.pledge_amount != null ? `$${inv.pledge_amount.toLocaleString()}` : "—"}
+                    </td>
+                  ) : null}
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium border rounded-md ${inv.interested ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-slate-50 text-slate-500 border-slate-200"}`}>
                       {inv.interested ? "Yes" : "No"}
@@ -733,7 +735,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
                 {[
                   { label: "Investor Type", node: <TypeBadge type={profileOf.investor_type} /> },
                   { label: "Investment Size", node: <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>{profileOf.investment_size ?? "—"}</span> },
-                  { label: "Amount Pledged", node: <span className="text-sm font-medium tabular-nums" style={{ color: "var(--text-primary)" }}>{profileOf.pledge_amount != null ? `$${profileOf.pledge_amount.toLocaleString()}` : "—"}</span> },
+                  ...(showPledges ? [{ label: "Amount Pledged", node: <span className="text-sm font-medium tabular-nums" style={{ color: "var(--text-primary)" }}>{profileOf.pledge_amount != null ? `$${profileOf.pledge_amount.toLocaleString()}` : "—"}</span> }] : []),
                   { label: "Match Score", node: <MatchBar score={profileOf.match_score} /> },
                   { label: "Outreach Status", node: <OutreachBadge status={profileOf.outreach_status} /> },
                   { label: "Meeting Status", node: <MeetingBadge status={profileOf.meeting_requested} /> },
@@ -889,10 +891,12 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
                   <label className="block text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--text-muted)" }}>Investment Size</label>
                   <input className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200" style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }} value={form.investment_size} onChange={(e) => setForm((f) => ({ ...f, investment_size: e.target.value }))} placeholder="e.g. $250K – $1M" />
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--text-muted)" }}>Indicated amount ($)</label>
-                  <input type="number" className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200" style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }} value={form.pledge_amount} onChange={(e) => setForm((f) => ({ ...f, pledge_amount: e.target.value }))} placeholder="250000" />
-                </div>
+                {showPledges ? (
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--text-muted)" }}>Indicated amount ($)</label>
+                    <input type="number" className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200" style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }} value={form.pledge_amount} onChange={(e) => setForm((f) => ({ ...f, pledge_amount: e.target.value }))} placeholder="250000" />
+                  </div>
+                ) : null}
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--text-muted)" }}>Match Score (0–100)</label>
                   <input type="number" min={0} max={100} className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200" style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }} value={form.match_score} onChange={(e) => setForm((f) => ({ ...f, match_score: e.target.value }))} placeholder="75" />

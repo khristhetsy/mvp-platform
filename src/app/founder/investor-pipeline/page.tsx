@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
 import { requireRole } from "@/lib/supabase/auth";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { DealCompanyEmptyState } from "@/components/founder/DealCompanyEmptyState";
@@ -47,6 +48,8 @@ export default async function InvestorPipelinePage() {
   // a Deal Company shows no pipeline; fall back to founder_id pre-backfill. RLS
   // still restricts to the user's own rows either way.
   const supabase = await createServerSupabaseClient();
+  // Admin switch (Feature Controls, Pledged amounts). Off also keeps amounts out of the page payload.
+  const pledgesOn = isFeatureEnabled(await loadFeatureFlags(supabase), "founder", "pledged");
   const pipelineQuery = untyped(supabase)
     .from("pipeline_investors")
     .select(
@@ -72,7 +75,10 @@ export default async function InvestorPipelinePage() {
             description={t("track_and_manage_your_investor_relationships_p")}
           />
           <VocabularyProvider value={await loadVocabularies()}>
-            <InvestorPipelineClient initialData={initialInvestors ?? []} />
+            <InvestorPipelineClient
+              initialData={pledgesOn ? (initialInvestors ?? []) : (initialInvestors ?? []).map((r) => ({ ...r, pledge_amount: null }))}
+              showPledges={pledgesOn}
+            />
           </VocabularyProvider>
           <ManualInvestorsPanel investors={manualInvestors} />
         </WorkspacePageContainer>

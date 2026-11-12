@@ -203,6 +203,7 @@ export function CapitalReadinessSection({
   companyStatus,
   companyFundingAmount,
   pledgeSummary,
+  showPledges = true,
   investorActivityTotal,
   investorActivity,
   documents,
@@ -222,6 +223,8 @@ export function CapitalReadinessSection({
   companyStatus: string | null;
   companyFundingAmount: number | null;
   pledgeSummary: PledgeSummary;
+  /** False when the Pledged feature is switched off: hides indicated amounts and fill %. */
+  showPledges?: boolean;
   investorActivityTotal: number;
   investorActivity: FounderInvestorActivityResult | null;
   documents: DocRecord[];
@@ -239,7 +242,7 @@ export function CapitalReadinessSection({
   const introCount = investorActivity?.introRequests.length ?? 0;
   const savedCount = investorActivity?.savedDeals.length ?? 0;
   const target = companyFundingAmount ?? 0;
-  const fillPct = target > 0 ? Math.min(1, pledgeSummary.totalPledged / target) : 0;
+  const fillPct = showPledges && target > 0 ? Math.min(1, pledgeSummary.totalPledged / target) : 0;
 
   // -------------------------------------------------------------------------
   // Drawer configs
@@ -284,28 +287,34 @@ export function CapitalReadinessSection({
       stats: [
         { label: "Listing status", value: raiseProgress },
         { label: "Funding target", value: target > 0 ? formatPledgeTotal(target, pledgeSummary.currency) : "TBD" },
-        { label: "Target filled", value: target > 0 ? `${Math.round(fillPct * 100)}%` : "—" },
+        ...(showPledges
+          ? [{ label: "Target filled", value: target > 0 ? `${Math.round(fillPct * 100)}%` : "—" }]
+          : []),
       ],
       breakdown: (
         <div>
           <BRow name="Listing published" status={raiseProgress === "Published" ? "Live" : "Not live"} variant={raiseProgress === "Published" ? "success" : "critical"} />
           <BRow name="Company profile" status={companyStatus ?? "Pending"} variant={companyStatus === "approved" ? "success" : "medium"} />
           <BRow name="Data room" status={uploadedCount > 0 ? "Active" : "Empty"} variant={uploadedCount > 0 ? "success" : "high"} />
-          <BRow name="Indications of interest" status={pledgeSummary.investorCount > 0 ? `${pledgeSummary.investorCount} investor${pledgeSummary.investorCount === 1 ? "" : "s"}` : "None yet"} variant={pledgeSummary.investorCount > 0 ? "success" : "neutral"} />
+          {showPledges ? (
+            <BRow name="Indications of interest" status={pledgeSummary.investorCount > 0 ? `${pledgeSummary.investorCount} investor${pledgeSummary.investorCount === 1 ? "" : "s"}` : "None yet"} variant={pledgeSummary.investorCount > 0 ? "success" : "neutral"} />
+          ) : null}
           <BRow name="Investor activity" status={totalActivity > 0 ? `${totalActivity} interactions` : "No activity"} variant={totalActivity > 0 ? "medium" : "neutral"} />
         </div>
       ),
-      meaning: `Your listing is ${raiseProgress === "Published" ? "live on the marketplace and receiving traffic" : "not yet published — investors cannot find you"}. ${target > 0 ? `At ${Math.round(fillPct * 100)}% of your ${formatPledgeTotal(target, pledgeSummary.currency)} target with ${pledgeSummary.investorCount} investor${pledgeSummary.investorCount === 1 ? "" : "s"} indicating interest, you are in ${fillPct > 0.5 ? "strong" : fillPct > 0.2 ? "early" : "very early"} momentum.` : "Set a funding target to track your raise progress."}`,
+      meaning: `Your listing is ${raiseProgress === "Published" ? "live on the marketplace and receiving traffic" : "not yet published — investors cannot find you"}. ${!showPledges ? "" : target > 0 ? `At ${Math.round(fillPct * 100)}% of your ${formatPledgeTotal(target, pledgeSummary.currency)} target with ${pledgeSummary.investorCount} investor${pledgeSummary.investorCount === 1 ? "" : "s"} indicating interest, you are in ${fillPct > 0.5 ? "strong" : fillPct > 0.2 ? "early" : "very early"} momentum.` : "Set a funding target to track your raise progress."}`,
       advice: [
         raiseProgress !== "Published"
           ? `Your listing is not live. Complete your company profile and submit for admin review — you are invisible to investors until published.`
+          : !showPledges
+          ? `You're published. Review your pitch deck for clarity, ensure your funding target is realistic, and share your iCapOS profile directly with warm contacts.`
           : pledgeSummary.investorCount === 0
           ? `You're published but have 0 indications of interest. Review your pitch deck for clarity, ensure your funding target is realistic, and share your iCapOS profile directly with warm contacts.`
           : `You have ${pledgeSummary.investorCount} investor${pledgeSummary.investorCount === 1 ? "" : "s"} indicating ${formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)}. Schedule calls with each to move from indication to commitment.`,
         missingTypes.length > 0
           ? `Your data room is incomplete — ${missingTypes.length} document${missingTypes.length === 1 ? "" : "s"} missing. Investors who open your profile expect a full data room. Uploading ${missingTypes[0] ? DOC_LABELS[missingTypes[0]] ?? missingTypes[0] : "missing documents"} first is highest priority.`
           : `Your data room is complete. Make sure each document is current and dated within the last 12 months before taking investor meetings.`,
-        target > 0 && fillPct < 1
+        showPledges && target > 0 && fillPct < 1
           ? `You need ${formatPledgeTotal(target - pledgeSummary.totalPledged, pledgeSummary.currency)} more to reach your target. At your current pace, focus on converting your ${interestCount} expressed interest${interestCount === 1 ? "" : "s"} and ${introCount} pending intro${introCount === 1 ? "" : "s"} into commitments.`
           : `Set a clear funding target if you haven't — investors use it to gauge round structure and decide whether your raise fits their typical check size.`,
       ],
@@ -408,7 +417,7 @@ export function CapitalReadinessSection({
           </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className={`grid gap-4 sm:grid-cols-2 ${showPledges ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
           {/* Capital Readiness Rating (CRR) — the single fundability score. Data
               room completeness is shown as a component, not a rival number. */}
           <button type="button" className={cardClass} onClick={() => setOpen("investable")} aria-label="View Capital Readiness Rating details">
@@ -442,6 +451,7 @@ export function CapitalReadinessSection({
           </button>
 
           {/* Indicative Interest */}
+          {showPledges ? (
           <button type="button" className={cardClass} onClick={() => setOpen("interest")} aria-label="View indicative interest details">
             <p className="text-[10px] font-semibold uppercase tracking-[0.09em] text-slate-500">{t("indicative_interest")}</p>
             <div className="mt-2 flex items-center justify-between gap-2">
@@ -457,6 +467,7 @@ export function CapitalReadinessSection({
             </div>
             <p className="mt-3 text-[10px] font-medium text-[#2E78F5]">{t("tap_to_explore")}</p>
           </button>
+          ) : null}
 
           {/* Investor Activity — two-segment donut */}
           <button type="button" className={cardClass} onClick={() => setOpen("activity")} aria-label="View investor activity details">

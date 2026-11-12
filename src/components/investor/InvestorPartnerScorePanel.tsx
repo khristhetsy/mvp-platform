@@ -63,7 +63,7 @@ const TIER_LADDER: Array<{ tier: PartnerTier; band: string }> = [
 ];
 
 /** Build every drawer's content from the already-computed score — no new data. */
-function buildDetails(score: PartnerScore): Record<string, DrawerDetail> {
+function buildDetails(score: PartnerScore, showPledges: boolean): Record<string, DrawerDetail> {
   const f = score.facts;
   const p = score.pillars;
   const accreditedValue = f.accredited ? "Verified" : "Not verified";
@@ -96,7 +96,7 @@ function buildDetails(score: PartnerScore): Record<string, DrawerDetail> {
         "Turning interest into committed action — opening deal rooms and honoring SPV commitments — minus founders you went quiet on. It's the heaviest driver.",
       rows: [
         { label: "Interest → deal room", value: pct(f.conversionRate) },
-        { label: "Pledges honored", value: pct(f.pledgeHonorRate) },
+        ...(showPledges ? [{ label: "Pledges honored", value: pct(f.pledgeHonorRate) }] : []),
         { label: "Founders gone quiet on", value: pct(f.ghostRate), highlight: f.ghostRate > 0 },
       ],
     },
@@ -172,9 +172,11 @@ function buildDetails(score: PartnerScore): Record<string, DrawerDetail> {
 export function InvestorPartnerScorePanel({
   score,
   coaching,
+  showPledges = true,
 }: Readonly<{
   score: PartnerScore;
   coaching: PartnerCoaching;
+  showPledges?: boolean;
 }>) {
   const t = useTranslations("investorCmp");
   const isNew = score.status === "new";
@@ -182,7 +184,7 @@ export function InvestorPartnerScorePanel({
   // Remember the last-opened drawer so its content stays visible during the
   // slide-out transition after openId is cleared.
   const [lastId, setLastId] = useState<string | null>(null);
-  const details = buildDetails(score);
+  const details = buildDetails(score, showPledges);
 
   const open = (id: string) => {
     setLastId(id);
