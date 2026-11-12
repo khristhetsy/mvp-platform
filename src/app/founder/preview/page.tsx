@@ -10,6 +10,7 @@ import { InvestableScoreBadge } from "@/components/founder/InvestableScoreBadge"
 import { parseUseOfFunds } from "@/lib/founder/use-of-funds";
 import { UseOfCapitalBar } from "@/components/founder/UseOfCapitalBar";
 import { UseOfFundsText } from "@/components/founder/UseOfFundsText";
+import { fetchClientType, isSpvClient } from "@/lib/listing/client-type";
 
 export const dynamic = "force-dynamic";
 
@@ -87,9 +88,13 @@ export default async function FounderPreviewPage({
   if (!pub) notFound();
 
   // Same rule as the public page: "Raising" falls back to the business plan's raise amount.
-  const raiseAmount = pub.funding_amount
-    ? Number(pub.funding_amount)
-    : (await loadBusinessPlanInputs(admin, company.id)).raiseAmount;
+  // Only SPV clients show a raise amount to investors, so the preview matches the public page.
+  const showRaise = isSpvClient(await fetchClientType(admin, company.id));
+  const raiseAmount = !showRaise
+    ? null
+    : pub.funding_amount
+      ? Number(pub.funding_amount)
+      : (await loadBusinessPlanInputs(admin, company.id)).raiseAmount;
 
   const geography = [pub.state, pub.country].filter(Boolean).join(", ") || null;
   const stageLabel = pub.revenue_stage
@@ -307,7 +312,7 @@ export default async function FounderPreviewPage({
 
         {/* Key metrics */}
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 20 }}>
-          <MetricCard label="Raising" value={raiseAmount ? formatFunding(raiseAmount) : "TBD"} accent />
+          {showRaise ? <MetricCard label="Raising" value={raiseAmount ? formatFunding(raiseAmount) : "TBD"} accent /> : null}
           <MetricCard label={t("revenue_stage")} value={stageLabel ?? "—"} />
           {geography && <MetricCard label={t("location")} value={geography} />}
           {pub.website && (

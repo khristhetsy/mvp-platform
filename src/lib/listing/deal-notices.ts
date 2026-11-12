@@ -9,6 +9,7 @@
  *  - Unsubscribed or suppressed contacts are skipped, and demo or internal
  *    founder accounts never email real investors.
  */
+import { fetchClientType, raiseForInvestors } from "@/lib/listing/client-type";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { emailConfigured, makeUnsubscribeToken, sendMarketingEmail } from "@/lib/marketing/send";
 import { firstValidEmail } from "@/lib/marketing/recipient";
@@ -96,7 +97,7 @@ export async function loadDealSummary(companyId: string, db: Db = createServiceR
     industry: c.industry ?? null,
     stage: c.funding_stage ?? null,
     location: [c.state, c.country].filter(Boolean).join(", ") || null,
-    raising: raisingLabel(c.funding_amount, c.funding_amount_band),
+    raising: raiseForInvestors(await fetchClientType(db, companyId), raisingLabel(c.funding_amount, c.funding_amount_band)),
     description: c.business_description ?? null,
     crr: scores.get(companyId) ?? null,
   };

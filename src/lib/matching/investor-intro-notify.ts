@@ -5,6 +5,7 @@
  * real email (demo and internal accounts), the investor paused email or turned
  * the email channel off, or there is no usable address. Never throws.
  */
+import { fetchClientType, raiseForInvestors } from "@/lib/listing/client-type";
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -76,7 +77,7 @@ export async function emailInvestorIntroMade(input: {
       companyName: company?.company_name?.trim() || "a company",
       industry: company?.industry ?? null,
       fundingStage: company?.funding_stage ?? null,
-      raising: formatRaise(company?.funding_amount ?? null, company?.funding_amount_band ?? null),
+      raising: raiseForInvestors(await fetchClientType(admin, input.companyId), formatRaise(company?.funding_amount ?? null, company?.funding_amount_band ?? null)),
       alignedOn,
       note: input.note,
       dashboardUrl: absoluteUrl("/investor/dashboard"),

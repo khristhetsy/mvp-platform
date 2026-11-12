@@ -1,3 +1,4 @@
+import { INTRODUCTIONS_ONLY_NOTE } from "@/lib/listing/disclosures";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
@@ -54,6 +55,8 @@ export default async function InvestorCompanyReportPage({
       </div>
 
       <InvestorCompanyReportView report={report} viewerRole="investor" isOwnCompany={false} />
+
+      <p className="mt-4 rounded-lg bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-600">{INTRODUCTIONS_ONLY_NOTE}</p>
 
       {/* Private note — auto-synced to watchlist */}
       <div className="mt-6">

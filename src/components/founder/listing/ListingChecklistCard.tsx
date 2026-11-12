@@ -1,5 +1,6 @@
 "use client";
 
+import { FOUNDER_LISTING_NOTE, LISTING_CONSENT_TEXT } from "@/lib/listing/disclosures";
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -19,7 +20,7 @@ export type ListingFigures = {
 type Panel = "attested" | "opt_in" | null;
 
 const OPT_IN_COPY =
-  "Your listing summary (name, sector, stage, location, amount raising, description, CRR) is shown to matched investors in our 7,000+ network. Your documents stay private until you share them.";
+  "Your listing summary (name, sector, stage, location, description, CRR) is shown to matched investors in our 7,000+ network. Your documents stay private until you share them.";
 
 function shown(v: string | null | undefined): string | null {
   const t = typeof v === "string" ? v.trim() : "";
@@ -44,6 +45,7 @@ export function ListingChecklistCard({
   const [state, setState] = useState<CompanyListingState>(initial);
   const [panel, setPanel] = useState<Panel>(null);
   const [confirmed, setConfirmed] = useState(false);
+  const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -93,6 +95,9 @@ export function ListingChecklistCard({
         <p className="flex items-center gap-2 text-sm text-slate-700">
           <i className="ti ti-circle-check-filled text-[18px] text-emerald-600" aria-hidden="true" />
           All 4 due diligence checks are complete.
+        </p>
+        <p className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-[11px] leading-5 text-slate-600">
+          <b className="font-semibold text-slate-700">Important note.</b> {FOUNDER_LISTING_NOTE}
         </p>
       </WorkspacePanel>
     );
@@ -219,6 +224,10 @@ export function ListingChecklistCard({
             {panel === "opt_in" && item.key === "opt_in" ? (
               <div className="ml-8 mt-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
                 <p className="text-sm leading-6 text-slate-700">{OPT_IN_COPY}</p>
+                <label className="mt-3 flex items-start gap-2 text-sm text-slate-700">
+                  <input type="checkbox" className="mt-1" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
+                  {LISTING_CONSENT_TEXT}
+                </label>
                 <div className="mt-3 flex gap-2">
                   <button
                     type="button"
@@ -229,7 +238,7 @@ export function ListingChecklistCard({
                   </button>
                   <button
                     type="button"
-                    disabled={busy}
+                    disabled={busy || !agreed}
                     onClick={() => void post("/api/founder/listing/opt-in", { optIn: true })}
                     className="cap-btn-primary rounded-lg px-3.5 py-1.5 text-sm font-medium disabled:opacity-60"
                   >
@@ -241,6 +250,10 @@ export function ListingChecklistCard({
           </li>
         ))}
       </ul>
+
+      <p className="mt-4 rounded-lg bg-slate-50 px-3 py-2 text-[11px] leading-5 text-slate-600">
+        <b className="font-semibold text-slate-700">Important note.</b> {FOUNDER_LISTING_NOTE}
+      </p>
 
       <p className="mt-4 text-[11px] leading-5 text-slate-500">
         Any Capital Readiness Rating qualifies. Listing does not guarantee investor interest or funding. iCFO Capital does not

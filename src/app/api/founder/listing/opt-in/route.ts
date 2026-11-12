@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { writeAuditLog } from "@/lib/data/audit";
+import { LISTING_CONSENT_VERSION } from "@/lib/listing/disclosures";
 import { loadListingChecklist, markListingCompleteIfReady } from "@/lib/listing/listing-server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { resolveFounderOwnCompany } from "@/lib/founder-api/own-company";
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
     action: optIn ? "listing.opted_in" : "listing.opted_out",
     entityType: "company",
     entityId: companyId,
-    metadata: { at: now },
+    metadata: optIn ? { at: now, consentVersion: LISTING_CONSENT_VERSION } : { at: now },
   }).catch(() => null);
 
   // Does nothing after an opt out (the checklist is no longer complete).

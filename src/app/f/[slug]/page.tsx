@@ -9,6 +9,8 @@ import { InvestableScoreBadge } from "@/components/founder/InvestableScoreBadge"
 import { parseUseOfFunds } from "@/lib/founder/use-of-funds";
 import { UseOfCapitalBar } from "@/components/founder/UseOfCapitalBar";
 import { UseOfFundsText } from "@/components/founder/UseOfFundsText";
+import { isSpvClient, normalizeClientType } from "@/lib/listing/client-type";
+import { SPV_LEGEND } from "@/lib/listing/disclosures";
 
 export const dynamic = "force-dynamic";
 
@@ -70,6 +72,20 @@ async function getPublishedCompanyBySlug(slug: string): Promise<PublicCompany | 
   return data as PublicCompany | null;
 }
 
+/**
+ * The client type is read on its own, so this public page keeps loading before
+ * the client_type migration is applied. Any error reads as Standard, which
+ * hides the raise amount, the safe side.
+ */
+async function loadClientType(companyId: string): Promise<string> {
+  try {
+    const { data } = await createServiceRoleClient().from("companies").select("client_type").eq("id", companyId).maybeSingle();
+    return normalizeClientType((data as { client_type?: string | null } | null)?.client_type);
+  } catch {
+    return "standard";
+  }
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -128,9 +144,13 @@ export default async function InvestorOnePagerPage({
     : null;
 
   // "Raising" falls back to the business plan's raise amount when the profile has none.
-  const raiseAmount = company.funding_amount
-    ? Number(company.funding_amount)
-    : (await loadBusinessPlanInputs(createServiceRoleClient(), company.id)).raiseAmount;
+  const clientType = await loadClientType(company.id);
+  const showRaise = isSpvClient(clientType);
+  const raiseAmount = !showRaise
+    ? null
+    : company.funding_amount
+      ? Number(company.funding_amount)
+      : (await loadBusinessPlanInputs(createServiceRoleClient(), company.id)).raiseAmount;
 
   const investableScore = company.founder_id
     ? await loadInvestableScore(createServiceRoleClient(), company.founder_id)
@@ -281,11 +301,13 @@ export default async function InvestorOnePagerPage({
           flexWrap: "wrap",
           gap: 12, marginBottom: 20,
         }}>
-          <MetricCard
-            label="Raising"
-            value={raiseAmount ? formatFunding(raiseAmount) : "TBD"}
-            accent
-          />
+          {showRaise ? (
+            <MetricCard
+              label="Raising"
+              value={raiseAmount ? formatFunding(raiseAmount) : "TBD"}
+              accent
+            />
+          ) : null}
           <MetricCard
             label={company.annual_revenue_size ? "Revenue" : t("revenue_stage")}
             value={company.annual_revenue_size ?? stageLabel ?? "—"}
@@ -375,6 +397,12 @@ export default async function InvestorOnePagerPage({
             </Link>
           </div>
         </div>
+
+        {showRaise ? (
+          <p style={{ fontSize: 6, lineHeight: 1.35, color: "#5F5E5A", background: "#F1EFE8", border: "1px solid #D3D1C7", borderRadius: 6, padding: "4px 7px", marginTop: 20 }}>
+            <b>Important disclosure.</b> {SPV_LEGEND}
+          </p>
+        ) : null}
 
         {/* Footer note */}
         <p style={{ textAlign: "center", fontSize: 11, color: "#9ca3af", marginTop: 28, lineHeight: 1.6 }}>
