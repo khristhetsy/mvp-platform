@@ -12,6 +12,7 @@ import { UseOfCapitalBar } from "@/components/founder/UseOfCapitalBar";
 import { UseOfFundsText } from "@/components/founder/UseOfFundsText";
 import { fetchClientType, isSpvClient } from "@/lib/listing/client-type";
 import { OnePagerDisclaimer } from "@/components/founder/OnePagerDisclaimer";
+import { SPV_LEGEND } from "@/lib/listing/disclosures";
 import { OnePagerDisclaimerNudge } from "@/components/founder/OnePagerDisclaimerNudge";
 
 export const dynamic = "force-dynamic";
@@ -368,7 +369,7 @@ export default async function FounderPreviewPage({
           </div>
         </div>
 
-        <OnePagerDisclaimer />
+        <OnePagerDisclaimer spvLegend={showRaise ? SPV_LEGEND : undefined} />
       </main>
     </div>
   );

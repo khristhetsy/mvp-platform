@@ -385,13 +385,7 @@ export default async function InvestorOnePagerPage({
           </div>
         </div>
 
-        {showRaise ? (
-          <p style={{ fontSize: 6, lineHeight: 1.35, color: "#5F5E5A", background: "#F1EFE8", border: "1px solid #D3D1C7", borderRadius: 6, padding: "4px 7px", marginTop: 20 }}>
-            <b>Important disclosure.</b> {SPV_LEGEND}
-          </p>
-        ) : null}
-
-        <OnePagerDisclaimer />
+        <OnePagerDisclaimer spvLegend={showRaise ? SPV_LEGEND : undefined} />
       </main>
     </div>
   );
