@@ -4,6 +4,7 @@ import { loadInvestorContacts, type ScoredInvestorContact } from "@/lib/investor
 import { loadShortList } from "@/lib/matching/candidate-investors";
 import { sendEmail } from "@/lib/email/send-email";
 import { renderIntroEmail } from "@/lib/outreach/intro-template";
+import { fetchClientType, raiseForInvestors } from "@/lib/listing/client-type";
 import { buildUnsubscribeUrl, filterUnsubscribed } from "@/lib/outreach/unsubscribe";
 import { getOutreachAutomationEnabled, getInvestorMatchConfig, getOutreachMessage } from "@/lib/settings/platform-settings";
 import { resolveFounderOutreachConfig, loadOutreachGlobals, type EffectiveOutreachConfig } from "@/lib/outreach/founder-overrides";
@@ -636,7 +637,8 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
         continue;
       }
       const tagline = comp.business_description ?? null;
-      const raise = formatRaise(comp.funding_amount);
+      // iCapOS sends this email, so the raise amount shows only for SPV clients.
+      const raise = raiseForInvestors(await fetchClientType(db, campaign.company_id), formatRaise(comp.funding_amount));
       const location = [comp.state, comp.country].filter(Boolean).join(", ") || null;
 
       // CAN-SPAM: never send to a suppressed address. The email is stored on the

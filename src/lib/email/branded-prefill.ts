@@ -8,6 +8,7 @@
 
 import { db, entrepreneurProfile, getProject } from "@/lib/ir/db";
 import { TERM_FIELDS, termLine, termValue } from "./founder-fields";
+import { fetchClientType, isSpvClient } from "@/lib/listing/client-type";
 import { glanceFields, glanceVars } from "./company-glance";
 
 export type FounderRef = { kind: "project" | "company"; id: string };
@@ -104,6 +105,15 @@ export function companyFields(c: Company): FounderField[] {
   return out.filter(([, , v]) => v).map(([key, label, value]) => ({ key, label, value }));
 }
 
+/**
+ * These branded emails are sent by iCapOS, so the Raise line is left out of the email terms unless the
+ * company is an SPV client. The founder data panel still lists the raise for reference.
+ */
+async function emailFields(fields: FounderField[], companyId: string | null | undefined): Promise<FounderField[]> {
+  const spv = companyId ? isSpvClient(await fetchClientType(db(), companyId)) : false;
+  return spv ? fields : fields.filter((f) => f.key !== "raise");
+}
+
 /** Map the panel fields onto the template values every design starts from. */
 export function valuesFrom(fields: FounderField[]): { values: Record<string, string>; sources: Record<string, string> } {
   const f = new Map(fields.map((x) => [x.key, x]));
@@ -165,7 +175,7 @@ async function projectPrefill(projectId: string): Promise<FounderPrefill | null>
   add("entity", "Business entity", q("Business entity"));
   if (companyRow) for (const cf of companyFields(companyRow as Company)) add(cf.key, cf.label, cf.value);
 
-  const { values, sources } = valuesFrom(fields);
+  const { values, sources } = valuesFrom(await emailFields(fields, ep.companyId));
   // The panel labels the raise with its source; the template wants the amount.
   if (parsed) values.terms = (values.terms ?? "").replace(/^Raise: .*$/m, `Raise: ${parsed}`);
   if (companyRow && (companyRow as Company).business_description) sources.body = "Company description";
@@ -194,7 +204,7 @@ async function companyPrefill(companyId: string): Promise<FounderPrefill | null>
   const fields = companyFields(c);
   const founder = (p.full_name ?? "").trim();
   if (founder || p.email || c.contact_phone) fields.splice(1, 0, { key: "founder", label: "Founder", value: [founder, p.email, c.contact_phone].filter(Boolean).join(" · ") });
-  const { values, sources } = valuesFrom(fields);
+  const { values, sources } = valuesFrom(await emailFields(fields, companyId));
   const company = String(c.company_name ?? "").trim();
   const banner = await lastBanner(company);
   if (banner) { values.hero_image = banner.url; sources.hero_image = banner.from; fields.push({ key: "hero_image", label: "Banner", value: `${banner.url.split("/").pop()} · from ${banner.from}` }); }
