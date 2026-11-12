@@ -73,7 +73,8 @@ describe("outreach, intro and connection routes", () => {
 
 describe("billing routes are owner only", () => {
   // Public or staff only routes are listed on purpose.
-  const EXEMPT = new Set(["webhook", "repair", "debug"]);
+  // guest-checkout is public on purpose: it is the payment step for someone who has no account yet.
+  const EXEMPT = new Set(["webhook", "repair", "debug", "guest-checkout"]);
   const dir = path.join(ROOT, "src/app/api/billing");
   const files = routeFiles(dir).filter((f) => !EXEMPT.has(path.relative(dir, f).split(path.sep)[0]));
 

@@ -10,6 +10,7 @@ import { recordFunnelEvent } from "@/lib/analytics/funnel";
 import { alertStaffNewCustomer } from "@/lib/notifications/new-customer-alerts";
 import { sendFounderWelcomeLetter } from "@/lib/notifications/founder-welcome-letter";
 import { assignAccountManagerForPremium } from "@/lib/team/account-manager";
+import { recordGuestPayment } from "@/lib/billing/paid-signup";
 
 // Map a LemonSqueezy event to a funnel step (§8). New paid subscription →
 // checkout_complete; a recurring payment → renewal. Others aren't funnel steps.
@@ -242,6 +243,38 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       }
     }
     return NextResponse.json({ received: true, created: profileId });
+  }
+
+  // A payment made before any login existed (pay first, account after). The order
+  // carries the paid signup id; keep what the payment says until the founder
+  // creates their login on /start/paid.
+  const signupId = custom_data?.signup_id;
+  if (signupId) {
+    if (!plan) {
+      await reportServerFailure("billing.webhook.unmapped_variant", new Error(`Variant ${attributes.variant_id} does not map to a known plan`), {
+        event_name,
+        signup_id: signupId,
+        variant_id: attributes.variant_id,
+      });
+      return NextResponse.json({ error: "Unmapped plan variant" }, { status: 500 });
+    }
+    const recorded = await recordGuestPayment({
+      signupId,
+      lsSubscriptionId: lsSubId ?? null,
+      lsCustomerId: String(attributes.customer_id),
+      lsVariantId: String(attributes.variant_id),
+      userEmail: attributes.user_email,
+      plan,
+      status: mapped.status,
+      currentPeriodEnd: attributes.renews_at ?? attributes.ends_at ?? null,
+      graceEndsAt,
+      cancelAtPeriodEnd: mapped.cancelAtPeriodEnd,
+    });
+    if (recorded.error) {
+      await reportServerFailure("billing.webhook.guest_payment_failed", new Error(recorded.error), { event_name, signup_id: signupId });
+      return NextResponse.json({ error: "Could not save the payment" }, { status: 500 });
+    }
+    return NextResponse.json({ received: true, ...(recorded.found ? { guest: signupId } : { ignored: "unknown signup" }) });
   }
 
   console.warn(`[billing/webhook] ${event_name}: no existing subscription and no profile_id — nothing written.`);

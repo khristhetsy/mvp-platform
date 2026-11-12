@@ -3,6 +3,8 @@ import { z } from "zod";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { recordFunnelEvent } from "@/lib/analytics/funnel";
 import { checkFormRateLimit } from "@/lib/ai-site/ratelimit";
+import { isPaymentsEnabled } from "@/lib/billing/pricing-guard";
+import { startDestination } from "@/lib/billing/paid-signup-core";
 
 /**
  * Marketing signup intake (spec §3, §8). Writes a marketing_site_leads row via
@@ -76,17 +78,16 @@ export async function POST(req: NextRequest): Promise<Response> {
   const fitSessionId = req.cookies.get("fs_session")?.value;
   if (fitSessionId && parsed.data.role !== "investor") await recordFunnelEvent({ sessionId: fitSessionId, eventName: "fit_signup", properties: { source_page: parsed.data.source_page ?? null, start_choice: parsed.data.start_choice ?? null } });
 
-  // Hand off to existing auth (spec §15); does not reimplement it.
-  const email = encodeURIComponent(parsed.data.email);
-  const isInvestor = parsed.data.role === "investor" || parsed.data.start_choice === "investor";
-  // The account form opens on the right role, and for founders on the plan they picked.
-  const plan =
-    parsed.data.start_choice === "founder_premium" ? "founder_premium"
-    : parsed.data.start_choice === "founder_professional" ? "founder_professional"
-    : parsed.data.start_choice === "founder_free" ? "founder_free"
-    : "founder_basic";
-  const redirect = isInvestor
-    ? `/auth/sign-up?email=${email}&role=investor`
-    : `/auth/sign-up?email=${email}&role=founder&plan=${plan}`;
+  // Basic and Professional go to payment first, before any login exists (pay first,
+  // account after). Everything else hands off to existing auth (spec §15), which this
+  // does not reimplement.
+  const redirect = startDestination({
+    email: parsed.data.email,
+    role: parsed.data.role,
+    startChoice: parsed.data.start_choice,
+    name: parsed.data.name,
+    company: parsed.data.company,
+    paymentsEnabled: isPaymentsEnabled(),
+  });
   return NextResponse.json({ ok: true, redirect });
 }

@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 /** Re-checks the payment every few seconds while the payment provider confirms it. */
-export function ConfirmingPayment() {
+export function ConfirmingPayment({ next = "Onboarding opens automatically as soon as it is confirmed." }: Readonly<{ next?: string }>) {
   const router = useRouter();
   useEffect(() => {
     const id = setInterval(() => router.refresh(), 4000);
@@ -15,7 +15,7 @@ export function ConfirmingPayment() {
       <span aria-hidden="true">✓</span>
       <div>
         <p className="font-semibold">Thank you. We are confirming your payment.</p>
-        <p>This takes a few seconds. Onboarding opens automatically as soon as it is confirmed.</p>
+        <p>This takes a few seconds. {next}</p>
       </div>
     </div>
   );

@@ -7,7 +7,7 @@ import { CODE_DEFAULT_PRICING, priceLabel as labelOf, priceSublabel, type Pricin
 
 // Bumped when the refund-policy wording changes, so each consent record is
 // tied to the exact terms the founder accepted.
-const REFUND_POLICY_VERSION = "2025-08-services-rendered";
+export const REFUND_POLICY_VERSION = "2025-08-services-rendered";
 
 export function CheckoutButton({
   planType,
