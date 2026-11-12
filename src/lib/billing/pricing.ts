@@ -81,7 +81,6 @@ export const FOUNDER_PRICING_PLANS: PricingPlanCard[] = [
     priceLabel: "$1,000",
     priceSubtext: "/month",
     monthlyPriceCents: PLAN_PRICES.founder_premium,
-    badge: "Paid by wire",
     features: PREMIUM_FEATURES,
     paidPlan: true,
   },
