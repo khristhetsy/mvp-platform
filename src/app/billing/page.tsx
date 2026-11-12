@@ -25,6 +25,8 @@ import { findCurrentAcceptance } from "@/lib/billing/premium-agreement";
 import { loadFounderWireState } from "@/lib/billing/wire";
 import { wireDatePT } from "@/lib/billing/wire-core";
 import { WireCheckoutPanel, WireInvoiceList } from "@/components/billing/WireCheckoutPanel";
+import { PAYMENT_PAGE } from "@/lib/billing/payment-gate";
+import { mustPayFirst } from "@/lib/billing/payment-gate-server";
 
 function formatDate(value: string | null) {
   if (!value) return "—";
@@ -64,6 +66,11 @@ export default async function BillingPage({
   const subscription =
     (await getSubscriptionForProfile(profile.id)) ??
     (await ensureSubscriptionForProfile({ profileId: profile.id, role: profile.role }));
+  // Returning from checkout before the payment is confirmed: wait on the payment page, which sends them on once it is.
+  if (await mustPayFirst(subscription, profile.id)) {
+    const back = (await searchParams)?.checkout === "success" ? "?checkout=success" : "";
+    redirect(`${PAYMENT_PAGE}${back}`);
+  }
   const requestedPlan = await getRequestedPlanForProfile(profile.id);
   const lifecycle = getBillingLifecycleStatus(subscription, requestedPlan);
   const daysLeft =

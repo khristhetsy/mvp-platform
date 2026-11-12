@@ -10,6 +10,8 @@ import { alertStaffNewCustomer } from "@/lib/notifications/new-customer-alerts";
 import { syncFounderRemediationTasks } from "@/lib/remediation/tasks";
 import { ONBOARDING_STEP_IDS, type OnboardingStepId } from "@/lib/onboarding/progress";
 import { requireApiProfile } from "@/lib/api/auth";
+import { mustPayFirst } from "@/lib/billing/payment-gate-server";
+import { getSubscriptionForProfile } from "@/lib/subscriptions/get-subscription";
 import { advanceFounderJourney } from "@/lib/founder-journey/stage-gate";
 import { founderOnboardingStepSchema } from "@/lib/validation";
 import type { Company } from "@/lib/supabase/types";
@@ -116,6 +118,12 @@ export async function GET() {
 export async function PATCH(request: Request) {
   const auth = await requireApiProfile(["founder"]);
   if ("error" in auth) return auth.error;
+
+  // Onboarding opens after the first payment is confirmed.
+  const subscription = await getSubscriptionForProfile(auth.profile.id);
+  if (subscription && (await mustPayFirst(subscription, auth.profile.id))) {
+    return NextResponse.json({ error: "Payment is required before onboarding.", code: "payment_required" }, { status: 402 });
+  }
 
   const body = await request.json().catch(() => null);
   const parsed = founderOnboardingStepSchema.safeParse(body);

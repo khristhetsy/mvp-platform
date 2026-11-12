@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { start } from "@/content/start";
+import { Suspense } from "react";
 import { StartForm } from "@/components/marketing-site/StartForm";
 import { loadPricing } from "@/lib/subscriptions/pricing-server";
 import { priceLabel } from "@/lib/subscriptions/pricing-catalog";
@@ -44,7 +45,7 @@ export default async function StartPage() {
             </div>
           </div>
           <div className="text-site-ink">
-            <StartForm prices={prices} />
+            <Suspense fallback={null}><StartForm prices={prices} /></Suspense>
           </div>
         </div>
       </section>

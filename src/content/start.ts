@@ -60,7 +60,7 @@ export const start = {
     eyebrow: "What happens next",
     title: "Four steps, at your pace.",
     steps: [
-      { n: "1", p: "Choose your plan and create your account. Free needs no card; paid plans pay at checkout." },
+      { n: "1", p: "Choose your plan and create your account. Free needs no card. A paid plan is paid right after you create your account, before onboarding begins." },
       { n: "2", p: "You answer the readiness questions and upload whatever materials you have. Rough is fine." },
       { n: "3", p: "Your rating comes back with a per-dimension breakdown and an ordered fix list, and your matched investor list is built against the network." },
       { n: "4", p: "Distribution goes out, done for you or sent by you from your own domain." },
