@@ -88,7 +88,7 @@ export function WireCheckoutPanel({
 }: Readonly<{
   /** "$1,000", from the pricing catalogue. */
   monthlyLabel: string;
-  /** "$3,000", three months, no discount. */
+  /** "$2,500", three months of access. */
   quarterlyLabel: string;
   instructions: WireInstructions;
   /** An invoice already awaiting payment, shown instead of the request form. */
