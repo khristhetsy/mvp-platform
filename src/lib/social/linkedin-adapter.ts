@@ -87,8 +87,7 @@ export const linkedInAdapter: SocialAdapter = {
     // (socialActions) is partner-gated (403 without Community Management access),
     // so the body is the only reliable place to deliver the link self-serve.
     const commentary = linkedInCommentary(v, linkedInCommentsEnabled());
-    // LinkedIn's Posts API requires commentary, so an image needs some text with it.
-    if (v.imageUrl && !commentary.trim()) throw new Error("LinkedIn needs some text with the image. Add a line to the post.");
+    // An image alone is a valid post: commentary is sent empty when there is no text.
     const imageUrn = v.imageUrl ? await uploadImage(v.imageUrl, a.externalMemberId, a.accessToken) : null;
     const res = await fetch(`${REST_BASE}/posts`, {
       method: "POST",

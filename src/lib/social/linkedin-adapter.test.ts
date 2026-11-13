@@ -73,8 +73,11 @@ describe("linkedInAdapter.publish with an image", () => {
     expect(JSON.parse(String(calls[0].body)).content).toBeUndefined();
   });
 
-  it("needs some text with an image and calls nothing", async () => {
-    await expect(linkedInAdapter.publish({ ...variant, body: "" }, account)).rejects.toThrow(/needs some text/);
-    expect(calls).toHaveLength(0);
+  it("posts an image alone with empty commentary", async () => {
+    await linkedInAdapter.publish({ ...variant, body: "" }, account);
+    expect(calls).toHaveLength(4);
+    const post = JSON.parse(String(calls[3].body));
+    expect(post.commentary).toBe("");
+    expect(post.content).toEqual({ media: { id: "urn:li:image:IMG1" } });
   });
 });

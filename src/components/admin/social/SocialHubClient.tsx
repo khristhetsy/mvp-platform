@@ -270,7 +270,6 @@ function Composer({ accounts, googleReady, onScheduled }: { accounts: SocialAcco
 
   async function save(mode: "draft" | "park" | "schedule" | "now") {
     if (variants.length === 0) return;
-    if (imageUrl.trim() && variants.some((v) => platformOf(v.accountId) === "linkedin" && !v.body.trim())) { setMsg("LinkedIn needs some text with the image. Add a line, or untick the LinkedIn account."); return; }
     // One post per picked day. Anything else saves a single post.
     const targets: (string | null)[] = mode === "schedule" ? schedDates.map(isoFor) : mode === "now" ? [new Date().toISOString()] : [null];
     if (mode === "schedule" && targets.length === 0) { setMsg("Pick at least one date and a time to schedule."); return; }
@@ -599,6 +598,7 @@ function Composer({ accounts, googleReady, onScheduled }: { accounts: SocialAcco
             <div key={v.accountId} className={`${card} p-3`}>
               <p className="mb-1.5 text-[12px] font-medium text-slate-600">{nameOf(v.accountId)}</p>
               <textarea value={v.body} onChange={(e) => setVariants((p) => p.map((x, j) => j === i ? { ...x, body: e.target.value } : x))} rows={5} placeholder={imageUrl.trim() ? "No text. This account posts the image alone." : undefined} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-indigo-400 focus:outline-none" />
+              {imageUrl.trim() && !v.body.trim() && platformOf(v.accountId) === "linkedin" ? <p className="mt-1 text-[11px] text-amber-700">Image alone on LinkedIn is not yet confirmed. If LinkedIn rejects it, only this account shows as failed.</p> : null}
             </div>
           ))}
         </div>
