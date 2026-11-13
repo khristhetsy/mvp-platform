@@ -532,9 +532,10 @@ function Compose({ usage, accounts, campaigns, companyName, founderName, initial
       )}
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:items-start">
+      <div className="grid gap-4">
       <div className={card}>
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-base font-semibold text-slate-900">Compose post</h2>
+          <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#1A6CE4] text-xs font-semibold text-white">1</span>Compose post</h2>
           <span className="text-xs text-slate-500">{body ? "Draft kept on this device" : "Draft empty"}</span>
         </div>
         {accounts.length === 0 ? (
@@ -574,7 +575,10 @@ function Compose({ usage, accounts, campaigns, companyName, founderName, initial
           <span className="text-xs text-slate-500">{body.length.toLocaleString()} characters</span>
         </div>
         <p className="mt-1 text-xs text-slate-500">Free mode. The draft is written from your profile and you review every change. Drafts never count toward your post limit.</p>
+      </div>
 
+      <div className={card}>
+        <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#1A6CE4] text-xs font-semibold text-white">2</span>Assign AI agent</h2>
         <div className="mt-3">
           <div className="text-xs text-slate-500">Attachments</div>
           <button type="button" aria-pressed={useAgent} disabled={!agentUrl} onClick={() => setAgentOn((v) => !v)}
@@ -601,6 +605,12 @@ function Compose({ usage, accounts, campaigns, companyName, founderName, initial
               {campaigns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </label>
+        </div>
+      </div>
+
+      <div className={card}>
+        <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#1A6CE4] text-xs font-semibold text-white">3</span>Schedule your post</h2>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
           <div className="text-xs text-slate-500 sm:col-span-2">Dates and time (PT)
             <MultiDatePicker dates={dates} onDates={setDates} time={time} onTime={setTime} />
             {repeat !== "none" && dates.length > 1 && <p className="mt-1">A repeating post starts on the first date you picked, {dates[0]}.</p>}
@@ -660,6 +670,7 @@ function Compose({ usage, accounts, campaigns, companyName, founderName, initial
         )}
         {msg && <p className={`mt-2 text-xs ${msg.ok ? "text-emerald-700" : "text-red-700"}`}>{msg.text}</p>}
         {emailed && <Link href="/founder/deploy" className="mt-1 inline-block text-xs font-medium text-[#1A6CE4] hover:underline">Open Manual outreach</Link>}
+      </div>
       </div>
       <div className="lg:sticky lg:top-4">
         <SocialPreview body={body} network={shownNet} onNetwork={setPreviewNet} name={founderName} company={companyName} linkUrl={effectiveLink} firstComment={useAgent && shownNet !== "reddit" ? `${AGENT_COMMENT} ${effectiveLink}` : null} />
