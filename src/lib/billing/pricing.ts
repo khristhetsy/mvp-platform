@@ -1,5 +1,6 @@
 import type { FeatureKey, PlanType } from "@/lib/subscriptions/plans";
-import { FOUNDER_PROFESSIONAL_FEATURES, FREE_FEATURES, PLAN_PRICES, PREMIUM_FEATURES } from "@/lib/subscriptions/plans";
+import { FOUNDER_PROFESSIONAL_FEATURES, PLAN_PRICES } from "@/lib/subscriptions/plans";
+import { pricing as websitePricing } from "@/content/pricing";
 import {
   addCompanyLabel, centsFor, isPriced, priceLabel, priceSublabel, type PricingCatalog,
 } from "@/lib/subscriptions/pricing-catalog";
@@ -23,7 +24,42 @@ export type PricingPlanCard = {
   paidPlan: boolean;
   /** Sales-led tier — shown with a "Talk to us" CTA instead of self-serve checkout. */
   contactSales?: boolean;
+  /** One line under the price. Same words as the website pricing page. */
+  desc?: string;
+  /** Top tag on the card (the website's "Most founders start here"). */
+  tag?: string;
+  /** Free plan promotion: tag, price note and the urgency strip. */
+  promo?: { tag: string; priceNote: string; note: string };
 };
+
+// Free is shown again (Oct 9, 2026): a one time AI due diligence report, the
+// CRR, sharing with any investor and a Private Market listing. Premium is paid
+// by bank wire only; Basic and Professional check out through Lemon Squeezy.
+const WEBSITE_TIER_BY_PLAN: Partial<Record<PlanType, string>> = {
+  founder_free: "Free",
+  founder_basic: "Basic",
+  founder_professional: "Professional",
+  founder_premium: "Premium",
+  founder_managed_ir: "SPV Program",
+};
+
+/**
+ * Card copy comes from the website pricing content (src/content/pricing.ts), so
+ * /upgrade and /pricing read the same words and cannot drift. Prices still come
+ * from the live catalogue in founderPricingPlans below.
+ */
+function websiteCopy(planType: PlanType) {
+  const tier = websitePricing.tiers.find((t) => t.name === WEBSITE_TIER_BY_PLAN[planType]);
+  if (!tier) throw new Error(`No website pricing tier for ${planType}`);
+  const features = "features" in tier && tier.features ? [...tier.features] : "advisory" in tier && tier.advisory ? [tier.advisory.body] : [];
+  return {
+    desc: tier.desc,
+    badge: "badge" in tier ? tier.badge : undefined,
+    promo: "promo" in tier && tier.promo ? { ...tier.promo } : undefined,
+    tag: tier.featured ? "Most founders start here" : undefined,
+    features,
+  };
+}
 
 // Free is shown again (Oct 9, 2026): a one time AI due diligence report, the
 // CRR, sharing with any investor and a Private Market listing. Premium is paid
@@ -35,7 +71,7 @@ export const FOUNDER_PRICING_PLANS: PricingPlanCard[] = [
     priceLabel: "$0",
     priceSubtext: "",
     monthlyPriceCents: PLAN_PRICES.founder_free,
-    features: FREE_FEATURES,
+    ...websiteCopy("founder_free"),
     paidPlan: false,
   },
   {
@@ -44,16 +80,7 @@ export const FOUNDER_PRICING_PLANS: PricingPlanCard[] = [
     priceLabel: "$49",
     priceSubtext: "/month",
     monthlyPriceCents: PLAN_PRICES.founder_basic,
-    features: [
-      "All tools: CRR, valuation, data room, e-learning",
-      "Up to 5 matched investors get your one-pager",
-      "Attend the Investor Conference Virtual Event",
-      "DIY outreach unlocked: you can now reach investors",
-      "Up to 5 intro requests a month, through iCFO",
-      "Up to 100 investors from the public investor directory, not the iCFO Capital investor network",
-      "1,000 Manual outreach emails a month",
-      "Fully self-serve",
-    ],
+    ...websiteCopy("founder_basic"),
     paidPlan: true,
   },
   {
@@ -62,17 +89,8 @@ export const FOUNDER_PRICING_PLANS: PricingPlanCard[] = [
     priceLabel: "$199",
     priceSubtext: "/month",
     monthlyPriceCents: PLAN_PRICES.founder_professional,
-    badge: "Most popular",
     recommended: true,
-    features: [
-      "Everything in Basic",
-      "Up to 50 investors",
-      "Monthly live presentation slot",
-      "Up to 20 intro requests a month",
-      "Up to 1,000 investors from the public investor directory, not the iCFO Capital investor network",
-      "20,000 Manual outreach emails a month",
-      "Self-serve, with a call available",
-    ],
+    ...websiteCopy("founder_professional"),
     paidPlan: true,
   },
   {
@@ -81,7 +99,7 @@ export const FOUNDER_PRICING_PLANS: PricingPlanCard[] = [
     priceLabel: "$1,000",
     priceSubtext: "/month",
     monthlyPriceCents: PLAN_PRICES.founder_premium,
-    features: PREMIUM_FEATURES,
+    ...websiteCopy("founder_premium"),
     paidPlan: true,
   },
   {
@@ -91,13 +109,7 @@ export const FOUNDER_PRICING_PLANS: PricingPlanCard[] = [
     priceSubtext: "3-month min",
     monthlyPriceCents: PLAN_PRICES.founder_managed_ir,
     contactSales: true,
-    features: [
-      "Done for you Investor Relations",
-      "We curate the list and materials",
-      "You review and approve",
-      "Post-conference follow-up run for you",
-      "Limited capacity, talk to us",
-    ],
+    ...websiteCopy("founder_managed_ir"),
     paidPlan: true,
   },
 ];
