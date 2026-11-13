@@ -9,6 +9,7 @@ import {
 import { CODE_DEFAULT_PRICING, type PricingCatalog } from "@/lib/subscriptions/pricing-catalog";
 import type { PlanType } from "@/lib/subscriptions/plans";
 import { PLAN_LABELS } from "@/lib/subscriptions/plans";
+import { AGENT_FEATURE_LINE } from "@/lib/ir-agent/marketing";
 
 function PlanCard({
   plan,
@@ -16,12 +17,15 @@ function PlanCard({
   highlight,
   ctaHref,
   ctaLabel,
+  hasAgent,
 }: Readonly<{
   plan: PricingPlanCard;
   currentPlan?: PlanType | null;
   highlight?: boolean;
   ctaHref?: string;
   ctaLabel?: string;
+  /** The plan includes the Investor Relations Agent (same rule as the website). */
+  hasAgent?: boolean;
 }>) {
   const isCurrent = currentPlan === plan.planType;
 
@@ -30,9 +34,20 @@ function PlanCard({
       className={`relative flex flex-col rounded-3xl border p-6 shadow-sm ${
         highlight || plan.recommended
           ? "border-indigo-600 bg-indigo-50/40 ring-1 ring-indigo-600/20"
-          : "border-slate-200 bg-white"
+          : plan.promo
+            ? "border-2 border-amber-500 bg-white"
+            : "border-slate-200 bg-white"
       }`}
     >
+      {plan.tag || plan.promo ? (
+        <span
+          className={`absolute -top-3 left-5 rounded-full px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider ${
+            plan.promo ? "bg-amber-500 text-slate-900" : "bg-indigo-600 text-white"
+          }`}
+        >
+          {plan.promo ? plan.promo.tag : plan.tag}
+        </span>
+      ) : null}
       {plan.badge ? (
         <span className="absolute right-4 top-4 rounded-full bg-indigo-600 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">
           {plan.badge}
@@ -42,8 +57,25 @@ function PlanCard({
       <p className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
         {plan.priceLabel}
         {plan.priceSubtext ? <span className="text-base font-normal text-slate-500">{plan.priceSubtext}</span> : null}
+        {plan.promo ? <span className="ml-1 text-base font-normal text-slate-500">{plan.promo.priceNote}</span> : null}
       </p>
+      {plan.desc ? <p className="mt-2 text-sm leading-6 text-slate-600">{plan.desc}</p> : null}
+      {plan.promo ? (
+        <p className="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-900" role="note">
+          {plan.promo.note}
+        </p>
+      ) : null}
       <ul className="mt-5 flex-1 space-y-2">
+        {hasAgent ? (
+          <li className="flex items-start gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-900">
+            <span>
+              {AGENT_FEATURE_LINE}{" "}
+              <span className="ml-1 rounded-full bg-blue-600 px-1.5 py-0.5 align-middle font-mono text-[9px] font-semibold uppercase tracking-wider text-white">
+                New
+              </span>
+            </span>
+          </li>
+        ) : null}
         {plan.features.map((feature) => (
           <li key={feature} className="flex items-start gap-2 text-sm text-slate-600">
             <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-500" />
@@ -97,6 +129,7 @@ export function PlanComparisonSection({
   founderCtaHref = "/auth/sign-up",
   founderCtaLabel = "Get started",
   pricing = CODE_DEFAULT_PRICING,
+  agentPlans = [],
 }: Readonly<{
   currentPlan?: PlanType | null;
   showInvestor?: boolean;
@@ -105,6 +138,8 @@ export function PlanComparisonSection({
   founderCtaLabel?: string;
   /** Active pricing, passed by the server page. Defaults to the code constants. */
   pricing?: PricingCatalog;
+  /** Plan types that include the Investor Relations Agent. Empty while the agent switch is off. */
+  agentPlans?: string[];
 }>) {
   // Free and Premium are always listed (Oct 9, 2026). Premium is paid by wire,
   // so a signed in founder goes to the wire panel on /billing, never to checkout.
@@ -127,6 +162,7 @@ export function PlanComparisonSection({
                 plan={plan}
                 currentPlan={currentPlan}
                 highlight={plan.recommended}
+                hasAgent={agentPlans.includes(plan.planType)}
                 ctaHref={cta?.href}
                 ctaLabel={cta?.label}
               />
