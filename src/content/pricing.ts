@@ -70,17 +70,17 @@ export const pricing = {
         "Up to 20 intro requests a month",
       ],
       cta: { label: "Start on Professional", href: "/start?plan=professional" },
-      featured: false,
+      featured: true,
     },
     {
       name: "Premium",
       price: "$1,000",
       per: "/month",
       badge: "Done for you",
-      desc: "Done for you. We do the heavy lifting so you can close the deal. Paid by wire.",
+      desc: "Done for you. We do the heavy lifting so you can close the deal.",
       features: PREMIUM_FEATURES,
       cta: { label: "Start on Premium", href: "/auth/sign-up?role=founder&plan=founder_premium" },
-      featured: true,
+      featured: false,
     },
     {
       name: "SPV Program",
@@ -102,7 +102,7 @@ export const pricing = {
   investorNote: "Investors join free at icapos.com/investors. Investors are never charged, and iCapOS takes no fee from either side of an introduction.",
   investorLink: { label: "icapos.com/investors", href: "/investors" },
   billingNote:
-    "Billing and refunds. Basic and Professional are billed monthly by card. Premium is billed monthly ($1,000) or quarterly ($3,000) by bank wire, and activates as soon as your wire is received. A paid plan begins delivering the moment it starts, so payments are non-refundable, including partial periods. Cancel any time to stop future billing; access continues through the end of the paid period.",
+    "Billing and refunds. Basic and Professional are billed monthly by card. Premium is billed monthly ($1,000) or quarterly ($2,500), and activates as soon as your payment is received. A paid plan begins delivering the moment it starts, so payments are non-refundable, including partial periods. Cancel any time to stop future billing; access continues through the end of the paid period.",
   disclaimer: PRICING_DISCLAIMER,
   comparison: {
     title: "Side by side",
@@ -119,7 +119,7 @@ export const pricing = {
       { k: "Investor Conference Virtual Event", vals: ["Upgrade", "Attend", "Live presentation slot", "Live presentation slot"] },
       { k: "Investor intro requests", vals: ["Upgrade", "up to 5 a month", "up to 20 a month", "up to 20 a month"] },
       { k: "Investor outreach run by our team", vals: ["Not included", "Not included", "Not included", "Included"] },
-      { k: "How you pay", vals: ["Nothing to pay", "Card", "Card", "Bank wire"] },
+      { k: "How you pay", vals: ["Nothing to pay", "Card", "Card", ""] },
       { k: "Success fees or commission", vals: ["None", "None", "None", "None"] },
     ],
     note: "SPV Program, 3 month minimum, pricing on request, is done for you: we run this raise through an SPV, structuring the vehicle and managing the outreach against your matched mandates. Talk to us.",
@@ -132,7 +132,6 @@ export const pricing = {
       { q: "What do I get for free?", a: "A one time AI due diligence report and your Capital Readiness Rating, with clear steps to raise it. You can share the report with any investor. Once your listing checklist is complete, your company is listed in our Private Market for our network of 7,000+ investors. No credit card." },
       { q: "When should I upgrade?", a: "When investors are interested. A paid plan shows you who is interested and lets you reach them: Basic covers up to 5 matched investors and 5 intro requests a month; Professional up to 50 investors, 20 intro requests a month and the live stage." },
       { q: "What does Premium add?", a: "Premium is done for you. Everything in Professional, and a dedicated team member manages your investor outreach: we find your best fits in our 7,000+ investor network, make the introductions and follow up. We prospect investors and schedule meetings so you can close the deal." },
-      { q: "How do I pay for Premium?", a: "By bank wire, monthly ($1,000) or quarterly ($3,000, no discount). Request a wire invoice from your billing page and we email it with wire instructions. Premium activates as soon as your wire is received, usually within 1 to 2 business days. Include the invoice number as the reference; the sender pays wire fees." },
       { q: "Is there a sales call?", a: "Not for Free, Basic, Professional or Premium. The SPV Program is done for you through an SPV, so it starts with a conversation. You can book a 30 minute walkthrough if you'd find it useful, but nothing requires it." },
       { q: "Why “up to” 5 and 50?", a: "Investors set their own monthly acceptance caps. When the right fit investors for your company have hit their limit that month, your list is shorter, which is what keeps response rates from collapsing." },
       { q: "Does iCapOS make introductions?", a: "On paid plans, you can ask us to introduce you to a matched investor (5 a month on Basic, 20 on Professional and Premium). We review each request and make the introduction; requests we decline don't count toward your limit. It distributes your materials to matched investors; it does not recommend or vouch for anyone." },
@@ -172,5 +171,5 @@ export function pricingFor(catalog: PricingCatalog) {
 
 /** One line summary used in the page description and the FAQ answer. */
 export function pricingSummary(catalog: PricingCatalog) {
-  return `Free ${priceLabel(catalog, "founder_free")} (AI due diligence report, CRR, share with any investor, Private Market listing), Basic ${priceLabel(catalog, "founder_basic")}/mo (all tools, up to 5 matched investors, one-pager, conference access, DIY outreach, 5 intro requests a month), Professional ${priceLabel(catalog, "founder_professional")}/mo (up to 50 matched investors, monthly live presentation slot, 20 intro requests a month), Premium ${priceLabel(catalog, "founder_premium")}/mo (done for you, paid by bank wire), SPV Program done for you with pricing on request. Additional company accounts ${money(catalog.addCompanyCents)}/mo.`;
+  return `Free ${priceLabel(catalog, "founder_free")} (AI due diligence report, CRR, share with any investor, Private Market listing), Basic ${priceLabel(catalog, "founder_basic")}/mo (all tools, up to 5 matched investors, one-pager, conference access, DIY outreach, 5 intro requests a month), Professional ${priceLabel(catalog, "founder_professional")}/mo (up to 50 matched investors, monthly live presentation slot, 20 intro requests a month), Premium ${priceLabel(catalog, "founder_premium")}/mo (done for you), SPV Program done for you with pricing on request. Additional company accounts ${money(catalog.addCompanyCents)}/mo.`;
 }

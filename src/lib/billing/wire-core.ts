@@ -2,7 +2,7 @@
  * Premium by bank wire: the pure parts (no database, no env), shared by the
  * server library (wire.ts), the cron, the API routes, the PDF and the client
  * panels. Approved Oct 9, 2026: Premium is paid ONLY by wire, monthly ($1,000)
- * or quarterly ($3,000, no discount). Basic and Professional stay on Lemon
+ * or quarterly ($2,500, from Nov 13, 2026). Basic and Professional stay on Lemon
  * Squeezy.
  */
 
@@ -116,9 +116,12 @@ export function isWireCycle(value: unknown): value is WireCycle {
   return value === "monthly" || value === "quarterly";
 }
 
-/** Monthly $1,000 or quarterly $3,000 (three months, no discount). */
+/** A quarterly invoice charges this many months of the monthly price: $2,500 at $1,000 a month (Nov 13, 2026). */
+export const QUARTERLY_BILLED_MONTHS = 2.5;
+
+/** Monthly $1,000 or quarterly $2,500 (the quarter still covers three months of access). */
 export function invoiceAmountCents(cycle: WireCycle, monthlyCents: number = PREMIUM_MONTHLY_CENTS): number {
-  return monthlyCents * cycleMonths(cycle);
+  return Math.round(monthlyCents * (cycle === "quarterly" ? QUARTERLY_BILLED_MONTHS : 1));
 }
 
 /**

@@ -12,6 +12,7 @@
  *
  * Pure and DB-free — the loader lives in pricing-server.ts.
  */
+import { QUARTERLY_BILLED_MONTHS } from "@/lib/billing/wire-core";
 import {
   ADDITIONAL_COMPANY_PRICE, MANAGED_IR_MIN_MONTHS, PLAN_PRICES,
   SIGNUP_FOUNDER_PLANS, type PlanType, type SignupPlanOption,
@@ -203,7 +204,7 @@ export function priceSurfaces(catalog: PricingCatalog): PriceSurface[] {
     { where: "Upgrade & Billing CTA buttons", audience: "Founder", renders: `Founder Basic — ${priceShort(catalog, "founder_basic")}`, status: "follows" },
     { where: "Admin billing · plan dropdown", audience: "Staff", renders: pair, status: "follows" },
     { where: "Outreach Qualification · plan caps", audience: "Staff", renders: pair, status: "follows" },
-    { where: "Premium wire panel, invoices and PDF", audience: "Founder", renders: `${priceShort(catalog, "founder_premium")} · quarterly ${money(centsFor(catalog, "founder_premium") * 3)}`, status: "follows", note: "Paid by bank wire; an issued invoice keeps the amount it was issued for." },
+    { where: "Premium wire panel, invoices and PDF", audience: "Founder", renders: `${priceShort(catalog, "founder_premium")} · quarterly ${money(centsFor(catalog, "founder_premium") * QUARTERLY_BILLED_MONTHS)}`, status: "follows", note: "Paid by bank wire; an issued invoice keeps the amount it was issued for." },
     { where: "“Add a company” refusal message", audience: "Founder", renders: addCompanyLabel(catalog), status: "follows" },
     { where: "Site AI + support assistant prompts", audience: "Public / Founder", renders: pair, status: "follows" },
     { where: "MRR · campaign ROI · social funnel revenue", audience: "Staff", renders: "computed from price", status: "follows", note: "New rows only — history keeps what was billed." },
