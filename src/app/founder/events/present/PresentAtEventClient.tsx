@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, Lock, Sparkles, Video } from "lucide-react";
+import { CheckCircle2, Lock, Sparkles, Users, Video } from "lucide-react";
 import { SPOTLIGHT, type PresentTier } from "@/lib/icfo-events/present-tiers";
 import { PITCH_OUTLINE } from "@/lib/icfo-events/spotlight/rules";
 import { SpotlightVideoUpload, type UploadedSpotlightVideo } from "@/components/events/SpotlightVideoUpload";
@@ -436,14 +436,38 @@ export function PresentAtEventClient({
 
         {error && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
 
-        <button
-          type="button"
-          onClick={submit}
-          disabled={submitting}
-          className="mt-6 inline-flex items-center gap-2 rounded-lg bg-[var(--brand-indigo,#2E78F5)] px-5 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
-        >
-          {submitting ? "Submitting…" : "Submit application"}
-        </button>
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={submit}
+            disabled={submitting}
+            className="inline-flex items-center gap-2 rounded-lg bg-[var(--brand-indigo,#2E78F5)] px-5 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
+          >
+            {submitting ? "Submitting…" : "Submit application"}
+          </button>
+          {selectedEvent?.slug ? (
+            <Link
+              href={`/events/${selectedEvent.slug}/register`}
+              className="inline-flex items-center gap-2 rounded-lg border border-[var(--brand-indigo,#2E78F5)] bg-white px-5 py-2.5 text-sm font-medium text-[var(--brand-indigo,#2E78F5)] hover:bg-[var(--brand-indigo,#2E78F5)]/5"
+            >
+              <Users className="h-4 w-4" />
+              Just attend
+            </Link>
+          ) : (
+            <button
+              type="button"
+              disabled
+              title="Choose an event to register"
+              className="inline-flex cursor-not-allowed items-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-white px-5 py-2.5 text-sm font-medium text-[var(--text-muted)] opacity-60"
+            >
+              <Users className="h-4 w-4" />
+              Just attend
+            </button>
+          )}
+        </div>
+        <p className="mt-2.5 text-xs text-[var(--text-muted)]">
+          Not presenting? Just attend registers you as a free guest for the event you chose.
+        </p>
       </div>
 
       {/* Tier features + existing applications */}
