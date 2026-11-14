@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { FounderProfileMirror, type MirrorContact } from "./FounderProfileMirror";
 import { SalesChatter } from "@/components/sales/SalesChatter";
 import { AiAgentPanel } from "@/components/sales/AiAgentPanel";
+import { AutomationSuggestion, type SuggestionItem } from "@/components/sales/AutomationSuggestion";
 
 type Stage = { id: string; name: string; sort_order: number; is_won: boolean };
 type Opp = {
@@ -64,7 +65,7 @@ function actWhen(iso: string): string {
   return new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
-export function OpportunityDetailClient({ initial, stages, founderContact = null, contactActivity = [], staff = [] }: { initial: Opp; stages: Stage[]; founderContact?: MirrorContact | null; contactActivity?: ActivityItem[]; staff?: { id: string; name: string }[] }) {
+export function OpportunityDetailClient({ initial, stages, founderContact = null, contactActivity = [], staff = [], suggestions = [] }: { suggestions?: SuggestionItem[]; initial: Opp; stages: Stage[]; founderContact?: MirrorContact | null; contactActivity?: ActivityItem[]; staff?: { id: string; name: string }[] }) {
   const router = useRouter();
   const [o, setO] = useState<Opp>(initial);
   const [busy, setBusy] = useState(false);
@@ -144,6 +145,13 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
       const data = (await res.json().catch(() => ({}))) as { opportunity?: Opp };
       if (res.ok && data.opportunity) setO(data.opportunity);
     } finally { setBusy(false); }
+  }
+  // Re-read the opportunity after an automation suggestion is answered, then refresh the server data (timeline).
+  async function refreshOpp() {
+    const res = await fetch(`/api/sales/opportunities/${o.id}`);
+    const data = (await res.json().catch(() => ({}))) as { opportunity?: Opp };
+    if (res.ok && data.opportunity) setO(data.opportunity);
+    router.refresh();
   }
   // Inline Deal value editor (amount + billing period).
   const [dvEditing, setDvEditing] = useState(false);
@@ -325,6 +333,8 @@ export function OpportunityDetailClient({ initial, stages, founderContact = null
             disabled={busy}
           />
         </div>
+
+        <AutomationSuggestion items={suggestions} onDecided={() => { void refreshOpp(); }} />
 
         <div style={{ padding: 16 }}>
           {editing ? (

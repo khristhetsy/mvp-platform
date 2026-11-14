@@ -120,6 +120,12 @@ export async function alertStaffNewCustomer(raw: NewCustomerAlertInput): Promise
   try {
     let input = await fillFounder(raw);
     if (isInternalAccount({ email: input.founderEmail ?? null, role: "founder" })) return;
+    // Feed the CRM automation: a signup, or a payment (which also means the account exists).
+    if (input.event === "signup" || input.event === "payment") {
+      const { fireCrmAutomation } = await import("@/lib/sales/automation");
+      await fireCrmAutomation("signed_up", { email: input.founderEmail });
+      if (input.event === "payment") await fireCrmAutomation("payment_received", { email: input.founderEmail });
+    }
     input = await fillCompany(input);
 
     const type = NEW_CUSTOMER_TYPES[input.event];

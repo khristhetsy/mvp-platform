@@ -145,6 +145,8 @@ export async function recordGuestPayment(input: {
     const plan = (patch.plan_type as PlanType | undefined) ?? row.plan_type;
     await sendLoginEmail({ ...row, plan_type: plan });
     // Staff hear about the payment now, not only after the founder creates a login.
+    const { fireCrmAutomation } = await import("@/lib/sales/automation");
+    await fireCrmAutomation("payment_received", { email: input.userEmail || row.email });
     await alertStaffGuestPayment({
       signupId: row.id,
       email: input.userEmail || row.email,
