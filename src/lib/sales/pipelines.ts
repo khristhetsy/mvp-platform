@@ -18,7 +18,7 @@ export async function listPipelines(): Promise<Pipeline[]> {
 }
 
 export async function listBoardOpportunities(ownerId?: string | null): Promise<BoardOpp[]> {
-  let query = db().from("sales_opportunities").select("id, title, value_cents, billing, probability, priority, stage_id, pipeline_id, contact_name, updated_at, owner_id, source, expected_close, created_at").eq("status", "open").limit(20000);
+  let query = db().from("sales_opportunities").select("id, title, value_cents, billing, probability, priority, stage_id, pipeline_id, contact_name, updated_at, owner_id, source, expected_close, created_at").in("status", ["open", "won"]).limit(20000);
   if (ownerId) query = query.eq("owner_id", ownerId);
   const { data } = await query;
   return ((data ?? []) as Array<Record<string, unknown>>).map((r) => ({
