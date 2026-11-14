@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireApiProfile } from "@/lib/api/auth";
 import { isReminderKind } from "@/lib/reminders/types";
 import { listSalesReminders } from "@/lib/reminders/sales";
+import { listAutomationReminders } from "@/lib/reminders/automation";
 import { attachContactLinks, loadContactNames } from "@/lib/reminders/contact-links";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +34,8 @@ export async function GET(): Promise<Response> {
   // Sales staff also see their own open Sales tasks here, so a task added on a contact shows in the clock.
   const isSalesStaff = auth.profile.role === "admin" || auth.profile.role === "analyst";
   const sales = isSalesStaff ? await listSalesReminders(auth.profile.id, since) : [];
-  const all = [...data, ...sales].sort((a, b) => a.due_at.localeCompare(b.due_at));
+  const automation = isSalesStaff ? await listAutomationReminders(auth.profile.id) : [];
+  const all = [...data, ...sales, ...automation].sort((a, b) => a.due_at.localeCompare(b.due_at));
   return NextResponse.json({ reminders: all });
 }
 

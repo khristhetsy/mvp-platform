@@ -3,6 +3,8 @@
 
 export const AUTOMATION_TRIGGERS = [
   { key: "meeting_scheduled", label: "Meeting scheduled" },
+  { key: "meeting_held", label: "Meeting held" },
+  { key: "contact_replied", label: "Contact replied" },
   { key: "proposal_sent", label: "Proposal sent" },
   { key: "invite_sent", label: "Signup invite sent" },
   { key: "signed_up", label: "Account signed up" },

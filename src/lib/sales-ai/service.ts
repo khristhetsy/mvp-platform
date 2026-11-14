@@ -7,6 +7,7 @@
  * the existing Sales chatter send route, and a move is applied only when a
  * person confirms it.
  */
+import { cancelPendingApprovals } from "@/lib/sales/automation";
 import { isClaudeConfigured } from "@/lib/claude";
 import { createNote } from "@/lib/sales/chatter";
 import { getOpportunity, updateOpportunity } from "@/lib/sales/opportunities";
@@ -249,6 +250,7 @@ export async function resolveSuggestion(suggestionId: string, action: "apply" | 
   const stages = await stagesFor(s.opportunity_id);
   const target = stages.find((st) => st.id === s.to_stage_id);
   if (!target) throw new SalesAiError("That stage no longer exists.");
+  await cancelPendingApprovals(s.opportunity_id, userId);
   await updateOpportunity(s.opportunity_id, stagePatchFor(target), userId);
   await decideSuggestion(suggestionId, "applied", userId);
 }

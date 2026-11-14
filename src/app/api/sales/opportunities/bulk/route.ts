@@ -8,6 +8,7 @@
  * Each row still goes through updateOpportunity so the activity log and stage-triggered
  * sequences behave exactly as a one-at-a-time edit — but 6 at a time, one request.
  */
+import { cancelPendingApprovals } from "@/lib/sales/automation";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
@@ -70,7 +71,7 @@ export async function POST(req: NextRequest): Promise<Response> {
   async function worker() {
     while (cursor < targets.length) {
       const id = targets[cursor++];
-      try { await updateOpportunity(id, patch, profile!.id); count++; } catch { failed++; }
+      try { if (patch.stageId !== undefined) await cancelPendingApprovals(id, profile!.id); await updateOpportunity(id, patch, profile!.id); count++; } catch { failed++; }
     }
   }
   await Promise.all(Array.from({ length: Math.min(CONCURRENCY, targets.length) }, () => worker()));
