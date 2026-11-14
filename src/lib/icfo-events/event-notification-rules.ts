@@ -23,7 +23,7 @@ export type OffsetHours = (typeof OFFSET_HOURS)[number];
 export const AUDIENCES = ["all_founders", "registered_only"] as const;
 export type EventAudience = (typeof AUDIENCES)[number];
 
-export const NUDGE_START_DAYS = [14, 7, 3] as const;
+export const NUDGE_START_DAYS = [21, 14, 10, 7, 3] as const;
 export type NudgeStartDays = (typeof NUDGE_START_DAYS)[number];
 
 export type EventNotificationSettings = {
@@ -98,7 +98,7 @@ export function validateEventNotificationSettings(raw: unknown): string[] {
     errors.push("offsetsHours may only contain 168, 24 and 1.");
   }
   if (!(AUDIENCES as readonly unknown[]).includes(v.audience)) errors.push("audience must be all_founders or registered_only.");
-  if (!(NUDGE_START_DAYS as readonly unknown[]).includes(v.nudgeStartDays)) errors.push("nudgeStartDays must be 3, 7 or 14.");
+  if (!(NUDGE_START_DAYS as readonly unknown[]).includes(v.nudgeStartDays)) errors.push("nudgeStartDays must be 3, 7, 10, 14 or 21.");
   return errors;
 }
 
