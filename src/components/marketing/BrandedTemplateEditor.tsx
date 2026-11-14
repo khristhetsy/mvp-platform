@@ -13,7 +13,7 @@ import type { CopyWithMaster } from "@/lib/email/masters-queries";
 import type { PlaceholderSchema, TemplateSlot } from "@/lib/email/template-schema";
 import { DEPARTMENTS } from "@/lib/marketing/department-grouping";
 import { TERM_FIELDS, addTermLine, hasTermLine, removeTermLine } from "@/lib/email/founder-fields";
-import { ACCENT_SWATCHES, DESIGN_KEYS, dominantColor, hasDesign, isDesignOff, mapFounderValues, readDesign, setDesignOff, suggestLooks, writeDesign, type DesignSettings, type Look } from "@/lib/email/design";
+import { ACCENT_SWATCHES, DESIGN_KEYS, dominantColor, hasDesign, isDealLike, isDesignOff, mapFounderValues, readDesign, setDesignOff, suggestLooks, writeDesign, type DesignSettings, type Look } from "@/lib/email/design";
 import { HTML_SLOTS, htmlKey, htmlToText, isHtmlSlot, textToHtml } from "@/lib/email/safe-html";
 
 type Master = { id: string; name: string; description: string; compiled_html: string; placeholder_schema: PlaceholderSchema };
@@ -27,6 +27,8 @@ type Prefill = {
 };
 type FounderOption = { ref: FounderRef; label: string; sub: string };
 const refKey = (r: FounderRef) => `${r.kind}:${r.id}`;
+const FOLLOW_UP_CTA_INTRO = "If this is a fit, I am happy to set up a short call. If the timing is not right, just let me know and I will close the loop.";
+
 /** Stored on the template so Edit reopens on the same founder. */
 const FOUNDER_KEY = "founder_ref";
 
@@ -41,6 +43,15 @@ function startValues(masterName: string, defaults: Record<string, string>, prefi
   if (masterName === "Deal introduction" && co && !(v.body ?? "").trim()) {
     v.body = `I would like to introduce ${co}, a company that may fit your investment focus. The key details are below.`;
   }
+  if (masterName === "Follow up") {
+    // A follow up is short: its own wording, and the terms recap starts out removed (+ Insert brings it back).
+    v.considerations_title = "Quick reminder";
+    v.cta_intro = FOLLOW_UP_CTA_INTRO;
+    if (co && !(v.body ?? "").trim()) {
+      v.body = `I wanted to follow up on my earlier note introducing ${co}. I know inboxes fill quickly, so here is a short reminder of why it may be worth a closer look.`;
+    }
+    if (prefill) { v.terms = ""; v[OFF_KEY] = TERMS_FIELDS.join(","); }
+  }
   if (prefill) v[FOUNDER_KEY] = refKey(prefill.ref);
   return v;
 }
@@ -50,7 +61,7 @@ const TERMS_FIELDS = ["raise", "funding_stage", "capital_type", "revenue", "use_
 function usedBy(masterName: string): Record<string, string[]> {
   const terms = (slot: string) => Object.fromEntries(TERMS_FIELDS.map((k) => [k, [slot]]));
   const common = { website: ["cta_url"] };
-  if (masterName === "Deal introduction") return { ...common, company_name: ["company_name", "headline"], body: ["body"], considerations: ["considerations"], ...terms("terms"), hero_image: ["hero_image"] };
+  if (isDealLike(masterName)) return { ...common, company_name: ["company_name", "headline"], body: ["body"], considerations: ["considerations"], ...terms("terms"), hero_image: ["hero_image"] };
   if (masterName === "Announcement") return { ...common, company_name: ["headline"], body: ["body"], hero_image: [DESIGN_KEYS.bannerImage], logo_image: [DESIGN_KEYS.logoImage] };
   if (masterName === "Newsletter") return { ...common, company_name: ["headline"], body: ["intro"], considerations: ["section_one_body"], ...terms("section_two_body"), hero_image: [DESIGN_KEYS.bannerImage], logo_image: [DESIGN_KEYS.logoImage] };
   if (masterName === "Promo") return { ...common, company_name: ["headline"], body: ["subhead"], hero_image: [DESIGN_KEYS.bannerImage], logo_image: [DESIGN_KEYS.logoImage] };
@@ -71,7 +82,7 @@ function readIns(s: Record<string, string>): Record<string, string> {
   try { const v = JSON.parse(s[INS_KEY] || "{}") as unknown; return v && typeof v === "object" ? (v as Record<string, string>) : {}; } catch { return {}; }
 }
 /** The field a design puts terms lines in. */
-const termSlot = (masterName: string) => (masterName === "Deal introduction" ? "terms" : masterName === "Newsletter" ? "section_two_body" : null);
+const termSlot = (masterName: string) => (isDealLike(masterName) ? "terms" : masterName === "Newsletter" ? "section_two_body" : null);
 const IMAGE_SLOTS = new Set<string>([DESIGN_KEYS.bannerImage, DESIGN_KEYS.logoImage, "hero_image"]);
 
 /** Take one founder field out of the email: its terms line goes, or the fields it filled are cleared. */
@@ -326,7 +337,7 @@ export function BrandedTemplateEditor({ templateId, projectId, founderRef, defau
       if (prefill.website && slots.cta_url === prefill.website) return "Founder website";
       return undefined;
     }
-    const from = master.name === "Deal introduction" ? key : FOUNDER_FIELD[master.name]?.[key];
+    const from = isDealLike(master.name) ? key : FOUNDER_FIELD[master.name]?.[key];
     const src = from ? prefill.sources[from] : undefined;
     return src && (slots[key] ?? "").trim() ? src : undefined;
   }
@@ -493,7 +504,7 @@ export function BrandedTemplateEditor({ templateId, projectId, founderRef, defau
                     </div>
                   ) : null}
                   </div>
-                  {prefill && s.key === "terms" && master?.name === "Deal introduction" ? (
+                  {prefill && s.key === "terms" && master && isDealLike(master.name) ? (
                     <div style={{ margin: "0 0 4px" }}><SourceTag source={undefined} missing="not in record: add interest, maturity, discount, warrants as lines" /></div>
                   ) : null}
                   {isHtmlSlot(slots, s.key) ? (
