@@ -10,6 +10,7 @@ import { runCronOrchestrationPass } from "@/lib/notifications/orchestration/run-
 import { captureCompanyMetricSnapshots } from "@/lib/investor/metric-snapshots";
 import { refreshPartnerScoreSnapshots } from "@/lib/investor-rating/snapshot";
 import { digestStalledFoundersForStaff } from "@/lib/notifications/staff-journey-digest";
+import { runAutomationTimers } from "@/lib/sales/automation";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
 // Was 60, and every cron run since 2026-06-27 hit it and was killed (averaged
@@ -62,7 +63,8 @@ async function handleCron(request: Request) {
     // Leave ~30s of headroom under the function limit for the steps after the refresh.
     const partnerScores = await refreshPartnerScoresSafely(startedAt + (maxDuration - 30) * 1000);
     const journeyDigest = await digestStalledFoundersForStaff().catch(() => ({ staffNotified: 0, stalled: 0 }));
-    return NextResponse.json({ ...result, snapshots, partnerScores, journeyDigest }, { status: result.success ? 200 : 207 });
+    const crmAutomation = await runAutomationTimers();
+    return NextResponse.json({ ...result, snapshots, partnerScores, journeyDigest, crmAutomation }, { status: result.success ? 200 : 207 });
   } catch (error) {
     const message = error instanceof Error ? error.message.slice(0, 200) : "Orchestration pass failed.";
     return NextResponse.json(
