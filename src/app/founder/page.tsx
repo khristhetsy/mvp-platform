@@ -54,6 +54,7 @@ import { ListingChecklistCard } from "@/components/founder/listing/ListingCheckl
 import { loadListingChecklist } from "@/lib/listing/listing-server";
 import { CoachedCourseStrip } from "@/components/coach/CoachedCourseStrip";
 import { loadCoachedCourseSummaries } from "@/lib/learning/coach/program-summary";
+import { EventNudgeCard } from "@/components/founder/EventNudgeCard";
 
 export const dynamic = "force-dynamic";
 
@@ -270,6 +271,8 @@ export default async function FounderDashboardPage() {
         />
 
         <StageUnlockBanner />
+
+        <EventNudgeCard />
 
         {coached.length ? (
           <div className="mb-4 space-y-2">

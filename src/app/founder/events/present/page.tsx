@@ -22,6 +22,7 @@ import { FounderEventInvitations, type FounderInvite } from "@/components/founde
 import type { EventRecord } from "@/lib/icfo-events/types";
 import { sectorLabel } from "@/lib/icfo-events/sectors";
 import { PresentAtEventClient, type PresentEventOption, type ExistingApplication } from "./PresentAtEventClient";
+import { EventNudgeBanner } from "@/components/founder/EventNudgeBanner";
 
 export const dynamic = "force-dynamic";
 
@@ -127,6 +128,7 @@ export default async function PresentAtEventPage() {
       profileSubtitle={company?.company_name ?? "Your company"}
     >
       <WorkspacePageContainer>
+        <EventNudgeBanner />
         <Link
           href="/founder/events"
           className="mb-4 inline-flex items-center gap-1.5 text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)]"
