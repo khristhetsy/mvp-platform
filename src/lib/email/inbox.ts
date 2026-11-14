@@ -447,5 +447,11 @@ export async function recordInboundMessage(
     .update({ last_message_at: now, last_direction: "inbound", unread: true, updated_at: now })
     .eq("id", thread.id);
 
+  // A reply from a CRM contact feeds the sales automation. Never blocks the inbound mail.
+  try {
+    const { fireCrmAutomation } = await import("@/lib/sales/automation");
+    await fireCrmAutomation("contact_replied", { email: input.fromEmail });
+  } catch { /* best effort */ }
+
   return { matched: true };
 }

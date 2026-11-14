@@ -214,10 +214,54 @@ async function hasPaid(email: string): Promise<boolean> {
   return sub?.subscription_status === "active";
 }
 
+/** Meetings that ended in the last three days and have not fired "meeting held" yet. */
+async function runMeetingHeld(): Promise<number> {
+  let fired = 0;
+  const now = new Date().toISOString();
+  const since = new Date(Date.now() - 3 * 86400_000).toISOString();
+  const { data } = await db().from("scheduling_bookings").select("contact_crm_id, booker_email, end_time").eq("status", "confirmed").lte("end_time", now).gte("end_time", since).not("contact_crm_id", "is", null).limit(300);
+  for (const b of (data ?? []) as Array<{ contact_crm_id: string; booker_email: string | null; end_time: string }>) {
+    const { data: done } = await db().from("sales_automation_events").select("id").eq("contact_crm_id", b.contact_crm_id).eq("trigger", "meeting_held").gte("created_at", b.end_time).limit(1).maybeSingle();
+    if (done) continue;
+    await fireCrmAutomation("meeting_held", { email: b.booker_email, contactCrmId: b.contact_crm_id });
+    fired += 1;
+  }
+  return fired;
+}
+
+/** Twice daily digest: one notification per person who still has suggestions waiting. */
+export async function sendApprovalDigest(): Promise<{ notified: number }> {
+  let notified = 0;
+  try {
+    const { data } = await db().from("sales_automation_approvals").select("id, opportunity:sales_opportunities(owner_id)").eq("status", "pending").limit(500);
+    const byOwner = new Map<string, number>();
+    const unowned: number[] = [];
+    for (const r of (data ?? []) as Array<{ opportunity: { owner_id: string | null } | null }>) {
+      const owner = r.opportunity?.owner_id;
+      if (owner) byOwner.set(owner, (byOwner.get(owner) ?? 0) + 1); else unowned.push(1);
+    }
+    if (unowned.length > 0) for (const p of await staffRecipients()) byOwner.set(p.id, (byOwner.get(p.id) ?? 0) + unowned.length);
+    const slot = `${new Date().toISOString().slice(0, 13)}`;
+    for (const [userId, count] of byOwner) {
+      await createNotification({
+        recipientUserId: userId, type: "sales_automation_digest",
+        title: `${count} CRM suggestion${count === 1 ? "" : "s"} waiting for you`,
+        message: "Open Sales, Automation to approve or keep each one.",
+        entityType: "sales_automation", deepLink: "/admin/sales/automation", dedupeKey: `crm_auto_digest:${userId}:${slot}`,
+      });
+      notified += 1;
+    }
+  } catch (err) {
+    console.warn("[crm-automation] digest failed", err);
+  }
+  return { notified };
+}
+
 /** Daily pass: contacts who signed up, waited the rule's days and have not paid. */
 export async function runAutomationTimers(): Promise<{ fired: number }> {
   let fired = 0;
   try {
+    fired += await runMeetingHeld();
     const rules = (await listRules()).filter((r) => r.enabled && r.triggers.includes("signed_up_unpaid"));
     if (rules.length === 0) return { fired };
     const wait = Math.min(...rules.map((r) => r.wait_days));
