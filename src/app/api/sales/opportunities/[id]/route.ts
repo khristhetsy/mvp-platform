@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { getOpportunity, updateOpportunity, deleteOpportunity } from "@/lib/sales/opportunities";
+import { cancelPendingApprovals } from "@/lib/sales/automation";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +39,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const parsed = patchSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid update." }, { status: 400 });
   try {
+    // A stage picked by hand answers any open automation suggestion.
+    if (parsed.data.stageId !== undefined) await cancelPendingApprovals(id, profile.id);
     await updateOpportunity(id, parsed.data, profile.id);
     // Return the fresh joined row so the client can update in place without a
     // second round-trip (was: PATCH then a separate GET).

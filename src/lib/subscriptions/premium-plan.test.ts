@@ -44,10 +44,10 @@ describe("Premium founder plan", () => {
     expect(founderPricingPlans(CODE_DEFAULT_PRICING).map((p) => p.planType)).toContain("founder_premium");
   });
 
-  it("shows on the public pricing page at the catalogue price, paid by wire", () => {
+  it("shows on the public pricing page at the catalogue price", () => {
     const premium = pricingFor(CODE_DEFAULT_PRICING).tiers.find((t) => t.name === "Premium");
     expect(premium?.price).toBe("$1,000");
-    expect(premium?.desc).toContain("Paid by wire");
+    expect(premium?.desc).not.toContain("wire");
     expect(premium?.cta.href).toBe("/auth/sign-up?role=founder&plan=founder_premium");
   });
 });

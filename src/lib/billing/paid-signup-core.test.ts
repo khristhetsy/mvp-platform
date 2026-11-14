@@ -5,6 +5,7 @@ import {
   isGuestCheckoutPlan,
   makePaidSignupToken,
   paidSignupLoginPath,
+  resendState,
   startDestination,
   verifyPaidSignupToken,
 } from "./paid-signup-core";
@@ -85,5 +86,28 @@ describe("where the Start form sends someone", () => {
 
   it("defaults to Basic on the sign up page when no plan was chosen", () => {
     expect(startDestination({ ...base, paymentsEnabled: false, startChoice: undefined })).toBe("/auth/sign-up?email=a%2Bb%40acme.com&role=founder&plan=founder_basic");
+  });
+});
+
+describe("resendState", () => {
+  const now = new Date("2026-11-14T12:00:00Z");
+  const paid = { status: "paid", paid_at: "2026-11-13T18:56:00Z", login_email_sent_at: "2026-11-13T18:56:08Z" };
+
+  it("allows a resend for a paid signup whose link was sent a while ago", () => {
+    expect(resendState(paid, now)).toBe("ok");
+  });
+
+  it("blocks a signup that is not paid or already has a login", () => {
+    expect(resendState({ ...paid, status: "checkout_started" }, now)).toBe("not_paid");
+    expect(resendState({ ...paid, status: "claimed" }, now)).toBe("claimed");
+  });
+
+  it("blocks once the claim window has closed", () => {
+    expect(resendState({ ...paid, paid_at: "2026-09-01T00:00:00Z" }, now)).toBe("expired");
+  });
+
+  it("blocks a second send inside the cooldown", () => {
+    expect(resendState({ ...paid, login_email_sent_at: "2026-11-14T11:58:00Z" }, now)).toBe("cooldown");
+    expect(resendState({ ...paid, login_email_sent_at: null }, now)).toBe("ok");
   });
 });

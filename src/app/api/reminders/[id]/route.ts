@@ -3,6 +3,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireApiProfile } from "@/lib/api/auth";
 import { isReminderKind } from "@/lib/reminders/types";
 import { SALES_ID_PREFIX } from "@/lib/reminders/sales";
+import { AUTOMATION_ID_PREFIX } from "@/lib/reminders/automation";
+import { decideApproval } from "@/lib/sales/automation";
 import { updateTask } from "@/lib/sales/tasks";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +19,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const body = (await request.json().catch(() => null)) as { done?: unknown; title?: unknown; kind?: unknown; dueAt?: unknown } | null;
   const editing = Boolean(body && ("title" in body || "kind" in body || "dueAt" in body));
   if (!editing && typeof body?.done !== "boolean") return NextResponse.json({ error: "Send done as true or false." }, { status: 400 });
+  // A CRM automation suggestion: ticking it keeps the opportunity where it is. Approving happens on the opportunity page.
+  if (id.startsWith(AUTOMATION_ID_PREFIX)) {
+    if (editing || body?.done !== true) return NextResponse.json({ error: "Answer this suggestion on the opportunity page." }, { status: 400 });
+    if (auth.profile.role !== "admin" && auth.profile.role !== "analyst") return NextResponse.json({ error: "Insufficient permissions." }, { status: 403 });
+    const result = await decideApproval(id.slice(AUTOMATION_ID_PREFIX.length), "keep", auth.profile.id);
+    return result.ok ? NextResponse.json({ ok: true }) : NextResponse.json({ error: result.error ?? "Couldn't save." }, { status: 409 });
+  }
   // Sales tasks are completed in Sales, so the task page and the clock stay in step.
   if (id.startsWith(SALES_ID_PREFIX)) {
     if (editing) return NextResponse.json({ error: "Edit Sales tasks from Sales." }, { status: 400 });
@@ -62,6 +71,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   if ("error" in auth) return auth.error ?? NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
   if (id.startsWith(SALES_ID_PREFIX)) return NextResponse.json({ error: "Delete Sales tasks from Sales." }, { status: 400 });
+  if (id.startsWith(AUTOMATION_ID_PREFIX)) return NextResponse.json({ error: "Answer this suggestion on the opportunity page." }, { status: 400 });
   const { error } = await raw(auth.supabase).from("user_reminders").delete().eq("id", id).eq("user_id", auth.profile.id);
   if (error) return NextResponse.json({ error: "Couldn't delete the reminder." }, { status: 500 });
   return NextResponse.json({ ok: true });

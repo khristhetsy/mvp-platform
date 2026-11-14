@@ -9,12 +9,12 @@ import { renderWireInvoiceEmail, renderWirePausedEmail, renderWireReceiptEmail }
 const iso = (s: string) => new Date(s).toISOString();
 
 describe("invoiceAmountCents", () => {
-  it("is $1,000 monthly and $3,000 quarterly with no discount", () => {
+  it("is $1,000 monthly and $2,500 quarterly", () => {
     expect(invoiceAmountCents("monthly")).toBe(100000);
-    expect(invoiceAmountCents("quarterly")).toBe(300000);
+    expect(invoiceAmountCents("quarterly")).toBe(250000);
   });
   it("follows the catalogue's monthly price", () => {
-    expect(invoiceAmountCents("quarterly", 120000)).toBe(360000);
+    expect(invoiceAmountCents("quarterly", 120000)).toBe(300000);
   });
 });
 
@@ -107,7 +107,7 @@ describe("wire instructions", () => {
 
 describe("founder emails", () => {
   const invoice = {
-    invoice_number: "INV 2026 0001", billing_cycle: "quarterly" as const, amount_cents: 300000,
+    invoice_number: "INV 2026 0001", billing_cycle: "quarterly" as const, amount_cents: 250000,
     issued_at: "2026-10-09T17:00:00Z", due_at: "2026-10-16T17:00:00Z",
     period_start: "2026-10-09T17:00:00Z", period_end: "2027-01-09T17:00:00Z",
   };
@@ -116,7 +116,7 @@ describe("founder emails", () => {
   it("carries the amount, the reference line, the disclaimer and no sentence dashes", () => {
     const e = renderWireInvoiceEmail({ firstName: "Ana", invoice, instructions, billingUrl: "https://x/billing", pdfUrl: "https://x/pdf", isRenewal: false });
     expect(e.subject).toContain("INV 2026 0001");
-    expect(e.text).toContain("$3,000.00 USD");
+    expect(e.text).toContain("$2,500.00 USD");
     expect(e.text).toContain(WIRE_COPY.reference);
     expect(e.text).toContain("Reference: INV 2026 0001");
     expect(e.text).toContain(WIRE_COPY.disclaimer);

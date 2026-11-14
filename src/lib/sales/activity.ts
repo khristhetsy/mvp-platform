@@ -2,6 +2,14 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { proposalActivity, type ProposalActivityInput } from "@/lib/sales/proposal-activity";
 import { buildPreview } from "@/lib/notes-log-preview";
+import { containsSignupLink } from "@/lib/sales/automation-core";
+
+/** Hosts a signup link may use: icapos.com and the configured app URL. */
+function signupHosts(): string[] {
+  const hosts = ["icapos.com"];
+  try { if (process.env.NEXT_PUBLIC_APP_URL) hosts.push(new URL(process.env.NEXT_PUBLIC_APP_URL).hostname); } catch { /* ignore a bad URL */ }
+  return hosts;
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return createServiceRoleClient(); }
@@ -62,6 +70,8 @@ export async function logOutboundEmailActivity(
         ...(details.externalId ? { external_id: details.externalId } : {}),
       };
     };
+    // A one to one email that carries our signup link is the signup invite.
+    const sentInvite = emails.length <= 5 && containsSignupLink(details?.body, signupHosts());
     for (const email of emails) {
       const { data: contact } = await db().from("crm_contacts").select("id").ilike("email", email).maybeSingle();
       const contactId = (contact?.id as string | undefined) ?? null;
@@ -76,6 +86,10 @@ export async function logOutboundEmailActivity(
         for (const o of openOpps) await logActivity({ kind: "email", summary, actorId, opportunityId: o.id, meta: metaFor(email) });
       } else {
         await logActivity({ kind: "email", summary, actorId, contactCrmId: contactId, meta: metaFor(email) });
+      }
+      if (sentInvite) {
+        const { fireCrmAutomation } = await import("@/lib/sales/automation");
+        await fireCrmAutomation("invite_sent", { email, contactCrmId: contactId, actorId });
       }
     }
   } catch { /* never block the send */ }
@@ -96,6 +110,8 @@ export async function logProposalSent(input: ProposalActivityInput & { contactCr
     } else {
       await logActivity({ kind: "email", summary, actorId: input.actorId, contactCrmId: input.contactCrmId, meta });
     }
+    const { fireCrmAutomation } = await import("@/lib/sales/automation");
+    await fireCrmAutomation("proposal_sent", { contactCrmId: input.contactCrmId, actorId: input.actorId });
   } catch { /* never block the send */ }
 }
 

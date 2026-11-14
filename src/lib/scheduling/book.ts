@@ -8,6 +8,7 @@ import { configFromSettings, expandWindows } from "./availability";
 import { createBooking } from "./bookings";
 import { bookingProfile } from "./booking-profile";
 import { logActivity } from "@/lib/sales/activity";
+import { fireCrmAutomation } from "@/lib/sales/automation";
 import type { CalendarEventRecord, TimeInterval } from "./types";
 import type { SourceConfidence } from "@/lib/attribution/source";
 
@@ -199,6 +200,7 @@ export async function bookSlot(input: BookSlotInput): Promise<BookSlotResult> {
     if (contactCrmId) {
       const when = new Date(input.startTime).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
       await logActivity({ kind: "call", summary: `Booked: ${title} · ${when}`, actorId: input.hostId, contactCrmId });
+      await fireCrmAutomation("meeting_scheduled", { email: input.booker.email, contactCrmId, actorId: input.hostId });
     }
   } catch { /* never block a confirmed booking on bookkeeping */ }
 

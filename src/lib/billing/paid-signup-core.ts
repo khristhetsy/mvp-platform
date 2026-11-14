@@ -86,3 +86,23 @@ export function startDestination(input: {
     : "founder_basic";
   return `/auth/sign-up?email=${email}&role=founder&plan=${plan}`;
 }
+
+/** The login link can be sent again only after this many minutes, so the form cannot be used to flood an inbox. */
+export const RESEND_COOLDOWN_MINUTES = 5;
+
+export type ResendState = "ok" | "not_paid" | "claimed" | "expired" | "cooldown";
+
+/** Whether a paid signup may be sent its login link again right now. Pure, so staff and the public form follow the same rule. */
+export function resendState(
+  row: { status: string; paid_at: string | null; login_email_sent_at: string | null },
+  now: Date = new Date(),
+): ResendState {
+  if (row.status === "claimed") return "claimed";
+  if (row.status !== "paid") return "not_paid";
+  if (!claimWindowOpen(row.paid_at, now)) return "expired";
+  if (row.login_email_sent_at) {
+    const sent = Date.parse(row.login_email_sent_at);
+    if (Number.isFinite(sent) && now.getTime() - sent < RESEND_COOLDOWN_MINUTES * 60 * 1000) return "cooldown";
+  }
+  return "ok";
+}

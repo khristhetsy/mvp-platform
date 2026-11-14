@@ -109,7 +109,7 @@ export async function POST(request: Request) {
 
   // Record an "Email sent" activity on any recipient that matches a CRM contact
   // (and its open opportunities), so the send shows on their Sales timeline.
-  await logOutboundEmailActivity([...toList, ...ccList, ...bccList], parsed.data.subject, user.id, 25, "gmail");
+  await logOutboundEmailActivity([...toList, ...ccList, ...bccList], parsed.data.subject, user.id, 25, "gmail", { body: parsed.data.html ?? parsed.data.body });
 
   return NextResponse.json({ success: true, messageId: result.messageId });
 }

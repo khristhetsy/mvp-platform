@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { SalesHubTabs } from "./SalesHubTabs";
 import { SalesViewGear } from "./SalesViewGear";
 import { useAdminChrome } from "@/lib/ui/admin-chrome";
+import { AutomationToast } from "@/components/sales/AutomationToast";
 
 // Sales pages scoped by ?viewAs= that have no toolbar gear of their own; they get a
 // gear holding only the View section. Other pages carry View in their own gear.
@@ -18,9 +19,10 @@ export function SalesHubHeader() {
     </div>
   ) : null;
   // Compact chrome: the top bar shows "Sales" and the hub tabs.
-  if (chrome === "compact") return viewGear;
+  if (chrome === "compact") return <><AutomationToast />{viewGear}</>;
   return (
     <>
+      <AutomationToast />
       <div style={{ marginBottom: 14 }}>
         <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.14em", textTransform: "uppercase", color: "#4338CA" }}>Admin Workspace</p>
         <h1 style={{ marginTop: 6, fontSize: 26, fontWeight: 600, letterSpacing: "-0.01em", color: "var(--foreground)" }}>Sales</h1>
