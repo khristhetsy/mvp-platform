@@ -160,7 +160,10 @@ export function readableOnWhite(rgb: number[]): string {
   return `#${hex(r)}${hex(g)}${hex(b)}`;
 }
 
-/** Founder data mapped onto each design's fields (Deal introduction uses the values as is). */
+/** Designs that use the founder's values as is (same fields as the Deal introduction). */
+export const isDealLike = (masterName: string) => masterName === "Deal introduction" || masterName === "Follow up";
+
+/** Founder data mapped onto each design's fields (Deal introduction and Follow up use the values as is). */
 export function mapFounderValues(masterName: string, v: Record<string, string>, website?: string | null): Record<string, string> {
   const out: Record<string, string> = {};
   const set = (k: string, val: string | undefined) => { if (val && val.trim()) out[k] = val.trim(); };
@@ -170,7 +173,7 @@ export function mapFounderValues(masterName: string, v: Record<string, string>, 
     const cut = s.slice(0, max - 1);
     return `${cut.slice(0, cut.lastIndexOf(" ")).trim()}…`;
   };
-  if (masterName === "Deal introduction") return website ? { ...v, cta_url_fallback: website } : { ...v };
+  if (isDealLike(masterName)) return website ? { ...v, cta_url_fallback: website } : { ...v };
   if (v.hero_image) set(DESIGN_KEYS.bannerImage, v.hero_image);
   if (v.logo_image) set(DESIGN_KEYS.logoImage, v.logo_image);
   const headline = v.headline ?? "";

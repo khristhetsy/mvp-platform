@@ -17,6 +17,7 @@ export { brandedLink, type BrandedLink } from "./branded-templates-link";
 function templateName(master: Pick<EmailMaster, "name">, slots: Record<string, string>): string {
   const company = (slots.company_name ?? "").trim();
   if (master.name === "Deal introduction" && company) return `${company} deal introduction`;
+  if (master.name === "Follow up" && company) return `${company} follow up`;
   return plainHeadline(slots) || master.name;
 }
 

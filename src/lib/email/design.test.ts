@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { designTokens, dominantColor, hasDesign, isDesignOff, mapFounderValues, readDesign, setDesignOff, suggestLooks, writeDesign } from "./design";
+import { designTokens, dominantColor, hasDesign, isDealLike, isDesignOff, mapFounderValues, readDesign, setDesignOff, suggestLooks, writeDesign } from "./design";
 import manifest from "./templates/manifest.json";
 import type { PlaceholderSchema } from "./template-schema";
 
@@ -11,6 +11,7 @@ describe("which designs carry design settings", () => {
     expect(hasDesign(schemaOf("newsletter"))).toBe(true);
     expect(hasDesign(schemaOf("promo"))).toBe(true);
     expect(hasDesign(schemaOf("deal-introduction"))).toBe(false);
+    expect(hasDesign(schemaOf("follow-up"))).toBe(false);
   });
 });
 
@@ -110,5 +111,17 @@ describe("mapFounderValues", () => {
   });
   it("keeps the design settings out of the content", () => {
     expect(readDesign(mapFounderValues("Announcement", v), "Announcement").banner).toBe("brand");
+  });
+});
+
+describe("Follow up uses the founder values as is, like Deal introduction", () => {
+  it("isDealLike covers both designs only", () => {
+    expect(isDealLike("Deal introduction")).toBe(true);
+    expect(isDealLike("Follow up")).toBe(true);
+    expect(isDealLike("Promo")).toBe(false);
+  });
+  it("passes values through and adds the website fallback", () => {
+    const v = { company_name: "Acme", body: "Hello" };
+    expect(mapFounderValues("Follow up", v, "https://acme.test/")).toEqual({ ...v, cta_url_fallback: "https://acme.test/" });
   });
 });
