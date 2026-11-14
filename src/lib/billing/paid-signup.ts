@@ -6,12 +6,15 @@ import {
   isGuestCheckoutPlan,
   makePaidSignupToken,
   paidSignupLoginPath,
+  resendState,
+  type ResendState,
 } from "@/lib/billing/paid-signup-core";
 import { renderPaidSignupEmail } from "@/lib/billing/paid-signup-email";
 import { absoluteUrl } from "@/lib/activity/email-templates";
 import { sendEmail } from "@/lib/email/send-email";
 import { recordFunnelEvent } from "@/lib/analytics/funnel";
 import { alertStaffNewCustomer } from "@/lib/notifications/new-customer-alerts";
+import { alertStaffGuestPayment } from "@/lib/notifications/guest-payment-alert";
 import { sendFounderWelcomeLetter } from "@/lib/notifications/founder-welcome-letter";
 import { PLAN_LABELS, PLAN_PRICES, type PlanType } from "@/lib/subscriptions/plans";
 
@@ -138,11 +141,23 @@ export async function recordGuestPayment(input: {
   const { error } = await db().from("paid_signups").update(patch).eq("id", row.id);
   if (error) return { found: true, error: error.message };
 
-  if (becamePaid) await sendLoginEmail({ ...row, plan_type: (patch.plan_type as PlanType | undefined) ?? row.plan_type });
+  if (becamePaid) {
+    const plan = (patch.plan_type as PlanType | undefined) ?? row.plan_type;
+    await sendLoginEmail({ ...row, plan_type: plan });
+    // Staff hear about the payment now, not only after the founder creates a login.
+    await alertStaffGuestPayment({
+      signupId: row.id,
+      email: input.userEmail || row.email,
+      name: row.full_name,
+      company: row.company,
+      planLabel: PLAN_LABELS[plan] ?? "paid plan",
+      currentPeriodEnd: input.currentPeriodEnd,
+    });
+  }
   return { found: true };
 }
 
-async function sendLoginEmail(row: Pick<PaidSignupRow, "id" | "email" | "plan_type" | "full_name">): Promise<void> {
+async function sendLoginEmail(row: Pick<PaidSignupRow, "id" | "email" | "plan_type" | "full_name">): Promise<boolean> {
   try {
     const mail = renderPaidSignupEmail({
       firstName: row.full_name?.split(/\s+/)[0] ?? null,
@@ -151,9 +166,67 @@ async function sendLoginEmail(row: Pick<PaidSignupRow, "id" | "email" | "plan_ty
     });
     const sent = await sendEmail({ to: row.email, subject: mail.subject, html: mail.html, text: mail.text, source: "billing/paid-signup", audience: "founder" });
     if (sent) await db().from("paid_signups").update({ login_email_sent_at: new Date().toISOString() }).eq("id", row.id);
+    return Boolean(sent);
   } catch (err) {
     console.error("[paid-signup] login email failed (non-fatal)", err);
+    return false;
   }
+}
+
+export type ResendResult = { ok: true } | { ok: false; reason: ResendState | "not_found" | "send_failed" };
+
+/** Sends the private "create your login" link again. Same rule for staff and for the public form. */
+export async function resendLoginLink(signupId: string): Promise<ResendResult> {
+  const row = await db()
+    .from("paid_signups")
+    .select("id, email, plan_type, full_name, status, paid_at, login_email_sent_at")
+    .eq("id", signupId)
+    .maybeSingle()
+    .then((r: { data: (Pick<PaidSignupRow, "id" | "email" | "plan_type" | "full_name" | "status" | "paid_at"> & { login_email_sent_at: string | null }) | null }) => r.data);
+  if (!row) return { ok: false, reason: "not_found" };
+  const state = resendState(row);
+  if (state !== "ok") return { ok: false, reason: state };
+  const sent = await sendLoginEmail(row);
+  return sent ? { ok: true } : { ok: false, reason: "send_failed" };
+}
+
+/** The public "Paid but have no login yet?" form. Finds the paid, unclaimed signup for the email that paid. Null when there is none. */
+export async function findResendableSignupId(email: string): Promise<string | null> {
+  const clean = email.trim().toLowerCase();
+  if (!clean) return null;
+  const { data } = await db()
+    .from("paid_signups")
+    .select("id, email, paid_email, status")
+    .eq("status", "paid")
+    .or(`email.eq.${clean.replace(/[,()]/g, "")},paid_email.eq.${clean.replace(/[,()]/g, "")}`)
+    .order("paid_at", { ascending: false })
+    .limit(1);
+  const row = Array.isArray(data) ? data[0] : null;
+  return row ? String((row as { id: string }).id) : null;
+}
+
+export type AdminPaidSignupRow = {
+  id: string;
+  email: string;
+  full_name: string | null;
+  company: string | null;
+  plan_type: PlanType;
+  status: "checkout_started" | "paid" | "claimed";
+  paid_at: string | null;
+  login_email_sent_at: string | null;
+  claimed_at: string | null;
+  ls_status: string | null;
+};
+
+/** Everyone who started or finished a pay first checkout, newest first. Staff list. */
+export async function listPaidSignupsForAdmin(limit = 200): Promise<AdminPaidSignupRow[]> {
+  const { data } = await db()
+    .from("paid_signups")
+    .select("id, email, full_name, company, plan_type, status, paid_at, login_email_sent_at, claimed_at, ls_status")
+    .in("status", ["paid", "claimed"])
+    .order("paid_at", { ascending: false, nullsFirst: false })
+    .limit(limit);
+  return (data ?? []) as AdminPaidSignupRow[];
 }
 
 export type ClaimResult =

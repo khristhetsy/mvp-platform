@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { z } from "zod";
@@ -230,6 +231,14 @@ export function AuthForm({ mode }: Readonly<{ mode: "sign-in" | "sign-up" }>) {
           </button>
         </div>
       </FormField>
+
+      {mode === "sign-in" ? (
+        <div className="-mt-2 text-right">
+          <Link href="/auth/forgot-password" className="text-sm font-semibold text-[#1A6CE4] hover:underline">
+            Forgot password?
+          </Link>
+        </div>
+      ) : null}
 
       {apiError ? <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{apiError}</p> : null}
 
