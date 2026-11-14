@@ -50,6 +50,11 @@ const btnPrimary = "rounded-lg bg-[#1A6CE4] px-4 py-2 text-sm font-semibold text
 const btnQuiet = "rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50";
 const card = "rounded-xl border border-slate-200 bg-white p-5";
 
+/** Blue step number, same badge as the founder Social media cards. */
+function StepBadge({ n }: { n: number }) {
+  return <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#1A6CE4] text-xs font-semibold text-white">{n}</span>;
+}
+
 type AgentApi = (path?: string, params?: Record<string, string>) => string;
 
 /** Builds the agent API url. With an orgId or agentId the same routes serve an admin building for that company or agent. */
@@ -177,6 +182,8 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
   const [noticeOpen, setNoticeOpen] = useState(false);
   // Admin builds for any company and is not asked to confirm the founder compliance notice.
   const acknowledged = admin || Boolean(a.compliance_acknowledged_at);
+  // The admin only AI Agent Type card is step 1, so every later card shifts down by one.
+  const step = (n: number) => (admin ? n + 1 : n);
   const fileRef = useRef<HTMLInputElement>(null);
   const checkTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -337,7 +344,7 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
         {admin ? (
           <>
         <section className={card}>
-          <h2 className="text-base font-semibold text-slate-950">AI Agent Type</h2>
+          <h2 className="flex items-center gap-2 text-base font-semibold text-slate-950"><StepBadge n={1} />AI Agent Type</h2>
           <p className="mt-1 text-sm text-slate-600">Each type loads its own question set. Switching replaces the questions, agent name and welcome.</p>
           <p className="mt-3 rounded-lg bg-[#EEF4FF] px-3 py-2 text-xs text-[#1b3f99]">
             Your membership is <b>{admin ? "Admin" : "Founder"}</b>, so the {AGENT_TYPE_SPECS[admin ? ADMIN_DEFAULT_TYPE : DEFAULT_AGENT_TYPE].label} question set is loaded first.{" "}
@@ -370,9 +377,11 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
           </>
         ) : null}
 
-        {/* Address */}
+        {/* Address and branding */}
         <section className={card}>
-          <h2 className="text-base font-semibold text-slate-950">Address</h2>
+          <h2 className="flex items-center gap-2 text-base font-semibold text-slate-950"><StepBadge n={step(1)} />Address and branding</h2>
+          <div className="mt-4">
+          <h3 className="text-sm font-semibold text-slate-950">Address</h3>
           <p className="mt-1 text-sm text-slate-600">The company part is yours and locked. You choose the ending.</p>
           <div className="mt-3 flex flex-wrap items-stretch overflow-hidden rounded-lg border border-slate-300 font-mono text-sm">
             <span className="flex items-center bg-slate-100 px-3 py-2 text-slate-600">{AGENT_HOST.replace("https://", "")}/{a.company_slug}/</span>
@@ -387,11 +396,8 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
           {endingState && ending !== a.ending ? (
             <p className={`mt-2 text-xs ${endingState.ok ? "text-emerald-700" : "text-red-700"}`}>{endingState.ok ? "Available" : endingState.reason}</p>
           ) : null}
-        </section>
-
-        {/* Branding */}
-        <section className={card}>
-          <h2 className="text-base font-semibold text-slate-950">Branding</h2>
+          </div>
+          <h3 className="mt-6 text-sm font-semibold text-slate-950">Branding</h3>
           <div className="mt-3 grid gap-4 sm:grid-cols-[96px_1fr]">
             <div>
               {a.image_url ? (
@@ -433,7 +439,7 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
 
         {/* Fact sheet */}
         <section className={card}>
-          <h2 className="text-base font-semibold text-slate-950">What the agent knows</h2>
+          <h2 className="flex items-center gap-2 text-base font-semibold text-slate-950"><StepBadge n={step(2)} />What the agent knows</h2>
           <p className="mt-1 text-sm text-slate-600">
             Plain facts about the company, in your words. The agent answers only from this, from what you teach it in Train, and from your PDFs. No prices, percentages or promises: the agent will not say them, and the reply is checked on the server.
             {typeSpec.fromProfile ? " Add only what the Company profile does not already say: the selected profile fields are included automatically." : ""}
@@ -445,7 +451,7 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
         <section className={card}>
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-base font-semibold text-slate-950">{admin ? `${typeSpec.label} questions` : "Questions"}</h2>
+              <h2 className="flex items-center gap-2 text-base font-semibold text-slate-950"><StepBadge n={step(3)} />{admin ? `${typeSpec.label} questions` : "Questions"}</h2>
               <p className="mt-1 text-sm text-slate-600">
                 {admin ? (
                   <>
@@ -514,7 +520,7 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
         <section className={card}>
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-base font-semibold text-slate-950">Contact questions</h2>
+              <h2 className="flex items-center gap-2 text-base font-semibold text-slate-950"><StepBadge n={step(4)} />Contact questions</h2>
               <p className="mt-1 text-sm text-slate-600">Asked before the booking. Name and email are always required for the invitation.</p>
             </div>
             <button type="button" onClick={addContact} className={btnQuiet}>
@@ -619,7 +625,7 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
 
         {/* Booking */}
         <section className={card}>
-          <h2 className="text-base font-semibold text-slate-950">Booking</h2>
+          <h2 className="flex items-center gap-2 text-base font-semibold text-slate-950"><StepBadge n={step(5)} />Booking</h2>
           {data.booking.ready ? (
             <p className="mt-1 text-sm text-emerald-700">Your hours are set. The agent offers real open times and books on your calendar{data.booking.googleConnected ? " with a Google Meet link" : ""}.</p>
           ) : (
@@ -631,6 +637,17 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
               {data.booking.googleConnected ? "." : ", and connect Google Calendar in Integrations for Meet links."}
             </p>
           )}
+        </section>
+
+        {/* Locked rules */}
+        <section className="rounded-xl border border-slate-200 bg-slate-50 p-5 text-xs text-slate-600">
+          <p className="font-semibold text-slate-800">Always on, cannot be changed</p>
+          <ul className="mt-2 list-disc space-y-1 pl-4">
+            <li>The AI disclosure and disclaimer line under every conversation.</li>
+            <li>Hard stop on remove me, unsubscribe, stop contacting me.</li>
+            <li>No prices, percentages or funding promises in any reply.</li>
+            <li>The address starts with {AGENT_HOST.replace("https://", "")}/{a.company_slug}/.</li>
+          </ul>
         </section>
 
         {/* Compliance notice: confirmed once before going live */}
@@ -675,17 +692,6 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
             </button>
           </div>
         )}
-
-        {/* Locked rules */}
-        <section className="rounded-xl border border-slate-200 bg-slate-50 p-5 text-xs text-slate-600">
-          <p className="font-semibold text-slate-800">Always on, cannot be changed</p>
-          <ul className="mt-2 list-disc space-y-1 pl-4">
-            <li>The AI disclosure and disclaimer line under every conversation.</li>
-            <li>Hard stop on remove me, unsubscribe, stop contacting me.</li>
-            <li>No prices, percentages or funding promises in any reply.</li>
-            <li>The address starts with {AGENT_HOST.replace("https://", "")}/{a.company_slug}/.</li>
-          </ul>
-        </section>
 
         <div className="sticky bottom-0 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white/95 p-3 backdrop-blur">
           <button type="button" onClick={() => void save()} disabled={saving || !dirty || (endingState ? !endingState.ok : false)} className={btnPrimary}>
