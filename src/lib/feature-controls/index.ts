@@ -68,6 +68,8 @@ export const FEATURES: FeatureDef[] = [
   { key: "partner_score", label: "Partner Score", group: "Fundraising & market", hrefs: { investor: ["/investor/partner-score"] } },
   // In-page feature, no nav href. Off hides pledge amounts and totals wherever a screen checks it.
   { key: "pledged", label: "Pledged amounts", group: "Fundraising & market", hrefs: {}, audiences: ["founder", "investor", "admin"] },
+  // In-page feature, no nav href. Off hides Facebook and LinkedIn groups from the Social Media Compose "Post to" list.
+  { key: "group_share", label: "Social Media: Group share", group: "Fundraising & market", hrefs: {}, audiences: ["admin"] },
 
   // ── Readiness & documents ──────────────────────────────────────────────
   { key: "readiness", label: "Readiness", group: "Readiness & documents", hrefs: { founder: ["/founder/readiness", "/founder/readiness/wizard", "/founder/readiness/diligence", "/founder/readiness/documents", "/founder/report"] } },

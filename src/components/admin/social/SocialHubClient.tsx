@@ -17,6 +17,10 @@ import { AttributionPeriods } from "./AttributionPeriods";
 import { AiCmo } from "./AiCmo";
 import { Accounts } from "./Accounts";
 import { RedditReply } from "./RedditReply";
+import { PostTo } from "./PostTo";
+import { GroupShare } from "./GroupShare";
+import { GroupResults } from "./GroupResults";
+import type { GroupNetwork } from "@/lib/social/group-share";
 import { Finder, type RedditPrefill } from "./Finder";
 import { SiteAuditCard } from "./SiteAuditCard";
 import { fromPlatformInput, toPlatformInput } from "@/lib/time/platform-input";
@@ -126,7 +130,7 @@ export function SocialHubClient({ accounts, queue, settings: settings0, slots: s
                 </button>
               ))}
             </div>
-            {composeMode === "reddit" ? <RedditReply key={redditKey} prefill={redditPrefill} onPrefillUsed={() => setRedditPrefill(null)} /> : <Composer accounts={accounts} googleReady={googleReady} onScheduled={(count) => { setJustScheduled({ count, before: queue.map((q) => q.id) }); setTab("schedule"); }} />}
+            {composeMode === "reddit" ? <RedditReply key={redditKey} prefill={redditPrefill} onPrefillUsed={() => setRedditPrefill(null)} /> : <Composer accounts={accounts} googleReady={googleReady} onResults={() => setTab("attribution")} onScheduled={(count) => { setJustScheduled({ count, before: queue.map((q) => q.id) }); setTab("schedule"); }} />}
           </div>
         ) : null}
         {tab === "schedule" ? <Schedule queue={queue} accounts={accounts} slots={slots0} googleReady={googleReady} onAddPost={() => setTab("composer")} notice={justScheduled} onDismissNotice={() => setJustScheduled(null)} /> : null}
@@ -138,6 +142,7 @@ export function SocialHubClient({ accounts, queue, settings: settings0, slots: s
               <div className="mb-2 text-[12.5px] font-semibold text-slate-800">Signups by channel</div>
               <Attribution data={attribution} />
             </div>
+            <GroupResults />
           </div>
         ) : null}
         {tab === "settings" ? (
@@ -152,7 +157,7 @@ export function SocialHubClient({ accounts, queue, settings: settings0, slots: s
   );
 }
 
-function Composer({ accounts, googleReady, onScheduled }: { accounts: SocialAccount[]; googleReady: boolean; onScheduled: (count: number) => void }) {
+function Composer({ accounts, googleReady, onScheduled, onResults }: { accounts: SocialAccount[]; googleReady: boolean; onScheduled: (count: number) => void; onResults: () => void }) {
   const [brief, setBrief] = useState("");
   const [archetype, setArchetype] = useState<Archetype>("proof_case");
   const [department, setDepartment] = useState<string>("Marketing");
@@ -161,6 +166,9 @@ function Composer({ accounts, googleReady, onScheduled }: { accounts: SocialAcco
   const [newCampaign, setNewCampaign] = useState<{ open: boolean; name: string; budget: string }>({ open: false, name: "", budget: "" });
   const [selected, setSelected] = useState<string[]>(() => accounts.filter((a) => a.is_default).map((a) => a.id));   // default account pre-picked
   const [variants, setVariants] = useState<{ accountId: string; body: string }[]>([]);
+  const [groupNets, setGroupNets] = useState<GroupNetwork[]>([]);   // Post to: Facebook / LinkedIn groups (manual queue)
+  const [groupsEnabled, setGroupsEnabled] = useState(true);   // flips off if the Group share switch is off
+  const groupsOnly = selected.length === 0 && groupNets.length > 0;   // only groups ticked: Schedule and Post now do not apply
   const [linkUrl, setLinkUrl] = useState("");
   const [agentLinks, setAgentLinks] = useState<Array<{ key: string; label: string; url: string }>>([]);
   const [imageUrl, setImageUrl] = useState("");
@@ -369,13 +377,9 @@ function Composer({ accounts, googleReady, onScheduled }: { accounts: SocialAcco
 
       {/* 3 · Accounts & author */}
       <div className={`${card} p-5`}>
-        <StepHead n={3} title="Accounts & author" hint="who this publishes to" />
-        <div className="mt-2 flex flex-wrap gap-2">
-          {accounts.length === 0 ? <span className="text-[12px] text-slate-400">No accounts connected.</span> : accounts.map((a) => {
-            const on = selected.includes(a.id);
-            return <button type="button" key={a.id} onClick={() => setSelected((p) => on ? p.filter((x) => x !== a.id) : [...p, a.id])} className={`${chip} inline-flex items-center gap-1.5 ${on ? "border-indigo-400 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-600"}`}><i className={`ti ti-brand-${a.platform}`} aria-hidden="true" />{accountName(a)}{a.is_default ? <span className="text-[10px] opacity-60">default</span> : null}</button>;
-          })}
-        </div>
+        <StepHead n={3} title="Post to" hint="accounts publish for you, groups you tap" />
+        <PostTo accounts={accounts} selected={selected} onToggleAccount={(id) => setSelected((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]))} groupNets={groupNets} onToggleGroupNet={(n) => setGroupNets((p) => (p.includes(n) ? p.filter((x) => x !== n) : [...p, n]))} groupsEnabled={groupsEnabled} />
+        {groupsEnabled ? groupNets.map((n) => <GroupShare key={n} network={n} body={variants[0]?.body || brief} onResults={onResults} onDisabled={() => { setGroupsEnabled(false); setGroupNets([]); }} />) : null}
       </div>
 
       {/* 4 · Attachments */}
@@ -570,8 +574,8 @@ function Composer({ accounts, googleReady, onScheduled }: { accounts: SocialAcco
         <button type="button" onClick={() => setShowPreview(true)} disabled={variants.length === 0} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 disabled:opacity-45"><i className="ti ti-eye" aria-hidden="true" /> Preview</button>
         <button type="button" onClick={() => save("draft")} disabled={busy || variants.length === 0} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 disabled:opacity-45">Save draft</button>
         <button type="button" onClick={() => save("park")} disabled={busy || variants.length === 0} className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 disabled:opacity-45">Park in Queue</button>
-        <button type="button" onClick={() => { if (confirm("Post now? It goes out to every selected account within 5 minutes.")) void save("now"); }} disabled={busy || variants.length === 0} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 disabled:opacity-45">Post now</button>
-        <button type="button" onClick={() => save("schedule")} disabled={busy || variants.length === 0 || schedDates.length === 0} className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-45">{schedDates.length > 1 ? `Schedule ${schedDates.length} posts` : "Schedule post"}</button>
+        {groupsOnly ? null : <button type="button" onClick={() => { if (confirm("Post now? It goes out to every selected account within 5 minutes.")) void save("now"); }} disabled={busy || variants.length === 0} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 disabled:opacity-45">Post now</button>}
+        {groupsOnly ? null : <button type="button" onClick={() => save("schedule")} disabled={busy || variants.length === 0 || schedDates.length === 0} className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-45">{schedDates.length > 1 ? `Schedule ${schedDates.length} posts` : "Schedule post"}</button>}
       </div>
       {variants.length === 0 ? <p className="mt-1.5 text-right text-[11px] text-slate-400">Save draft, Park, Post now and Schedule turn on once the drafts exist.</p> : null}
 
