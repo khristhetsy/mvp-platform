@@ -455,3 +455,102 @@ export async function sendIntroductionDigest(input: {
     }),
   });
 }
+
+// ── Telling the founder where they stand ──────────────────────────────────
+// The investor is emailed about the founder; the founder only heard when
+// someone accepted. This is a snapshot, sent when staff press the button.
+
+/** Most accepted investors listed with a button; the rest are counted. */
+const FOUNDER_STATUS_LISTED = 25;
+
+type StatusPerson = { name: string; company: string | null };
+
+export function founderStatusSubject(input: { eventTitle: string; accepted: number; awaiting: number }): string {
+  return `Your introductions at ${input.eventTitle}: ${input.accepted} accepted, ${input.awaiting} waiting`;
+}
+
+function statusTile(value: number, label: string, color = NAVY, bg = "#f8fafc"): string {
+  return `<td style="background:${bg};border-radius:8px;padding:12px;text-align:center;font-family:Arial,sans-serif;">
+    <div style="font-size:24px;font-weight:bold;color:${color};">${value}</div>
+    <div style="font-size:12px;color:#5b6784;">${esc(label)}</div>
+  </td>`;
+}
+
+function statusLabel(text: string, color: string): string {
+  return `<p style="margin:0 0 8px;font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:${color};">${esc(text)}</p>`;
+}
+
+function personLine(p: StatusPerson): string {
+  return p.company && p.company !== p.name ? `${esc(p.name)} · ${esc(p.company)}` : esc(p.name);
+}
+
+export function founderStatusHtml(input: {
+  founderName: string;
+  eventTitle: string;
+  introduced: number;
+  awaiting: number;
+  declined: number;
+  needsTime: (StatusPerson & { scheduleUrl: string })[];
+  scheduled: (StatusPerson & { when: string })[];
+}): string {
+  const accepted = input.needsTime.length + input.scheduled.length;
+  const subject = founderStatusSubject({ eventTitle: input.eventTitle, accepted, awaiting: input.awaiting });
+  const first = input.founderName.split(/\s+/)[0] || input.founderName;
+  const cell = "padding:11px 14px;font-family:Arial,sans-serif;font-size:14px;color:#33415a;border-bottom:1px solid #eef1f6;";
+
+  const needs = input.needsTime.slice(0, FOUNDER_STATUS_LISTED);
+  const needsRest = input.needsTime.length - needs.length;
+  const needsBlock = input.needsTime.length
+    ? statusLabel("ACCEPTED: choose a time", "#14703a") +
+      `<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border:1px solid #e2e8f2;border-radius:8px;margin:0 0 18px;">` +
+      needs.map((p) => `<tr><td style="${cell}">${personLine(p)}</td><td style="${cell}text-align:right;">${button(p.scheduleUrl, "Set the time →", true)}</td></tr>`).join("") +
+      (needsRest > 0 ? `<tr><td colspan="2" style="${cell}color:#8a93a6;">and ${needsRest} more. We email you a link for each one as they accept.</td></tr>` : "") +
+      `</table>`
+    : "";
+
+  const scheduledBlock = input.scheduled.length
+    ? statusLabel("TIME SET", "#33415a") +
+      `<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border:1px solid #e2e8f2;border-radius:8px;margin:0 0 18px;">` +
+      input.scheduled.slice(0, FOUNDER_STATUS_LISTED).map((p) => `<tr><td style="${cell}">${personLine(p)}</td><td style="${cell}text-align:right;">${esc(p.when)}</td></tr>`).join("") +
+      `</table>`
+    : "";
+
+  const waitingBlock = input.awaiting
+    ? statusLabel("STILL WAITING FOR AN ANSWER", "#5b6784") +
+      para(`${input.awaiting} ${input.awaiting === 1 ? "investor has" : "investors have"} the introduction and ${input.awaiting === 1 ? "has" : "have"} not answered yet. We will email you as each one accepts.`)
+    : "";
+
+  return shell(
+    para(`Hi ${esc(first)},`) +
+    para(`Here is where your introductions stand for <b>${esc(input.eventTitle)}</b>.`) +
+    `<table role="presentation" cellpadding="0" cellspacing="8" style="width:100%;margin:0 0 20px;"><tr>` +
+      statusTile(input.introduced, "introduced", NAVY, "#f5f9ff") +
+      statusTile(accepted, "accepted", "#14703a", "#eaf7ef") +
+      statusTile(input.awaiting, "awaiting an answer") +
+      statusTile(input.declined, "not now") +
+    `</tr></table>` +
+    needsBlock + scheduledBlock + waitingBlock +
+    para(`<span style="font-size:12px;color:#8a93a6;">Investors who say "not now" are counted, not named. Declining is silent on our side, and we keep it that way.</span>`),
+    { audience: "founder", subject, preheader: `${accepted} accepted, ${input.awaiting} waiting for an answer.` },
+  );
+}
+
+/** One status email to one founder. False rather than a throw: one bad address must not stop the rest. */
+export async function sendFounderStatus(input: {
+  to: string;
+  founderName: string;
+  eventTitle: string;
+  introduced: number;
+  awaiting: number;
+  declined: number;
+  needsTime: (StatusPerson & { scheduleUrl: string })[];
+  scheduled: (StatusPerson & { when: string })[];
+}): Promise<boolean> {
+  if (!input.to?.includes("@")) return false;
+  const accepted = input.needsTime.length + input.scheduled.length;
+  return deliver({ via: "icapos" }, {
+    to: input.to,
+    subject: founderStatusSubject({ eventTitle: input.eventTitle, accepted, awaiting: input.awaiting }),
+    html: founderStatusHtml(input),
+  });
+}
