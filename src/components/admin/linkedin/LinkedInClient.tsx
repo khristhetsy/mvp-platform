@@ -4,23 +4,25 @@ import { useCallback, useEffect, useState } from "react";
 import type { CampaignWithStats, HubLinkedIn, LinkedInAccount, ThreadRow } from "@/lib/linkedin/store";
 import { ActivityTab } from "./ActivityTab";
 import { CampaignsTab } from "./CampaignsTab";
+import { CloudSenderTab } from "./CloudSenderTab";
 import { LinkedInInbox } from "./LinkedInInbox";
 import { NewCampaignTab } from "./NewCampaignTab";
 import { SettingsTab } from "./SettingsTab";
 import { ErrorLine, api, btnCls } from "./ui";
 
-type TabId = "campaigns" | "new" | "inbox" | "activity" | "settings";
+type TabId = "campaigns" | "new" | "inbox" | "activity" | "settings" | "cloud";
 const TABS: Array<{ id: TabId; label: string }> = [
   { id: "campaigns", label: "Campaigns" },
   { id: "new", label: "New campaign" },
   { id: "inbox", label: "Inbox" },
   { id: "activity", label: "Activity" },
   { id: "settings", label: "Settings" },
+  { id: "cloud", label: "Cloud sender" },
 ];
 
 type Overview = { account: LinkedInAccount; campaigns: CampaignWithStats[]; threads: ThreadRow[]; sentToday: number; hub: HubLinkedIn | null };
 
-/** Admin › LinkedIn. Five tabs: Campaigns, New campaign, Inbox, Activity, Settings. */
+/** Admin › LinkedIn. Six tabs: Campaigns, New campaign, Inbox, Activity, Settings, Cloud sender. */
 export function LinkedInClient() {
   const [tab, setTab] = useState<TabId>("campaigns");
   const [data, setData] = useState<Overview | null>(null);
@@ -53,13 +55,14 @@ export function LinkedInClient() {
         ))}
       </div>
       <ErrorLine text={error} />
-      {data?.account.status === "warning" ? (
+      {tab === "cloud" ? <CloudSenderTab /> : null}
+      {tab !== "cloud" && data?.account.status === "warning" ? (
         <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13px]">
           <span><b className="text-red-800">Paused by a LinkedIn warning.</b> <span className="text-red-700">Nothing more will be sent. Look at the account in LinkedIn first, then resume here.{data.account.paused_reason ? ` (${data.account.paused_reason})` : ""}</span></span>
           <button type="button" className={btnCls} onClick={() => { void api("/api/admin/linkedin/account", "PUT", { resume: true }).then(load); }}>Resume</button>
         </div>
       ) : null}
-      {!data ? (error ? null : <p className="text-[13px] text-slate-500">Loading…</p>) : (
+      {tab === "cloud" ? null : !data ? (error ? null : <p className="text-[13px] text-slate-500">Loading…</p>) : (
         <>
           {tab === "campaigns" ? <CampaignsTab campaigns={data.campaigns} onNew={() => setTab("new")} onChanged={load} /> : null}
           {tab === "new" ? <NewCampaignTab onSaved={() => { void load(); setTab("campaigns"); }} onOpenSettings={() => setTab("settings")} /> : null}
