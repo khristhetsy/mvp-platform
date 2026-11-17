@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import type { CloudAccount, CloudCampaign, CloudLead } from "@/lib/linkedin/cloud-sender";
+import type { CloudAudienceSummary as AudienceSummary } from "@/lib/linkedin/cloud-crm";
 import { ErrorLine, api, btnCls, inputCls, primaryCls } from "@/components/admin/accounting/ui";
 import { Section, Tag } from "@/components/admin/investor-directory/ui";
 
@@ -38,6 +40,9 @@ export function CloudSenderTab() {
   const [note, setNote] = useState("");
   const [urls, setUrls] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+  const [filters, setFilters] = useState<{ module: "" | "investor" | "founder"; stage: string; tag: string; industry: string }>({ module: "", stage: "", tag: "", industry: "" });
+  const [preview, setPreview] = useState<AudienceSummary | null>(null);
+  const [syncedAt, setSyncedAt] = useState<Date | null>(null);
   const [tick, setTick] = useState(0);
   const reload = useCallback(() => setTick((t) => t + 1), []);
 
@@ -71,6 +76,36 @@ export function CloudSenderTab() {
     if (status === "running" && !window.confirm(`Go live with "${c.name}"? The sender will send real LinkedIn invites to its leads.`)) return;
     void run(() => api(`/api/admin/linkedin/cloud/campaigns/${c.id}/status`, "POST", { status, confirm: status === "running" ? true : undefined }));
   };
+
+  const filterBody = () => ({
+    ...(filters.module ? { module: filters.module } : {}),
+    ...(filters.stage.trim() ? { stage: filters.stage.trim() } : {}),
+    ...(filters.tag.trim() ? { tag: filters.tag.trim() } : {}),
+    ...(filters.industry.trim() ? { industry: filters.industry.trim() } : {}),
+  });
+
+  const runPreview = (campaignId: string) => void run(async () => {
+    const r = await api<{ summary: AudienceSummary }>("/api/admin/linkedin/cloud/audience", "POST", { campaignId, filters: filterBody() });
+    if (!r.ok) return r;
+    setPreview(r.data.summary);
+    return { ok: true as const };
+  });
+
+  const runAdd = (c: CloudCampaign) => void run(async () => {
+    const r = await api<{ summary: AudienceSummary; added: number; skipped: number }>("/api/admin/linkedin/cloud/audience", "POST", { campaignId: c.id, filters: filterBody(), add: true });
+    if (!r.ok) return r;
+    setPreview(null);
+    setMessage(`Added ${r.data.added} from the CRM${r.data.skipped ? `, ${r.data.skipped} already there or not valid` : ""}.`);
+    return { ok: true as const };
+  });
+
+  const runSync = (c: CloudCampaign) => void run(async () => {
+    const r = await api<{ logged: number; duplicate: number; failed: number }>("/api/admin/linkedin/cloud/sync", "POST", { campaignId: c.id, campaignName: c.name });
+    if (!r.ok) return r;
+    setSyncedAt(new Date());
+    setMessage(r.data.logged ? `Wrote ${r.data.logged} new line${r.data.logged === 1 ? "" : "s"} to the CRM Notes log.` : "Nothing new to write to the CRM.");
+    return { ok: true as const };
+  });
 
   if (!data) return <>{error ? <ErrorLine text={error} /> : <p className="text-[13px] text-slate-500">Loading…</p>}</>;
 
@@ -141,14 +176,47 @@ export function CloudSenderTab() {
       </Section>
 
       {selectedCampaign ? (
+        <Section title="Add leads from the CRM">
+          <div className="flex flex-wrap items-center gap-2">
+            <select className={inputCls + " !w-auto"} aria-label="Contact type" value={filters.module} onChange={(e) => { setFilters({ ...filters, module: e.target.value as "" | "investor" | "founder" }); setPreview(null); }}>
+              <option value="">All contacts</option><option value="investor">Investors</option><option value="founder">Founders</option>
+            </select>
+            <input className={inputCls + " !w-36"} placeholder="Stage" aria-label="Stage" value={filters.stage} maxLength={80} onChange={(e) => { setFilters({ ...filters, stage: e.target.value }); setPreview(null); }} />
+            <input className={inputCls + " !w-36"} placeholder="Tag" aria-label="Tag" value={filters.tag} maxLength={80} onChange={(e) => { setFilters({ ...filters, tag: e.target.value }); setPreview(null); }} />
+            <input className={inputCls + " !w-36"} placeholder="Industry" aria-label="Industry" value={filters.industry} maxLength={80} onChange={(e) => { setFilters({ ...filters, industry: e.target.value }); setPreview(null); }} />
+            <button type="button" className={btnCls} disabled={busy} onClick={() => runPreview(selectedCampaign.id)}>Preview</button>
+          </div>
+          {preview ? (
+            <>
+              <div className="my-3 flex flex-wrap gap-2 text-[12.5px]">
+                <span className="rounded-lg border border-green-300 bg-green-50 px-3 py-2"><b className="block text-[18px]">{preview.ready}</b>ready to invite</span>
+                <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"><b className="block text-[18px]">{preview.noLink}</b>no LinkedIn link</span>
+                <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"><b className="block text-[18px]">{preview.doNotContact}</b>do not contact</span>
+                <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"><b className="block text-[18px]">{preview.alreadyConnected}</b>already connected</span>
+                <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"><b className="block text-[18px]">{preview.alreadyInCampaign}</b>already in this campaign</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <button type="button" className={primaryCls} disabled={busy || preview.ready === 0} onClick={() => runAdd(selectedCampaign)}>Add {preview.ready} to campaign</button>
+                <span className="text-[12px] text-slate-500">Already connected people are left out, because the sender only sends invites for now. Looks at the first 2,000 contacts that match.</span>
+              </div>
+            </>
+          ) : <p className="mt-3 text-[12.5px] text-slate-500">Choose who to reach, then Preview. Nothing is added until you click Add.</p>}
+        </Section>
+      ) : null}
+
+      {selectedCampaign ? (
         <Section title={`Leads in "${selectedCampaign.name}"`}>
+          <div className="mb-3 flex items-center justify-end gap-3 text-[12.5px] text-slate-500">
+            {syncedAt ? <span>Last synced {syncedAt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}</span> : null}
+            <button type="button" className={btnCls} disabled={busy} onClick={() => runSync(selectedCampaign)}>Sync to CRM</button>
+          </div>
           {shownLeads.length === 0 ? <p className="text-[13px] text-slate-500">No leads yet.</p> : (
             <table className="w-full text-[13px]">
               <thead><tr className="text-left text-slate-500"><th className="py-2 font-medium">Contact</th><th className="font-medium">LinkedIn</th><th className="font-medium">State</th><th className="font-medium">Invited</th><th className="font-medium">Accepted</th><th className="font-medium">Replied</th></tr></thead>
               <tbody>
                 {shownLeads.map((l) => (
                   <tr key={l.id} className="border-t border-slate-100">
-                    <td className="py-2.5">{l.full_name ?? "—"}</td>
+                    <td className="py-2.5">{l.external_ref ? <Link href={`/admin/sales/contacts/${l.external_ref}`} className="text-[#1A6CE4]">{l.full_name ?? "Contact"}</Link> : (l.full_name ?? "—")}</td>
                     <td className="text-slate-600">{slug(l.profile_url)}</td>
                     <td><Tag tone={(LEAD_STATE[l.state] ?? LEAD_STATE.new!).tone}>{(LEAD_STATE[l.state] ?? { label: l.state }).label}</Tag></td>
                     <td>{when(l.invited_at)}</td><td>{when(l.accepted_at)}</td><td>{when(l.replied_at)}</td>
