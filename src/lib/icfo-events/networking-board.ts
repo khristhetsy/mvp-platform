@@ -66,6 +66,8 @@ export type NetworkingBoard = {
   /** Registered as an investor or a founder — the matchable pool. */
   matchable: number;
   registered: number;
+  /** Presenters from the event's own speaker list. They are not registrations. */
+  presenters: number;
   /** How many of the pool declared no sectors, so match only on role. */
   withoutSectors: number;
   pairs: MatchPair[];
@@ -84,7 +86,7 @@ export type NetworkingBoard = {
 };
 
 const EMPTY: NetworkingBoard = {
-  matchable: 0, registered: 0, withoutSectors: 0, pairs: [], totalPairs: 0,
+  matchable: 0, registered: 0, presenters: 0, withoutSectors: 0, pairs: [], totalPairs: 0,
   counts: { matches: 0, requested: 0, accepted: 0, declined: 0, notSent: 0, scheduled: 0 },
   rules: DEFAULT_PAIR_TYPES,
   bands: [],
@@ -271,6 +273,7 @@ export async function loadNetworkingBoard(eventId: string): Promise<NetworkingBo
       // The pool these rules could pair — not everybody in the room.
       matchable: people.filter((p) => eligible.has(p.side.role)).length,
       registered: rows.length,
+      presenters: people.filter((p) => p.side.role === "presenter").length,
       withoutSectors: people.filter((p) => eligible.has(p.side.role) && p.sectors.length === 0).length,
       pairs: pairs.slice(0, MAX_ROWS),
       totalPairs: pairs.length,

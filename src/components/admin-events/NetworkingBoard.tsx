@@ -185,7 +185,7 @@ export function NetworkingBoard({ board, events, eventId, gmail }: Readonly<{
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
-        <Stat n={board.matchable} label={`investors & founders of ${board.registered}`} />
+        <Stat n={board.matchable} label={`in the pool: ${board.registered} registered + ${board.presenters} presenters`} />
         <Stat n={board.counts.matches} label="matches found" />
         <Stat n={board.counts.requested} label="awaiting an answer" warn={board.counts.requested > 0} />
         <Stat n={board.counts.scheduled} label="scheduled" />

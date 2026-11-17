@@ -46,7 +46,7 @@ export default async function NetworkingMatchingPage({
   const events = await listAllEvents(admin).catch(() => []);
   const selected = eventId && events.some((e) => e.id === eventId) ? eventId : events[0]?.id ?? null;
   const empty: Board = {
-    matchable: 0, registered: 0, withoutSectors: 0, pairs: [], totalPairs: 0,
+    matchable: 0, registered: 0, presenters: 0, withoutSectors: 0, pairs: [], totalPairs: 0,
     counts: { matches: 0, requested: 0, accepted: 0, declined: 0, notSent: 0, scheduled: 0 },
     rules: DEFAULT_PAIR_TYPES,
     bands: [],
