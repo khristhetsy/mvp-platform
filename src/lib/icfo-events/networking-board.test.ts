@@ -234,6 +234,24 @@ describe("registration is the qualifier", () => {
   });
 });
 
+describe("a presenter who is also registered", () => {
+  it("uses their registration id, so an introduction can be recorded", async () => {
+    rules.mockReturnValue(["presenter_investor"]);
+    regs.mockReturnValue([
+      person("i", "Ivy", "investor", ["FinTech"]),
+      { id: "rP", attendee_id: "prof1", attendee_type: "founder", answers: { name: "Pat" }, profiles: null },
+    ]);
+    presenters.mockReturnValue([
+      { id: "p1", profile_id: "prof1", display_name: "Pat", role_label: null },
+    ]);
+    const b = await loadNetworkingBoard("e1");
+    expect(b.pairs).toHaveLength(1);
+    const ids = [b.pairs[0].a.registrationId, b.pairs[0].b.registrationId];
+    expect(ids).toContain("rP");
+    expect(ids.some((id) => id.startsWith("presenter:"))).toBe(false);
+  });
+});
+
 describe("the sector answer comes in more than one shape", () => {
   it("reads a founder's single `sector` string", async () => {
     regs.mockReturnValue([

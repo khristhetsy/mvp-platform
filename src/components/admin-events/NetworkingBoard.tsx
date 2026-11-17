@@ -135,7 +135,10 @@ export function NetworkingBoard({ board, events, eventId, gmail }: Readonly<{
       setMsg(
         `${json.created} introductions created, ${json.sent} emails sent` +
         (Number(json.held ?? 0) ? `, ${json.held} held back by the cap` : "") +
-        (left ? `. ${left} still to send — press Introduce again.` : "."),
+        (left ? `. ${left} still to send — press Introduce again.` : ".") +
+        (Number(json.created ?? 0) === 0 && Array.isArray(json.skipped) && json.skipped.length
+          ? ` Why none were created: ${json.skipped.join("; ")}`
+          : ""),
       );
       // Only clear the selection when the job is finished; otherwise the next
       // press has nothing to continue with.
