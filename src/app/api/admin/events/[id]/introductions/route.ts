@@ -110,7 +110,8 @@ export async function POST(
       return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid request." }, { status: 400 });
     }
 
-    const board = await loadNetworkingBoard(eventId);
+    // Every pair, not the 400 the page renders: "select all" means all.
+    const board = await loadNetworkingBoard(eventId, { maxRows: Number.MAX_SAFE_INTEGER });
 
     // Only a pair nobody has been introduced for can be introduced.
     const introducible = board.pairs.filter((p) => p.status === "none");
