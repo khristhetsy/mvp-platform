@@ -112,7 +112,14 @@ function scoreRole(role: Role): "investor" | "founder" {
   return role === "investor" ? "investor" : "founder";
 }
 
-export async function loadNetworkingBoard(eventId: string): Promise<NetworkingBoard> {
+export async function loadNetworkingBoard(
+  eventId: string,
+  /**
+   * Rows to return. The page shows the strongest 400; a send needs every
+   * pair, or matches past the 400 can never be introduced.
+   */
+  opts: { maxRows?: number } = {},
+): Promise<NetworkingBoard> {
   try {
     const db = raw();
     const [regsRes, connsRes, intros, rulesRes, presentersRes] = await Promise.all([
@@ -273,7 +280,14 @@ export async function loadNetworkingBoard(eventId: string): Promise<NetworkingBo
       }
     }
 
-    pairs.sort((p, q) => q.score - p.score || p.a.name.localeCompare(q.a.name));
+    // Strongest first. On a tie, matches nobody has been introduced to come
+    // first: they are the ones staff can act on, and once the first 400 are
+    // introduced they must not hide the rest behind the row cap.
+    const unsentFirst = (s: MatchPair["status"]) => (s === "none" ? 0 : 1);
+    pairs.sort((p, q) =>
+      q.score - p.score ||
+      unsentFirst(p.status) - unsentFirst(q.status) ||
+      p.a.name.localeCompare(q.a.name));
     const count = (s: MatchPair["status"]) => pairs.filter((p) => p.status === s).length;
 
     const scores = pairs.map((p) => p.score);
@@ -290,7 +304,7 @@ export async function loadNetworkingBoard(eventId: string): Promise<NetworkingBo
       registered: rows.length,
       presenters: people.filter((p) => p.side.role === "presenter").length,
       withoutSectors: people.filter((p) => eligible.has(p.side.role) && p.sectors.length === 0).length,
-      pairs: pairs.slice(0, MAX_ROWS),
+      pairs: pairs.slice(0, opts.maxRows ?? MAX_ROWS),
       totalPairs: pairs.length,
       counts: {
         matches: pairs.length,
