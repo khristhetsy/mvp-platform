@@ -28,7 +28,7 @@ describe("senderCall", () => {
     expect(init.body).toBe('{"a":1}');
   });
   it("turns a refused token into a clear error that never shows the token", async () => {
-    const err = await senderCall(cfg, "GET", "/api/x", undefined, reply(401, { error: "Wrong or missing admin token." })).catch((e) => e as CloudSenderError);
+    const err = (await senderCall(cfg, "GET", "/api/x", undefined, reply(401, { error: "Wrong or missing admin token." })).catch((e) => e)) as CloudSenderError;
     expect(err.message).toContain("CLOUD_SENDER_TOKEN");
     expect(err.message).not.toContain(cfg.token);
   });
