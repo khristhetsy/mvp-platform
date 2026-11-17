@@ -133,7 +133,21 @@ export async function loadNetworkingBoard(eventId: string): Promise<NetworkingBo
     // roles (service, sponsor, presenter) have none and score as before.
     const people: { side: Side; sectors: string[]; extra?: Pick<Matchable, "stages" | "money"> }[] = [];
 
+    // A presenter who is also registered is one person, and an introduction can
+    // only be recorded against a real registration. So the presenter takes their
+    // registration's id, and the registration is not listed a second time.
+    const regByProfile = new Map<string, string>();
     for (const r of rows) {
+      if (r.attendee_id) regByProfile.set(String(r.attendee_id), String(r.id));
+    }
+    const presenterRegIds = new Set<string>();
+    for (const p of ((presentersRes.data ?? []) as Row[])) {
+      const reg = p.profile_id ? regByProfile.get(String(p.profile_id)) : undefined;
+      if (reg) presenterRegIds.add(reg);
+    }
+
+    for (const r of rows) {
+      if (presenterRegIds.has(String(r.id))) continue;
       const role = String(r.attendee_type ?? "").toLowerCase();
       if (role !== "investor" && role !== "founder" && role !== "service" && role !== "sponsor") continue;
 
@@ -166,7 +180,8 @@ export async function loadNetworkingBoard(eventId: string): Promise<NetworkingBo
       people.push({
         side: {
           profileId: (p.profile_id as string | null) ?? null,
-          registrationId: `presenter:${String(p.id)}`,
+          registrationId:
+            (p.profile_id ? regByProfile.get(String(p.profile_id)) : undefined) ?? `presenter:${String(p.id)}`,
           name: String(p.display_name ?? "Presenter"),
           role: "presenter",
           company: (p.role_label as string | null) ?? null,
