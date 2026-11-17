@@ -75,6 +75,8 @@ export function NetworkingBoard({ board, events, eventId, gmail }: Readonly<{
   const [sendAs, setSendAs] = useState<"digest" | "individual">("digest");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  // The founder update can only be sent after it has been previewed.
+  const [founderReady, setFounderReady] = useState(false);
 
   // Only a pair with nobody introduced yet can be introduced.
   const selectable = (p: MatchPair) => p.status === "none";
@@ -87,6 +89,42 @@ export function NetworkingBoard({ board, events, eventId, gmail }: Readonly<{
       if (next.has(p.key)) next.delete(p.key); else next.add(p.key);
       return next;
     });
+  }
+
+  /** Email each founder where their introductions stand. Preview first. */
+  async function emailFounders(dryRun: boolean) {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const res = await fetch(`/api/admin/events/${eventId}/introductions/founder-status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dryRun }),
+      });
+      const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+      if (!res.ok) { setMsg(String(json.error ?? "Could not email the founders.")); return; }
+      if (dryRun) {
+        const list = (Array.isArray(json.founders) ? json.founders : []) as {
+          name: string; introduced: number; accepted: number; awaiting: number; declined: number;
+        }[];
+        setMsg(
+          `Would email ${list.length} founder${list.length === 1 ? "" : "s"}: ` +
+          list.map((f) => `${f.name} (${f.introduced} introduced, ${f.accepted} accepted, ${f.awaiting} waiting, ${f.declined} not now)`).join("; ") +
+          (Number(json.noEmail ?? 0) ? `. ${json.noEmail} with no email on file would be skipped.` : "."),
+        );
+        setFounderReady(true);
+        return;
+      }
+      setMsg(
+        `${json.emailed} founder${Number(json.emailed) === 1 ? "" : "s"} emailed` +
+        (Number(json.failed ?? 0) ? `, ${json.failed} failed` : "") + ".",
+      );
+      setFounderReady(false);
+    } catch {
+      setMsg("Network error. Please try again.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function send(dryRun: boolean) {
@@ -219,6 +257,16 @@ export function NetworkingBoard({ board, events, eventId, gmail }: Readonly<{
             <option value="scheduled">Scheduled</option>
             <option value="declined">Declined</option>
           </select>
+          <button type="button" disabled={busy} onClick={() => void emailFounders(true)}
+            className="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] disabled:opacity-50">
+            Preview founder update
+          </button>
+          {founderReady ? (
+            <button type="button" disabled={busy} onClick={() => void emailFounders(false)}
+              className="rounded-md bg-[var(--navy)] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50">
+              Email founders their status
+            </button>
+          ) : null}
           {selectedCount > 0 ? (
             <>
               <button type="button" disabled={busy} onClick={() => void send(true)}
