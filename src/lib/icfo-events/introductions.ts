@@ -6,16 +6,16 @@
  * few hundred unsolicited emails to people who already ignored one.
  *
  * The founder is the one pursuing: the invitation goes **to the investor**,
- * about the founder, and the follow-up chases the investor on the founder's
- * behalf.
+ * about the founder. The follow-up goes only to an investor who accepted and
+ * has no time booked yet, and it carries a link to book on the founder's own
+ * scheduling page. An investor who has not answered, or who declined, is never
+ * followed up.
  */
 
 import { matchReason } from "@/lib/icfo-events/match-reason";
 
 export const MAX_FOLLOW_UPS = 2;
 export const FOLLOW_UP_AFTER_DAYS = 3;
-/** Nothing is sent inside this window — an event is imminent, not a campaign. */
-export const QUIET_HOURS_BEFORE_EVENT = 24;
 
 export type IntroductionStatus = "sent" | "accepted" | "declined";
 
@@ -25,6 +25,10 @@ export type Introduction = {
   sentAt: string;
   followUps: number;
   lastFollowUpAt: string | null;
+  /** When the investor said yes. Falls back to `sentAt` when absent. */
+  respondedAt?: string | null;
+  /** Set once a time is booked. A booked introduction needs no follow-up. */
+  scheduledAt?: string | null;
 };
 
 const hoursBetween = (a: Date, b: Date) => (b.getTime() - a.getTime()) / 3_600_000;
@@ -34,38 +38,52 @@ export type FollowUpDecision =
   | { send: false; reason: string };
 
 /**
- * Whether to chase this introduction now.
+ * Whether the founder's follow-up goes to this investor now.
+ *
+ * Only an investor who accepted and has no time booked is followed up. There is
+ * no event window: the follow-up keeps working after the event starts and
+ * after it ends, because it points at the founder's own scheduling page, which
+ * has no event window.
  *
  * Every "no" carries its reason, because a silent skip is indistinguishable
  * from a broken job — and this one runs unattended.
  */
 export function shouldFollowUp(
   intro: Introduction,
-  opts: { now?: Date; eventStartsAt?: string | null } = {},
+  opts: { now?: Date } = {},
 ): FollowUpDecision {
   const now = opts.now ?? new Date();
 
-  if (intro.status === "accepted") return { send: false, reason: "already accepted" };
   if (intro.status === "declined") return { send: false, reason: "declined — never chased" };
+  if (intro.status !== "accepted") return { send: false, reason: "not accepted — never chased" };
+  if (intro.scheduledAt) return { send: false, reason: "already booked" };
   if (intro.followUps >= MAX_FOLLOW_UPS) {
     return { send: false, reason: `already followed up ${intro.followUps} times` };
   }
 
-  if (opts.eventStartsAt) {
-    const starts = new Date(opts.eventStartsAt);
-    const until = hoursBetween(now, starts);
-    // Past events are not chased either: the introduction had its chance.
-    if (until < QUIET_HOURS_BEFORE_EVENT) {
-      return { send: false, reason: `event is within ${QUIET_HOURS_BEFORE_EVENT}h` };
-    }
-  }
-
-  const since = intro.lastFollowUpAt ?? intro.sentAt;
+  const since = intro.lastFollowUpAt ?? intro.respondedAt ?? intro.sentAt;
   const waited = hoursBetween(new Date(since), now);
   if (waited < FOLLOW_UP_AFTER_DAYS * 24) {
     return { send: false, reason: `only ${Math.floor(waited)}h since the last message` };
   }
 
+  return { send: true };
+}
+
+/**
+ * Whether the founder may send a follow-up by hand right now.
+ *
+ * The same eligibility as the daily run (accepted, no time booked, two at
+ * most) without the three day wait: the founder is choosing the moment.
+ */
+export function canFounderFollowUp(
+  intro: Pick<Introduction, "status" | "followUps" | "scheduledAt">,
+): FollowUpDecision {
+  if (intro.status !== "accepted") return { send: false, reason: "That investor has not accepted yet." };
+  if (intro.scheduledAt) return { send: false, reason: "A time is already booked." };
+  if (intro.followUps >= MAX_FOLLOW_UPS) {
+    return { send: false, reason: `You have already followed up ${intro.followUps} times.` };
+  }
   return { send: true };
 }
 

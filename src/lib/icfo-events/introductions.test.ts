@@ -8,6 +8,7 @@ import {
   renderBody,
   renderTemplate,
   shouldFollowUp,
+  canFounderFollowUp,
   shouldRemindFounder,
   MAX_FOLLOW_UPS,
   type FounderChase,
@@ -19,29 +20,28 @@ const daysAgo = (n: number) => new Date(NOW.getTime() - n * 86_400_000).toISOStr
 
 const intro = (over: Partial<Introduction> = {}): Introduction => ({
   id: "i1",
-  status: "sent",
+  status: "accepted",
   sentAt: daysAgo(5),
   followUps: 0,
   lastFollowUpAt: null,
   ...over,
 });
 
-const decide = (i: Introduction, eventStartsAt?: string | null) =>
-  shouldFollowUp(i, { now: NOW, eventStartsAt });
+const decide = (i: Introduction) => shouldFollowUp(i, { now: NOW });
 
-describe("when a founder follow-up goes out", () => {
-  it("sends once three days have passed with no answer", () => {
-    expect(decide(intro())).toEqual({ send: true });
+describe("when a follow-up goes out", () => {
+  it("sends once three days have passed since the investor accepted", () => {
+    expect(decide(intro({ respondedAt: daysAgo(4) }))).toEqual({ send: true });
   });
 
   it("waits until then", () => {
-    expect(decide(intro({ sentAt: daysAgo(2) }))).toEqual({
+    expect(decide(intro({ respondedAt: daysAgo(2) }))).toEqual({
       send: false, reason: "only 48h since the last message",
     });
   });
 
-  it("counts from the last follow-up, not from the first message", () => {
-    const i = intro({ sentAt: daysAgo(9), followUps: 1, lastFollowUpAt: daysAgo(1) });
+  it("counts from the last follow-up, not from the acceptance", () => {
+    const i = intro({ respondedAt: daysAgo(9), followUps: 1, lastFollowUpAt: daysAgo(1) });
     expect(decide(i).send).toBe(false);
   });
 
@@ -51,33 +51,49 @@ describe("when a founder follow-up goes out", () => {
   });
 });
 
-describe("who is never chased", () => {
+describe("who is never followed up", () => {
   it("leaves a declined introduction alone", () => {
     expect(decide(intro({ status: "declined" }))).toEqual({
       send: false, reason: "declined — never chased",
     });
   });
 
-  it("leaves an accepted one alone", () => {
-    expect(decide(intro({ status: "accepted" })).send).toBe(false);
+  it("leaves an investor who has not answered alone", () => {
+    expect(decide(intro({ status: "sent" }))).toEqual({
+      send: false, reason: "not accepted — never chased",
+    });
   });
 
-  it("goes quiet in the last day before the event", () => {
-    const soon = new Date(NOW.getTime() + 6 * 3_600_000).toISOString();
-    expect(decide(intro(), soon)).toEqual({ send: false, reason: "event is within 24h" });
+  it("stops once a time is booked", () => {
+    expect(decide(intro({ scheduledAt: daysAgo(1) }))).toEqual({ send: false, reason: "already booked" });
   });
 
-  it("does not chase after the event has happened", () => {
-    expect(decide(intro(), daysAgo(1)).send).toBe(false);
+  it("has no event window: the same decision on any day", () => {
+    const later = new Date(NOW.getTime() + 30 * 86_400_000);
+    expect(shouldFollowUp(intro(), { now: later })).toEqual({ send: true });
+  });
+});
+
+describe("when the founder follows up by hand", () => {
+  it("is allowed for an accepted investor with no time", () => {
+    expect(canFounderFollowUp({ status: "accepted", followUps: 0, scheduledAt: null })).toEqual({ send: true });
   });
 
-  it("still chases when the event is comfortably ahead", () => {
-    const later = new Date(NOW.getTime() + 10 * 86_400_000).toISOString();
-    expect(decide(intro(), later)).toEqual({ send: true });
+  it("needs no three day wait", () => {
+    expect(canFounderFollowUp({ status: "accepted", followUps: 1, scheduledAt: null }).send).toBe(true);
   });
 
-  it("chases when the event has no date at all", () => {
-    expect(decide(intro(), null).send).toBe(true);
+  it("is refused for an investor who has not accepted", () => {
+    expect(canFounderFollowUp({ status: "sent", followUps: 0, scheduledAt: null }).send).toBe(false);
+    expect(canFounderFollowUp({ status: "declined", followUps: 0, scheduledAt: null }).send).toBe(false);
+  });
+
+  it("is refused once a time is booked", () => {
+    expect(canFounderFollowUp({ status: "accepted", followUps: 0, scheduledAt: daysAgo(1) }).send).toBe(false);
+  });
+
+  it("is refused after two", () => {
+    expect(canFounderFollowUp({ status: "accepted", followUps: MAX_FOLLOW_UPS, scheduledAt: null }).send).toBe(false);
   });
 });
 

@@ -53,6 +53,15 @@ export default async function FounderEventsPage() {
             description="Sector-curated showcases, panels, and talk shows convening founders, investors, and operators. Education and community in the room — deals stay behind the accredited diligence flow."
           />
 
+          <div className="mt-4">
+            <Link
+              href="/founder/events/follow-ups"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--indigo)] hover:underline"
+            >
+              Follow up with investors who accepted <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+
           <div className="mt-8 grid gap-4">
             {events.length === 0 ? (
               <div className="rounded-xl border border-[var(--border-subtle)] bg-white px-6 py-16 text-center">

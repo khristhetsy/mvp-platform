@@ -24,6 +24,7 @@ import { registeredEventIds } from "@/lib/icfo-events/invitations/person";
 import { getCampaign, type Campaign } from "@/lib/icfo-events/invitations/store";
 import { inviteToken } from "@/lib/icfo-events/invitations/token";
 import { renderAttendeeEmail, renderInviteEmail, type EmailEvent, type InviteStep } from "@/lib/icfo-events/invitations/emails";
+import { networkingToken } from "@/lib/icfo-events/networking-choice";
 import { STAT_ORDER, statTiles, OFFERS, OFFER_ANSWER_KEY, type InviteRole } from "@/lib/icfo-events/invitations/types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -257,6 +258,8 @@ export async function sendAttendeeEmail(registrationId: string, step: "confirm" 
     event: emailEvent(event),
     activities: chosenActivities(role, answers),
     applyUrl: role === "founder" && answers.applyToPresent === true ? `${appUrl()}/events/${event.slug}/apply` : null,
+    // Only the roles the matching pool is made of are asked.
+    networkingUrl: role === "founder" || role === "investor" ? `${appUrl()}/e/networking/${networkingToken(reg.id)}` : null,
     signUpUrl: SIGN_UP_URL,
   });
 

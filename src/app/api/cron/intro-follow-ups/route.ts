@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { withCronGate } from "@/lib/cron/gate";
 import * as Sentry from "@sentry/nextjs";
 import {
-  introDetail, listTemplates, runFollowUpPass, runFounderReminderPass,
+  introDetail, runFollowUpPass, runFounderReminderPass,
   scheduleToken, type IntroRow,
 } from "@/lib/icfo-events/introductions-server";
-import { sendIntroductionEmail, sendScheduleRequest } from "@/lib/icfo-events/introduction-emails";
+import { sendScheduleRequest } from "@/lib/icfo-events/introduction-emails";
+import { sendBookingFollowUpFor } from "@/lib/icfo-events/booking-follow-up";
 import { formatSlot } from "@/lib/icfo-events/calendar-links";
 
 export const dynamic = "force-dynamic";
@@ -15,8 +16,9 @@ const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com";
 /**
  * The daily chase, in both directions.
  *
- * An investor who has not answered is followed up on the founder's behalf,
- * twice at most and never inside the last day before the event. A founder who
+ * An investor who accepted and has no time booked is sent a link to book on
+ * the founder's scheduling page, twice at most, before or after the event.
+ * An investor who has not answered, or who declined, is never followed up. A founder who
  * has not given a time to an investor who already accepted is reminded, also
  * twice — the other half of the stall, and the more embarrassing one, because
  * somebody is expecting a meeting.
@@ -31,37 +33,11 @@ async function scheduledGET(req: NextRequest): Promise<Response> {
   }
 
   try {
-    const templates = await listTemplates();
-    const followUp = templates.find((t) => t.kind === "follow_up");
-
-    const investors = followUp
-      ? await runFollowUpPass(async (intro: IntroRow) => {
-          const detail = await introDetail(intro.id);
-          if (!detail?.investor?.email) return false;
-          return sendIntroductionEmail({
-            introductionId: intro.id,
-            to: detail.investor.email,
-            template: followUp,
-            investor: { name: detail.investor.name, company: detail.investor.company },
-            founder: {
-              name: detail.founder?.name ?? "a founder",
-              company: detail.founder?.company ?? null,
-              pitch: detail.founder?.pitch ?? null,
-              stage: detail.founder?.stage ?? null,
-              raising: detail.founder?.raising ?? null,
-              roundSize: detail.founder?.roundSize ?? null,
-              // The follow-up quotes the same reason as the invitation did.
-              role: "founder",
-            },
-            eventTitle: detail.event?.title ?? "an iCFO event",
-            eventWhen: detail.event?.startsAt
-              ? formatSlot(detail.event.startsAt, detail.event.timezone)
-              : null,
-            sharedSectors: intro.sharedSectors,
-            baseUrl: BASE_URL,
-          });
-        })
-      : { considered: 0, sent: 0, skipped: { "no follow-up template": 1 } };
+    const investors = await runFollowUpPass(async (intro: IntroRow) => {
+      const sent = await sendBookingFollowUpFor(intro.id);
+      if (sent.ok) return true;
+      return sent.noAccount ? { skip: "founder has no account" } : false;
+    });
 
     const founders = await runFounderReminderPass(async (intro: IntroRow) => {
       const detail = await introDetail(intro.id);

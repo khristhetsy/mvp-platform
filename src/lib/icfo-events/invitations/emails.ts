@@ -129,6 +129,8 @@ export type AttendeeEmailInput = {
   event: EmailEvent;
   activities: string[];
   applyUrl?: string | null;
+  /** The signed networking yes or no page for this registration. Omitted for roles that are not matched. */
+  networkingUrl?: string | null;
   signUpUrl: string;
 };
 
@@ -142,9 +144,19 @@ export function renderAttendeeEmail(i: AttendeeEmailInput): { subject: string; h
     const apply = i.applyUrl
       ? `<p style="font-size:14px;line-height:1.6;">To present, send your application and deck. Our team accepts or waitlists each application and emails you the result.</p>${button("Apply to present", i.applyUrl)}`
       : "";
+    const other = i.attendeeType === "investor" ? "founders" : "investors";
+    const pill = `display:inline-block;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:600;font-size:13px;margin:0 8px 8px 0;`;
+    const network = i.networkingUrl
+      ? `<div style="margin:16px 0;padding:14px 16px;background:#f5f9ff;border-left:3px solid ${BLUE};border-radius:6px;">
+           <p style="margin:0 0 6px;font-size:14px;font-weight:bold;">Meet ${other} at this event?</p>
+           <p style="margin:0 0 12px;font-size:13px;line-height:1.55;color:#33415a;">We match investors and founders by shared sectors. Investors are emailed the founders worth meeting, and founders hear when an investor accepts. Doing nothing keeps you in.</p>
+           <a href="${esc(`${i.networkingUrl}?a=yes`)}" style="${pill}background:${BLUE};color:#ffffff;">Yes, match me</a>
+           <a href="${esc(`${i.networkingUrl}?a=no`)}" style="${pill}background:#ffffff;color:#1b2a4a;border:1px solid #d5deea;">No thanks</a>
+         </div>`
+      : "";
     return {
       subject: `You're registered: ${i.event.title}`,
-      html: wrap(`${hi}<p style="font-size:14px;">You're registered.</p>${when}${acts}${apply}${button("View the event", i.event.url)}`),
+      html: wrap(`${hi}<p style="font-size:14px;">You're registered.</p>${when}${acts}${network}${apply}${button("View the event", i.event.url)}`),
     };
   }
   if (i.step === "reminder_1d") {

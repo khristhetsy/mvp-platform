@@ -88,6 +88,8 @@ export function EventRegistrationForm({ slug, defaultCompany, defaultEmail, defa
   const [error, setError] = useState<string | null>(null);
   const [matches, setMatches] = useState<Match[] | null>(null);
   const [gate, setGate] = useState(false);
+  // Set when the typed email already has an account: sign in to register with it.
+  const [account, setAccount] = useState<{ masked: string } | null>(null);
 
   // Live matches: founders and investors only, as on the networking board.
   const matchRole = role === "founder" || role === "investor" ? role : null;
@@ -120,6 +122,23 @@ export function EventRegistrationForm({ slug, defaultCompany, defaultEmail, defa
   function set(key: string, value: unknown) {
     setAnswers((a) => ({ ...a, [key]: value }));
   }
+
+  /** Visitors only: does this email already belong to an account? */
+  async function checkAccount(email: string) {
+    if (signedIn || invite || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) return;
+    try {
+      const res = await fetch("/api/events/account-check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const j = (await res.json()) as { found?: boolean; masked?: string };
+      setAccount(j.found && j.masked ? { masked: j.masked } : null);
+    } catch {
+      // Best effort: the server checks again on submit.
+    }
+  }
+  const signInHref = `/auth/sign-in?next=${encodeURIComponent(`/events/${slug}/register`)}`;
   function toggleChip(key: string, opt: string) {
     setAnswers((a) => {
       const cur = Array.isArray(a[key]) ? (a[key] as string[]) : [];
@@ -197,10 +216,21 @@ export function EventRegistrationForm({ slug, defaultCompany, defaultEmail, defa
             type={f.key === "email" ? "email" : f.key === "phone" ? "tel" : "text"}
             value={String(answers[f.key] ?? "")}
             onChange={(e) => set(f.key, e.target.value)}
+            onBlur={f.key === "email" ? (e) => void checkAccount(e.target.value) : undefined}
+            readOnly={f.key === "email" && Boolean(account)}
             className={`w-full rounded-md border px-3 py-2 text-sm ${prefill && f.required && !String(answers[f.key] ?? "").trim() ? "border-amber-300" : "border-[var(--border-subtle)]"}`}
           />
         )}
         {secondNote(f)}
+        {f.key === "email" && account ? (
+          <span className="mt-2 block rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2.5 text-sm text-indigo-900">
+            <b>We found your iCapOS account ({account.masked}).</b> Sign in to register with it. Your details fill in for you.
+            <span className="mt-2 flex flex-wrap gap-2">
+              <a href={signInHref} className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white">Sign in to register</a>
+              <button type="button" onClick={() => { setAccount(null); set("email", ""); }} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs">Use a different email</button>
+            </span>
+          </span>
+        ) : null}
       </label>
     );
   }
@@ -232,6 +262,10 @@ export function EventRegistrationForm({ slug, defaultCompany, defaultEmail, defa
         body: JSON.stringify({ ...(invite ? { eventIds: chosen } : {}), attendeeType: role, answers: { ...answers, sectors: sectorLabels, ...(role === "founder" ? { sector: sectorLabels[0] } : {}) }, interests }),
       });
       const json = await res.json();
+      if (res.status === 409 && json.accountExists && typeof json.masked === "string") {
+        setAccount({ masked: json.masked });
+        throw new Error("That email has an iCapOS account. Sign in to register with it.");
+      }
       if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Could not register.");
       if (Array.isArray(json.changes)) setChanges(json.changes as Change[]);
       if (Array.isArray(json.registered)) setRegisteredTitles((json.registered as { title: string }[]).map((r) => r.title));
