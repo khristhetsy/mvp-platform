@@ -5,6 +5,7 @@ import { ensureUserOnboarding } from "@/lib/onboarding/ensure-founder-setup";
 import { alertStaffNewCustomer, isFreshSignup } from "@/lib/notifications/new-customer-alerts";
 import { parseRequestedPlan } from "@/lib/subscriptions/plans";
 import { profileRoleFromPublicMetadata } from "@/lib/auth/signup-role";
+import { GOOGLE_STEP_PATH, shouldOfferGoogleStep } from "@/lib/onboarding/google-step";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
@@ -76,7 +77,9 @@ export async function GET(request: Request) {
 
       const redirectPath =
         next ||
-        (isNewProfile && profile.role === "founder"
+        (shouldOfferGoogleStep({ isNewProfile, role: profile.role, next })
+          ? GOOGLE_STEP_PATH
+          : isNewProfile && profile.role === "founder"
           ? "/founder/onboarding"
           : isNewProfile && profile.role === "investor"
             ? "/investor/onboarding"

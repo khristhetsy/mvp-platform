@@ -23,6 +23,7 @@ const ALLOWED_RETURN_PATHS = new Set([
   "/founder/inbox",
   "/investor/inbox",
   "/admin/inbox",
+  "/onboarding/google",
 ]);
 
 export async function GET(request: Request) {
