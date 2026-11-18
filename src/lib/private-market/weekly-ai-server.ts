@@ -11,7 +11,8 @@ import { agentFactSheet } from "@/lib/ir-agent/ai";
 import { getAgentById, getSourceTexts, getTaughtAnswers } from "@/lib/ir-agent/store";
 import { wiredFactSheet } from "@/lib/ir-agent/wired";
 import type { DigestMarket } from "./weekly-digest";
-import type { Audience } from "./weekly-email";
+import { trackedUrl } from "@/lib/ir-agent/slug";
+import type { Audience, EmailAgent } from "./weekly-email";
 import {
   DEFAULT_PERSONA, DEFAULT_WRITER_NAME, TARGET_LIMIT, WRITER_RULES, allowedFigures, checkOption, factOptions, numbersIn, parseOptions,
   rewriteTask, writeTask, type FactKey, type RewriteAction, type Target, type Tone,
@@ -26,6 +27,8 @@ export type WriterOption = {
   selectable: boolean;
   /** Founder and investor agents speak as their own company. */
   speaksAsCompany: boolean;
+  /** Tracked email link to the agent's page. Null unless the agent is live. */
+  emailUrl: string | null;
 };
 
 const kindLabel = (t: AgentType | null | undefined) => `${AGENT_TYPE_SPECS[t ?? DEFAULT_AGENT_TYPE].label} agent`;
@@ -34,17 +37,26 @@ const kindLabel = (t: AgentType | null | undefined) => `${AGENT_TYPE_SPECS[t ?? 
 export async function listWriters(): Promise<WriterOption[]> {
   const { data } = await serviceRoleClientUntyped()
     .from("ir_agents")
-    .select("id, company_name, status, agent_type, archived_at")
+    .select("id, company_name, company_slug, ending, status, agent_type, archived_at")
     .is("archived_at", null)
     .order("company_name");
-  return ((data ?? []) as Array<{ id: string; company_name: string; status: WriterOption["status"]; agent_type: AgentType | null }>).map((a) => ({
+  return ((data ?? []) as Array<{ id: string; company_name: string; company_slug: string; ending: string; status: WriterOption["status"]; agent_type: AgentType | null }>).map((a) => ({
     id: a.id,
     name: a.company_name,
     kind: kindLabel(a.agent_type),
     status: a.status,
     selectable: a.status === "live",
     speaksAsCompany: (a.agent_type ?? DEFAULT_AGENT_TYPE) === "founder" || a.agent_type === "investor",
+    emailUrl: a.status === "live" ? trackedUrl(a.company_slug, a.ending, "email") : null,
   }));
+}
+
+/** The agent the email's second button talks to. Null for the default writer, or when the agent is missing, archived or not live. */
+export async function resolveEmailAgent(agentId: string | null): Promise<EmailAgent | null> {
+  if (!agentId || agentId === "default") return null;
+  const agent = await getAgentById(agentId);
+  if (!agent || agent.status !== "live" || agent.archived_at) return null;
+  return { name: agent.company_name, url: trackedUrl(agent.company_slug, agent.ending, "email") };
 }
 
 export type Persona = { name: string; system: string };

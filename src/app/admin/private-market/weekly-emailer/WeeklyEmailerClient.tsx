@@ -83,8 +83,10 @@ export function WeeklyEmailerClient({ initial, lists, groupCounts, market, examp
 
   const preview = useMemo(() => {
     if (!market || !ex) return null;
-    return renderWeeklyEmail({ config: c, market, viewer: ex.viewer, links });
-  }, [c, market, ex, links]);
+    const w = writers.find((x) => x.id === c.agentId);
+    const withAgent: EmailLinks = w?.selectable && w.emailUrl ? { ...links, agent: { name: w.name, url: w.emailUrl } } : links;
+    return renderWeeklyEmail({ config: c, market, viewer: ex.viewer, links: withAgent });
+  }, [c, market, ex, links, writers]);
 
   const grouped = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -325,6 +327,8 @@ export function WeeklyEmailerClient({ initial, lists, groupCounts, market, examp
               facts={facts[aud]}
               styles={{ card, h, lab, inp, seg }}
               selection={sel}
+              agentId={c.agentId}
+              onAgentChange={(id) => patch({ agentId: id })}
               signOff={c.signOff}
               onSignOff={(name) => patch({ signOff: name })}
               onUse={(target: Target, text: string) => patch(target === "subject" ? { subject: text } : target === "preheader" ? { preheader: text } : { note: text.slice(0, 600) })}
