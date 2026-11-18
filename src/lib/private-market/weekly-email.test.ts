@@ -26,6 +26,26 @@ describe("merge fields", () => {
   });
 });
 
+describe("agent button", () => {
+  const agent = { name: "Credtent, Inc.", url: "https://icapos.com/credtent/invest?src=email" };
+  it("adds a Talk to button beside the board button when a live agent is selected", () => {
+    const r = renderWeeklyEmail({ config: defaultConfig("founder"), market, viewer: scored, links: { ...links, agent } });
+    expect(r.html).toContain("Talk to Credtent, Inc.");
+    expect(r.html).toContain('href="https://icapos.com/credtent/invest?src=email"');
+    expect(r.html).toContain("Open the Private Market board");
+    expect(r.text).toContain("Talk to Credtent, Inc.: https://icapos.com/credtent/invest?src=email");
+  });
+  it("shows no second button without an agent", () => {
+    const r = renderWeeklyEmail({ config: defaultConfig("founder"), market, viewer: scored, links });
+    expect(r.html).not.toContain("Talk to");
+    expect(r.text).not.toContain("Talk to");
+  });
+  it("escapes the agent name", () => {
+    const r = renderWeeklyEmail({ config: defaultConfig("founder"), market, viewer: scored, links: { ...links, agent: { name: "A <b>&", url: "https://icapos.com/a/invest?src=email" } } });
+    expect(r.html).toContain("Talk to A &lt;b&gt;&amp;");
+  });
+});
+
 describe("founder email", () => {
   const out = renderWeeklyEmail({ config: defaultConfig("founder"), market, viewer: scored, links });
   it("shows the founder's own rating, rank and the market", () => {

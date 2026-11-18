@@ -92,6 +92,8 @@ export type WeeklyEmailConfig = {
   signOff: string | null;
   /** One of the template editor theme presets. "navy" is the current weekly look. */
   themeId: string;
+  /** The live AI Agent the second button talks to. Null shows no second button. */
+  agentId: string | null;
 };
 
 export const DEFAULT_SUBJECT: Record<Version, string> = {
@@ -134,6 +136,7 @@ export function defaultConfig(version: Version): WeeklyEmailConfig {
     bannerStrip: true,
     signOff: null,
     themeId: DEFAULT_WEEKLY_THEME,
+    agentId: null,
   };
 }
 
@@ -166,8 +169,13 @@ export function testSubject(subject: string): string {
   return /^\[TEST\]/i.test(subject) ? subject : `[TEST] ${subject}`;
 }
 
+/** A live AI Agent the email can send the reader to: its name and tracked email link. */
+export type EmailAgent = { name: string; url: string };
+
 export type EmailLinks = {
   appUrl: string;
+  /** Adds the "Talk to" button beside the main one. Left out when no live agent is selected. */
+  agent?: EmailAgent | null;
   logoUrl: string;
   unsubscribeUrl: string;
   preferencesUrl: string;
@@ -199,6 +207,11 @@ function section(title: string, body: string): string {
 
 function button(href: string, label: string): string {
   return `<a href="${esc(href)}" style="display:inline-block;background:${BLUE};color:#ffffff;text-decoration:none;font:600 14px ${FONT};padding:12px 18px;border-radius:10px;">${esc(label)}</a>`;
+}
+
+/** The second button: same size as the first, outlined, so the board stays the main action. */
+function agentButton(href: string, label: string): string {
+  return `<a href="${esc(href)}" style="display:inline-block;background:#ffffff;color:${BLUE};border:2px solid ${BLUE};text-decoration:none;font:600 14px ${FONT};padding:10px 16px;border-radius:10px;">${esc(label)}</a>`;
 }
 
 function dataTable(head: string[], rows: string[][]): string {
@@ -342,6 +355,7 @@ export function renderWeeklyEmail(input: RenderInput): RenderedEmail {
   const subject = input.test ? testSubject(subject0) : subject0;
   const preheader = fillMerge(config.preheader, { rating: rating?.score ?? null, band: rating ? BAND_LABEL[rating.band] : null, approved: market.newlyApproved.count });
   const boardUrl = `${links.appUrl}/private-market`;
+  const agent = links.agent ?? null;
 
   const rows: string[] = [];
   const text: string[] = [subject, v === "monthly" && market.monthly ? market.monthly.range : market.range, ""];
@@ -413,8 +427,8 @@ export function renderWeeklyEmail(input: RenderInput): RenderedEmail {
 
   const buttonUrl = v === "intros" ? `${links.appUrl}/investor/opportunities` : boardUrl;
   const buttonNote = v === "intros" ? "Open your introduction requests and see where each one stands." : `See all ${market.approvedTotal} approved companies, filter by sector and open any one pager.`;
-  rows.push(`<tr><td align="center" style="padding:22px 28px;border-bottom:1px solid ${LINE};">${button(buttonUrl, config.buttonText || DEFAULT_BUTTON[v])}<div style="font:400 11px ${FONT};color:${MUT};margin-top:10px;">${esc(buttonNote)}</div></td></tr>`);
-  text.push(`${config.buttonText}: ${buttonUrl}`, "");
+  rows.push(`<tr><td align="center" style="padding:22px 28px;border-bottom:1px solid ${LINE};">${button(buttonUrl, config.buttonText || DEFAULT_BUTTON[v])}${agent ? `<span style="display:inline-block;width:8px;"></span>${agentButton(agent.url, `Talk to ${agent.name}`)}` : ""}<div style="font:400 11px ${FONT};color:${MUT};margin-top:10px;">${esc(buttonNote)}${agent ? ` Questions about the numbers? ${esc(agent.name)} can answer them.` : ""}</div></td></tr>`);
+  text.push(`${config.buttonText}: ${buttonUrl}`, ...(agent ? [`Talk to ${agent.name}: ${agent.url}`] : []), "");
 
   const why =
     viewer.marketOnly ? "You receive this because you are on an iCapOS mailing list." :

@@ -25,6 +25,9 @@ type Props = {
   styles: Styles;
   /** Characters of the note currently selected, and the selected words. */
   selection: { start: number; end: number; text: string };
+  /** The selected agent, kept in the email settings so the email button follows it. Null is the default writer. */
+  agentId: string | null;
+  onAgentChange: (id: string | null) => void;
   signOff: string | null;
   onSignOff: (name: string | null) => void;
   onUse: (target: Target, text: string) => void;
@@ -35,9 +38,9 @@ const TARGET_LABEL: Record<Target, string> = { subject: "Subject line", preheade
 const TONE_LABEL: Record<Tone, string> = { friendly: "Friendly", formal: "Formal", persuasive: "Persuasive" };
 const REWRITE_LABEL: Record<RewriteAction, string> = { formal: "Formal", friendly: "Friendly", persuasive: "Persuasive", shorten: "Shorten", expand: "Expand", polish: "Polish" };
 
-export function WeeklyAiWriter({ audience, writers, facts, styles, selection, signOff, onSignOff, onUse, onReplaceSelection }: Props) {
+export function WeeklyAiWriter({ audience, writers, facts, styles, selection, agentId, onAgentChange, signOff, onSignOff, onUse, onReplaceSelection }: Props) {
   const { card, h, lab, inp, seg } = styles;
-  const [writerId, setWriterId] = useState<string>("default");
+  const writerId = agentId ?? "default";
   const [target, setTarget] = useState<Target>("subject");
   const [tone, setTone] = useState<Tone>("friendly");
   const [extra, setExtra] = useState("");
@@ -114,7 +117,7 @@ export function WeeklyAiWriter({ audience, writers, facts, styles, selection, si
         {[{ id: "default", name: "iCapOS email writing assistant", sub: "Default · writes in the iCapOS voice from the facts you tick", badge: null as string | null, ok: true },
           ...writers.map((w) => ({ id: w.id, name: w.name, sub: w.selectable ? `${w.kind} · Live · uses its own profile and knowledge` : `${w.kind} · ${w.status === "paused" ? "Paused agents" : "Draft agents"} cannot write emails until they are live`, badge: w.status.toUpperCase(), ok: w.selectable }))].map((o) => (
           <label key={o.id} style={{ display: "flex", gap: 10, alignItems: "flex-start", border: `0.5px solid ${writerId === o.id ? "#1d4ed8" : "#e2e6ed"}`, borderRadius: 10, padding: "9px 12px", cursor: o.ok ? "pointer" : "not-allowed", background: writerId === o.id ? "#eef3ff" : "#fff", opacity: o.ok ? 1 : 0.55 }}>
-            <input type="radio" name="weekly-writer" disabled={!o.ok} checked={writerId === o.id} onChange={() => { setWriterId(o.id); setOptions([]); setErr(null); }} style={{ marginTop: 3 }} />
+            <input type="radio" name="weekly-writer" disabled={!o.ok} checked={writerId === o.id} onChange={() => { onAgentChange(o.id === "default" ? null : o.id); setOptions([]); setErr(null); }} style={{ marginTop: 3 }} />
             <span style={{ flex: 1 }}>
               <b style={{ display: "block", fontSize: 13 }}>{o.name}</b>
               <span style={{ display: "block", fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>{o.sub}</span>

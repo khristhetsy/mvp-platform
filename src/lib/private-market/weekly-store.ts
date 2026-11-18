@@ -16,12 +16,13 @@ import {
   type RepeatRule, type SequenceSchedule,
 } from "@/lib/marketing/sequence-schedule";
 import { validateScheduleInput, type ScheduleInput } from "@/lib/marketing/sequence-schedule-store";
-import { DEFAULT_WEEKLY_THEME, defaultConfig, isWeeklyThemeId, renderWeeklyEmail, testSubject, VERSION_LABEL, versionAudience, type Audience, type EmailLinks, type Version, type WeeklyEmailConfig } from "./weekly-email";
+import { DEFAULT_WEEKLY_THEME, defaultConfig, isWeeklyThemeId, renderWeeklyEmail, testSubject, VERSION_LABEL, versionAudience, type Audience, type EmailAgent, type EmailLinks, type Version, type WeeklyEmailConfig } from "./weekly-email";
+import { resolveEmailAgent } from "./weekly-ai-server";
 import { hasIntroActivity, nothingChanged, type DigestViewer } from "./weekly-digest";
 import { founderViewer, introActivity, investorViewer, loadWeeklyContext, marketOnlyViewer, type WeeklyContext } from "./weekly-data";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-const COLS = "audience, subject, preheader, note, button_text, sections, groups, list_ids, skip_if_unchanged, from_name, from_email, header_mode, banner_url, banner_strip, sign_off, theme_id, enabled, start_date, end_date, repeat, weekdays, send_time, max_per_run, reminder_minutes, unreviewed_action, reviewed_for, activated_at, last_run_for, run_sent, run_done, last_reminder_for";
+const COLS = "audience, subject, preheader, note, button_text, sections, groups, list_ids, skip_if_unchanged, from_name, from_email, header_mode, banner_url, banner_strip, sign_off, theme_id, agent_id, enabled, start_date, end_date, repeat, weekdays, send_time, max_per_run, reminder_minutes, unreviewed_action, reviewed_for, activated_at, last_run_for, run_sent, run_done, last_reminder_for";
 
 export type WeeklySchedule = Omit<SequenceSchedule, "sequence_id"> & { reviewed_for: string | null };
 export type WeeklyState = { config: WeeklyEmailConfig; schedule: WeeklySchedule; saved: boolean };
@@ -47,6 +48,7 @@ function fromRow(r: any): WeeklyState {
       headerMode: r.header_mode === "banner" ? "banner" : "std", bannerUrl: r.banner_url ?? null, bannerStrip: r.banner_strip !== false,
       signOff: r.sign_off?.trim() || null,
       themeId: isWeeklyThemeId(r.theme_id) ? r.theme_id : DEFAULT_WEEKLY_THEME,
+      agentId: typeof r.agent_id === "string" && r.agent_id ? r.agent_id : null,
     },
     schedule: {
       enabled: !!r.enabled, start_date: r.start_date ?? todayInPt(), end_date: r.end_date ?? null, repeat: r.repeat, weekdays: r.weekdays ?? [],
@@ -64,6 +66,8 @@ export async function getWeekly(audience: Version, now: Date = new Date()): Prom
 
 export type WeeklySaveInput = { config: WeeklyEmailConfig; schedule: Pick<WeeklySchedule, "enabled" | "start_date" | "end_date" | "repeat" | "weekdays" | "send_time" | "max_per_run" | "reminder_minutes" | "unreviewed_action"> };
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /** Null when valid, otherwise the sentence to show. */
 export function validateWeekly(i: WeeklySaveInput): string | null {
   const c = i.config;
@@ -75,6 +79,7 @@ export function validateWeekly(i: WeeklySaveInput): string | null {
   if (c.fromEmail && !isValidEmail(c.fromEmail)) return "The sender address isn't valid.";
   if ((c.signOff ?? "").length > 80) return "The sign off name is too long.";
   if (!isWeeklyThemeId(c.themeId)) return "Pick one of the theme presets.";
+  if (c.agentId !== null && c.agentId !== undefined && !UUID_RE.test(c.agentId)) return "Pick an agent from the list.";
   if (c.headerMode === "banner" && !/^https:\/\/[^\s"<>]+$/i.test(c.bannerUrl ?? "")) return "Choose a banner image, or switch back to Logo and title.";
   return validateScheduleInput(i.schedule as ScheduleInput);
 }
@@ -96,6 +101,7 @@ export async function saveWeekly(i: WeeklySaveInput, userId: string): Promise<vo
     header_mode: c.headerMode === "banner" ? "banner" : "std", banner_url: c.bannerUrl?.trim() || null, banner_strip: c.bannerStrip !== false,
     sign_off: c.signOff?.trim() || null,
     theme_id: c.themeId,
+    agent_id: c.agentId || null,
     enabled: s.enabled, start_date: s.start_date, end_date: s.end_date || null, repeat: s.repeat as RepeatRule,
     weekdays: [...new Set(s.weekdays)].filter((d) => d >= 0 && d <= 6).sort(), send_time: s.send_time,
     max_per_run: s.max_per_run, reminder_minutes: Math.max(0, Math.round(s.reminder_minutes)), unreviewed_action: s.unreviewed_action,
@@ -221,8 +227,8 @@ async function viewerFor(ctx: WeeklyContext, version: Version, r: WeeklyRecipien
 const skipRecipient = (version: Version, viewer: DigestViewer): boolean =>
   version === "intros" && !(viewer.kind === "investor" && !viewer.marketOnly && hasIntroActivity(viewer.intros));
 
-async function deliver(config: WeeklyEmailConfig, ctx: WeeklyContext, email: string, viewer: DigestViewer, test: boolean, triggeredBy: string | null) {
-  const links = linksFor(email);
+async function deliver(config: WeeklyEmailConfig, ctx: WeeklyContext, email: string, viewer: DigestViewer, test: boolean, triggeredBy: string | null, agent: EmailAgent | null) {
+  const links = { ...linksFor(email), agent };
   const out = renderWeeklyEmail({ config, market: ctx.market, viewer, links, test });
   const ok = await sendEmail({
     to: email, subject: out.subject, html: out.html, text: out.text,
@@ -249,12 +255,13 @@ export async function sendTestEmail(config: WeeklyEmailConfig, to: string[], exa
   if (bad.length) throw new Error(`Not a valid address: ${bad.join(", ")}`);
   const ctx = await loadWeeklyContext();
   if (!ctx) throw new Error("The market numbers could not be read, so no test was sent.");
+  const agent = await resolveEmailAgent(config.agentId);
   let sent = 0;
   const failed: string[] = [];
   for (const a of addresses) {
-    if (await deliver(config, ctx, a, example, true, userId)) sent++; else failed.push(a);
+    if (await deliver(config, ctx, a, example, true, userId, agent)) sent++; else failed.push(a);
   }
-  return { sent, failed, subject: testSubject(renderWeeklyEmail({ config, market: ctx.market, viewer: example, links: linksFor(addresses[0]) }).subject) };
+  return { sent, failed, subject: testSubject(renderWeeklyEmail({ config, market: ctx.market, viewer: example, links: { ...linksFor(addresses[0]), agent } }).subject) };
 }
 
 // ---------- Cron runner ----------
@@ -296,6 +303,7 @@ export async function runWeeklyEmails(now: Date = new Date(), budgetMs = 240_000
       continue;
     }
 
+    const agent = await resolveEmailAgent(st.config.agentId);
     const { recipients } = await resolveRecipients(st.config);
     const already = new Set<string>();
     for (const r of await pageAll<any>((a, b) => db.from("private_market_weekly_sends").select("email").eq("audience", audience).eq("run_for", run.toISOString()).order("email").range(a, b))) already.add(r.email);
@@ -313,7 +321,7 @@ export async function runWeeklyEmails(now: Date = new Date(), budgetMs = 240_000
           await db.from("private_market_weekly_sends").upsert({ audience, run_for: run.toISOString(), email: r.email, status: "skipped", error: "No introduction activity" }, { onConflict: "audience,run_for,email" });
           continue;
         }
-        ok = await deliver(st.config, ctx, r.email, viewer, false, st.updatedBy);
+        ok = await deliver(st.config, ctx, r.email, viewer, false, st.updatedBy, agent);
         if (!ok) error = "Send failed";
       }
       catch (e) { error = e instanceof Error ? e.message.slice(0, 200) : "Send failed"; }

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
+vi.mock("./weekly-ai-server", () => ({ resolveEmailAgent: async () => null }));
 
 import { defaultConfig } from "./weekly-email";
 import { validateWeekly, type WeeklySaveInput } from "./weekly-store";
@@ -24,6 +25,11 @@ describe("validateWeekly", () => {
   it("accepts a template theme preset and rejects an unknown one", () => {
     expect(validateWeekly(input({ themeId: "violet" }))).toBeNull();
     expect(validateWeekly(input({ themeId: "neon" }))).toMatch(/theme preset/i);
+  });
+  it("accepts no agent or an agent id, and rejects anything else", () => {
+    expect(validateWeekly(input({ agentId: null }))).toBeNull();
+    expect(validateWeekly(input({ agentId: "3f1c2a4e-9b7d-4c1a-8e55-0d2f6a7b9c10" }))).toBeNull();
+    expect(validateWeekly(input({ agentId: "not-an-id" }))).toMatch(/agent/i);
   });
   it("needs recipients and a subject", () => {
     expect(validateWeekly(input({ groups: [], listIds: [] }))).toMatch(/who to send to/i);
