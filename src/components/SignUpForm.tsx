@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/client";
+import { GOOGLE_STEP_PATH } from "@/lib/onboarding/google-step";
 import {
   SIGNUP_FOUNDER_PLANS,
   SIGNUP_INVESTOR_PLAN,
@@ -20,8 +21,9 @@ import { PAYMENT_PAGE, isPayFirstPlan } from "@/lib/billing/payment-gate";
 type SignupRole = "founder" | "investor";
 
 function signUpDestinationByRole(role: SignupRole, privateBetaMode: boolean) {
-  if (role === "founder") return "/founder/onboarding";
-  return privateBetaMode ? "/investor/onboarding" : "/investor/dashboard";
+  // The Connect Google step passes people on to their own onboarding.
+  if (role === "founder") return GOOGLE_STEP_PATH;
+  return privateBetaMode ? GOOGLE_STEP_PATH : "/investor/dashboard";
 }
 
 function defaultPlanForRole(role: SignupRole, showPremium: boolean): PlanType {
