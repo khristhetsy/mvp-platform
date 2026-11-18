@@ -486,6 +486,7 @@ export function NetworkingBoard({ board, events, eventId, gmail, founders = [] }
                     ) : p.status === "accepted" && p.founderReminders > 0 ? (
                       <span className="mt-0.5 block text-[10px] text-[var(--text-muted)]">
                         founder reminded {p.founderReminders}×
+                        {p.followUps > 0 ? ` · followed up ${p.followUps}×` : ""}
                       </span>
                     ) : p.followUps > 0 ? (
                       <span className="mt-0.5 block text-[10px] text-[var(--text-muted)]">
@@ -512,13 +513,15 @@ export function NetworkingBoard({ board, events, eventId, gmail, founders = [] }
         Everyone registered as an investor or a founder is matched — registration is the qualifier, not the
         networking opt-in. A pair can be two investors who share sectors, which is why the columns are sides rather
         than roles; a founder–investor pairing scores three points higher. The introduction goes <b>to the
-        investor, about the founder</b>; the founder follow-up chases them, twice at most, never after a decline
-        and never inside the last day before the event. <b>Preview send</b> shows who would be mailed and flags
+        investor, about the founder</b>. Only investors who accepted are followed up: one who has not answered or who
+        declined is never chased. <b>Preview send</b> shows who would be mailed and flags
         anyone who would get more than one.
         An investor who matched several founders gets one email listing them, each with its own accept button,
         rather than one email per match. Accepting no longer creates a room: the founder picks a slot inside the
         event and brings the meeting link, and the investor is emailed the time. An acceptance with no time on it
-        is chased — the founder, not the investor — twice at most, and never once the event has started. The
+        is chased in two ways, each twice at most. The founder is reminded to set a time, until the event starts. The
+        investor gets a follow-up with a link to book on the founder&apos;s scheduling page, and that keeps going after
+        the event ends. The founder can also send it from their own Follow up list. The
         investor can ask for another time; the founder still chooses it.
       </p>
     </div>

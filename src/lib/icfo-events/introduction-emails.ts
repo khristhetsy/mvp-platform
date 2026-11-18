@@ -252,6 +252,42 @@ export async function sendScheduleRequest(input: {
 }
 
 /**
+ * To an investor who accepted and has no time yet: book with the founder.
+ *
+ * Points at the founder's own scheduling page, which has no event window, so
+ * it still works after the event has ended.
+ */
+export async function sendBookingFollowUp(input: {
+  to: string;
+  investorName: string;
+  founderName: string;
+  founderCompany: string | null;
+  eventTitle: string;
+  when: string | null;
+  bookUrl: string;
+}): Promise<boolean> {
+  if (!input.to?.includes("@")) return false;
+  const who = input.founderCompany
+    ? `${esc(input.founderName)}, ${esc(input.founderCompany)}`
+    : esc(input.founderName);
+
+  const subject = `Book a time with ${input.founderName}`;
+  return sendEmail({
+    to: input.to,
+    subject,
+    html: shell(
+      para(`Hi ${esc(input.investorName.split(/\s+/)[0] || input.investorName)},`) +
+      para(`You said yes to meeting ${who} after ${esc(input.eventTitle)}. No time is booked yet.`) +
+      whenBlock({ eventTitle: input.eventTitle, when: input.when }) +
+      para("Pick a time that suits you on their calendar. You will both get a confirmation.") +
+      `<div>${button(input.bookUrl, "Book a time →", true)}</div>`,
+      { audience: "investor", subject, preheader: `Pick a time with ${input.founderName}.` },
+    ),
+    fromName: "iCapOS",
+  });
+}
+
+/**
  * To the investor: here is when, and here is the link.
  *
  * Sent when the founder confirms, and again if they change it — the second one

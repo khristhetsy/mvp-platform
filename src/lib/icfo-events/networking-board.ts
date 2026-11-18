@@ -14,6 +14,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { listIntroductions } from "@/lib/icfo-events/introductions-server";
+import { isNetworkingOptOut } from "@/lib/icfo-events/networking-choice-core";
 import { matchableFromAnswers, pairScore, sectorsOf, sharedSectors, type Matchable } from "@/lib/icfo-events/matching-rule";
 import {
   DEFAULT_PAIR_TYPES, PAIR_TYPES, matchableRoles, medianScore, pairTypeOf, sanitizeRules, scoreBands,
@@ -159,6 +160,8 @@ export async function loadNetworkingBoard(
       if (role !== "investor" && role !== "founder" && role !== "service" && role !== "sponsor") continue;
 
       const answers = (r.answers as Record<string, unknown> | null) ?? {};
+      // Said no to networking. Silence is not a no, so this is the only way out.
+      if (isNetworkingOptOut(answers)) continue;
       const profile = r.profiles as { full_name?: string | null } | null;
       const typed = typeof answers.name === "string" ? answers.name.trim() : "";
       const company = typeof answers.company === "string" ? answers.company.trim() : "";

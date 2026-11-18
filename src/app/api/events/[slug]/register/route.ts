@@ -14,6 +14,7 @@ import { upsertOptin } from "@/lib/icfo-events/networking";
 import { awardPoints } from "@/lib/icfo-events/gamification";
 import { applyRegistrationIntake, ATTENDEE_TYPES, type AttendeeType } from "@/lib/icfo-events/registration-intake";
 import { applyRegistrationEdits } from "@/lib/icfo-events/invitations/person";
+import { findAccountByEmail } from "@/lib/icfo-events/account-lookup";
 
 export const dynamic = "force-dynamic";
 
@@ -64,6 +65,15 @@ export async function POST(
       if (!attendeeType) return NextResponse.json({ error: "Choose how you are attending." }, { status: 400 });
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return NextResponse.json({ error: "A valid email is required." }, { status: 400 });
       if (name.length < 2) return NextResponse.json({ error: "Your name is required." }, { status: 400 });
+      // An email that already has an account registers with that login, so the
+      // registration is tied to the account instead of becoming a loose guest row.
+      const account = await findAccountByEmail(email).catch(() => null);
+      if (account) {
+        return NextResponse.json(
+          { error: "That email has an iCapOS account. Sign in to register with it.", accountExists: true, masked: account.masked },
+          { status: 409 },
+        );
+      }
       const { created } = await registerGuest(event.id, attendeeType, { ...answers, email, name });
       if (created) track("event_registered", { eventId: event.id, guest: true });
       return NextResponse.json({ guest: true, created }, { status: created ? 201 : 200 });

@@ -14,7 +14,7 @@ import {
   DEFAULT_PAIR_TYPES, sanitizeRules, type PairTypeKey,
 } from "@/lib/icfo-events/pair-types";
 import {
-  introVars, renderBody, renderTemplate, shouldFollowUp, shouldRemindFounder,
+  canFounderFollowUp, introVars, renderBody, renderTemplate, shouldFollowUp, shouldRemindFounder,
   type Introduction, type IntroductionStatus,
 } from "@/lib/icfo-events/introductions";
 
@@ -227,7 +227,8 @@ export type FollowUpPass = {
  * be explainable.
  */
 export async function runFollowUpPass(
-  send: (intro: IntroRow) => Promise<boolean>,
+  /** True when sent; false when the send failed; `{ skip }` to count it under that reason instead. */
+  send: (intro: IntroRow) => Promise<boolean | { skip: string }>,
   now: Date = new Date(),
 ): Promise<FollowUpPass> {
   const out: FollowUpPass = { considered: 0, sent: 0, skipped: {} };
@@ -235,20 +236,24 @@ export async function runFollowUpPass(
   const { data: events } = await raw()
     .from("events")
     .select("id, starts_at")
-    .in("status", ["published", "live"]);
+    .in("status", ["published", "live", "ended"]);
 
   for (const e of ((events ?? []) as Row[])) {
     const eventId = String(e.id);
-    const startsAt = (e.starts_at as string | null) ?? null;
 
     for (const intro of await listIntroductions(eventId)) {
       out.considered += 1;
-      const decision = shouldFollowUp(intro, { now, eventStartsAt: startsAt });
+      const decision = shouldFollowUp(intro, { now });
       if (!decision.send) {
         out.skipped[decision.reason] = (out.skipped[decision.reason] ?? 0) + 1;
         continue;
       }
-      if (!(await send(intro).catch(() => false))) {
+      const result = await send(intro).catch(() => false);
+      if (typeof result === "object") {
+        out.skipped[result.skip] = (out.skipped[result.skip] ?? 0) + 1;
+        continue;
+      }
+      if (!result) {
         out.skipped["send failed"] = (out.skipped["send failed"] ?? 0) + 1;
         continue;
       }
@@ -278,6 +283,8 @@ export function renderIntro(
 
 export type Contact = {
   registrationId: string;
+  /** The profile behind the registration, when there is one. Booking links use it. */
+  profileId: string | null;
   name: string;
   company: string | null;
   email: string | null;
@@ -306,7 +313,7 @@ export async function contactsFor(regIds: string[]): Promise<Map<string, Contact
 
   const { data, error } = await raw()
     .from("registrations")
-    .select("id, answers, profiles:attendee_id(full_name, email)")
+    .select("id, attendee_id, answers, profiles:attendee_id(full_name, email)")
     .in("id", ids);
   if (error) {
     console.error("[introductions] contacts failed:", error.message);
@@ -320,6 +327,7 @@ export async function contactsFor(regIds: string[]): Promise<Map<string, Contact
     const email = typed("email") || profile?.email?.trim() || "";
     out.set(String(r.id), {
       registrationId: String(r.id),
+      profileId: r.attendee_id ? String(r.attendee_id) : null,
       name: typed("name") || profile?.full_name?.trim() || "Attendee",
       company: typed("company") || null,
       email: email.includes("@") ? email : null,
@@ -563,4 +571,79 @@ export async function saveMatchingRules(
       updated_at: new Date().toISOString(),
     }, { onConflict: "event_id" });
   return error ? { ok: false, error: error.message } : { ok: true, saved };
+}
+
+// ---------------------------------------------------------------------------
+// The founder's own follow-up list
+// ---------------------------------------------------------------------------
+
+export type FounderFollowUpRow = {
+  introId: string;
+  investorName: string;
+  investorCompany: string | null;
+  followUps: number;
+  /** Set once a time is booked. */
+  scheduledAt: string | null;
+  canFollowUp: boolean;
+};
+
+export type FounderFollowUpEvent = {
+  eventId: string;
+  title: string;
+  startsAt: string | null;
+  rows: FounderFollowUpRow[];
+};
+
+/**
+ * Investors who accepted, grouped by event, for the founder who was matched.
+ *
+ * Only accepted introductions are listed: an investor who has not answered or
+ * who declined is not someone to follow up.
+ */
+export async function listFounderFollowUps(profileId: string): Promise<FounderFollowUpEvent[]> {
+  const { data: regs } = await raw().from("registrations").select("id, event_id").eq("attendee_id", profileId);
+  const regRows = (regs ?? []) as Row[];
+  if (!regRows.length) return [];
+
+  const { data: intros } = await raw()
+    .from("event_introductions")
+    .select("*")
+    .in("founder_reg_id", regRows.map((r) => String(r.id)))
+    .eq("status", "accepted");
+  const accepted = ((intros ?? []) as Row[]).map(mapIntro);
+  if (!accepted.length) return [];
+
+  const eventIds = [...new Set(accepted.map((i) => i.eventId))];
+  const [{ data: events }, contacts] = await Promise.all([
+    raw().from("events").select("id, title, starts_at").in("id", eventIds),
+    contactsFor(accepted.map((i) => i.investorRegId)),
+  ]);
+
+  const out: FounderFollowUpEvent[] = [];
+  for (const e of ((events ?? []) as Row[])) {
+    const id = String(e.id);
+    const rows = accepted
+      .filter((i) => i.eventId === id)
+      .map((i): FounderFollowUpRow => {
+        const c = contacts.get(i.investorRegId);
+        return {
+          introId: i.id,
+          investorName: c?.name ?? "Investor",
+          investorCompany: c?.company ?? null,
+          followUps: i.followUps,
+          scheduledAt: i.scheduledAt,
+          canFollowUp: canFounderFollowUp(i).send,
+        };
+      });
+    out.push({ eventId: id, title: String(e.title ?? "Event"), startsAt: (e.starts_at as string | null) ?? null, rows });
+  }
+  return out.sort((a, b) => String(b.startsAt ?? "").localeCompare(String(a.startsAt ?? "")));
+}
+
+/** Count a follow-up that has just been sent. */
+export async function recordFollowUp(id: string, count: number, now: Date = new Date()): Promise<void> {
+  await raw()
+    .from("event_introductions")
+    .update({ follow_ups: count + 1, last_follow_up_at: now.toISOString() })
+    .eq("id", id);
 }

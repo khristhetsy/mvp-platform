@@ -297,3 +297,15 @@ describe("a room big enough to matter", () => {
     expect(b.counts.matches).toBe(b.totalPairs);
   });
 });
+
+describe("someone who said no to networking", () => {
+  it("is left out of the pool, and everyone else stays", async () => {
+    regs.mockReturnValue([
+      person("a", "Ann", "founder", ["FinTech"]),
+      { ...person("b", "Ivy", "investor", ["FinTech"]), answers: { name: "Ivy", sectors: ["FinTech"], networking_opt_out: true } },
+      person("c", "Cal", "investor", ["FinTech"]),
+    ]);
+    const b = await loadNetworkingBoard("e1");
+    expect(b.pairs.map((p) => [p.a.name, p.b.name].sort().join("+"))).toEqual(["Ann+Cal"]);
+  });
+});
