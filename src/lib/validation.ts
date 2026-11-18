@@ -129,6 +129,7 @@ export const documentUploadSchema = z.object({
     "TEAM_BIOS",
     "LEGAL_DOCUMENTS",
     "LEGAL_DOCUMENT",
+    "IP_MOAT",
     "OTHER",
     // Legacy/extended types (kept for backward compatibility)
     "CORPORATE_DOCUMENTS",

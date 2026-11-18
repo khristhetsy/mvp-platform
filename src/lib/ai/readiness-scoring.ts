@@ -99,6 +99,7 @@ export const SCORED_DOCUMENT_TYPES = [
   "TEAM_BIOS",
   "CUSTOMER_CONTRACTS",
   "MARKET_RESEARCH",
+  "IP_MOAT",
 ] as const;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -1420,8 +1421,12 @@ function scoreIpMoat(
   const pitchSummary = getSummary("PITCH_DECK");
   const bizSummary = getSummary("BUSINESS_PLAN");
   const incorpSummary = getSummary("INCORPORATION_DOCS");
+  // The founder's own IP and Moat uploads (patents, trademarks, IP assignments,
+  // or a short note on defensibility) are read first-class, like the deck and plan.
+  const hasIpDocs = has("IP_MOAT");
+  const ipSummary = getSummary("IP_MOAT");
 
-  const combinedSummary = [pitchSummary, bizSummary, incorpSummary].filter(Boolean).join(" ");
+  const combinedSummary = [pitchSummary, bizSummary, incorpSummary, ipSummary].filter(Boolean).join(" ");
 
   // Determine if this is a software/digital industry where patents are not the norm
   const SOFTWARE_INDUSTRIES = ["saas", "software", "fintech", "edtech", "marketplace", "platform", "app", "digital", "insurtech", "proptech"];
@@ -1441,6 +1446,10 @@ function scoreIpMoat(
   const hasMoat = containsKeywords(combinedSummary, MOAT_ALL);
   const formalMatchCount = countKeywordMatches(combinedSummary, IP_FORMAL);
 
+  const OWNERSHIP_TERMS = [...IP_FORMAL, "assignment"];
+  const ownershipInIpDocs = hasIpDocs && containsKeywords(ipSummary, OWNERSHIP_TERMS);
+  const ownershipDocumented = ownershipInIpDocs || (hasIncorp && containsKeywords(incorpSummary, OWNERSHIP_TERMS));
+
   let ipPts: number;
   let moatPts: number;
   let formalPts: number;
@@ -1453,21 +1462,21 @@ function scoreIpMoat(
     ipMax = 6;
     ipPts = hasFormalIp ? 6 : hasSoftwareIp ? 5 : 0; // proprietary code = full credit
     moatPts = hasMoat ? 3 : hasSoftwareIp ? 1 : 0;
-    formalPts = hasIncorp && containsKeywords(incorpSummary, [...IP_FORMAL, "assignment"]) ? 1 : 0;
+    formalPts = ownershipDocumented ? 1 : 0;
   } else if (isPatentIndustry) {
     // Hardware/biotech: formal IP (patents) is critical, not optional
     ipLabel = "Patents / formal IP protection";
     ipMax = 6;
     ipPts = hasFormalIp ? (formalMatchCount >= 2 ? 6 : 5) : hasSoftwareIp ? 2 : 0;
     moatPts = hasMoat ? 3 : hasSoftwareIp ? 1 : 0;
-    formalPts = hasIncorp && containsKeywords(incorpSummary, [...IP_FORMAL, "assignment"]) ? 1 : 0;
+    formalPts = ownershipDocumented ? 1 : 0;
   } else {
     // Unknown industry: give credit for either formal IP or proprietary signals
     ipLabel = "IP evidence in documents";
     ipMax = 6;
     ipPts = hasFormalIp ? (formalMatchCount >= 2 ? 6 : 5) : hasSoftwareIp ? 4 : 0;
     moatPts = hasMoat ? 3 : hasSoftwareIp ? 1 : 0;
-    formalPts = hasIncorp && containsKeywords(incorpSummary, [...IP_FORMAL, "assignment"]) ? 1 : 0;
+    formalPts = ownershipDocumented ? 1 : 0;
   }
 
   const subScores: FactorSubScore[] = [
@@ -1477,29 +1486,32 @@ function scoreIpMoat(
   ];
 
   let pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 8);
-  if (!hasPitch && !hasBizPlan) pts = Math.min(pts, 1);
-  else if (!pitchSummary && !bizSummary) pts = Math.min(pts, 2);
+  if (!hasPitch && !hasBizPlan && !hasIpDocs) pts = Math.min(pts, 1);
+  else if (!pitchSummary && !bizSummary && !ipSummary) pts = Math.min(pts, 2);
+
+  // Evidence names the IP and Moat upload as its source when that is what matched.
+  const srcFor = (keywords: string[]) => (containsKeywords(ipSummary, keywords) ? "IP_MOAT" : "AI summaries");
 
   const evidence: FactorEvidence[] = [];
   if (isSoftwareIndustry) {
     // Software-specific evidence messaging
-    if (hasFormalIp) evidence.push({ icon: "pass", text: "Formal IP (patents/trademarks) referenced — strong for a software company", src: "AI summaries" });
-    else if (hasSoftwareIp) evidence.push({ icon: "pass", text: "Proprietary technology or data assets referenced — appropriate for SaaS/software", src: "AI summaries" });
+    if (hasFormalIp) evidence.push({ icon: "pass", text: "Formal IP (patents/trademarks) referenced — strong for a software company", src: srcFor(IP_FORMAL) });
+    else if (hasSoftwareIp) evidence.push({ icon: "pass", text: "Proprietary technology or data assets referenced — appropriate for SaaS/software", src: srcFor(IP_SOFTWARE) });
     else evidence.push({ icon: "warn", text: "No proprietary technology or data assets mentioned — describe what makes the software defensible", src: "AI summaries" });
   } else if (isPatentIndustry) {
-    if (hasFormalIp) evidence.push({ icon: "pass", text: "Patents or formal IP protection referenced — critical for this industry", src: "AI summaries" });
+    if (hasFormalIp) evidence.push({ icon: "pass", text: "Patents or formal IP protection referenced — critical for this industry", src: srcFor(IP_FORMAL) });
     else evidence.push({ icon: "fail", text: "No patents or formal IP found — expected for hardware/biotech/medtech companies", src: "AI summaries" });
   } else {
-    if (hasFormalIp) evidence.push({ icon: "pass", text: "Formal IP (patents, trademarks, trade secrets) referenced", src: "AI summaries" });
+    if (hasFormalIp) evidence.push({ icon: "pass", text: "Formal IP (patents, trademarks, trade secrets) referenced", src: srcFor(IP_FORMAL) });
     else if (hasSoftwareIp) evidence.push({ icon: "warn", text: "Proprietary technology mentioned — formal IP not confirmed", src: "AI summaries" });
     else evidence.push({ icon: "fail", text: "No IP or proprietary assets referenced in documents", src: "AI summaries" });
   }
 
-  if (hasMoat) evidence.push({ icon: "pass", text: "Competitive moat or defensibility strategy articulated", src: "AI summaries" });
+  if (hasMoat) evidence.push({ icon: "pass", text: "Competitive moat or defensibility strategy articulated", src: srcFor(MOAT_ALL) });
   else evidence.push({ icon: "warn", text: "No moat or defensibility strategy detected — investors will probe this", src: "AI summaries" });
 
-  if (formalPts) evidence.push({ icon: "pass", text: "IP ownership documented in legal/incorporation docs", src: "INCORPORATION_DOCS" });
-  if (!hasPitch && !hasBizPlan) evidence.push({ icon: "fail", text: "No documents uploaded to assess IP", src: "Document checklist" });
+  if (formalPts) evidence.push({ icon: "pass", text: "IP ownership documented in legal/incorporation docs", src: ownershipInIpDocs ? "IP_MOAT" : "INCORPORATION_DOCS" });
+  if (!hasPitch && !hasBizPlan && !hasIpDocs) evidence.push({ icon: "fail", text: "No documents uploaded to assess IP", src: "Document checklist" });
 
   const flags: FactorFlag[] = [];
   if (isSoftwareIndustry) {
@@ -1520,8 +1532,8 @@ function scoreIpMoat(
     : "";
 
   const aiSummary = (hasFormalIp || hasSoftwareIp)
-    ? `IP/moat context: ${(pitchSummary ?? bizSummary ?? "").slice(0, 250)}…${industryNote}`
-    : hasPitch || hasBizPlan
+    ? `IP/moat context: ${(ipSummary ?? pitchSummary ?? bizSummary ?? "").slice(0, 250)}…${industryNote}`
+    : hasPitch || hasBizPlan || hasIpDocs
     ? `Documents uploaded but no IP or moat signals found in summaries.${industryNote} Add defensibility context to your pitch.`
     : `No documents uploaded. IP and competitive moat cannot be assessed.${industryNote}`;
 
