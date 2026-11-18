@@ -13,6 +13,8 @@ import type { Recipient } from "@/lib/icfo-events/introductions";
 import { matchReason } from "@/lib/icfo-events/match-reason";
 import type { Role } from "@/lib/icfo-events/pair-types";
 import { renderEmail, type EmailAudience } from "@/lib/email/layout";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { GOOGLE_CONNECT_PATH, needsGoogleNudge } from "@/lib/icfo-events/google-nudge";
 
 const NAVY = "#0A1A40";
 const BLUE = "#1A6CE4";
@@ -528,6 +530,8 @@ export function founderStatusHtml(input: {
   declined: number;
   needsTime: (StatusPerson & { scheduleUrl: string })[];
   scheduled: (StatusPerson & { when: string })[];
+  /** Set only for a founder who has not connected Google. */
+  connectGoogleUrl?: string | null;
 }): string {
   const accepted = input.needsTime.length + input.scheduled.length;
   const subject = founderStatusSubject({ eventTitle: input.eventTitle, accepted, awaiting: input.awaiting });
@@ -556,6 +560,12 @@ export function founderStatusHtml(input: {
       para(`${input.awaiting} ${input.awaiting === 1 ? "investor has" : "investors have"} the introduction and ${input.awaiting === 1 ? "has" : "have"} not answered yet. We will email you as each one accepts.`)
     : "";
 
+  const googleBlock = input.connectGoogleUrl
+    ? statusLabel("ONE QUICK STEP", "#14703a") +
+      para("Connect your Google account so iCapOS can create a Google Meet link and a calendar event when an investor books time with you.") +
+      `<p style="margin:0 0 18px;">${button(input.connectGoogleUrl, "Connect Google →", true)}</p>`
+    : "";
+
   return shell(
     para(`Hi ${esc(first)},`) +
     para(`Here is where your introductions stand for <b>${esc(input.eventTitle)}</b>.`) +
@@ -565,10 +575,27 @@ export function founderStatusHtml(input: {
       statusTile(input.awaiting, "awaiting an answer") +
       statusTile(input.declined, "not now") +
     `</tr></table>` +
-    needsBlock + scheduledBlock + waitingBlock +
+    googleBlock + needsBlock + scheduledBlock + waitingBlock +
     para(`<span style="font-size:12px;color:#8a93a6;">Investors who say "not now" are counted, not named. Declining is silent on our side, and we keep it that way.</span>`),
     { audience: "founder", subject, preheader: `${accepted} accepted, ${input.awaiting} waiting for an answer.` },
   );
+}
+
+/** ilike treats % _ and \\ as wildcards; an email must match literally. */
+const literalEmail = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
+
+/** Best effort: a failed lookup means no nudge, never a failed status email. */
+async function founderNeedsGoogle(email: string): Promise<boolean> {
+  try {
+    const db = createServiceRoleClient();
+    const { data: profiles } = await db.from("profiles").select("id").ilike("email", literalEmail(email.trim().toLowerCase()));
+    const ids = (profiles ?? []).map((p) => String(p.id));
+    if (!ids.length) return false;
+    const { data: accounts } = await db.from("connected_accounts").select("user_id").eq("provider", "google").in("user_id", ids);
+    return needsGoogleNudge(ids, (accounts ?? []).map((a) => String(a.user_id)));
+  } catch {
+    return false;
+  }
 }
 
 /** One status email to one founder. False rather than a throw: one bad address must not stop the rest. */
@@ -584,9 +611,11 @@ export async function sendFounderStatus(input: {
 }): Promise<boolean> {
   if (!input.to?.includes("@")) return false;
   const accepted = input.needsTime.length + input.scheduled.length;
+  const base = (process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com").replace(/\/$/, "");
+  const connectGoogleUrl = (await founderNeedsGoogle(input.to)) ? `${base}${GOOGLE_CONNECT_PATH}` : null;
   return deliver({ via: "icapos" }, {
     to: input.to,
     subject: founderStatusSubject({ eventTitle: input.eventTitle, accepted, awaiting: input.awaiting }),
-    html: founderStatusHtml(input),
+    html: founderStatusHtml({ ...input, connectGoogleUrl }),
   });
 }
