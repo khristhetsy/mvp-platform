@@ -59,6 +59,11 @@ export type MatchPair = {
   founderReminders: number;
   /** The investor asked for a different slot and is waiting again. */
   rescheduleAsked: boolean;
+  /**
+   * Accepted, no time yet, and the founder registered without an account: the
+   * daily follow-up cannot reach them, so the board says why.
+   */
+  founderGuest: boolean;
   /** Which pairing produced this row, and so which message it would get. */
   pairType: PairTypeKey;
 };
@@ -278,6 +283,11 @@ export async function loadNetworkingBoard(
           meetingUrl: intro?.meetingUrl ?? null,
           founderReminders: intro?.founderReminders ?? 0,
           rescheduleAsked: Boolean(intro?.rescheduleRequestedAt),
+          founderGuest: (() => {
+            if (intro?.status !== "accepted" || intro.scheduledAt) return false;
+            const founder = a.role === "founder" ? a : b.role === "founder" ? b : null;
+            return founder ? !founder.profileId : false;
+          })(),
           pairType: type.key,
         });
       }
