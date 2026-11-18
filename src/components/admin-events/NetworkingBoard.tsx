@@ -483,10 +483,11 @@ export function NetworkingBoard({ board, events, eventId, gmail, founders = [] }
                       <span className="mt-0.5 block text-[10px] text-[var(--text-muted)]">
                         {slotLabel(p.scheduledAt)}{p.meetingUrl ? " · link set" : ""}
                       </span>
-                    ) : p.status === "accepted" && p.founderReminders > 0 ? (
+                    ) : p.status === "accepted" && (p.founderReminders > 0 || p.founderGuest) ? (
                       <span className="mt-0.5 block text-[10px] text-[var(--text-muted)]">
-                        founder reminded {p.founderReminders}×
+                        {p.founderReminders > 0 ? `founder reminded ${p.founderReminders}×` : "no founder reminder yet"}
                         {p.followUps > 0 ? ` · followed up ${p.followUps}×` : ""}
+                        {p.founderGuest ? " · no follow up: founder has no account" : ""}
                       </span>
                     ) : p.followUps > 0 ? (
                       <span className="mt-0.5 block text-[10px] text-[var(--text-muted)]">
