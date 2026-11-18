@@ -55,6 +55,8 @@ import { loadListingChecklist } from "@/lib/listing/listing-server";
 import { CoachedCourseStrip } from "@/components/coach/CoachedCourseStrip";
 import { loadCoachedCourseSummaries } from "@/lib/learning/coach/program-summary";
 import { EventNudgeCard } from "@/components/founder/EventNudgeCard";
+import { SocialConnectNudge } from "@/components/founder/SocialConnectNudge";
+import { loadShowConnectNudge } from "@/lib/social/connect-nudge";
 
 export const dynamic = "force-dynamic";
 
@@ -85,6 +87,8 @@ export default async function FounderDashboardPage() {
   const serviceSupabase = createServiceRoleClient();
   // Admin switch (Feature Controls, Pledged amounts). Off hides every pledge figure below.
   const pledgesOn = isFeatureEnabled(await loadFeatureFlags(supabase), "founder", "pledged");
+  // "Connect with investors" banner: paid founders with no connected social account (Feature Controls, Social Media nudge).
+  const showSocialNudge = await loadShowConnectNudge(profile.id);
   // Funding tile falls back to the business plan raise amount, like the public one-pager.
   const planRaiseAmount =
     company && !company.funding_amount
@@ -273,6 +277,8 @@ export default async function FounderDashboardPage() {
         <StageUnlockBanner />
 
         <EventNudgeCard />
+
+        {showSocialNudge ? <SocialConnectNudge /> : null}
 
         {coached.length ? (
           <div className="mb-4 space-y-2">
