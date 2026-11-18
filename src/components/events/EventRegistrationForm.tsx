@@ -80,7 +80,8 @@ export function EventRegistrationForm({ slug, defaultCompany, defaultEmail, defa
     const had = Array.isArray(known.sectors) ? (known.sectors as unknown[]).map(String) : [];
     return sectors.filter((s) => had.includes(s.label) || had.includes(s.slug)).map((s) => s.slug);
   });
-  const [chosen, setChosen] = useState<string[]>(() => invite?.events.filter((e) => !e.already).map((e) => e.id) ?? []);
+  // Nothing is pre-checked: people opt in to each event they want to attend.
+  const [chosen, setChosen] = useState<string[]>([]);
   const [changes, setChanges] = useState<Change[]>([]);
   const [registeredTitles, setRegisteredTitles] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
