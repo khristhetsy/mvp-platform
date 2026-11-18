@@ -4,7 +4,7 @@
 
 /**
  * Document types a founder may mark "Not applicable" — every required type plus
- * Other. Canonical codes (the checklist's own codes). Marking N/A completes the
+ * IP and Moat and Other. Canonical codes (the checklist's own codes). Marking N/A completes the
  * step; the Capital Readiness Rating engine still scores only real uploads.
  */
 export const NA_ALLOWED_TYPES = new Set([
@@ -14,6 +14,7 @@ export const NA_ALLOWED_TYPES = new Set([
   "CAP_TABLE",
   "TEAM_BIOS",
   "LEGAL_DOCUMENTS",
+  "IP_MOAT",
   "CORPORATE_DOCUMENTS",
   "CUSTOMER_CONTRACTS",
   "MARKET_RESEARCH",

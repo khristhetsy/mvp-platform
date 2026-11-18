@@ -97,6 +97,23 @@ describe("the move behind a factor", () => {
   });
 });
 
+describe("the IP and moat move", () => {
+  it("lands on the IP and Moat upload category with its guidance", () => {
+    const m = moveFor("ip_moat");
+    expect(m.href).toBe("/founder/documents?focus=IP_MOAT");
+    expect(m.hint).toContain("IP assignments");
+    expect(m.cta).toBe("Upload IP documents");
+  });
+
+  it("carries the guidance onto the ranked step", () => {
+    const steps = improvementSteps([
+      { key: "ip_moat", label: "IP", pts: 1, max: 6, dimension: "Cap table" },
+    ]);
+    expect(steps[0].href).toBe("/founder/documents?focus=IP_MOAT");
+    expect(steps[0].cta).toBe("Upload IP documents");
+  });
+});
+
 describe("projected score", () => {
   it("adds the listed gaps' recoverable points to the current score", () => {
     const steps = improvementSteps(GAPS);

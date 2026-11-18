@@ -170,9 +170,12 @@ export function CrrImprovement({
                   <p className="mt-1 text-[11.5px] leading-relaxed text-[var(--text-muted)]">
                     {s.why} Currently {Math.round(s.pts)} of {Math.round(s.max)}.
                   </p>
+                  {s.hint ? (
+                    <p className="mt-2 rounded-lg bg-blue-50 px-3 py-2 text-[11.5px] leading-relaxed text-blue-900">{s.hint}</p>
+                  ) : null}
                   <Link href={s.href}
                     className="mt-2 inline-block rounded-lg bg-[var(--blue)] px-3 py-1.5 text-xs font-semibold text-white">
-                    {s.action.split(" ")[0]} →
+                    {s.cta ?? s.action.split(" ")[0]} →
                   </Link>
                 </div>
               ))}

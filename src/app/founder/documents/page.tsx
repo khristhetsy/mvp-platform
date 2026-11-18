@@ -19,13 +19,18 @@ import { resolveActingFounderScope } from "@/lib/admin/act-on-behalf";
 
 // Human-readable label lookup — covers canonical codes + upload-API aliases
 const DOC_TYPE_LABEL_MAP: Record<string, string> = {};
-const _FOUNDER_DOCUMENT_TYPES_RAW: { label: string; value: string; aliases?: string[] }[] = [
+const _FOUNDER_DOCUMENT_TYPES_RAW: { label: string; value: string; aliases?: string[]; hint?: string }[] = [
   { label: "Pitch Deck", value: "PITCH_DECK" },
   { label: "Business Plan", value: "BUSINESS_PLAN" },
   { label: "Financials", value: "FINANCIALS", aliases: ["FINANCIAL_STATEMENTS"] },
   { label: "Cap Table", value: "CAP_TABLE" },
   { label: "Team Bios", value: "TEAM_BIOS" },
   { label: "Legal Document", value: "LEGAL_DOCUMENT", aliases: ["LEGAL_DOCUMENTS"] },
+  {
+    label: "IP and Moat",
+    value: "IP_MOAT",
+    hint: "Patents, trademarks, IP assignments or license agreements. No formal IP? Upload a short PDF on your proprietary technology, data, or what makes you hard to copy. This is what the IP and moat score reads.",
+  },
   { label: "Corporate Documents", value: "CORPORATE_DOCUMENTS" },
   { label: "Customer Contracts", value: "CUSTOMER_CONTRACTS" },
   { label: "Market Research", value: "MARKET_RESEARCH" },
@@ -40,9 +45,16 @@ for (const t of _FOUNDER_DOCUMENT_TYPES_RAW) {
   }
 }
 
-const FOUNDER_DOCUMENT_TYPES: { label: string; value: string; aliases?: string[] }[] = _FOUNDER_DOCUMENT_TYPES_RAW;
+const FOUNDER_DOCUMENT_TYPES: { label: string; value: string; aliases?: string[]; hint?: string }[] = _FOUNDER_DOCUMENT_TYPES_RAW;
 
-export default async function DocumentUploadPage() {
+export default async function DocumentUploadPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ focus?: string | string[] }>;
+}) {
+  // ?focus=IP_MOAT opens that category, so a link from the readiness wizard lands on the right row.
+  const focusParam = (await searchParams)?.focus;
+  const focusType = (Array.isArray(focusParam) ? focusParam[0] : focusParam)?.toUpperCase();
   // Act-on-behalf: permissioned staff render as the founder; otherwise normal gate.
   const acting = await resolveActingFounderScope();
   const profile = acting ? acting.profile : await requireRole(["founder"]);
@@ -135,7 +147,8 @@ export default async function DocumentUploadPage() {
             <DocumentUploadForm
               companyId={company.id}
               companyName={company.company_name}
-              documentTypes={FOUNDER_DOCUMENT_TYPES.map(({ label, value }) => ({ label, value }))}
+              documentTypes={FOUNDER_DOCUMENT_TYPES.map(({ label, value, hint }) => ({ label, value, hint }))}
+              focusType={focusType}
               filesByType={filesByType}
               notApplicableTypes={notApplicableTypes}
               notApplicableEntries={notApplicableEntries}

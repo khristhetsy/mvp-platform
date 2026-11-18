@@ -64,3 +64,40 @@ describe("every document of a type is read", () => {
     expect(r.documentsUsed).toBe(2);
   });
 });
+
+describe("the IP and Moat upload feeds the IP and moat factor", () => {
+  const ipDoc = {
+    type: "IP_MOAT",
+    summary: "Granted US patent for the scoring method, two registered trademarks, and a signed IP assignment from all founders. Switching costs and data advantage create a moat.",
+  };
+
+  it("lifts ip_moat above what a bare deck earns", async () => {
+    const deck = { type: "PITCH_DECK", summary: "Pitch deck for a B2B product." };
+    const a = await score([deck]);
+    const b = await score([deck, ipDoc]);
+    expect(b.factorScores.ip_moat.pts).toBeGreaterThan(a.factorScores.ip_moat.pts);
+  });
+
+  it("is read even when there is no deck or plan, instead of capping at 1", async () => {
+    const r = await score([ipDoc]);
+    expect(r.factorScores.ip_moat.pts).toBeGreaterThan(2);
+  });
+
+  it("credits ownership documented in IP and Moat files, and names them as the source", async () => {
+    const r = await score([ipDoc]);
+    const sub = r.factorScores.ip_moat.subScores?.find((x) => x.label === "IP / ownership documented legally");
+    expect(sub?.pts).toBe(1);
+    expect(r.factorScores.ip_moat.evidence.some((e) => e.src === "IP_MOAT")).toBe(true);
+  });
+
+  it("counts toward documentsUsed", async () => {
+    const r = await score([ipDoc]);
+    expect(r.documentsUsed).toBe(1);
+  });
+
+  it("a patent filed under Legal Documents is still not read by this factor", async () => {
+    const legal = { type: "LEGAL_DOCUMENTS", summary: "Granted US patent for the scoring method." };
+    const r = await score([legal]);
+    expect(r.factorScores.ip_moat.pts).toBeLessThanOrEqual(1);
+  });
+});

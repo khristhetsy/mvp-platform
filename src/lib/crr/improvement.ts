@@ -33,9 +33,13 @@ export type ImprovementStep = FactorGap & {
   href: string;
   /** Why this one is first. */
   why: string;
+  /** Optional guidance on what to upload or write, shown under the explanation. */
+  hint?: string;
+  /** Optional button label, when the first word of the action does not read well. */
+  cta?: string;
 };
 
-type Move = { action: string; href: string };
+type Move = { action: string; href: string; hint?: string; cta?: string };
 
 /**
  * The move behind each factor.
@@ -50,7 +54,12 @@ const MOVES: Record<FactorKey, Move> = {
   market_evidence:    { action: "Upload market research", href: "/founder/readiness/data-room" },
   unit_economics:     { action: "Add your unit economics", href: "/founder/financial-model" },
   governance_legal:   { action: "Upload incorporation and governance documents", href: "/founder/readiness/data-room" },
-  ip_moat:            { action: "Document your IP and moat", href: "/founder/readiness/data-room" },
+  ip_moat: {
+    action: "Document your IP and moat",
+    href: "/founder/documents?focus=IP_MOAT",
+    hint: "Upload your patents, trademarks or IP assignments under IP and Moat. If you have none, upload a short PDF describing your proprietary technology and what makes you hard to copy.",
+    cta: "Upload IP documents",
+  },
   burn_runway:        { action: "State your burn rate and runway", href: "/founder/financial-model" },
   exit_strategy:      { action: "Set out your exit strategy", href: "/founder/business-plan" },
   pitch_quality:      { action: "Improve your pitch deck", href: "/founder/pitch-deck" },

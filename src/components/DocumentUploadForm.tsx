@@ -22,7 +22,9 @@ export type CategoryFile = { id: string; fileName: string; label: string | null;
 type Props = {
   companyId: string;
   companyName: string;
-  documentTypes: { label: string; value: string }[];
+  documentTypes: { label: string; value: string; hint?: string }[];
+  /** Category to open and highlight on arrival (from ?focus=). */
+  focusType?: string;
   /** Active (non-archived) files per UI type value, newest first. */
   filesByType?: Record<string, CategoryFile[] | undefined>;
   /** Canonical document-type codes currently flagged "Not applicable". */
@@ -51,6 +53,7 @@ function guessType(name: string, types: { value: string }[]): string | null {
   const rules: Array<[RegExp, string]> = [
     [/deck|pitch/, "PITCH_DECK"], [/business\s*plan|bplan/, "BUSINESS_PLAN"], [/cap\s*table|captable/, "CAP_TABLE"],
     [/p&l|pnl|balance|cash|financ|budget|forecast|statement|bank/, "FINANCIALS"], [/team|bio|resume|cv\b/, "TEAM_BIOS"],
+    [/patent|trademark|moat|(^|[^a-z])ip([^a-z]|$)/, "IP_MOAT"],
     [/contract|msa|agreement|loi|po\b|purchase order|sow/, "CUSTOMER_CONTRACTS"], [/incorporat|bylaw|board|minutes|resolution|consent/, "CORPORATE_DOCUMENTS"],
     [/legal|ip\b|patent|trademark|nda|license|assignment/, "LEGAL_DOCUMENT"], [/market|research|tam|survey|competit/, "MARKET_RESEARCH"],
   ];
@@ -69,13 +72,17 @@ function toMessage(status: number, body: unknown) {
 
 type Pending = { files: File[]; type: string; label: string; replaceId: string | null; replaceName: string | null };
 
-export function DocumentUploadForm({ companyId, companyName, documentTypes, filesByType = {}, notApplicableTypes = [], notApplicableEntries = {}, maxUploadBytes, maxPages = 0 }: Props) {
+export function DocumentUploadForm({ companyId, companyName, documentTypes, focusType, filesByType = {}, notApplicableTypes = [], notApplicableEntries = {}, maxUploadBytes, maxPages = 0 }: Props) {
   const t = useTranslations("sharedCmp");
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement | null>(null);
   const [pending, setPending] = useState<Pending | null>(null);
   const [wantType, setWantType] = useState<{ type: string; replaceId: string | null; replaceName: string | null } | null>(null);
-  const [open, setOpen] = useState<Set<string>>(() => new Set(documentTypes.filter((d) => (filesByType[d.value.toUpperCase()] ?? []).length > 0).slice(0, 1).map((d) => d.value)));
+  const [open, setOpen] = useState<Set<string>>(() => {
+    const focused = documentTypes.find((d) => d.value.toUpperCase() === focusType);
+    if (focused) return new Set([focused.value]);
+    return new Set(documentTypes.filter((d) => (filesByType[d.value.toUpperCase()] ?? []).length > 0).slice(0, 1).map((d) => d.value));
+  });
   const [progress, setProgress] = useState<{ done: number; total: number; pct: number } | null>(null);
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -195,7 +202,7 @@ export function DocumentUploadForm({ companyId, companyName, documentTypes, file
           const drafting = naDraft?.type === type.value;
           const isOpen = open.has(type.value);
           return (
-            <div key={type.value} className={`rounded-xl border ${isNa ? "border-slate-200 bg-slate-50" : "border-slate-300 bg-white"}`}>
+            <div key={type.value} className={`rounded-xl border ${isNa ? "border-slate-200 bg-slate-50" : type.value.toUpperCase() === focusType ? "border-2 border-[var(--blue)] bg-blue-50/40" : "border-slate-300 bg-white"}`}>
               <div className="flex items-center gap-3 px-4 py-3 text-sm">
                 <button type="button" onClick={() => toggleOpen(type.value)} className="flex flex-1 items-center gap-2 text-left font-medium text-slate-900" aria-expanded={isOpen}>
                   <span className={`text-slate-400 transition-transform ${isOpen ? "rotate-90" : ""}`}>›</span>
@@ -232,6 +239,7 @@ export function DocumentUploadForm({ companyId, companyName, documentTypes, file
               ) : null}
               {isOpen && !isNa ? (
                 <div className="border-t border-slate-100 px-4 py-2 pl-9">
+                  {type.hint ? <p className="mt-1 rounded-lg bg-blue-50 px-3 py-2 text-xs leading-5 text-blue-900">{type.hint}</p> : null}
                   {files.length === 0 ? <p className="py-2 text-xs text-slate-400">No files yet.</p> : files.map((f) => (
                     <div key={f.id} className="flex items-center gap-3 border-b border-slate-50 py-2 text-sm last:border-b-0">
                       <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-red-50 text-[9px] font-bold text-red-700">PDF</span>

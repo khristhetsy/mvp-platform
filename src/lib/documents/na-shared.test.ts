@@ -8,6 +8,11 @@ describe("N/A shared rules", () => {
     }
   });
 
+  it("allows N/A on IP and Moat", () => {
+    expect(NA_ALLOWED_TYPES.has("IP_MOAT")).toBe(true);
+    expect(normalizeNaType("ip_moat")).toBe("IP_MOAT");
+  });
+
   it("normalizes UI and upload values to checklist codes", () => {
     expect(normalizeNaType("legal_document")).toBe("LEGAL_DOCUMENTS");
     expect(normalizeNaType("FINANCIALS")).toBe("FINANCIAL_MODEL");
