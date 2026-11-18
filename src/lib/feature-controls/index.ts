@@ -70,6 +70,8 @@ export const FEATURES: FeatureDef[] = [
   { key: "pledged", label: "Pledged amounts", group: "Fundraising & market", hrefs: {}, audiences: ["founder", "investor", "admin"] },
   // In-page feature, no nav href. Off hides Facebook and LinkedIn groups from the Social Media Compose "Post to" list.
   { key: "group_share", label: "Social Media: Group share", group: "Fundraising & market", hrefs: {}, audiences: ["admin"] },
+  // In-page feature, no nav href. Off hides the founder home banner and stops the weekly email that asks paid founders to connect with investors.
+  { key: "social_nudge", label: "Social Media: Connect with investors nudge", group: "Fundraising & market", hrefs: {}, audiences: ["founder"] },
 
   // ── Readiness & documents ──────────────────────────────────────────────
   { key: "readiness", label: "Readiness", group: "Readiness & documents", hrefs: { founder: ["/founder/readiness", "/founder/readiness/wizard", "/founder/readiness/diligence", "/founder/readiness/documents", "/founder/report"] } },

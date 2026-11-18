@@ -26877,6 +26877,8 @@ export type Database = {
           email_signature: string | null
           profile_id: string
           show_tips: boolean
+          social_nudge_dismissals: number
+          social_nudge_snoozed_until: string | null
           tips_dismissed_on: string | null
           updated_at: string
         }
@@ -26886,6 +26888,8 @@ export type Database = {
           email_signature?: string | null
           profile_id: string
           show_tips?: boolean
+          social_nudge_dismissals?: number
+          social_nudge_snoozed_until?: string | null
           tips_dismissed_on?: string | null
           updated_at?: string
         }
@@ -26895,6 +26899,8 @@ export type Database = {
           email_signature?: string | null
           profile_id?: string
           show_tips?: boolean
+          social_nudge_dismissals?: number
+          social_nudge_snoozed_until?: string | null
           tips_dismissed_on?: string | null
           updated_at?: string
         }

@@ -12,6 +12,7 @@ import { nudgeStalledJourneyFounders } from "@/lib/notifications/founder-nudges"
 import { runStageGateReminderPass } from "@/lib/notifications/stage-gate-reminders";
 import { runManualOutreachReminderPass } from "@/lib/notifications/manual-outreach-reminders";
 import { runCoachReminderPass } from "@/lib/learning/coach/reminders-pass";
+import { runSocialConnectNudgePass } from "@/lib/notifications/social-connect-nudge";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -45,8 +46,10 @@ async function handle(request: Request) {
   const manualOutreachReminders = await safe("manual_outreach_reminders", runManualOutreachReminderPass);
   // AI IR Coach: does nothing until an admin enables the coach for a course and founders are enrolled.
   const coachReminders = await safe("coach_reminders", () => runCoachReminderPass());
+  // Weekly "Connect with investors" reminder for paid founders with no connected social account. Off with the Social Media nudge switch.
+  const socialConnectNudge = await safe("social_connect_nudge", runSocialConnectNudgePass);
 
-  return NextResponse.json({ ok: true, dataRoomReminders, journeyNudges, gateReminders, manualOutreachReminders, coachReminders });
+  return NextResponse.json({ ok: true, dataRoomReminders, journeyNudges, gateReminders, manualOutreachReminders, coachReminders, socialConnectNudge });
 }
 
 async function scheduledGET(request: Request) {
