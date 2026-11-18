@@ -10,6 +10,7 @@ import { loadNetworkingBoard, type NetworkingBoard as Board } from "@/lib/icfo-e
 import { DEFAULT_PAIR_TYPES } from "@/lib/icfo-events/pair-types";
 import { NetworkingBoard } from "@/components/admin-events/NetworkingBoard";
 import { listTemplates } from "@/lib/icfo-events/introductions-server";
+import { loadFounderPanel } from "@/lib/icfo-events/founder-panel";
 import { IntroTemplatesEditor } from "@/components/admin-events/IntroTemplatesEditor";
 import { MatchingRulesEditor } from "@/components/admin-events/MatchingRulesEditor";
 import { MatchStrength } from "@/components/admin-events/MatchStrength";
@@ -55,6 +56,9 @@ export default async function NetworkingMatchingPage({
   };
   const board = selected ? await loadNetworkingBoard(selected) : empty;
   const templates = await listTemplates().catch(() => []);
+  const founders = selected
+    ? await loadFounderPanel(selected, events.find((e) => e.id === selected)?.title ?? "").catch(() => [])
+    : [];
 
   // Where a test may go: the signed-in staff address, plus one alternate from
   // the environment for checking how another mail client renders it. Neither
@@ -120,6 +124,7 @@ export default async function NetworkingMatchingPage({
                     eventId={selected ?? ""}
                     events={events.map((e) => ({ id: e.id, title: e.title }))}
                     gmail={{ available: gmail.available, address: gmail.address }}
+                    founders={founders}
                   />
                 </div>
               ) : null}
