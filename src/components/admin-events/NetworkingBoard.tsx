@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { MatchPair, NetworkingBoard as Board } from "@/lib/icfo-events/networking-board";
+import { formatEmailedAt, type FounderPanelRow } from "@/lib/icfo-events/founder-status";
 
 const I = "rounded-md border border-[var(--border-subtle)] px-2.5 py-1.5 text-xs";
 
@@ -59,8 +60,10 @@ function Who({ side }: Readonly<{ side: MatchPair["a"] }>) {
  * the whole set is already on the page, so a round-trip per keystroke would
  * buy nothing.
  */
-export function NetworkingBoard({ board, events, eventId, gmail }: Readonly<{
+export function NetworkingBoard({ board, events, eventId, gmail, founders = [] }: Readonly<{
   board: Board;
+  /** One row per presenter, with when they were last emailed. */
+  founders?: FounderPanelRow[];
   events: { id: string; title: string }[];
   eventId: string;
   /** Offered as a sender only when it can actually send. */
@@ -77,6 +80,8 @@ export function NetworkingBoard({ board, events, eventId, gmail }: Readonly<{
   const [msg, setMsg] = useState<string | null>(null);
   // The founder update can only be sent after it has been previewed.
   const [founderReady, setFounderReady] = useState(false);
+  // Shown in the panel straight after a send, until the page is next loaded.
+  const [justEmailed, setJustEmailed] = useState<string | null>(null);
 
   // Only a pair with nobody introduced yet can be introduced.
   const selectable = (p: MatchPair) => p.status === "none";
@@ -120,6 +125,7 @@ export function NetworkingBoard({ board, events, eventId, gmail }: Readonly<{
         (Number(json.failed ?? 0) ? `, ${json.failed} failed` : "") + ".",
       );
       setFounderReady(false);
+      if (Number(json.emailed ?? 0) > 0) setJustEmailed(new Date().toISOString());
     } catch {
       setMsg("Network error. Please try again.");
     } finally {
@@ -238,6 +244,60 @@ export function NetworkingBoard({ board, events, eventId, gmail }: Readonly<{
         ) : null}
       </div>
 
+      {founders.length > 0 ? (
+        <div className="overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-white">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border-subtle)] px-3.5 py-2.5">
+            <div>
+              <div className="text-[13px] font-semibold text-[var(--navy)]">Presenters</div>
+              <div className="text-[11.5px] text-[var(--text-muted)]">
+                Where each presenter stands, and whether they have been told.
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button type="button" disabled={busy} onClick={() => void emailFounders(true)}
+                className="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] disabled:opacity-50">
+                Preview founder update
+              </button>
+              {founderReady ? (
+                <button type="button" disabled={busy} onClick={() => void emailFounders(false)}
+                  className="rounded-md bg-[var(--navy)] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50">
+                  Email founders their status
+                </button>
+              ) : null}
+            </div>
+          </div>
+          <table className="w-full text-left text-[12.5px]">
+            <thead>
+              <tr className="text-[11px] uppercase text-[var(--text-muted)]">
+                <th className="px-3.5 py-2 font-medium">Presenter</th>
+                <th className="py-2 font-medium">Introduced</th>
+                <th className="py-2 font-medium">Accepted</th>
+                <th className="py-2 font-medium">Waiting</th>
+                <th className="py-2 font-medium">Not now</th>
+                <th className="py-2 font-medium">Time set</th>
+                <th className="py-2 pr-3.5 font-medium">Last emailed</th>
+              </tr>
+            </thead>
+            <tbody>
+              {founders.map((f) => (
+                <tr key={f.name} className="border-t border-[var(--border-subtle)]">
+                  <td className="px-3.5 py-2.5 font-semibold text-[var(--navy)]">{f.name}</td>
+                  <td className="py-2.5">{f.introduced}</td>
+                  <td className="py-2.5 font-semibold text-emerald-700">{f.accepted}</td>
+                  <td className="py-2.5">{f.awaiting}</td>
+                  <td className="py-2.5">{f.declined}</td>
+                  <td className="py-2.5">{f.timeSet} of {f.accepted}</td>
+                  <td className="py-2.5 pr-3.5 text-[var(--text-muted)]">{formatEmailedAt(justEmailed ?? f.lastEmailedAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="border-t border-[var(--border-subtle)] px-3.5 py-2 text-[11.5px] text-[var(--text-muted)]">
+            Last emailed is the last status email staff sent, not the automatic pick-a-time emails.
+          </div>
+        </div>
+      ) : null}
+
       <div className="overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-white">
         <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border-subtle)] px-3.5 py-2.5">
           <select
@@ -257,16 +317,6 @@ export function NetworkingBoard({ board, events, eventId, gmail }: Readonly<{
             <option value="scheduled">Scheduled</option>
             <option value="declined">Declined</option>
           </select>
-          <button type="button" disabled={busy} onClick={() => void emailFounders(true)}
-            className="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] disabled:opacity-50">
-            Preview founder update
-          </button>
-          {founderReady ? (
-            <button type="button" disabled={busy} onClick={() => void emailFounders(false)}
-              className="rounded-md bg-[var(--navy)] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50">
-              Email founders their status
-            </button>
-          ) : null}
           {selectedCount > 0 ? (
             <>
               <button type="button" disabled={busy} onClick={() => void send(true)}

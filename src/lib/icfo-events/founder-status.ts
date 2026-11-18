@@ -43,3 +43,24 @@ export function summarizeByFounder(rows: StatusInput[]): Map<string, FounderStat
 
 /** Everyone who said yes, with or without a time. */
 export const acceptedCount = (s: FounderStatus) => s.needsTime.length + s.scheduled.length;
+
+/** One presenter's row in the admin panel. */
+export type FounderPanelRow = {
+  name: string;
+  introduced: number;
+  accepted: number;
+  awaiting: number;
+  declined: number;
+  /** Accepted investors the presenter has booked a time with. */
+  timeSet: number;
+  /** When staff last emailed this presenter their status. Null: never. */
+  lastEmailedAt: string | null;
+};
+
+/** Fixed zone and locale, so the server and the browser print the same text. */
+export function formatEmailedAt(iso: string | null): string {
+  if (!iso) return "Never";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "Never";
+  return `${d.toLocaleString("en-US", { timeZone: "UTC", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} UTC`;
+}
