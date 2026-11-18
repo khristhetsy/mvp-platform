@@ -7,6 +7,7 @@ import {
   type Organization,
   type OrgType,
 } from "@/lib/organizations/organizations";
+import { OpenAsFounderButton } from "@/components/admin/OpenAsFounderButton";
 
 const BILLING_STYLE: Record<string, string> = {
   active: "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -20,8 +21,21 @@ function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-export function AdminAccountsClient({ initialOrgs, canManage }: { initialOrgs: Organization[]; canManage: boolean }) {
+type FounderLink = { id: string; name: string };
+
+export function AdminAccountsClient({
+  initialOrgs,
+  canManage,
+  founders: initialFounders,
+  canOpenAs,
+}: {
+  initialOrgs: Organization[];
+  canManage: boolean;
+  founders: Record<string, FounderLink>;
+  canOpenAs: boolean;
+}) {
   const [orgs, setOrgs] = useState<Organization[]>(initialOrgs);
+  const [founders, setFounders] = useState<Record<string, FounderLink>>(initialFounders);
   const [typeFilter, setTypeFilter] = useState<"all" | OrgType>("all");
   const [showCreate, setShowCreate] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -49,13 +63,39 @@ export function AdminAccountsClient({ initialOrgs, canManage }: { initialOrgs: O
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type: cType, name: cName.trim(), purpose: cPurpose, tier: cType === "founder" ? cTier : undefined }),
       });
-      const d = (await res.json().catch(() => ({}))) as { organization?: Organization; error?: string };
+      const d = (await res.json().catch(() => ({}))) as {
+        organization?: Organization;
+        error?: string;
+        founderId?: string | null;
+        founderName?: string | null;
+        provisionError?: string | null;
+      };
       if (!res.ok || !d.organization) { setError(d.error ?? "Could not create account."); return; }
       setOrgs((prev) => [d.organization!, ...prev]);
+      if (d.founderId) {
+        setFounders((prev) => ({ ...prev, [d.organization!.id]: { id: d.founderId!, name: d.founderName ?? d.organization!.name } }));
+      }
+      if (d.provisionError) setError(`Account created, but the founder was not set up: ${d.provisionError}`);
       setShowCreate(false);
       setCName("");
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function setUpFounder(org: Organization) {
+    setBusyId(org.id);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/accounts/${org.id}/provision`, { method: "POST" });
+      const d = (await res.json().catch(() => ({}))) as { founderId?: string; founderName?: string; error?: string };
+      if (res.ok && d.founderId) {
+        setFounders((prev) => ({ ...prev, [org.id]: { id: d.founderId!, name: d.founderName ?? org.name } }));
+      } else {
+        setError(d.error ?? "Could not set up the founder.");
+      }
+    } finally {
+      setBusyId(null);
     }
   }
 
@@ -174,13 +214,13 @@ export function AdminAccountsClient({ initialOrgs, canManage }: { initialOrgs: O
 
       {/* Registry */}
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-        <div className="hidden grid-cols-[1.7fr_1fr_1fr_1fr_120px] gap-3 border-b border-slate-100 bg-slate-50 px-4 py-2.5 text-[10.5px] font-medium uppercase tracking-wide text-slate-400 sm:grid">
+        <div className="hidden grid-cols-[1.7fr_1fr_1fr_1fr_220px] gap-3 border-b border-slate-100 bg-slate-50 px-4 py-2.5 text-[10.5px] font-medium uppercase tracking-wide text-slate-400 sm:grid">
           <span>Account</span><span>Type</span><span>Billing</span><span>Created</span><span className="text-right">Entitlement</span>
         </div>
         {visible.length === 0 ? (
           <p className="px-4 py-10 text-center text-sm text-slate-500">No accounts yet.</p>
         ) : visible.map((o) => (
-          <div key={o.id} className="grid grid-cols-1 gap-2 border-b border-slate-100 px-4 py-3 last:border-b-0 sm:grid-cols-[1.7fr_1fr_1fr_1fr_120px] sm:items-center sm:gap-3">
+          <div key={o.id} className="grid grid-cols-1 gap-2 border-b border-slate-100 px-4 py-3 last:border-b-0 sm:grid-cols-[1.7fr_1fr_1fr_1fr_220px] sm:items-center sm:gap-3">
             <div className="min-w-0">
               <p className="flex items-center gap-2 truncate text-sm font-semibold text-slate-900">
                 {o.name}
@@ -202,6 +242,20 @@ export function AdminAccountsClient({ initialOrgs, canManage }: { initialOrgs: O
             <div className="flex flex-wrap gap-2 sm:justify-end">
               {canManage ? (
                 <>
+                  {o.type === "founder" && o.created_via === "admin_direct" && founders[o.id] && canOpenAs && (
+                    <OpenAsFounderButton founderId={founders[o.id].id} founderName={founders[o.id].name} />
+                  )}
+                  {o.type === "founder" && o.created_via === "admin_direct" && !founders[o.id] && (
+                    <button
+                      type="button"
+                      onClick={() => setUpFounder(o)}
+                      disabled={busyId === o.id}
+                      title="This account has no founder or company yet"
+                      className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                    >
+                      {busyId === o.id ? "…" : "Set up founder"}
+                    </button>
+                  )}
                   {o.type === "founder" && (
                     <button
                       type="button"

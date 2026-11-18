@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireApiProfile } from "@/lib/api/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import type { Organization } from "@/lib/organizations/organizations";
+import { provisionDemoFounder } from "@/lib/organizations/provision-demo-founder";
 
 export const dynamic = "force-dynamic";
 
@@ -57,5 +59,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: memErr.message }, { status: 500 });
   }
 
-  return NextResponse.json({ organization: org }, { status: 201 });
+  // A Founder account needs a founder profile and company too, or there is nothing to
+  // open. If this step fails the org still exists and the registry offers "Set up founder".
+  let founderId: string | null = null;
+  let founderName: string | null = null;
+  let provisionError: string | null = null;
+  if (type === "founder") {
+    try {
+      const result = await provisionDemoFounder(admin, org as Pick<Organization, "id" | "name" | "tier" | "type">);
+      founderId = result.founderId;
+      founderName = (org as { name: string }).name;
+    } catch (e) {
+      provisionError = e instanceof Error ? e.message : "Could not set up the founder.";
+    }
+  }
+
+  return NextResponse.json({ organization: org, founderId, founderName, provisionError }, { status: 201 });
 }
