@@ -15,6 +15,17 @@ import type { SubscriptionStatus, PlanType } from "@/lib/subscriptions/plans";
  */
 export const PAST_DUE_GRACE_DAYS = 5;
 
+/**
+ * What Lemon Squeezy bills per plan, in cents. Every Lemon Squeezy subscription is on
+ * the old price (it stopped taking new sign ups before the Nov 2026 price change), so
+ * the webhook records these, not PLAN_PRICES, which now holds the current prices.
+ */
+export const LEMON_SQUEEZY_PRICES: Partial<Record<PlanType, number>> = {
+  founder_basic: 4900,
+  founder_professional: 19900,
+  founder_premium: 100000,
+};
+
 export type StatusMapping = {
   status: SubscriptionStatus;
   /** When set, access should end at this instant even if status reads active. */

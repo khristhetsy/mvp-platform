@@ -59,7 +59,7 @@ function CrrGapList({
               Let us do it, Premium
             </Link>
             <Link href={UPGRADE_BASIC_HREF} className="cap-btn-primary rounded-lg px-3.5 py-1.5 text-sm font-medium">
-              Upgrade to Basic, $49/mo
+              Upgrade to Basic, $99/mo
             </Link>
           </div>
         ) : undefined

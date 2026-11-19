@@ -125,6 +125,9 @@ export type Subscription = {
   is_grandfathered?: boolean | null;
   ls_customer_id?: string | null;
   ls_subscription_id?: string | null;
+  stripe_customer_id?: string | null;
+  stripe_subscription_id?: string | null;
+  stripe_price_id?: string | null;
   grace_period_ends_at?: string | null;
   // Stop payment, scheduled downgrades, and the wire billing address.
   cancel_at_period_end?: boolean | null;

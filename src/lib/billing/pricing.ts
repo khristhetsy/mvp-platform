@@ -77,7 +77,7 @@ export const FOUNDER_PRICING_PLANS: PricingPlanCard[] = [
   {
     planType: "founder_basic",
     title: "Basic",
-    priceLabel: "$49",
+    priceLabel: "$99",
     priceSubtext: "/month",
     monthlyPriceCents: PLAN_PRICES.founder_basic,
     ...websiteCopy("founder_basic"),
@@ -96,7 +96,7 @@ export const FOUNDER_PRICING_PLANS: PricingPlanCard[] = [
   {
     planType: "founder_premium",
     title: "Premium",
-    priceLabel: "$1,000",
+    priceLabel: "$1,500",
     priceSubtext: "/month",
     monthlyPriceCents: PLAN_PRICES.founder_premium,
     ...websiteCopy("founder_premium"),

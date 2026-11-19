@@ -23,7 +23,7 @@ describe("money", () => {
 
 describe("labels", () => {
   it("derives the label from the amount unless the plan carries words", () => {
-    expect(priceLabel(CODE_DEFAULT_PRICING, "founder_basic")).toBe("$49");
+    expect(priceLabel(CODE_DEFAULT_PRICING, "founder_basic")).toBe("$99");
     expect(priceLabel(CODE_DEFAULT_PRICING, "founder_professional")).toBe("$199");
     expect(priceLabel(CODE_DEFAULT_PRICING, "founder_managed_ir")).toBe("Pricing on request");
   });

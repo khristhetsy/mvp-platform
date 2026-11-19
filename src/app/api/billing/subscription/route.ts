@@ -3,7 +3,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { writeAuditLog } from "@/lib/data/audit";
 import { billingOwnerOnlyResponse } from "@/lib/billing/billing-access";
-import { cancelSubscription, resumeSubscription } from "@/lib/lemonsqueezy";
+import { cancelRenewal, resumeRenewal } from "@/lib/billing/provider";
 import { canDowngrade, canSwitchFromPremium, cardPlanFor, isCardSubscription, isWirePremium, pendingPlanFor, type CardTarget, type DowngradeTarget } from "@/lib/billing/plan-change";
 import { openWireInvoiceForProfile, voidWireInvoice } from "@/lib/billing/wire";
 
@@ -15,6 +15,7 @@ type Sub = {
   plan_type: string;
   ls_subscription_id: string | null;
   ls_variant_id: string | null;
+  stripe_subscription_id: string | null;
   current_period_end: string | null;
   cancel_at_period_end: boolean | null;
   cancel_reason: string | null;
@@ -22,7 +23,7 @@ type Sub = {
 };
 
 /**
- * Founder self service for card plans (Basic, Professional) on Lemon Squeezy:
+ * Founder self service for card plans (Basic, Professional) on Stripe or Lemon Squeezy:
  * stop payment, resume, schedule a downgrade, undo a scheduled downgrade.
  * Access is kept until the paid period ends in every case.
  */
@@ -46,7 +47,7 @@ export async function POST(req: Request) {
 
   const { data } = await admin
     .from("subscriptions")
-    .select("id, plan_type, ls_subscription_id, ls_variant_id, current_period_end, cancel_at_period_end, cancel_reason, pending_plan_type")
+    .select("id, plan_type, ls_subscription_id, ls_variant_id, stripe_subscription_id, current_period_end, cancel_at_period_end, cancel_reason, pending_plan_type")
     .eq("profile_id", user.id)
     .maybeSingle();
   const sub = data as Sub | null;
@@ -56,7 +57,6 @@ export async function POST(req: Request) {
   if (!sub || (!wire && !isCardSubscription(sub))) {
     return NextResponse.json({ error: "No subscription found for this account." }, { status: 400 });
   }
-  const lsId = sub.ls_subscription_id ?? "";
   const cancelling = Boolean(sub.cancel_at_period_end);
 
   const save = async (patch: Record<string, unknown>) => {
@@ -128,7 +128,7 @@ export async function POST(req: Request) {
       }
       // Stop payment and downgrade to Free are the same: cancel now, keep access to
       // the end of the paid period, then land on the Free plan.
-      await cancelSubscription(lsId);
+      await cancelRenewal(sub);
       await save({
         cancel_at_period_end: true,
         cancel_reason: "user",
@@ -145,7 +145,7 @@ export async function POST(req: Request) {
       if (sub.cancel_reason === "deletion") {
         return NextResponse.json({ error: "Restore your account to resume this subscription." }, { status: 409 });
       }
-      await resumeSubscription(lsId);
+      await resumeRenewal(sub);
       await save({ cancel_at_period_end: false, cancel_reason: null, grace_period_ends_at: null, pending_plan_type: null, pending_plan_effective_at: null });
       await audit("resume_payment");
       return NextResponse.json({ success: true });
@@ -161,7 +161,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Your billing period isn't available yet. Try again later." }, { status: 409 });
       }
       if (target === "free") {
-        await cancelSubscription(lsId);
+        await cancelRenewal(sub);
         await save({
           cancel_at_period_end: true,
           cancel_reason: "user",
@@ -178,7 +178,7 @@ export async function POST(req: Request) {
 
     if (action === "undo_downgrade") {
       if (!sub.pending_plan_type) return NextResponse.json({ error: "No downgrade is scheduled." }, { status: 400 });
-      if (cancelling && sub.cancel_reason !== "deletion") await resumeSubscription(lsId);
+      if (cancelling && sub.cancel_reason !== "deletion") await resumeRenewal(sub);
       await save({
         pending_plan_type: null,
         pending_plan_effective_at: null,

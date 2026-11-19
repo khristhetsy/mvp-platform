@@ -42,7 +42,7 @@ export const pricing = {
     },
     {
       name: "Basic",
-      price: "$49",
+      price: "$99",
       per: "/month",
       desc: "See who is interested and start reaching investors yourself.",
       features: [
@@ -74,7 +74,7 @@ export const pricing = {
     },
     {
       name: "Premium",
-      price: "$1,000",
+      price: "$1,500",
       per: "/month",
       badge: "Done for you",
       desc: "Done for you. We do the heavy lifting so you can close the deal.",
@@ -107,7 +107,7 @@ export const pricing = {
   comparison: {
     title: "Side by side",
     sub: "Start with the free report. Upgrade to see who is interested and reach them.",
-    cols: ["Free · $0", "Basic · $49", "Professional · $199", "Premium · $1,000"],
+    cols: ["Free · $0", "Basic · $99", "Professional · $199", "Premium · $1,500"],
     rows: [
       { k: "AI due diligence report and Capital Readiness Rating", vals: ["One time", "Included", "Included", "Included"] },
       { k: "Share your report with any investor", vals: ["Included", "Included", "Included", "Included"] },

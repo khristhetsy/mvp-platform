@@ -10,11 +10,18 @@ export function isCardPlan(plan: PlanType | string | null | undefined): boolean 
   return plan === "founder_basic" || plan === "founder_professional";
 }
 
-type BillingSub = { plan_type?: string | null; ls_subscription_id?: string | null; ls_variant_id?: string | null } | null | undefined;
+type BillingSub = {
+  plan_type?: string | null;
+  ls_subscription_id?: string | null;
+  ls_variant_id?: string | null;
+  stripe_subscription_id?: string | null;
+} | null | undefined;
 
 /**
- * A subscription that Lemon Squeezy bills: Basic or Professional with a Lemon Squeezy
- * subscription id, or Premium whose Lemon Squeezy variant is the Premium product.
+ * A subscription that a card provider bills. Anything with a Stripe subscription id
+ * is billed by Stripe, including Premium. Otherwise it is a Lemon Squeezy one: Basic
+ * or Professional with a Lemon Squeezy subscription id, or Premium whose Lemon
+ * Squeezy variant is the Premium product.
  *
  * A wire Premium can still carry the id of the card subscription it replaced (the wire
  * receipt cancels that subscription but keeps the id), so for Premium the id alone is
@@ -22,6 +29,7 @@ type BillingSub = { plan_type?: string | null; ls_subscription_id?: string | nul
  * deletion must go through Lemon Squeezy for every card subscription, or it keeps charging.
  */
 export function isCardSubscription(sub: BillingSub): boolean {
+  if (sub?.stripe_subscription_id) return true;
   if (!sub?.ls_subscription_id) return false;
   if (isCardPlan(sub.plan_type)) return true;
   if (sub.plan_type !== "founder_premium") return false;
@@ -57,8 +65,9 @@ export function awaitingCardCheckout(sub: {
   plan_type: string;
   pending_plan_type?: string | null;
   ls_subscription_id?: string | null;
+  stripe_subscription_id?: string | null;
 }): boolean {
-  return sub.plan_type === "founder_free" && isCardPlan(sub.pending_plan_type) && !sub.ls_subscription_id;
+  return sub.plan_type === "founder_free" && isCardPlan(sub.pending_plan_type) && !sub.ls_subscription_id && !sub.stripe_subscription_id;
 }
 
 export function pendingPlanFor(target: DowngradeTarget): PlanType {

@@ -11,7 +11,7 @@
  * No money moves through iCapOS: this records invoices and their status only.
  * Pure helpers live in wire-core.ts (tested); founder emails in wire-emails.ts.
  */
-import { cancelSubscription } from "@/lib/lemonsqueezy";
+import { cancelRenewal } from "@/lib/billing/provider";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/send-email";
 import { absoluteUrl } from "@/lib/activity/email-templates";
@@ -288,8 +288,8 @@ export async function markWireReceived(invoiceId: string, staffId: string, clien
     grace_period_ends_at: null,
     updated_at: receivedAt.toISOString(),
   };
-  const { data: existing } = await client.from("subscriptions").select("id, ls_subscription_id, subscription_status, plan_type").eq("profile_id", paid.profile_id).maybeSingle();
-  const ex = existing as { id: string; ls_subscription_id: string | null; subscription_status: string; plan_type: string } | null;
+  const { data: existing } = await client.from("subscriptions").select("id, ls_subscription_id, stripe_subscription_id, subscription_status, plan_type").eq("profile_id", paid.profile_id).maybeSingle();
+  const ex = existing as { id: string; ls_subscription_id: string | null; stripe_subscription_id: string | null; subscription_status: string; plan_type: string } | null;
   if (ex) {
     const { error: subError } = await client.from("subscriptions").update(subPatch).eq("id", ex.id);
     if (subError) throw new Error(`Invoice marked received, but Premium could not be activated: ${subError.message}`);
@@ -301,12 +301,12 @@ export async function markWireReceived(invoiceId: string, staffId: string, clien
   // twice. It runs to the end of its paid period. The webhook ignores later events
   // for it because the row is now Premium.
   let warning: string | null = null;
-  if (ex?.ls_subscription_id && ex.plan_type !== "founder_premium") {
+  if (ex && (ex.ls_subscription_id || ex.stripe_subscription_id) && ex.plan_type !== "founder_premium") {
     try {
-      await cancelSubscription(ex.ls_subscription_id);
+      await cancelRenewal(ex);
     } catch (e) {
       console.warn("[billing/wire] could not cancel the card subscription", e);
-      warning = "This founder still has a Lemon Squeezy subscription on file and it could not be cancelled automatically. Cancel it in Lemon Squeezy so they are not charged twice.";
+      warning = "This founder still has a card subscription on file (Stripe or Lemon Squeezy) and it could not be cancelled automatically. Cancel it with the provider so they are not charged twice.";
     }
   }
 

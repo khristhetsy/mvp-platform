@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyWebhookSignature, type LsWebhookPayload } from "@/lib/lemonsqueezy";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { isFirstActivation, mapStatus, variantToPlan } from "@/lib/billing/webhook-mapping";
+import { isFirstActivation, LEMON_SQUEEZY_PRICES, mapStatus, variantToPlan } from "@/lib/billing/webhook-mapping";
 import { isNewPastDue, keepGraceWindow } from "@/lib/billing/past-due";
 import { notifyPastDue } from "@/lib/billing/past-due-alerts";
 import { PLAN_PRICES } from "@/lib/subscriptions/plans";
@@ -82,6 +82,18 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Lookup failed" }, { status: 500 });
   }
 
+  // The founder has moved to Stripe. This is a late event for the Lemon Squeezy
+  // subscription that was replaced, and must not rewrite the Stripe row.
+  if (!existing && profileId) {
+    const { data: moved } = await admin
+      .from("subscriptions")
+      .select("id")
+      .eq("profile_id", profileId)
+      .not("stripe_subscription_id", "is", null)
+      .maybeSingle();
+    if (moved) return NextResponse.json({ received: true, ignored: "moved to Stripe" });
+  }
+
   const { plan, source } = variantToPlan(attributes.variant_id, attributes.variant_name, attributes.product_name);
 
   // A wire Premium replaced a card subscription that is cancelled and keeps sending
@@ -152,7 +164,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // The scheduled plan change has been applied by Lemon Squeezy.
     patch.pending_plan_type = null;
     patch.pending_plan_effective_at = null;
-    patch.monthly_price_cents = PLAN_PRICES[plan];
+    patch.monthly_price_cents = LEMON_SQUEEZY_PRICES[plan] ?? PLAN_PRICES[plan];
   }
 
   if (existing) {
@@ -222,7 +234,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         role: "founder",
         // Single source of truth — this used to be two hardcoded literals that
         // could drift from the pricing table.
-        monthly_price_cents: PLAN_PRICES[plan],
+        monthly_price_cents: LEMON_SQUEEZY_PRICES[plan] ?? PLAN_PRICES[plan],
         currency: "USD",
       },
       { onConflict: "profile_id" },

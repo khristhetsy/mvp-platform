@@ -3,7 +3,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { writeAuditLog } from "@/lib/data/audit";
 import { isPurgeDue } from "@/lib/account/deletion";
-import { resumeSubscription } from "@/lib/lemonsqueezy";
+import { resumeRenewal } from "@/lib/billing/provider";
 import { isActingAsFounder } from "@/lib/admin/acting-central";
 
 export const dynamic = "force-dynamic";
@@ -38,21 +38,22 @@ export async function POST() {
   // founder restores the account and picks a plan again.
   const { data: subRaw } = await admin
     .from("subscriptions")
-    .select("id, ls_subscription_id, cancel_reason, cancel_at_period_end, current_period_end")
+    .select("id, ls_subscription_id, stripe_subscription_id, cancel_reason, cancel_at_period_end, current_period_end")
     .eq("profile_id", user.id)
     .maybeSingle();
   const sub = subRaw as {
     id: string;
     ls_subscription_id: string | null;
+    stripe_subscription_id: string | null;
     cancel_reason: string | null;
     cancel_at_period_end: boolean | null;
     current_period_end: string | null;
   } | null;
-  if (sub?.cancel_reason === "deletion" && sub.ls_subscription_id) {
+  if (sub?.cancel_reason === "deletion" && (sub.ls_subscription_id || sub.stripe_subscription_id)) {
     const open = sub.current_period_end ? Date.parse(sub.current_period_end) > Date.now() : false;
     if (open) {
       try {
-        await resumeSubscription(sub.ls_subscription_id);
+        await resumeRenewal(sub);
       } catch (err) {
         console.error("[account/restore] subscription resume failed", err);
         return NextResponse.json({ error: "Couldn't restore your billing. Try again." }, { status: 502 });

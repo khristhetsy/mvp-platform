@@ -10,7 +10,7 @@ import {
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { writeAuditLog } from "@/lib/data/audit";
 import { prepareUserDeletion } from "@/lib/users/ownership-transfer";
-import { cancelSubscription } from "@/lib/lemonsqueezy";
+import { cancelRenewal } from "@/lib/billing/provider";
 import { isCardSubscription } from "@/lib/billing/plan-change";
 
 export const dynamic = "force-dynamic";
@@ -56,24 +56,26 @@ async function handle(request: Request) {
       // would keep charging with nobody able to cancel it.
       const { data: subRaw } = await admin
         .from("subscriptions")
-        .select("plan_type, ls_subscription_id, ls_variant_id, cancel_at_period_end, subscription_status")
+        .select("plan_type, ls_subscription_id, ls_variant_id, stripe_subscription_id, cancel_at_period_end, subscription_status")
         .eq("profile_id", row.id)
         .maybeSingle();
       const sub = subRaw as {
         plan_type: string;
         ls_subscription_id: string | null;
         ls_variant_id: string | null;
+        stripe_subscription_id: string | null;
         cancel_at_period_end: boolean | null;
         subscription_status: string;
       } | null;
       if (
-        sub?.ls_subscription_id &&
+        sub &&
+        (sub.ls_subscription_id || sub.stripe_subscription_id) &&
         isCardSubscription(sub) &&
         !sub.cancel_at_period_end &&
         sub.subscription_status === "active"
       ) {
         try {
-          await cancelSubscription(sub.ls_subscription_id);
+          await cancelRenewal(sub);
         } catch (cancelErr) {
           blocked += 1;
           await writeAuditLog(admin, {
