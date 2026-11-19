@@ -13,6 +13,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { emailDispatchAllowedForUser } from "@/lib/organizations/organizations";
 import { automatedCeiling, automatedRunLimit, founderCapPeriod, reachedInPeriod } from "@/lib/outreach/investor-cap";
+import { latestCompanyReadiness } from "@/lib/outreach/company-readiness";
 import { loadOutreachGlobals, resolveFounderOutreachConfig, type OutreachGlobals } from "@/lib/outreach/founder-overrides";
 import { nextCronSlot, nextOutreachRun } from "@/lib/outreach/outreach-schedule";
 import { isOutreachLiveSendEnabled } from "@/lib/outreach/investor-outreach";
@@ -64,12 +65,20 @@ async function previewForCampaign(client: Db, campaign: CampaignRow, globals: Ou
   const pausedUntil = eff.pause.enabled ? eff.pause.until : null;
   // An open ended automation pause: no date to give.
   if (eff.pause.enabled && !eff.pause.until) return null;
+  // Automation switched off for this whole plan, or the company has not reached
+  // the plan's minimum Capital Readiness Rating: nothing to announce.
+  if (!eff.automationEnabled) return null;
+  if (eff.minCrr > 0) {
+    const crr = await latestCompanyReadiness(client, campaign.company_id);
+    if (crr === null || crr < eff.minCrr) return null;
+  }
 
   const ent = founderEntitlements(eff.planType);
   const period = await founderCapPeriod(client, c.founder_id, now);
   const reached = (await reachedInPeriod(client, campaign.company_id, period.start)).size;
   const periodCap = automatedCeiling({ planCap: ent.investorCap, adminPlanCap: eff.monthlyCap, capOverride: eff.capOverride });
-  const limit = automatedRunLimit(periodCap, reached, campaign.weekly_cap);
+  const runCap = eff.runCap > 0 ? Math.min(campaign.weekly_cap, eff.runCap) : campaign.weekly_cap;
+  const limit = automatedRunLimit(periodCap, reached, runCap);
 
   let blocked: NextBatchBlock = null;
   let notBefore: Date | null = null;
@@ -84,7 +93,7 @@ async function previewForCampaign(client: Db, campaign: CampaignRow, globals: Ou
     now,
   );
   // After the reset the allowance is the full period cap again.
-  const upTo = blocked === "cap_reached" ? Math.min(periodCap ?? campaign.weekly_cap, campaign.weekly_cap) : limit;
+  const upTo = blocked === "cap_reached" ? Math.min(periodCap ?? runCap, runCap) : limit;
 
   const { data: queued } = await client
     .from("investor_outreach_recipients")

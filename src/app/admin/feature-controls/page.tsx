@@ -3,6 +3,7 @@ import { FounderSocialControls } from "@/components/admin/FounderSocialControls"
 import { getTranslations } from "next-intl/server";
 import { DepartmentsControls } from "@/components/admin/DepartmentsControls";
 import { OutreachAutomationToggle } from "@/components/admin/OutreachAutomationToggle";
+import { AutomationLimitsControls } from "@/components/admin/AutomationLimitsControls";
 import { StageMenuEditor } from "@/components/admin/StageMenuEditor";
 import { AiUsageLimitsControls } from "@/components/admin/AiUsageLimitsControls";
 import { AiBudgetControls } from "@/components/admin/AiBudgetControls";
@@ -26,6 +27,7 @@ export default async function AdminFeatureControlsPage() {
     >
       <div id="site-default-view" className="scroll-mt-24"><SiteDefaultViewControls /></div>
       <div id="outreach-automation" className="scroll-mt-24"><OutreachAutomationToggle /></div>
+      <div id="automation-limits" className="scroll-mt-24"><AutomationLimitsControls /></div>
       <div id="departments" className="scroll-mt-24"><DepartmentsControls /></div>
       <div id="ai-budget" className="scroll-mt-24"><AiBudgetControls /></div>
       <div id="ai-usage-limits" className="scroll-mt-24"><AiUsageLimitsControls /></div>

@@ -16,6 +16,7 @@ import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import { emailDispatchAllowedForUser } from "@/lib/organizations/organizations";
 import { notifyOutreachQueued, notifyOutreachSent, type OutreachInvestor } from "@/lib/outreach/outreach-notify";
 import { automatedCeiling, automatedRunLimit, founderCapPeriod, reachedInPeriod } from "@/lib/outreach/investor-cap";
+import { latestCompanyReadiness } from "@/lib/outreach/company-readiness";
 
 /** Formats a raise amount as a compact "~$2M" / "~$500K" string. */
 function formatRaise(amount: number | null | undefined): string | null {
@@ -518,6 +519,15 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
       // that lapsed) see their matches but nothing is sent for them. The campaign
       // is held, not completed, so it resumes if they choose a plan.
       if (!founderEntitlements(eff.planType).canDistribute) continue;
+      // Plan rule: automation can be switched off for a whole plan on Admin,
+      // Feature controls. Held, not completed, so it resumes when switched back on.
+      if (!eff.automationEnabled) continue;
+      // Plan rule: a minimum Capital Readiness Rating before automation starts.
+      // 0 = no gate beyond the global matching threshold.
+      if (eff.minCrr > 0) {
+        const crr = await latestCompanyReadiness(db, campaign.company_id);
+        if (crr === null || crr < eff.minCrr) continue;
+      }
     }
     // Paid rule: only founders with a live, paid subscription get automated
     // outreach. The plan label alone is not enough (a stale "active" row with no
@@ -541,7 +551,10 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
     // Per-run slice = the campaign weekly cap, clamped by what is left of the
     // founder's plan allowance this 30 day period (from signup), shared with DIY
     // outreach. See automatedCeiling for how admin settings combine with the plan.
-    let batchLimit = campaign.weekly_cap;
+    // The plan's per-run cap narrows the campaign's own weekly cap; 0 leaves the
+    // campaign cap alone.
+    const runCap = eff && eff.runCap > 0 ? Math.min(campaign.weekly_cap, eff.runCap) : campaign.weekly_cap;
+    let batchLimit = runCap;
     let sentBeforeRun = 0;
     let periodCap: number | null = null;
     let refillRoom = 0;
@@ -554,7 +567,7 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
         adminPlanCap: eff.monthlyCap,
         capOverride: eff.capOverride,
       });
-      batchLimit = automatedRunLimit(periodCap, reached, campaign.weekly_cap);
+      batchLimit = automatedRunLimit(periodCap, reached, runCap);
       refillRoom = periodCap === null ? MAX_AUDIENCE : Math.max(0, periodCap - reached);
     }
     // Allowance used up — send nothing this run; it resumes next period.

@@ -54,6 +54,13 @@ const PROFESSIONAL: FounderEntitlements = {
   investorCap: 50,
 };
 
+/**
+ * Premium is done for you: everything Professional has, with a larger reach
+ * because the iCFO team runs the outreach. This is the ceiling; Admin, Investor
+ * outreach can set a lower automated cap per plan (see planMonthlyCap).
+ */
+const PREMIUM: FounderEntitlements = { ...PROFESSIONAL, investorCap: 250 };
+
 const MANAGED_IR: FounderEntitlements = { ...PROFESSIONAL, investorCap: null };
 
 /** Distribution entitlements for a founder plan. Unknown / Free / legacy trial → Free. */
@@ -62,10 +69,9 @@ export function founderEntitlements(plan: PlanType | null | undefined): FounderE
     case "founder_basic":
       return BASIC;
     case "founder_professional":
-    // Premium is done for you: same distribution limits as Professional, the
-    // iCFO team runs the outreach.
-    case "founder_premium":
       return PROFESSIONAL;
+    case "founder_premium":
+      return PREMIUM;
     case "founder_managed_ir":
     case "admin_internal":
       return MANAGED_IR;

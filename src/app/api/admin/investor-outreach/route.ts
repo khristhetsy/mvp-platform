@@ -189,6 +189,16 @@ export async function PATCH(req: Request): Promise<Response> {
   }
 
   if (body?.action === "set_automation_config" && body.config && typeof body.config === "object") {
+    const planNumbers = (raw: unknown, d: AutomationConfig["runCapByPlan"], max = 100000) => {
+      const v = (raw ?? {}) as Partial<AutomationConfig["runCapByPlan"]>;
+      const one = (n: unknown, fb: number) => (typeof n === "number" && n >= 0 && n <= max ? Math.round(n) : fb);
+      return { basic: one(v.basic, d.basic), professional: one(v.professional, d.professional), premium: one(v.premium, d.premium) };
+    };
+    const planFlags = (raw: unknown, d: AutomationConfig["enabledByPlan"]) => {
+      const v = (raw ?? {}) as Partial<AutomationConfig["enabledByPlan"]>;
+      const one = (b: unknown, fb: boolean) => (typeof b === "boolean" ? b : fb);
+      return { basic: one(v.basic, d.basic), professional: one(v.professional, d.professional), premium: one(v.premium, d.premium) };
+    };
     const c = body.config as Partial<AutomationConfig>;
     const clampCap = (n: unknown, d: number) => (typeof n === "number" && n >= 0 && n <= 100000 ? Math.round(n) : d);
     const isoDate = (v: unknown): string | null => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
@@ -198,7 +208,11 @@ export async function PATCH(req: Request): Promise<Response> {
       monthlyByPlan: {
         basic: clampCap(mbp.basic, DEFAULT_AUTOMATION_CONFIG.monthlyByPlan.basic),
         professional: clampCap(mbp.professional, DEFAULT_AUTOMATION_CONFIG.monthlyByPlan.professional),
+        premium: clampCap(mbp.premium, DEFAULT_AUTOMATION_CONFIG.monthlyByPlan.premium),
       },
+      enabledByPlan: planFlags(c.enabledByPlan, DEFAULT_AUTOMATION_CONFIG.enabledByPlan),
+      runCapByPlan: planNumbers(c.runCapByPlan, DEFAULT_AUTOMATION_CONFIG.runCapByPlan),
+      minCrrByPlan: planNumbers(c.minCrrByPlan, DEFAULT_AUTOMATION_CONFIG.minCrrByPlan, 100),
       startDate: isoDate(c.startDate),
       cadence: c.cadence === "daily" ? "daily" : "weekly",
       pause: { enabled: pause.enabled === true, until: isoDate(pause.until) },

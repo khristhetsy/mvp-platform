@@ -14,7 +14,7 @@ type MatchConfig = {
   engineWeights: EngineWeights;
 };
 type AutomationConfig = {
-  monthlyByPlan: { basic: number; professional: number };
+  monthlyByPlan: { basic: number; professional: number; premium: number };
   startDate: string | null;
   cadence: "weekly" | "daily";
   pause: { enabled: boolean; until: string | null };
@@ -142,7 +142,7 @@ export function MatchQualificationControls({ pricing = CODE_DEFAULT_PRICING }: {
         <div className="mt-4 rounded-lg border border-slate-200 p-3">
           <div className="text-[11px] font-semibold uppercase tracking-wide text-indigo-500">Founder outreach automation</div>
           <p className="mt-0.5 text-[11px] leading-5 text-slate-500">Monthly introduction cap by subscription plan. The schedule and pause apply to every founder; per-founder overrides layer on top.</p>
-          <div className="mt-2 grid gap-3 sm:grid-cols-2">
+          <div className="mt-2 grid gap-3 sm:grid-cols-3">
             <label className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2 text-[13px] text-slate-700">
               <span>Basic <span className="text-[10px] text-slate-400">{priceShort(pricing, "founder_basic")}</span></span>
               <span className="flex items-center gap-1.5">
@@ -157,6 +157,15 @@ export function MatchQualificationControls({ pricing = CODE_DEFAULT_PRICING }: {
               <span className="flex items-center gap-1.5">
                 <input type="number" min={0} max={100000} value={auto.monthlyByPlan.professional}
                   onChange={(e) => setAuto({ ...auto, monthlyByPlan: { ...auto.monthlyByPlan, professional: Number(e.target.value) } })}
+                  onBlur={() => saveAuto(auto)} className="w-16 rounded-lg border border-slate-300 px-2 py-1 text-center text-sm" />
+                <span className="text-[11px] text-slate-500">/ mo</span>
+              </span>
+            </label>
+            <label className="flex items-center justify-between gap-2 rounded-lg border-2 border-indigo-300 px-3 py-2 text-[13px] text-slate-700">
+              <span>Premium <span className="text-[10px] text-slate-400">{priceShort(pricing, "founder_premium")}</span></span>
+              <span className="flex items-center gap-1.5">
+                <input type="number" min={0} max={100000} value={auto.monthlyByPlan.premium}
+                  onChange={(e) => setAuto({ ...auto, monthlyByPlan: { ...auto.monthlyByPlan, premium: Number(e.target.value) } })}
                   onBlur={() => saveAuto(auto)} className="w-16 rounded-lg border border-slate-300 px-2 py-1 text-center text-sm" />
                 <span className="text-[11px] text-slate-500">/ mo</span>
               </span>

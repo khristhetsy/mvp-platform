@@ -325,7 +325,13 @@ export async function setOutreachMessage(msg: OutreachMessage, updatedBy: string
 export type SendCadence = "weekly" | "daily";
 export type AutomationConfig = {
   /** Monthly introduction cap per subscription tier. */
-  monthlyByPlan: { basic: number; professional: number };
+  monthlyByPlan: { basic: number; professional: number; premium: number };
+  /** Automation on or off for a whole plan. Off holds every campaign on it. */
+  enabledByPlan: { basic: boolean; professional: boolean; premium: boolean };
+  /** Most investors ONE automated run may reach. 0 = the campaign's own cap decides. */
+  runCapByPlan: { basic: number; professional: number; premium: number };
+  /** Minimum Capital Readiness Rating before automation starts. 0 = no extra gate. */
+  minCrrByPlan: { basic: number; professional: number; premium: number };
   /** Nothing sends before this date (ISO yyyy-mm-dd); null = start immediately. */
   startDate: string | null;
   cadence: SendCadence;
@@ -334,13 +340,43 @@ export type AutomationConfig = {
 };
 
 export const DEFAULT_AUTOMATION_CONFIG: AutomationConfig = {
-  monthlyByPlan: { basic: 25, professional: 100 },
+  monthlyByPlan: { basic: 25, professional: 100, premium: 250 },
+  // The three below are no-ops until staff change them: every plan on, no
+  // per-run narrowing, no readiness gate beyond the global matching threshold.
+  enabledByPlan: { basic: true, professional: true, premium: true },
+  runCapByPlan: { basic: 0, professional: 0, premium: 0 },
+  minCrrByPlan: { basic: 0, professional: 0, premium: 0 },
   startDate: null,
   cadence: "weekly",
   pause: { enabled: false, until: null },
 };
 
 const AUTOMATION_CONFIG_KEY = "investor_automation_config";
+
+type PlanNumbers = AutomationConfig["runCapByPlan"];
+type PlanFlags = AutomationConfig["enabledByPlan"];
+
+/** Per-plan numbers from a stored row; any missing or invalid key keeps its default. */
+function readPlanNumbers(raw: unknown, fallback: PlanNumbers): PlanNumbers {
+  const v = (raw ?? {}) as Partial<PlanNumbers>;
+  const one = (n: unknown, d: number) => (typeof n === "number" && Number.isFinite(n) && n >= 0 ? Math.round(n) : d);
+  return {
+    basic: one(v.basic, fallback.basic),
+    professional: one(v.professional, fallback.professional),
+    premium: one(v.premium, fallback.premium),
+  };
+}
+
+/** Per-plan switches from a stored row; any missing key keeps its default. */
+function readPlanFlags(raw: unknown, fallback: PlanFlags): PlanFlags {
+  const v = (raw ?? {}) as Partial<PlanFlags>;
+  const one = (b: unknown, d: boolean) => (typeof b === "boolean" ? b : d);
+  return {
+    basic: one(v.basic, fallback.basic),
+    professional: one(v.professional, fallback.professional),
+    premium: one(v.premium, fallback.premium),
+  };
+}
 
 export async function getAutomationConfig(): Promise<AutomationConfig> {
   try {
@@ -353,7 +389,12 @@ export async function getAutomationConfig(): Promise<AutomationConfig> {
       monthlyByPlan: {
         basic: typeof mbp.basic === "number" ? mbp.basic : DEFAULT_AUTOMATION_CONFIG.monthlyByPlan.basic,
         professional: typeof mbp.professional === "number" ? mbp.professional : DEFAULT_AUTOMATION_CONFIG.monthlyByPlan.professional,
+        // Rows saved before Premium had its own cap carry no premium key.
+        premium: typeof mbp.premium === "number" ? mbp.premium : DEFAULT_AUTOMATION_CONFIG.monthlyByPlan.premium,
       },
+      enabledByPlan: readPlanFlags(v.enabledByPlan, DEFAULT_AUTOMATION_CONFIG.enabledByPlan),
+      runCapByPlan: readPlanNumbers(v.runCapByPlan, DEFAULT_AUTOMATION_CONFIG.runCapByPlan),
+      minCrrByPlan: readPlanNumbers(v.minCrrByPlan, DEFAULT_AUTOMATION_CONFIG.minCrrByPlan),
       startDate: typeof v.startDate === "string" && v.startDate ? v.startDate : null,
       cadence: v.cadence === "daily" ? "daily" : "weekly",
       pause: {

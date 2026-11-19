@@ -45,6 +45,12 @@ export type EffectiveOutreachConfig = {
   startDate: string | null;
   cadence: SendCadence;
   pause: { enabled: boolean; until: string | null };
+  /** False when automation is switched off for this founder's whole plan. */
+  automationEnabled: boolean;
+  /** Most investors one run may reach for this plan. 0 = the campaign cap alone decides. */
+  runCap: number;
+  /** Minimum Capital Readiness Rating before automation starts. 0 = no extra gate. */
+  minCrr: number;
   planType: PlanType | null;
   /** Whether the founder has a custom value in each section (for Inherited/Custom badges). */
   customized: { match: boolean; automation: boolean; message: boolean };
@@ -57,10 +63,29 @@ function db(): any {
 
 /** The plan-derived monthly cap before any per-founder override. */
 export function planMonthlyCap(plan: PlanType | null, automation: AutomationConfig): number {
-  // Premium uses Professional's cap.
-  if (plan === "founder_professional" || plan === "founder_premium") return automation.monthlyByPlan.professional;
-  // basic, trial, and anything else fall to the basic tier cap.
-  return automation.monthlyByPlan.basic;
+  return automation.monthlyByPlan[planKey(plan)];
+}
+
+/** Which per-plan column a founder plan reads. Trial and anything else fall to basic. */
+export function planKey(plan: PlanType | null): "basic" | "professional" | "premium" {
+  if (plan === "founder_premium") return "premium";
+  if (plan === "founder_professional") return "professional";
+  return "basic";
+}
+
+/** Is automation switched on for this plan? */
+export function planAutomationEnabled(plan: PlanType | null, automation: AutomationConfig): boolean {
+  return automation.enabledByPlan[planKey(plan)];
+}
+
+/** Per-plan cap on ONE run. 0 = the campaign's own cap decides. */
+export function planRunCap(plan: PlanType | null, automation: AutomationConfig): number {
+  return automation.runCapByPlan[planKey(plan)];
+}
+
+/** Minimum Capital Readiness Rating before automation starts. 0 = no extra gate. */
+export function planMinCrr(plan: PlanType | null, automation: AutomationConfig): number {
+  return automation.minCrrByPlan[planKey(plan)];
 }
 
 /** Read a founder's raw override row (null when they've never customized). */
@@ -172,6 +197,9 @@ export async function resolveFounderOutreachConfig(
     startDate,
     cadence,
     pause,
+    automationEnabled: planAutomationEnabled(plan, automation),
+    runCap: planRunCap(plan, automation),
+    minCrr: planMinCrr(plan, automation),
     planType: plan,
     customized: { match: hasKeys(om), automation: hasKeys(oa), message: hasKeys(override?.message) },
   };

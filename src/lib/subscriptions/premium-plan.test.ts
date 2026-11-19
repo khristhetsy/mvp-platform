@@ -10,8 +10,12 @@ import { pricingFor } from "@/content/pricing";
 describe("Premium founder plan", () => {
   afterEach(() => vi.unstubAllEnvs());
 
-  it("has Professional's distribution limits", () => {
-    expect(founderEntitlements("founder_premium")).toEqual(founderEntitlements("founder_professional"));
+  it("has Professional's features with a larger investor reach", () => {
+    const premium = founderEntitlements("founder_premium");
+    const professional = founderEntitlements("founder_professional");
+    expect(premium.investorCap).toBe(250);
+    expect(professional.investorCap).toBe(50);
+    expect({ ...premium, investorCap: 0 }).toEqual({ ...professional, investorCap: 0 });
   });
 
   it("is priced at $1,000 and appears on the admin Pricing page", () => {
