@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { graceDaysLeft, isNewPastDue, keepGraceWindow, pastDueState, reminderDue } from "./past-due";
+import { FREE_MOVE_DAYS, freeMoveDate, graceDaysLeft, isNewPastDue, keepGraceWindow, lapsedNoticeDue, pastDueState, reminderDue } from "./past-due";
 import { renderFounderPastDueEmail } from "./past-due-email";
 import { mapStatus, PAST_DUE_GRACE_DAYS } from "./webhook-mapping";
 
@@ -105,8 +105,28 @@ describe("renderFounderPastDueEmail", () => {
   it("says the tools stay on and only investor outreach pauses", () => {
     expect(renderFounderPastDueEmail(base).text).toContain("Your tools stay on");
   });
+  it("lapsed notice names the Free plan and the move date", () => {
+    const email = renderFounderPastDueEmail({ ...base, stage: "lapsed" });
+    expect(email.subject).toBe("Your iCapOS account will move to the Free plan on Nov 5, 2026");
+    expect(email.text).toContain("Nov 5, 2026");
+    expect(email.text).toContain("Free plan");
+  });
   it("day 3 and day 5 have their own subjects", () => {
     expect(renderFounderPastDueEmail({ ...base, stage: "midpoint" }).subject).toContain("Reminder");
     expect(renderFounderPastDueEmail({ ...base, stage: "final" }).subject).toBe("Last day to update your card");
+  });
+});
+
+describe("free move date", () => {
+  const ends = "2026-11-02T12:00:00.000Z";
+  it("is 3 days after the grace period ends", () => {
+    expect(FREE_MOVE_DAYS).toBe(3);
+    expect(freeMoveDate(ends)).toBe("2026-11-05T12:00:00.000Z");
+  });
+  it("the lapsed notice is due from the end of grace until the move date", () => {
+    expect(lapsedNoticeDue(ends, new Date("2026-11-02T11:59:00.000Z"))).toBe(false);
+    expect(lapsedNoticeDue(ends, new Date("2026-11-02T12:00:00.000Z"))).toBe(true);
+    expect(lapsedNoticeDue(ends, new Date("2026-11-04T12:00:00.000Z"))).toBe(true);
+    expect(lapsedNoticeDue(ends, new Date("2026-11-05T12:00:00.000Z"))).toBe(false);
   });
 });
