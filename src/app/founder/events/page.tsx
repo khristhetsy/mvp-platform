@@ -44,21 +44,22 @@ export default async function FounderEventsPage() {
   }
 
   // Follow-up counts from the same data the follow-ups page lists: every
-  // accepted introduction across the founder's events. An investor counts as
-  // followed up once a follow-up was sent or a time is booked.
+  // accepted introduction across the founder's events. Pending uses the same
+  // rule as that page's "To follow up" tile: an investor stays pending until a
+  // time is booked. If the load fails the card shows no count at all.
   let followTotal = 0;
   let followDone = 0;
+  let followError = false;
   try {
     const followEvents = await listFounderFollowUps(profile.id);
     for (const fe of followEvents) {
       for (const r of fe.rows) {
         followTotal += 1;
-        if (r.followUps > 0 || r.scheduledAt) followDone += 1;
+        if (r.scheduledAt) followDone += 1;
       }
     }
   } catch {
-    followTotal = 0;
-    followDone = 0;
+    followError = true;
   }
   const followPending = followTotal - followDone;
   const followPct = followTotal > 0 ? Math.round((followDone / followTotal) * 100) : 0;
@@ -79,25 +80,33 @@ export default async function FounderEventsPage() {
             aria-label="Investor follow-ups"
             className="mt-6 flex flex-col gap-5 rounded-xl border-2 border-[var(--indigo)] bg-white p-5 shadow-[var(--shadow-panel)] sm:flex-row sm:items-center sm:p-6"
           >
-            <div
-              className={`flex h-20 w-20 flex-none flex-col items-center justify-center rounded-xl ${
-                followPending > 0 ? "bg-[var(--indigo-soft)] text-[var(--indigo)]" : "bg-emerald-50 text-emerald-700"
-              }`}
-            >
-              <span className="text-3xl font-semibold leading-none">{followPending}</span>
-              <span className="mt-1 text-[11px] font-medium uppercase tracking-wide">pending</span>
-            </div>
+            {!followError && (
+              <div
+                className={`flex h-20 w-20 flex-none flex-col items-center justify-center rounded-xl ${
+                  followPending > 0 ? "bg-[var(--indigo-soft)] text-[var(--indigo)]" : "bg-emerald-50 text-emerald-700"
+                }`}
+              >
+                <span className="text-3xl font-semibold leading-none">{followPending}</span>
+                <span className="mt-1 text-[11px] font-medium uppercase tracking-wide">pending</span>
+              </div>
+            )}
 
             <div className="min-w-0 flex-1">
               <h2 className="text-lg font-semibold text-[var(--navy)]">
-                {followPending > 0 ? "Investors accepted your invite" : "All caught up"}
+                {followError
+                  ? "Investor follow-ups"
+                  : followPending > 0
+                    ? "Investors accepted your invite"
+                    : "All caught up"}
               </h2>
               <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                {followPending > 0
-                  ? `${followPending} of ${followTotal} still need a follow up. Reach out while the conversation is warm.`
-                  : followTotal > 0
-                    ? "Every investor who accepted your invite has been followed up."
-                    : "No investor has accepted a meeting with you yet."}
+                {followError
+                  ? "We couldn't load your follow-up count. Open your follow-ups to see who still needs a reply."
+                  : followPending > 0
+                    ? `${followPending} of ${followTotal} still need a follow up. Reach out while the conversation is warm.`
+                    : followTotal > 0
+                      ? "Every investor who accepted your invite has been followed up."
+                      : "No investor has accepted a meeting with you yet."}
               </p>
               {followTotal > 0 && (
                 <div className="mt-3 flex items-center gap-3">
@@ -118,7 +127,7 @@ export default async function FounderEventsPage() {
               )}
             </div>
 
-            {followPending > 0 ? (
+            {!followError && followPending > 0 ? (
               <Link
                 href="/founder/events/follow-ups"
                 className="inline-flex flex-none items-center justify-center gap-1.5 rounded-lg bg-[var(--indigo)] px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
