@@ -10,6 +10,7 @@ import { FounderSupportClient, type FounderRequestRow } from "@/components/found
 import { FounderSupportAssistant } from "@/components/founder/FounderSupportAssistant";
 import { RequestHelpButton } from "@/components/founder/RequestHelpButton";
 import { supportInboundEnabled } from "@/lib/support/inbound";
+import { SupportPolicyStrip } from "@/components/support/SupportPolicyStrip";
 import { formatSupportTime } from "@/lib/support/business-hours";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
@@ -21,6 +22,7 @@ const BROWSE = [
   { href: "/founder/help", icon: "ti-book-2", title: "Stage guides", desc: "Step-by-step for each stage of your raise." },
   { href: "/founder/learning", icon: "ti-compass", title: "Learning", desc: "Courses and lessons for your round." },
   { href: "/founder/settings/billing", icon: "ti-credit-card", title: "Billing & plan", desc: "Manage your plan and subscription." },
+  { href: "/founder/support/policy", icon: "ti-file-text", title: "Support policy", desc: "Reply times, hours, plan limits and what support covers." },
 ];
 
 export default async function FounderSupportPage() {
@@ -75,6 +77,8 @@ export default async function FounderSupportPage() {
         <RequestHelpButton contextItem="Support" variant="primary" />
       </div>
 
+      <SupportPolicyStrip href="/founder/support/policy" />
+
       {openRequest ? (
         <section aria-label="Open request" className="mt-2 flex flex-wrap items-center gap-4 rounded-2xl border-2 border-indigo-600 bg-white p-5">
           <div className="min-w-0 flex-1 basis-72">
@@ -108,7 +112,7 @@ export default async function FounderSupportPage() {
 
       <section className="mt-8">
         <h2 className="mb-3 text-sm font-medium text-slate-700">Browse on your own</h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {BROWSE.map((b) => (
             <Link
               key={b.href}
