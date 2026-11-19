@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
+import type { PickerClient } from "@/lib/support/client-picker";
+import { ClientPicker } from "./ClientPicker";
 import type { StaffOption } from "./SupportQueueClient";
-
-type Person = { id: string; name: string; email: string; role: string };
 
 /**
  * Staff start a conversation with a client. It opens a normal support thread the
@@ -24,9 +24,7 @@ export function NewClientMessageModal({
   onClose: () => void;
   onCreated: (id: string) => void;
 }>) {
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<Person[]>([]);
-  const [client, setClient] = useState<Person | null>(null);
+  const [client, setClient] = useState<PickerClient | null>(null);
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [emailClient, setEmailClient] = useState(true);
@@ -36,29 +34,6 @@ export function NewClientMessageModal({
   const [aiNote, setAiNote] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const searchSeq = useRef(0);
-
-  // Find a founder or investor as staff type. Reuses the platform user search.
-  useEffect(() => {
-    const q = query.trim();
-    if (client || q.length < 2) return;
-    const seq = ++searchSeq.current;
-    const t = setTimeout(async () => {
-      try {
-        const res = await fetch(`/api/admin/events/guests/search-users?q=${encodeURIComponent(q)}`);
-        const json = (await res.json()) as { users?: Person[] };
-        if (seq === searchSeq.current) {
-          setResults((json.users ?? []).filter((u) => u.role === "founder" || u.role === "investor"));
-        }
-      } catch {
-        if (seq === searchSeq.current) setResults([]);
-      }
-    }, 250);
-    return () => clearTimeout(t);
-  }, [query, client]);
-
-  // Results only show while a search is active; stale ones are never displayed.
-  const shown = !client && query.trim().length >= 2 ? results : [];
 
   async function askAi(payload: Record<string, unknown>) {
     setAiBusy(true);
@@ -132,35 +107,7 @@ export function NewClientMessageModal({
 
         <div className="px-5 pb-4 pt-1">
           <label className={label} htmlFor="ncm-client">Client</label>
-          {client ? (
-            <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-sm">
-              <span>
-                <span className="font-medium text-slate-900">{client.name}</span>
-                <span className="text-slate-500"> · {client.email} · {client.role}</span>
-              </span>
-              <button type="button" className="text-xs font-semibold text-indigo-700 hover:underline" onClick={() => { setClient(null); setQuery(""); }}>
-                Change
-              </button>
-            </div>
-          ) : (
-            <div className="relative">
-              <input id="ncm-client" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search a founder or investor by name or email" className={field} autoComplete="off" />
-              {shown.length > 0 ? (
-                <ul className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white text-sm shadow-lg">
-                  {shown.map((u) => (
-                    <li key={u.id}>
-                      <button type="button" className="flex w-full flex-col px-3 py-2 text-left hover:bg-slate-50" onClick={() => { setClient(u); setResults([]); }}>
-                        <span className="font-medium text-slate-900">{u.name}</span>
-                        <span className="text-xs text-slate-500">{u.email} · {u.role}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              ) : query.trim().length >= 2 ? (
-                <p className="mt-1 text-[11px] text-slate-400">No founder or investor matches. Search covers name and email.</p>
-              ) : null}
-            </div>
-          )}
+          <ClientPicker value={client} onChange={setClient} />
 
           <label className={label} htmlFor="ncm-subject">Subject</label>
           <input id="ncm-subject" value={subject} onChange={(e) => setSubject(e.target.value)} maxLength={160} className={field} />
