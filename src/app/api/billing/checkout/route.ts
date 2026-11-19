@@ -9,6 +9,9 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { recordFunnelEvent } from "@/lib/analytics/funnel";
 import type { PlanType } from "@/lib/subscriptions/plans";
 import { findCurrentAcceptance } from "@/lib/billing/premium-agreement";
+import { createStripeCheckoutUrl, stripeConfigured } from "@/lib/stripe";
+import { isStripePlan, keepsLegacyPrice, managedPaymentsFor, stripePriceId, type PriceHolder } from "@/lib/billing/stripe-mapping";
+import { isCardSubscription } from "@/lib/billing/plan-change";
 
 const PLAN_TO_VARIANT: Partial<Record<PlanType, string>> = {
   founder_basic: LS_VARIANT_IDS.founder_basic,
@@ -74,6 +77,63 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       });
     } catch (e) {
       console.error("[billing/checkout] consent record failed (non-fatal)", e);
+    }
+
+    // Stripe, when configured: Lemon Squeezy shuts down March 31, 2027.
+    // Price rule: a subscriber with a continuous active subscription on the plan they
+    // are buying keeps the legacy price ($49 Basic, $1,000 Premium). Everyone else
+    // (never paid, cancelled and returning, upgrading from another plan) pays the
+    // current price ($99 Basic, $199 Professional, $1,500 Premium).
+    if (stripeConfigured()) {
+      if (!isStripePlan(planType)) {
+        return NextResponse.json({ error: "Invalid plan type." }, { status: 400 });
+      }
+      const db = createServiceRoleClient();
+      const { data: rowRaw } = await db
+        .from("subscriptions")
+        .select("plan_type, subscription_status, ls_subscription_id, ls_variant_id, stripe_subscription_id, stripe_customer_id, cancel_at_period_end, grace_period_ends_at")
+        .eq("profile_id", profile.id)
+        .maybeSingle();
+      const row = rowRaw as (PriceHolder & {
+        ls_variant_id: string | null;
+        stripe_subscription_id: string | null;
+        stripe_customer_id: string | null;
+      }) | null;
+
+      if (
+        row?.stripe_subscription_id &&
+        row.subscription_status === "active" &&
+        !row.cancel_at_period_end &&
+        row.plan_type === planType
+      ) {
+        return NextResponse.json({ error: "You are already subscribed to this plan." }, { status: 409 });
+      }
+
+      const tier = keepsLegacyPrice(row, planType) ? "legacy" : "current";
+      const priceId = stripePriceId(planType, tier);
+      if (!priceId) {
+        // Never fall back to the current price for a legacy subscriber: they would be
+        // charged more than they agreed to.
+        console.error(`[billing/checkout] Stripe ${tier} price for ${planType} is not configured`);
+        return NextResponse.json({ error: "Checkout is not available for this plan yet. Please contact us." }, { status: 503 });
+      }
+
+      const origin = req.headers.get("origin") ?? process.env.NEXT_PUBLIC_SITE_URL ?? "https://icapos.com";
+      // A live Lemon Squeezy subscription is cancelled by the webhook once the Stripe
+      // payment succeeds, so the founder is never charged twice.
+      const replaces = row?.ls_subscription_id && isCardSubscription(row) ? row.ls_subscription_id : null;
+      const url = await createStripeCheckoutUrl({
+        priceId,
+        profileId: profile.id,
+        planType,
+        email: profile.email ?? null,
+        customerId: row?.stripe_customer_id ?? null,
+        successUrl: `${origin}/billing?checkout=success`,
+        cancelUrl: `${origin}/billing`,
+        managedPayments: managedPaymentsFor(planType),
+        replacesLsSubscriptionId: replaces,
+      });
+      return NextResponse.json({ url });
     }
 
     // Preferred path: redirect straight to the Lemon Squeezy buy link, attaching

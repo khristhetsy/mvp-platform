@@ -14,10 +14,10 @@ describe("Premium founder plan", () => {
     expect(founderEntitlements("founder_premium")).toEqual(founderEntitlements("founder_professional"));
   });
 
-  it("is priced at $1,000 and appears on the admin Pricing page", () => {
-    expect(PLAN_PRICES.founder_premium).toBe(100000);
+  it("is priced at $1,500 and appears on the admin Pricing page", () => {
+    expect(PLAN_PRICES.founder_premium).toBe(150000);
     expect(PRICED_PLANS).toContain("founder_premium");
-    expect(CODE_DEFAULT_PRICING.plans.founder_premium.cents).toBe(100000);
+    expect(CODE_DEFAULT_PRICING.plans.founder_premium.cents).toBe(150000);
   });
 
   it("fills in for a saved price version made before Premium existed", () => {
@@ -25,7 +25,7 @@ describe("Premium founder plan", () => {
       id: "x", version: "pricing-v1", plans: { founder_basic: { cents: 4900 } }, add_company_cents: 80000,
       reason: null, existing_policy: "grandfather", effective_at: "", is_active: true, created_by: null, created_at: "",
     });
-    expect(catalog.plans.founder_premium.cents).toBe(100000);
+    expect(catalog.plans.founder_premium.cents).toBe(150000);
   });
 
   it("can be requested at sign up", () => {
@@ -46,7 +46,7 @@ describe("Premium founder plan", () => {
 
   it("shows on the public pricing page at the catalogue price", () => {
     const premium = pricingFor(CODE_DEFAULT_PRICING).tiers.find((t) => t.name === "Premium");
-    expect(premium?.price).toBe("$1,000");
+    expect(premium?.price).toBe("$1,500");
     expect(premium?.desc).not.toContain("wire");
     expect(premium?.cta.href).toBe("/auth/sign-up?role=founder&plan=founder_premium");
   });

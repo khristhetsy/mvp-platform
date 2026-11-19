@@ -4,7 +4,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { writeAuditLog } from "@/lib/data/audit";
 import { isActingAsFounder } from "@/lib/admin/acting-central";
 import { isConfirmPhrase, scheduledPurgeDate } from "@/lib/account/deletion";
-import { cancelSubscription, resumeSubscription } from "@/lib/lemonsqueezy";
+import { cancelRenewal, resumeRenewal } from "@/lib/billing/provider";
 import { isCardSubscription } from "@/lib/billing/plan-change";
 
 export const dynamic = "force-dynamic";
@@ -37,11 +37,11 @@ export async function POST(req: Request) {
   }
 
   // A card subscription keeps charging after the account is gone, so cancel it
-  // first (paid access runs to the end of the period). If Lemon Squeezy refuses,
+  // first (paid access runs to the end of the period). If the provider refuses,
   // stop here rather than schedule a deletion that leaves a live subscription.
   const { data: subRaw } = await admin
     .from("subscriptions")
-    .select("id, plan_type, ls_subscription_id, ls_variant_id, current_period_end, cancel_at_period_end")
+    .select("id, plan_type, ls_subscription_id, ls_variant_id, stripe_subscription_id, current_period_end, cancel_at_period_end")
     .eq("profile_id", user.id)
     .maybeSingle();
   const sub = subRaw as {
@@ -49,13 +49,14 @@ export async function POST(req: Request) {
     plan_type: string;
     ls_subscription_id: string | null;
     ls_variant_id: string | null;
+    stripe_subscription_id: string | null;
     current_period_end: string | null;
     cancel_at_period_end: boolean | null;
   } | null;
   let cancelledByDeletion = false;
-  if (sub?.ls_subscription_id && isCardSubscription(sub) && !sub.cancel_at_period_end) {
+  if (sub && (sub.ls_subscription_id || sub.stripe_subscription_id) && isCardSubscription(sub) && !sub.cancel_at_period_end) {
     try {
-      await cancelSubscription(sub.ls_subscription_id);
+      await cancelRenewal(sub);
       await admin
         .from("subscriptions")
         .update({
@@ -86,9 +87,9 @@ export async function POST(req: Request) {
     .eq("id", user.id);
   if (error) {
     // Put billing back the way it was so the founder is not left cancelled by accident.
-    if (cancelledByDeletion && sub?.ls_subscription_id) {
+    if (cancelledByDeletion && sub) {
       try {
-        await resumeSubscription(sub.ls_subscription_id);
+        await resumeRenewal(sub);
         await admin
           .from("subscriptions")
           .update({ cancel_at_period_end: false, cancel_reason: null, grace_period_ends_at: null })

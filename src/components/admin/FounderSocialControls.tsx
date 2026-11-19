@@ -8,9 +8,9 @@ type UsageRow = { profileId: string; name: string; usage: { planType: string | n
 
 const PLAN_LABEL: Record<string, string> = {
   founder_free: "Free (due diligence only)",
-  founder_basic: "Basic, $49",
+  founder_basic: "Basic, $99",
   founder_professional: "Professional, $199",
-  founder_premium: "Premium, $1,000",
+  founder_premium: "Premium, $1,500",
 };
 const ORDER = ["founder_free", "founder_basic", "founder_professional", "founder_premium"];
 

@@ -9,7 +9,7 @@ import {
 } from "@/lib/notifications/cron/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { FREE_MOVE_DAYS, lapsedNoticeDue, reminderDue } from "@/lib/billing/past-due";
-import { cancelSubscription } from "@/lib/lemonsqueezy";
+import { cancelRenewal } from "@/lib/billing/provider";
 import { notifyPastDue } from "@/lib/billing/past-due-alerts";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +25,7 @@ export const maxDuration = 120;
  * account on the Free plan, the same path a founder's own downgrade to Free uses.
  * Each notice goes out once per failed payment, so a re-run is harmless. A
  * cancellation that runs to the end of the paid period is skipped, and so is a
- * plan with no Lemon Squeezy subscription (paid by wire).
+ * plan with no card subscription (paid by wire).
  */
 async function handle(request: Request) {
   if (!getCronSecret()) return cronMisconfiguredResponse();
@@ -81,17 +81,17 @@ async function handle(request: Request) {
     }
   }
 
-  // Free move date reached: record the move, then cancel the Lemon Squeezy
-  // subscription. The pending move is written first so the cancellation webhook
+  // Free move date reached: record the move, then cancel the card
+  // subscription (Stripe or Lemon Squeezy). The pending move is written first so the cancellation webhook
   // lands the account on Free. A failed cancellation is retried the next day.
   const { data: moveData, error: moveError } = await admin
     .from("subscriptions")
-    .select("id, ls_subscription_id")
+    .select("id, ls_subscription_id, stripe_subscription_id")
     .eq("subscription_status", "active")
     .eq("cancel_at_period_end", false)
     .like("plan_type", "founder_%")
     .neq("plan_type", "founder_free")
-    .not("ls_subscription_id", "is", null)
+    .or("ls_subscription_id.not.is.null,stripe_subscription_id.not.is.null")
     .not("grace_period_ends_at", "is", null)
     .lte("grace_period_ends_at", moveCutoff)
     .limit(50);
@@ -106,7 +106,7 @@ async function handle(request: Request) {
         .update({ pending_plan_type: "founder_free", pending_plan_effective_at: now.toISOString() })
         .eq("id", row.id);
       if (pendingError) throw new Error(pendingError.message);
-      await cancelSubscription(row.ls_subscription_id as string);
+      await cancelRenewal(row);
       moved += 1;
     } catch (err) {
       moveFailed += 1;

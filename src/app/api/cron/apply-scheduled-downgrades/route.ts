@@ -8,14 +8,15 @@ import {
   validateCronSecret,
 } from "@/lib/notifications/cron/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { changeSubscriptionVariant } from "@/lib/lemonsqueezy";
+import { changeRenewalPlan } from "@/lib/billing/provider";
+import { stripePriceId } from "@/lib/billing/stripe-mapping";
 import { DOWNGRADE_LEAD_MS } from "@/lib/billing/plan-change";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
 /**
- * Daily: apply scheduled Professional to Basic downgrades. Lemon Squeezy changes
+ * Daily: apply scheduled Professional to Basic downgrades. The provider changes
  * the plan immediately, so this runs one day before the period ends, which keeps
  * the next renewal at the Basic price. The webhook then writes the new plan and
  * clears the pending change. Downgrades to Free are handled by the cancellation
@@ -25,17 +26,22 @@ async function handle(request: Request) {
   if (!getCronSecret()) return cronMisconfiguredResponse();
   if (!validateCronSecret(request)) return cronUnauthorizedResponse();
 
-  const variant = process.env.LEMONSQUEEZY_VARIANT_ID_BASIC;
-  if (!variant) return NextResponse.json({ ok: false, error: "LEMONSQUEEZY_VARIANT_ID_BASIC is not set." }, { status: 500 });
+  // Lemon Squeezy rows move to the Basic variant, Stripe rows to the current Basic
+  // price. Each needs its own id; a row is skipped (and counted failed) without it.
+  const lsVariantId = process.env.LEMONSQUEEZY_VARIANT_ID_BASIC?.trim() || null;
+  const basicStripePrice = stripePriceId("founder_basic", "current");
+  if (!lsVariantId && !basicStripePrice) {
+    return NextResponse.json({ ok: false, error: "Neither LEMONSQUEEZY_VARIANT_ID_BASIC nor STRIPE_PRICE_BASIC is set." }, { status: 500 });
+  }
 
   const admin = createServiceRoleClient();
   const cutoff = new Date(Date.now() + DOWNGRADE_LEAD_MS).toISOString();
   const { data, error } = await admin
     .from("subscriptions")
-    .select("id, ls_subscription_id")
+    .select("id, ls_subscription_id, stripe_subscription_id")
     .eq("pending_plan_type", "founder_basic")
     .eq("cancel_at_period_end", false)
-    .not("ls_subscription_id", "is", null)
+    .or("ls_subscription_id.not.is.null,stripe_subscription_id.not.is.null")
     .lte("pending_plan_effective_at", cutoff)
     .limit(50);
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
@@ -44,7 +50,7 @@ async function handle(request: Request) {
   let failed = 0;
   for (const row of data ?? []) {
     try {
-      await changeSubscriptionVariant(row.ls_subscription_id as string, variant);
+      await changeRenewalPlan(row, { lsVariantId, stripePriceId: basicStripePrice });
       applied += 1;
     } catch (err) {
       failed += 1;
