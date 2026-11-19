@@ -30,6 +30,8 @@ export type ContactProfile = {
   tags: string[]; owner: string | null; owner_id: string | null; assignee_ids: string[]; membership: string | null; job_position: string | null;
   street: string | null; street2: string | null; city: string | null; state: string | null; zip: string | null; country: string | null;
   language: string | null; created_on: string | null; note: string | null;
+  /** Set when the contact is archived (hidden from the Contacts list); null/absent = active. */
+  archived_at?: string | null;
   ein: string | null; operator_licence: string | null; curp: string | null; member_portal_plan: string | null;
   // Full source (Odoo) questionnaire/company fields, label → values, for display.
   extra: Array<{ label: string; values: string[] }>;
@@ -197,6 +199,7 @@ export async function getContactProfile(id: string): Promise<{ contact: ContactP
     country: pref("country", pickRaw(raw, ["country_id", "country"])),
     language: pref("language", pickRaw(raw, ["lang", "language"])), created_on: pickRaw(raw, ["create_date", "created_on"]) ?? (c.synced_at as string) ?? null,
     note,
+    archived_at: (c.archived_at as string | null) ?? null,
     ein: pref("ein", null), operator_licence: pref("operator_licence", null), curp: pref("curp", null), member_portal_plan: pref("member_portal_plan", null),
     extra: flattenExtra(raw, ov),
     // String overrides ending in _source are derivation tags, not user-visible fields —
@@ -215,6 +218,8 @@ export type ContactPatch = {
   language?: string | null; street?: string | null; street2?: string | null; city?: string | null;
   state?: string | null; zip?: string | null; country?: string | null;
   ein?: string | null; operator_licence?: string | null; curp?: string | null; member_portal_plan?: string | null;
+  /** true archives the contact (hidden from the Contacts list), false restores it. */
+  archived?: boolean;
   /** Structured "Additional details" edits, keyed by label → values. Stored as
    *  array-valued overrides so they win over the Odoo-synced questionnaire. */
   preferences?: Record<string, string[]>;
@@ -237,6 +242,10 @@ export async function updateContact(id: string, patch: ContactPatch, actorId?: s
   if (patch.owner_id !== undefined) update.owner_id = patch.owner_id || null;
   if (patch.assignee_ids !== undefined) update.assignee_ids = Array.from(new Set((patch.assignee_ids ?? []).filter(Boolean))).slice(0, 50);
   if (patch.tags !== undefined) update.tags = patch.tags.map((t) => t.trim()).filter(Boolean).slice(0, 20);
+  if (patch.archived !== undefined) {
+    update.archived_at = patch.archived ? new Date().toISOString() : null;
+    update.archived_by = patch.archived ? (actorId ?? null) : null;
+  }
 
   const ovPatch: Record<string, string | null | string[]> = {};
   for (const k of OVERRIDE_KEYS) {
