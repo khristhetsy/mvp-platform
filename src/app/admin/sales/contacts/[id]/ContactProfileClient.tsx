@@ -12,6 +12,7 @@ import { NoteLogEntries } from "./NoteLogEntries";
 import { TaskEditRow } from "@/components/sales/TaskEditRow";
 import { ContactTaskViews } from "./ContactTaskViews";
 import { NextTaskBar } from "./NextTaskBar";
+import { ContactGearMenu } from "./ContactGearMenu";
 import { RatingRing } from "@/components/investor-rating/RatingRing";
 import { SalesChatter } from "@/components/sales/SalesChatter";
 import { TaskTitleInput } from "@/components/sales/TaskTitleInput";
@@ -21,6 +22,8 @@ type Contact = {
   website: string | null; lead_status: string | null; lead_source: string | null; tags: string[]; owner: string | null; owner_id: string | null; assignee_ids: string[]; membership: string | null;
   job_position: string | null; street: string | null; street2: string | null; city: string | null; state: string | null; zip: string | null;
   country: string | null; language: string | null; created_on: string | null; note: string | null;
+  /** Set when archived (hidden from the Contacts list). */
+  archived_at?: string | null;
   extra: Array<{ label: string; values: string[] }>;
   /** sourceKey → rule id for values this platform derived rather than was told. */
   derivedSources?: Record<string, string>;
@@ -567,6 +570,17 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
   }
   const saveText = (key: string) => async (next: string) => saveFields({ [key]: next || null });
 
+  /** Archive or restore this contact. Archived contacts drop out of the Contacts list. */
+  async function setArchived(archived: boolean) {
+    setActionErr(null);
+    setBusy(true);
+    try {
+      const err = await saveFields({ archived });
+      if (err) { setActionErr(err); return; }
+      setContact((c) => ({ ...c, archived_at: archived ? new Date().toISOString() : null }));
+    } finally { setBusy(false); }
+  }
+
   async function savePreferences() {
     setPrefBusy(true);
     setActionErr(null);
@@ -782,6 +796,14 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
         </div>
       ) : null}
 
+      {contact.archived_at ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, fontSize: 12.5, color: "#444441", background: "#F1EFE8", border: "0.5px solid #D3D1C7", borderRadius: 8, padding: "8px 12px" }}>
+          <i className="ti ti-archive" aria-hidden="true" />
+          <span style={{ flex: 1 }}>This contact is archived and hidden from the Contacts list.</span>
+          <button type="button" disabled={busy} onClick={() => setArchived(false)} style={{ background: "none", border: "none", cursor: busy ? "default" : "pointer", color: "#185FA5", fontSize: 12.5, fontWeight: 600 }}>Restore</button>
+        </div>
+      ) : null}
+
       <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, overflow: "hidden" }}>
         {/* Redesigned header: identity + status + owner, actions, stat chips */}
         <div style={{ padding: "14px 16px", borderBottom: "0.5px solid #eef1f5" }}>
@@ -815,6 +837,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                 ? <a href={smsHref(contact.phone) ?? `sms:${contact.phone.replace(/[^+\d]/g, "")}`} target="_blank" rel="noopener noreferrer" onClick={() => logTouch("message")} style={{ fontSize: 11.5, fontWeight: 600, color: "#854F0B", background: "#FAEEDA", border: "0.5px solid #F4D9A0", borderRadius: 7, padding: "7px 13px", textDecoration: "none" }}><i className="ti ti-message" aria-hidden="true" /> Message</a>
                 : <span title="No phone number on this contact" style={{ ...outlineBtn, opacity: 0.5, cursor: "not-allowed" }}><i className="ti ti-message" aria-hidden="true" /> Message</span>}
               <Link href={`/admin/sales/contracts/send?contact=${contact.id}`} style={{ fontSize: 11.5, fontWeight: 600, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 7, padding: "7px 13px", textDecoration: "none" }}><i className="ti ti-signature" aria-hidden="true" /> Contracts</Link>
+              <ContactGearMenu archived={Boolean(contact.archived_at)} busy={busy} onArchive={() => setArchived(true)} onRestore={() => setArchived(false)} />
             </div>
           </div>
           <div className="cpKpi" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 8, marginTop: 14 }}>

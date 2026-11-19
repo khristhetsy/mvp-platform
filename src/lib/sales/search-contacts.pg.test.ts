@@ -18,6 +18,7 @@ const MIGRATIONS = [
   "supabase/migrations/20260914006_search_contacts_optional_count.sql",
   "supabase/migrations/20261001200000_contacts_sales_opportunity_filter.sql",
   "supabase/migrations/20261001210000_search_contact_id_array.sql",
+  "supabase/migrations/20261119100000_contact_archive.sql",
 ].map((f) => join(process.cwd(), f));
 
 const OWNER_A = "11111111-1111-1111-1111-111111111111";
@@ -220,5 +221,48 @@ describe("count_contact_buckets — header counts equal the rows a group expands
   it("search_contact_ids returns the same set the list would page through", async () => {
     const r = await pg.query<{ id: string }>("select search_contact_ids as id from public.search_contact_ids($1::jsonb, null, 'profile', 'investor')", [JSON.stringify(spec([]))]);
     expect(r.rows).toHaveLength(2);
+  });
+});
+
+describe("archived contacts", () => {
+  // Eve is archived for the duration of each test and restored after, so the suites above
+  // and below keep seeing five active contacts.
+  const archiveEve = () => pg.query("update public.crm_contacts set archived_at = now() where name = 'Eve Nobody'");
+  const restoreEve = () => pg.query("update public.crm_contacts set archived_at = null where name = 'Eve Nobody'");
+
+  it("are hidden from every search by default, and from the total", async () => {
+    await archiveEve();
+    try {
+      const r = await rows(spec([]));
+      expect(r.names).not.toContain("Eve Nobody");
+      expect(r.total).toBe(4);
+      expect((await rows(spec([{ field: "country", op: "in", value: ["France"] }]))).names).toEqual([]);
+    } finally { await restoreEve(); }
+  });
+  it("stay hidden when the conditions are joined with any", async () => {
+    await archiveEve();
+    try {
+      const r = await rows(spec([{ field: "name", op: "contains", value: "Eve" }, { field: "country", op: "in", value: ["France"] }], "any"));
+      expect(r.names).toEqual([]);
+    } finally { await restoreEve(); }
+  });
+  it("archived is set lists only archived contacts; not set lists only active ones", async () => {
+    await archiveEve();
+    try {
+      expect((await rows(spec([{ field: "archived", op: "set" }]))).names).toEqual(["Eve Nobody"]);
+      expect((await rows(spec([{ field: "archived", op: "not_set" }]))).total).toBe(4);
+      expect((await rows(spec([{ field: "archived", op: "set" }, { field: "country", op: "in", value: ["France"] }]))).names).toEqual(["Eve Nobody"]);
+    } finally { await restoreEve(); }
+  });
+  it("are left out of group bucket counts, and restoring brings them back", async () => {
+    await archiveEve();
+    try {
+      expect(await buckets(spec([]), "country")).not.toHaveProperty("France");
+    } finally { await restoreEve(); }
+    expect((await rows(spec([]))).total).toBe(5);
+    expect(await buckets(spec([]), "country")).toHaveProperty("France", 1);
+  });
+  it("reject an unsupported operator", async () => {
+    await expect(rows(spec([{ field: "archived", op: "contains", value: "x" }]))).rejects.toThrow(/unsupported op/);
   });
 });

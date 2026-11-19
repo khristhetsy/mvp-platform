@@ -18,6 +18,7 @@ const patchSchema = z.object({
   owner_id: z.string().uuid().nullable().optional(),
   assignee_ids: z.array(z.string().uuid()).max(50).nullable().optional(),
   tags: z.array(z.string().min(1).max(40)).max(20).optional(),
+  archived: z.boolean().optional(),
   phone2: z.string().max(60).nullable().optional(),
   email2: z.string().max(200).nullable().optional(),
   lead_source: z.string().max(120).nullable().optional(),
