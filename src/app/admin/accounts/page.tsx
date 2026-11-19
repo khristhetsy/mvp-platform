@@ -7,6 +7,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { listAllOrganizations } from "@/lib/organizations/organizations";
 import { AdminAccountsClient } from "@/components/admin/AdminAccountsClient";
 import { getActingCapability } from "@/lib/admin/act-on-behalf";
+import { loadConversions } from "@/lib/organizations/convert-to-paid";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +36,10 @@ export default async function AdminAccountsPage() {
   const acting = await getActingCapability();
   const canOpenAs = acting.available && acting.hasPermission;
 
+  // Checkout links already sent to convert a demo to paid, and who may send one. Billing is admin only.
+  const conversions = await loadConversions(admin);
+  const canConvert = String(profile.role).toLowerCase() === "admin";
+
   return (
     <AppShell
       role="ADMIN"
@@ -48,7 +53,7 @@ export default async function AdminAccountsPage() {
           title="Account registry"
           description="Every account — Founder and Deal Company — with live billing status. Create demo or internal accounts directly (comped, email dispatch off)."
         />
-        <AdminAccountsClient initialOrgs={orgs} canManage={canManage} founders={founders} canOpenAs={canOpenAs} />
+        <AdminAccountsClient initialOrgs={orgs} canManage={canManage} founders={founders} canOpenAs={canOpenAs} conversions={conversions} canConvert={canConvert} />
       </WorkspacePageContainer>
     </AppShell>
   );

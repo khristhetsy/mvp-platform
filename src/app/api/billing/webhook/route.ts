@@ -8,6 +8,7 @@ import { PLAN_PRICES } from "@/lib/subscriptions/plans";
 import { reportServerFailure } from "@/lib/monitoring/operational-events";
 import { recordFunnelEvent } from "@/lib/analytics/funnel";
 import { alertStaffNewCustomer } from "@/lib/notifications/new-customer-alerts";
+import { activateConvertedOrg } from "@/lib/organizations/convert-to-paid";
 import { sendFounderWelcomeLetter } from "@/lib/notifications/founder-welcome-letter";
 import { assignAccountManagerForPremium } from "@/lib/team/account-manager";
 import { recordGuestPayment } from "@/lib/billing/paid-signup";
@@ -165,6 +166,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       });
       return NextResponse.json({ error: "Update failed" }, { status: 500 });
     }
+    // A demo account converted to paid by card: the first payment makes it a normal paying account.
+    if (mapped.status === "active") await activateConvertedOrg(admin, existing.profile_id);
     // First failed renewal payment: tell the founder (and staff, for Premium).
     if (graceEndsAt && isNewPastDue(graceInput)) {
       await notifyPastDue({
@@ -232,6 +235,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       });
       return NextResponse.json({ error: "Create failed" }, { status: 500 });
     }
+    // First payment for a converted demo account (its comped row had no Lemon Squeezy id yet).
+    if (mapped.status === "active") await activateConvertedOrg(admin, profileId);
     const step = funnelStepFor(event_name);
     if (step && mapped.status === "active") {
       await recordFunnelEvent({ sessionId: `webhook_${profileId}`, eventName: step, properties: { plan, event: event_name } });
