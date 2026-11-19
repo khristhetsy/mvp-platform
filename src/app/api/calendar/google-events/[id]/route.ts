@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireApiProfile } from "@/lib/api/auth";
 import { getValidGoogleAccessToken } from "@/lib/integrations/google-access-token";
+import { resolveGoogleCalendarOwnerId } from "@/lib/integrations/google-calendar-owner";
 import { updateCalendarEvent, cancelCalendarEvent, getGoogleEvent } from "@/lib/integrations/google-calendar";
 
 export const dynamic = "force-dynamic";
@@ -31,7 +32,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if ("error" in auth) return auth.error ?? NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const tk = await token(auth.profile.id);
+  const tk = await token(await resolveGoogleCalendarOwnerId(auth.profile.id));
   if (typeof tk !== "string") return tk.error;
 
   try {
@@ -51,7 +52,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const parsed = patchSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid event update." }, { status: 400 });
 
-  const tk = await token(auth.profile.id);
+  const tk = await token(await resolveGoogleCalendarOwnerId(auth.profile.id));
   if (typeof tk !== "string") return tk.error;
 
   try {
@@ -76,7 +77,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   if ("error" in auth) return auth.error ?? NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const tk = await token(auth.profile.id);
+  const tk = await token(await resolveGoogleCalendarOwnerId(auth.profile.id));
   if (typeof tk !== "string") return tk.error;
 
   try {

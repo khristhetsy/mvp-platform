@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireApiProfile } from "@/lib/api/auth";
 import { getValidGoogleAccessToken } from "@/lib/integrations/google-access-token";
 import { listGoogleEvents } from "@/lib/integrations/google-calendar";
+import { resolveGoogleCalendarOwnerId } from "@/lib/integrations/google-calendar-owner";
 
 /**
  * GET /api/calendar/google-events?from=<iso>&to=<iso>
- * Read-only overlay of the signed-in user's Google Calendar events for the range.
+ * Read-only overlay of the founder's Google Calendar (the founder's own, also while staff act as them) events for the range.
  * Returns { events: [], connected: false } when Google isn't connected.
  */
 export async function GET(req: NextRequest): Promise<Response> {
@@ -18,7 +19,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     return NextResponse.json({ error: "from and to are required." }, { status: 400 });
   }
 
-  const token = await getValidGoogleAccessToken(auth.profile.id);
+  const token = await getValidGoogleAccessToken(await resolveGoogleCalendarOwnerId(auth.profile.id));
   if (!("accessToken" in token) || !token.accessToken) {
     return NextResponse.json({ events: [], connected: false });
   }
