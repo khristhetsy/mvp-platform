@@ -179,6 +179,26 @@ export const FREE_FEATURES: string[] = [
   "Listed in our Private Market for investors once complete",
 ];
 
+/**
+ * Basic and Professional plan copy. One list, read by the pricing page and the
+ * sign up plan cards, so the two can't drift apart.
+ */
+export const BASIC_FEATURES: string[] = [
+  "Every tool: CRR, Due diligence report, Pitch deck analyzer, Valuation, Financial model, Cap table, Data room, Deal room, Market claim grader, Pitch practice simulator, e-learning",
+  "See which investors are interested",
+  "Up to 5 matched investors, identities revealed",
+  "Your one-pager distributed to them",
+  "Attend our Investor Conference Virtual Event",
+  "DIY outreach, self-serve start to finish",
+  "Up to 5 intro requests a month",
+];
+export const PROFESSIONAL_FEATURES: string[] = [
+  "Everything in Basic",
+  "Up to 50 matched investors",
+  "Monthly live presentation slot",
+  "Up to 20 intro requests a month",
+];
+
 export const SIGNUP_FOUNDER_PLANS: SignupPlanOption[] = [
   {
     planType: "founder_free",
@@ -190,19 +210,10 @@ export const SIGNUP_FOUNDER_PLANS: SignupPlanOption[] = [
   {
     planType: "founder_basic",
     title: "Basic",
-    priceLabel: "$49",
+    priceLabel: "$99",
     priceSubtext: "/month",
     paidPlan: true,
-    features: [
-      "All tools: CRR, valuation, data room, e-learning",
-      "Up to 5 matched investors receive your one-pager",
-      "Attend the Investor Conference Virtual Event",
-      "DIY outreach unlocked — you can now reach investors",
-      "Up to 5 intro requests a month, through iCFO",
-      "500 investors from the public investor directory, not the iCFO Capital investor network",
-      "1,000 Manual outreach emails a month",
-      "Fully self-serve",
-    ],
+    features: BASIC_FEATURES,
   },
   {
     planType: "founder_professional",
@@ -210,38 +221,16 @@ export const SIGNUP_FOUNDER_PLANS: SignupPlanOption[] = [
     priceLabel: "$199",
     priceSubtext: "/month",
     paidPlan: true,
-    features: [
-      "Everything in Basic",
-      "Up to 50 investors",
-      "Monthly live presentation slot",
-      "Up to 20 intro requests a month",
-      "Up to 10,000 public directory investors as the directory grows, not the iCFO Capital investor network",
-      "20,000 Manual outreach emails a month",
-      "Self-serve, with a call available",
-    ],
+    features: PROFESSIONAL_FEATURES,
   },
   {
     planType: "founder_premium",
     title: "Premium",
-    priceLabel: "$1,000",
+    priceLabel: "$1,500",
     priceSubtext: "/month",
     badge: "Most popular",
     paidPlan: true,
     features: PREMIUM_FEATURES,
-  },
-  {
-    planType: "founder_managed_ir",
-    title: "SPV Program",
-    priceLabel: "Pricing on request",
-    priceSubtext: "3-month minimum",
-    contactSales: true,
-    features: [
-      "Done-for-you investor relations",
-      "We curate the list and materials",
-      "You review and approve",
-      "Post-conference follow-up run for you",
-      "Capacity-capped — talk to us",
-    ],
   },
 ];
 

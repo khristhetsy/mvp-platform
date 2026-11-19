@@ -8,14 +8,13 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/client";
 import { GOOGLE_STEP_PATH } from "@/lib/onboarding/google-step";
 import {
-  SIGNUP_FOUNDER_PLANS,
   SIGNUP_INVESTOR_PLAN,
   type SignupPlanOption,
   type PlanType,
 } from "@/lib/subscriptions/plans";
 import { FormField } from "@/components/ui/FormField";
 import { useFormValidation } from "@/hooks/useFormValidation";
-import { type PricingCatalog } from "@/lib/subscriptions/pricing-catalog";
+import { CODE_DEFAULT_PRICING, signupFounderPlans, type PricingCatalog } from "@/lib/subscriptions/pricing-catalog";
 import { PAYMENT_PAGE, isPayFirstPlan } from "@/lib/billing/payment-gate";
 
 type SignupRole = "founder" | "investor";
@@ -174,6 +173,7 @@ export function SignUpForm({
   privateBetaMode = false,
   agentPlans = [],
   showPremium = false,
+  pricing,
 }: Readonly<{
   privateBetaMode?: boolean;
   /** Premium is paid by bank wire and always listed (the sign up page passes true). */
@@ -326,7 +326,7 @@ export function SignUpForm({
         </p>
         <div className={`mt-3 grid gap-3 ${role === "founder" ? "md:grid-cols-1" : ""}`}>
           {role === "founder" ? (
-            SIGNUP_FOUNDER_PLANS.filter((plan) => showPremium || plan.planType !== "founder_premium").map((plan) => (
+            signupFounderPlans(pricing ?? CODE_DEFAULT_PRICING).filter((plan) => showPremium || plan.planType !== "founder_premium").map((plan) => (
               <PlanCard
                 key={plan.planType}
                 plan={plan}
