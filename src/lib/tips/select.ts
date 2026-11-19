@@ -7,6 +7,8 @@ export type TipSelectionInput = {
   investorState?: InvestorTipState;
   /** Stable per-day seed (e.g. "2026-06-20") — same day yields the same tip. */
   dateKey: string;
+  /** Tip ids to leave out of the pool (e.g. a feature that is switched off). */
+  excludeIds?: readonly string[];
 };
 
 function hashString(value: string): number {
@@ -22,6 +24,7 @@ function stageRank(stage: JourneyStage | undefined): number {
 }
 
 function matchesContext(tip: Tip, input: TipSelectionInput): boolean {
+  if (input.excludeIds?.includes(tip.id)) return false;
   if (tip.audience !== input.audience) return false;
   if (input.audience === "founder") {
     // Stage tips must match the founder's stage exactly.

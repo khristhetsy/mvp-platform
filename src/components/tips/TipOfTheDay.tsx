@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { loadTipPreference } from "@/lib/tips/preferences";
+import { CREDITS_ENABLED } from "@/lib/icfo-events/credits";
 import { selectTip, tipDateKey } from "@/lib/tips/select";
 import type { InvestorTipState, TipAudience } from "@/lib/tips/library";
 import { JOURNEY_STAGES, type JourneyStage } from "@/lib/founder-journey/types";
@@ -46,7 +47,10 @@ export async function TipOfTheDay({
       ? await resolveFounderStage(supabase as unknown as SupabaseClient, profileId)
       : founderStage;
 
-  const tip = selectTip({ audience, founderStage: stage, investorState, dateKey: tipDateKey() });
+  const tip = selectTip({ audience, founderStage: stage, investorState, dateKey: tipDateKey(),
+    // The Points page returns 404 while the program is off, so do not point at it.
+    excludeIds: CREDITS_ENABLED ? [] : ["f-menu-credits"],
+  });
   if (!tip) return null;
 
   return <TipOfTheDayCard tip={tip} />;

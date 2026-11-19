@@ -57,3 +57,19 @@ describe("selectTip", () => {
     expect(TIPS.some((t) => t.audience === "investor")).toBe(true);
   });
 });
+
+describe("selectTip excludeIds", () => {
+  it("never returns an excluded tip", () => {
+    for (let d = 1; d <= 120; d += 1) {
+      const dateKey = `2026-06-${String((d % 28) + 1).padStart(2, "0")}`;
+      const tip = selectTip({ audience: "founder", dateKey: `${dateKey}`, excludeIds: ["f-menu-credits"] });
+      expect(tip?.id).not.toBe("f-menu-credits");
+    }
+    const all = new Set<string>();
+    for (let d = 0; d < 400; d += 1) {
+      const t = selectTip({ audience: "founder", dateKey: new Date(Date.UTC(2026, 0, 1 + d)).toISOString().slice(0, 10), excludeIds: ["f-menu-credits"] });
+      if (t) all.add(t.id);
+    }
+    expect(all.has("f-menu-credits")).toBe(false);
+  });
+});

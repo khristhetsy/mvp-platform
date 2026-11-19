@@ -76,6 +76,13 @@ export default async function FounderEventsPage() {
             description="Sector-curated showcases, panels, and talk shows convening founders, investors, and operators. Education and community in the room — deals stay behind the accredited diligence flow."
           />
 
+          <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+            <p className="font-semibold">Before you attend</p>
+            <p className="mt-0.5">
+              You must be registered for the event and sign up for the networking match to be matched with investors and attendees.
+            </p>
+          </div>
+
           <section
             aria-label="Investor follow-ups"
             className="mt-6 flex flex-col gap-5 rounded-xl border-2 border-[var(--indigo)] bg-white p-5 shadow-[var(--shadow-panel)] sm:flex-row sm:items-center sm:p-6"
@@ -194,6 +201,7 @@ export default async function FounderEventsPage() {
                         <h2 className="mt-2 text-lg font-semibold text-[var(--navy)]">{ev.title}</h2>
                         <p className="mt-1 text-sm text-[var(--text-muted)]">{fmtRange(ev.startsAt, ev.endsAt)}</p>
                         {ev.summary && <p className="mt-2 max-w-2xl text-sm text-[var(--text-secondary)]">{ev.summary}</p>}
+                        <p className="mt-2 text-xs text-[var(--text-muted)]">1. Register for the event. 2. Sign up for the networking match.</p>
                       </div>
                       <ArrowRight className="h-5 w-5 flex-none text-[var(--text-muted)] transition group-hover:translate-x-0.5 group-hover:text-[var(--indigo)]" />
                     </div>
