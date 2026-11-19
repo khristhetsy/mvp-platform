@@ -9,6 +9,8 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { listPublicEvents } from "@/lib/icfo-events/queries";
+import { bannerPublicUrl } from "@/lib/icfo-events/banner";
+import { listFounderFollowUps } from "@/lib/icfo-events/introductions-server";
 import type { EventRecord } from "@/lib/icfo-events/types";
 
 export const dynamic = "force-dynamic";
@@ -41,6 +43,26 @@ export default async function FounderEventsPage() {
     events = [];
   }
 
+  // Follow-up counts from the same data the follow-ups page lists: every
+  // accepted introduction across the founder's events. An investor counts as
+  // followed up once a follow-up was sent or a time is booked.
+  let followTotal = 0;
+  let followDone = 0;
+  try {
+    const followEvents = await listFounderFollowUps(profile.id);
+    for (const fe of followEvents) {
+      for (const r of fe.rows) {
+        followTotal += 1;
+        if (r.followUps > 0 || r.scheduledAt) followDone += 1;
+      }
+    }
+  } catch {
+    followTotal = 0;
+    followDone = 0;
+  }
+  const followPending = followTotal - followDone;
+  const followPct = followTotal > 0 ? Math.round((followDone / followTotal) * 100) : 0;
+
   return (
     <FounderAppShell
       profileName={profile.full_name ?? profile.email ?? "Founder"}
@@ -53,14 +75,65 @@ export default async function FounderEventsPage() {
             description="Sector-curated showcases, panels, and talk shows convening founders, investors, and operators. Education and community in the room — deals stay behind the accredited diligence flow."
           />
 
-          <div className="mt-4">
-            <Link
-              href="/founder/events/follow-ups"
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--indigo)] hover:underline"
+          <section
+            aria-label="Investor follow-ups"
+            className="mt-6 flex flex-col gap-5 rounded-xl border-2 border-[var(--indigo)] bg-white p-5 shadow-[var(--shadow-panel)] sm:flex-row sm:items-center sm:p-6"
+          >
+            <div
+              className={`flex h-20 w-20 flex-none flex-col items-center justify-center rounded-xl ${
+                followPending > 0 ? "bg-[var(--indigo-soft)] text-[var(--indigo)]" : "bg-emerald-50 text-emerald-700"
+              }`}
             >
-              Follow up with investors who accepted <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
+              <span className="text-3xl font-semibold leading-none">{followPending}</span>
+              <span className="mt-1 text-[11px] font-medium uppercase tracking-wide">pending</span>
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <h2 className="text-lg font-semibold text-[var(--navy)]">
+                {followPending > 0 ? "Investors accepted your invite" : "All caught up"}
+              </h2>
+              <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                {followPending > 0
+                  ? `${followPending} of ${followTotal} still need a follow up. Reach out while the conversation is warm.`
+                  : followTotal > 0
+                    ? "Every investor who accepted your invite has been followed up."
+                    : "No investor has accepted a meeting with you yet."}
+              </p>
+              {followTotal > 0 && (
+                <div className="mt-3 flex items-center gap-3">
+                  <div
+                    className="h-2 flex-1 overflow-hidden rounded-full bg-[var(--indigo-soft)]"
+                    role="progressbar"
+                    aria-valuemin={0}
+                    aria-valuemax={followTotal}
+                    aria-valuenow={followDone}
+                    aria-label="Investors followed up"
+                  >
+                    <div className="h-full rounded-full bg-[var(--indigo)]" style={{ width: `${followPct}%` }} />
+                  </div>
+                  <span className="flex-none text-xs font-medium text-[var(--text-muted)]">
+                    {followDone} of {followTotal} followed up
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {followPending > 0 ? (
+              <Link
+                href="/founder/events/follow-ups"
+                className="inline-flex flex-none items-center justify-center gap-1.5 rounded-lg bg-[var(--indigo)] px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+              >
+                Follow up now <ArrowRight className="h-4 w-4" />
+              </Link>
+            ) : (
+              <Link
+                href="/founder/events/follow-ups"
+                className="inline-flex flex-none items-center justify-center gap-1.5 rounded-lg border border-[var(--border-subtle)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition hover:border-[var(--indigo)] hover:text-[var(--indigo)]"
+              >
+                View follow-ups
+              </Link>
+            )}
+          </section>
 
           <div className="mt-8 grid gap-4">
             {events.length === 0 ? (
@@ -72,28 +145,52 @@ export default async function FounderEventsPage() {
                 </p>
               </div>
             ) : (
-              events.map((ev) => (
-                <Link
-                  key={ev.id}
-                  href={`/events/${ev.slug}`}
-                  className="group flex items-center justify-between rounded-xl border border-[var(--border-subtle)] bg-white px-6 py-5 shadow-[var(--shadow-panel)] transition hover:border-[var(--indigo)]"
-                >
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="rounded-full bg-[var(--indigo-soft)] px-2.5 py-0.5 text-xs font-medium capitalize text-[var(--indigo)]">
-                        {ev.format.replace("_", " ")}
-                      </span>
-                      {ev.status === "live" && (
-                        <span className="rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">{t("live")}</span>
-                      )}
+              events.map((ev) => {
+                // The same banner image (with its focal point and overlay) the
+                // Present at an event page shows; navy block when none is set.
+                const coverUrl = bannerPublicUrl(supabase, ev.coverPath);
+                return (
+                  <Link
+                    key={ev.id}
+                    href={`/events/${ev.slug}`}
+                    className="group flex flex-col overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-white shadow-[var(--shadow-panel)] transition hover:border-[var(--indigo)] sm:flex-row"
+                  >
+                    <div
+                      className="relative h-40 w-full flex-none overflow-hidden sm:h-auto sm:min-h-[9rem] sm:w-56"
+                      style={{ background: "#0c2340" }}
+                    >
+                      {coverUrl ? (
+                        <div
+                          aria-hidden
+                          className="absolute inset-0"
+                          style={{ backgroundImage: `url(${coverUrl})`, backgroundSize: "cover", backgroundPosition: ev.coverFocal ?? "center" }}
+                        />
+                      ) : null}
+                      <div
+                        aria-hidden
+                        className="absolute inset-0"
+                        style={{ background: "#0c2340", opacity: coverUrl ? (ev.coverOverlay ?? 40) / 100 : 1 }}
+                      />
                     </div>
-                    <h2 className="mt-2 text-lg font-semibold text-[var(--navy)]">{ev.title}</h2>
-                    <p className="mt-1 text-sm text-[var(--text-muted)]">{fmtRange(ev.startsAt, ev.endsAt)}</p>
-                    {ev.summary && <p className="mt-2 max-w-2xl text-sm text-[var(--text-secondary)]">{ev.summary}</p>}
-                  </div>
-                  <ArrowRight className="h-5 w-5 flex-none text-[var(--text-muted)] transition group-hover:translate-x-0.5 group-hover:text-[var(--indigo)]" />
-                </Link>
-              ))
+                    <div className="flex flex-1 items-center justify-between gap-4 px-6 py-5">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="rounded-full bg-[var(--indigo-soft)] px-2.5 py-0.5 text-xs font-medium capitalize text-[var(--indigo)]">
+                            {ev.format.replace("_", " ")}
+                          </span>
+                          {ev.status === "live" && (
+                            <span className="rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">{t("live")}</span>
+                          )}
+                        </div>
+                        <h2 className="mt-2 text-lg font-semibold text-[var(--navy)]">{ev.title}</h2>
+                        <p className="mt-1 text-sm text-[var(--text-muted)]">{fmtRange(ev.startsAt, ev.endsAt)}</p>
+                        {ev.summary && <p className="mt-2 max-w-2xl text-sm text-[var(--text-secondary)]">{ev.summary}</p>}
+                      </div>
+                      <ArrowRight className="h-5 w-5 flex-none text-[var(--text-muted)] transition group-hover:translate-x-0.5 group-hover:text-[var(--indigo)]" />
+                    </div>
+                  </Link>
+                );
+              })
             )}
           </div>
 
