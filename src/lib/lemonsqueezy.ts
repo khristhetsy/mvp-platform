@@ -43,11 +43,14 @@ export async function createCheckoutUrl({
   email,
   profileId,
   successUrl,
+  name,
 }: {
   variantId: string;
   email: string;
   profileId: string;
   successUrl: string;
+  /** Pre-fills the name on the checkout page. Optional. */
+  name?: string;
 }): Promise<string> {
   const storeId = await resolveStoreId();
   if (!storeId) throw new Error("Could not resolve a Lemon Squeezy store for this API key (check the key / mode).");
@@ -62,6 +65,7 @@ export async function createCheckoutUrl({
           checkout_options: { embed: false, media: false, logo: true },
           checkout_data: {
             email,
+            ...(name ? { name } : {}),
             custom: { profile_id: profileId },
           },
           product_options: {

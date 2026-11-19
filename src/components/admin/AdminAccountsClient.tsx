@@ -8,6 +8,8 @@ import {
   type OrgType,
 } from "@/lib/organizations/organizations";
 import { OpenAsFounderButton } from "@/components/admin/OpenAsFounderButton";
+import type { Conversion, ConvertPlan } from "@/lib/organizations/convert-to-paid";
+import { PLAN_LABELS, PLAN_PRICES } from "@/lib/subscriptions/plans";
 
 const BILLING_STYLE: Record<string, string> = {
   active: "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -28,14 +30,25 @@ export function AdminAccountsClient({
   canManage,
   founders: initialFounders,
   canOpenAs,
+  conversions: initialConversions,
+  canConvert,
 }: {
   initialOrgs: Organization[];
   canManage: boolean;
   founders: Record<string, FounderLink>;
   canOpenAs: boolean;
+  conversions: Record<string, Conversion>;
+  canConvert: boolean;
 }) {
   const [orgs, setOrgs] = useState<Organization[]>(initialOrgs);
   const [founders, setFounders] = useState<Record<string, FounderLink>>(initialFounders);
+  const [conversions, setConversions] = useState<Record<string, Conversion>>(initialConversions);
+  const [convertId, setConvertId] = useState<string | null>(null);
+  const [vPlan, setVPlan] = useState<ConvertPlan>("founder_professional");
+  const [vName, setVName] = useState("");
+  const [vEmail, setVEmail] = useState("");
+  const [vCompany, setVCompany] = useState("");
+  const [notice, setNotice] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<"all" | OrgType>("all");
   const [showCreate, setShowCreate] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -80,6 +93,51 @@ export function AdminAccountsClient({
       setCName("");
     } finally {
       setCreating(false);
+    }
+  }
+
+  function openConvert(org: Organization) {
+    setConvertId(org.id);
+    setVPlan(org.tier === "basic" ? "founder_basic" : "founder_professional");
+    setVName(org.name);
+    setVEmail("");
+    setVCompany("");
+    setError(null);
+    setNotice(null);
+  }
+
+  // send: true emails the checkout link to the client. send: false only returns it (Copy link).
+  async function convert(org: Organization, opts: { send: boolean; fresh: boolean }) {
+    if (opts.fresh && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(vEmail.trim())) { setError("Enter the client's email address."); return; }
+    setBusyId(org.id);
+    setError(null);
+    setNotice(null);
+    try {
+      const res = await fetch(`/api/admin/accounts/${org.id}/convert`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          opts.fresh
+            ? { plan: vPlan, billToName: vName, billToEmail: vEmail.trim(), company: vCompany || undefined, send: opts.send }
+            : { send: opts.send },
+        ),
+      });
+      const d = (await res.json().catch(() => ({}))) as { url?: string; emailed?: boolean; conversion?: Conversion; error?: string };
+      if (!res.ok || !d.conversion) { setError(d.error ?? "Could not create the checkout link."); return; }
+      setConversions((prev) => ({ ...prev, [org.id]: d.conversion! }));
+      setConvertId(null);
+      if (opts.send) {
+        setNotice(d.emailed ? `Checkout link sent to ${d.conversion.email}.` : "The checkout link was made but the email did not send. Use Copy link.");
+      } else if (d.url) {
+        try {
+          await navigator.clipboard.writeText(d.url);
+          setNotice("Checkout link copied.");
+        } catch {
+          setNotice(`Checkout link: ${d.url}`);
+        }
+      }
+    } finally {
+      setBusyId(null);
     }
   }
 
@@ -169,6 +227,7 @@ export function AdminAccountsClient({
       </div>
 
       {error && <p className="mb-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
+      {notice && <p className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{notice}</p>}
 
       {/* Create panel */}
       {showCreate && (
@@ -220,7 +279,8 @@ export function AdminAccountsClient({
         {visible.length === 0 ? (
           <p className="px-4 py-10 text-center text-sm text-slate-500">No accounts yet.</p>
         ) : visible.map((o) => (
-          <div key={o.id} className="grid grid-cols-1 gap-2 border-b border-slate-100 px-4 py-3 last:border-b-0 sm:grid-cols-[1.7fr_1fr_1fr_1fr_220px] sm:items-center sm:gap-3">
+          <div key={o.id} className="border-b border-slate-100 last:border-b-0">
+          <div className="grid grid-cols-1 gap-2 px-4 py-3 sm:grid-cols-[1.7fr_1fr_1fr_1fr_220px] sm:items-center sm:gap-3">
             <div className="min-w-0">
               <p className="flex items-center gap-2 truncate text-sm font-semibold text-slate-900">
                 {o.name}
@@ -231,17 +291,43 @@ export function AdminAccountsClient({
               {o.created_via === "admin_direct" && (
                 <p className="text-[11px] text-slate-400">Admin-created{o.email_dispatch_enabled ? "" : " · email off"}</p>
               )}
+              {conversions[o.id] && o.purpose === "demo" && (
+                <p className="text-[11px] text-slate-400">Checkout link sent to {conversions[o.id].email}</p>
+              )}
             </div>
             <span className="text-[13px] text-slate-700">{TYPE_LABEL[o.type]}</span>
             <span>
-              <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${BILLING_STYLE[o.billing_status] ?? BILLING_STYLE.incomplete}`}>
-                {BILLING_LABEL[o.billing_status] ?? o.billing_status}
-              </span>
+              {conversions[o.id] && o.purpose === "demo" ? (
+                <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-medium text-amber-800">Pending payment</span>
+              ) : (
+                <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${BILLING_STYLE[o.billing_status] ?? BILLING_STYLE.incomplete}`}>
+                  {BILLING_LABEL[o.billing_status] ?? o.billing_status}
+                </span>
+              )}
             </span>
             <span className="text-[12px] text-slate-500">{fmtDate(o.created_at)}</span>
             <div className="flex flex-wrap gap-2 sm:justify-end">
               {canManage ? (
                 <>
+                  {canConvert && o.type === "founder" && o.created_via === "admin_direct" && o.purpose === "demo" && founders[o.id] && !conversions[o.id] && (
+                    <button
+                      type="button"
+                      onClick={() => (convertId === o.id ? setConvertId(null) : openConvert(o))}
+                      className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
+                    >
+                      Convert to paid
+                    </button>
+                  )}
+                  {canConvert && o.purpose === "demo" && conversions[o.id] && (
+                    <>
+                      <button type="button" onClick={() => convert(o, { send: false, fresh: false })} disabled={busyId === o.id} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+                        {busyId === o.id ? "…" : "Copy link"}
+                      </button>
+                      <button type="button" onClick={() => convert(o, { send: true, fresh: false })} disabled={busyId === o.id} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+                        Resend
+                      </button>
+                    </>
+                  )}
                   {o.type === "founder" && o.created_via === "admin_direct" && founders[o.id] && canOpenAs && (
                     <OpenAsFounderButton founderId={founders[o.id].id} founderName={founders[o.id].name} />
                   )}
@@ -280,6 +366,44 @@ export function AdminAccountsClient({
                 <span className="text-[11px] text-slate-300">—</span>
               )}
             </div>
+          </div>
+          {convertId === o.id && (
+            <div className="border-t border-slate-100 bg-slate-50 px-4 py-4">
+              <p className="text-sm font-semibold text-slate-900">Convert {o.name} to paid</p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="text-xs font-medium text-slate-500">Plan</label>
+                  <select value={vPlan} onChange={(e) => setVPlan(e.target.value as ConvertPlan)} className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
+                    <option value="founder_professional">{PLAN_LABELS.founder_professional} · ${Math.round(PLAN_PRICES.founder_professional / 100)} per month</option>
+                    <option value="founder_basic">{PLAN_LABELS.founder_basic} · ${Math.round(PLAN_PRICES.founder_basic / 100)} per month</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-500">Bill to name</label>
+                  <input value={vName} onChange={(e) => setVName(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-500">Bill to email</label>
+                  <input value={vEmail} onChange={(e) => setVEmail(e.target.value)} placeholder="name@company.com" className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-500">Company</label>
+                  <input value={vCompany} onChange={(e) => setVCompany(e.target.value)} placeholder="Legal company name" className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm" />
+                </div>
+              </div>
+              <ul className="mt-3 space-y-1 text-xs text-slate-600">
+                <li>The client enters their own card at Lemon Squeezy and is billed every month.</li>
+                <li>Receipts and failed payment notices go to the bill to email.</li>
+                <li>The account stays comped and a demo until the first payment arrives.</li>
+              </ul>
+              <div className="mt-4 flex justify-end gap-2">
+                <button type="button" onClick={() => setConvertId(null)} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancel</button>
+                <button type="button" onClick={() => convert(o, { send: true, fresh: true })} disabled={busyId === o.id} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50">
+                  {busyId === o.id ? "Sending…" : "Send checkout link"}
+                </button>
+              </div>
+            </div>
+          )}
           </div>
         ))}
       </div>
