@@ -6,6 +6,7 @@ import { BookOpen, Lock, Search, AlertTriangle } from "lucide-react";
 import { SOP_PARTS, sopAnchor } from "@/lib/admin-sop/types";
 import type { SopEntry, SopPartId } from "@/lib/admin-sop/types";
 import { INTERNAL_PERMISSION_LABELS } from "@/lib/rbac/constants";
+import type { ManualReviewStatus } from "@/lib/admin-sop/review";
 
 type Entry = { sop: SopEntry; locked: boolean };
 
@@ -14,9 +15,32 @@ function permissionLabel(sop: SopEntry): string {
   return INTERNAL_PERMISSION_LABELS[sop.permission] ?? sop.permission;
 }
 
-export function AdminManualClient({ entries }: { entries: Entry[] }) {
+type ReportState = "idle" | "sending" | "sent" | "error";
+
+export function AdminManualClient({ entries, review }: { entries: Entry[]; review: ManualReviewStatus }) {
   const t = useTranslations("adminCmp");
   const [search, setSearch] = useState("");
+  const [reports, setReports] = useState<Record<number, ReportState>>({});
+
+  // Reuses the admin Tasks API: the report lands on the Tasks board tagged ops-manual.
+  async function reportOutdated(sop: SopEntry) {
+    setReports((r) => ({ ...r, [sop.id]: "sending" }));
+    try {
+      const res = await fetch("/api/admin/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: `Operations Manual: SOP ${sop.id} may be outdated`,
+          description: `SOP ${sop.id}, ${sop.title}. A step no longer matches the platform. Open /admin/manual#${sopAnchor(sop.id)} and check it.`,
+          priority: "medium",
+          tags: ["ops-manual"],
+        }),
+      });
+      setReports((r) => ({ ...r, [sop.id]: res.ok ? "sent" : "error" }));
+    } catch {
+      setReports((r) => ({ ...r, [sop.id]: "error" }));
+    }
+  }
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -55,7 +79,17 @@ export function AdminManualClient({ entries }: { entries: Entry[] }) {
           Standard operating procedures for running the platform. You see the procedures your role can perform; ones you
           can&apos;t are marked locked. Ask the assistant &ldquo;how do I…&rdquo; to jump straight to a procedure.
         </p>
+        <p className="mt-1 text-xs text-slate-500">
+          Last reviewed {review.lastReviewed}. Next review {review.nextReview}.
+        </p>
       </div>
+
+      {review.due ? (
+        <div className="max-w-2xl rounded-lg border border-[#E4C77A] bg-[#FBF4E2] px-3 py-2 text-sm text-[#7A5409]">
+          <span className="font-semibold">Review due.</span> The manual was last checked {review.daysSince} days ago.
+          Compare the sidebar with the procedures, then update the last reviewed date.
+        </div>
+      ) : null}
 
       <div className="relative max-w-md">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -148,6 +182,20 @@ export function AdminManualClient({ entries }: { entries: Entry[] }) {
                           ))}
                         </div>
                       ) : null}
+
+                      <div className="mt-3 flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void reportOutdated(sop)}
+                          disabled={reports[sop.id] === "sending" || reports[sop.id] === "sent"}
+                          className="rounded-md border border-slate-200 px-2 py-1 text-[11px] text-slate-600 hover:bg-slate-50 disabled:opacity-60"
+                        >
+                          {reports[sop.id] === "sent" ? "Reported" : reports[sop.id] === "sending" ? "Sending" : "Report outdated step"}
+                        </button>
+                        {reports[sop.id] === "error" ? (
+                          <span className="text-[11px] text-red-600">Could not send the report. Try again.</span>
+                        ) : null}
+                      </div>
 
                       {locked ? (
                         <p className="mt-3 text-xs text-slate-400">
