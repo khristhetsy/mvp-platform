@@ -8,7 +8,8 @@ import {
   validateCronSecret,
 } from "@/lib/notifications/cron/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { reminderDue } from "@/lib/billing/past-due";
+import { FREE_MOVE_DAYS, lapsedNoticeDue, reminderDue } from "@/lib/billing/past-due";
+import { cancelSubscription } from "@/lib/lemonsqueezy";
 import { notifyPastDue } from "@/lib/billing/past-due-alerts";
 
 export const dynamic = "force-dynamic";
@@ -17,8 +18,14 @@ export const maxDuration = 120;
 /**
  * Daily: remind founders whose renewal payment failed. Day 0 is sent by the
  * billing webhook; this job sends day 3 (24 to 48 hours left) and day 5 (under
- * 24 hours left). Each reminder goes out once per failed payment, so a re-run is
- * harmless. A cancellation that runs to the end of the paid period is skipped.
+ * 24 hours left). Once the grace period has run out it sends the notice that the
+ * account moves to the Free plan. FREE_MOVE_DAYS after the grace period ends it
+ * makes the move: the plan change is recorded as a pending move to Free and the
+ * Lemon Squeezy subscription is cancelled, so the billing webhook lands the
+ * account on the Free plan, the same path a founder's own downgrade to Free uses.
+ * Each notice goes out once per failed payment, so a re-run is harmless. A
+ * cancellation that runs to the end of the paid period is skipped, and so is a
+ * plan with no Lemon Squeezy subscription (paid by wire).
  */
 async function handle(request: Request) {
   if (!getCronSecret()) return cronMisconfiguredResponse();
@@ -39,10 +46,25 @@ async function handle(request: Request) {
     .limit(500);
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
 
+  // Grace period already over, Free move date not reached yet.
+  const moveCutoff = new Date(now.getTime() - FREE_MOVE_DAYS * 86_400_000).toISOString();
+  const { data: lapsedData, error: lapsedError } = await admin
+    .from("subscriptions")
+    .select("id, profile_id, plan_type, grace_period_ends_at")
+    .eq("subscription_status", "active")
+    .eq("cancel_at_period_end", false)
+    .like("plan_type", "founder_%")
+    .not("grace_period_ends_at", "is", null)
+    .lte("grace_period_ends_at", now.toISOString())
+    .gt("grace_period_ends_at", moveCutoff)
+    .limit(500);
+  if (lapsedError) return NextResponse.json({ ok: false, error: lapsedError.message }, { status: 500 });
+
   let sent = 0;
   let failed = 0;
-  for (const row of (data ?? []) as Array<{ id: string; profile_id: string; plan_type: string; grace_period_ends_at: string }>) {
-    const stage = reminderDue(row.grace_period_ends_at, now);
+  const rows = [...(data ?? []), ...(lapsedData ?? [])] as Array<{ id: string; profile_id: string; plan_type: string; grace_period_ends_at: string }>;
+  for (const row of rows) {
+    const stage = reminderDue(row.grace_period_ends_at, now) ?? (lapsedNoticeDue(row.grace_period_ends_at, now) ? "lapsed" : null);
     if (!stage) continue;
     try {
       await notifyPastDue({
@@ -58,7 +80,40 @@ async function handle(request: Request) {
       Sentry.captureException(err, { tags: { pass: "past_due_reminders" } });
     }
   }
-  return NextResponse.json({ ok: true, due: data?.length ?? 0, sent, failed });
+
+  // Free move date reached: record the move, then cancel the Lemon Squeezy
+  // subscription. The pending move is written first so the cancellation webhook
+  // lands the account on Free. A failed cancellation is retried the next day.
+  const { data: moveData, error: moveError } = await admin
+    .from("subscriptions")
+    .select("id, ls_subscription_id")
+    .eq("subscription_status", "active")
+    .eq("cancel_at_period_end", false)
+    .like("plan_type", "founder_%")
+    .neq("plan_type", "founder_free")
+    .not("ls_subscription_id", "is", null)
+    .not("grace_period_ends_at", "is", null)
+    .lte("grace_period_ends_at", moveCutoff)
+    .limit(50);
+  if (moveError) return NextResponse.json({ ok: false, error: moveError.message }, { status: 500 });
+
+  let moved = 0;
+  let moveFailed = 0;
+  for (const row of moveData ?? []) {
+    try {
+      const { error: pendingError } = await admin
+        .from("subscriptions")
+        .update({ pending_plan_type: "founder_free", pending_plan_effective_at: now.toISOString() })
+        .eq("id", row.id);
+      if (pendingError) throw new Error(pendingError.message);
+      await cancelSubscription(row.ls_subscription_id as string);
+      moved += 1;
+    } catch (err) {
+      moveFailed += 1;
+      Sentry.captureException(err, { tags: { pass: "past_due_free_move" } });
+    }
+  }
+  return NextResponse.json({ ok: true, due: rows.length, sent, failed, moved, moveFailed });
 }
 
 async function scheduledGET(request: Request) {

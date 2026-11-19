@@ -6,7 +6,7 @@ import { absoluteUrl } from "@/lib/activity/email-templates";
 import { renderEmail } from "@/lib/email/layout";
 import { staffRecipients, newCustomerLink } from "@/lib/notifications/new-customer-alerts";
 import { PLAN_LABELS, type PlanType } from "@/lib/subscriptions/plans";
-import { formatPtDate, type PastDueStage } from "@/lib/billing/past-due";
+import { formatPtDate, freeMoveDate, type PastDueStage } from "@/lib/billing/past-due";
 import { renderFounderPastDueEmail } from "@/lib/billing/past-due-email";
 
 export const PAST_DUE_FOUNDER_TYPE = "billing_past_due";
@@ -14,11 +14,13 @@ const STAGE_TYPE: Record<PastDueStage, string> = {
   first: PAST_DUE_FOUNDER_TYPE,
   midpoint: "billing_past_due_midpoint",
   final: "billing_past_due_final",
+  lapsed: "billing_past_due_lapsed",
 };
 const STAGE_TITLE: Record<PastDueStage, string> = {
   first: "Your payment did not go through",
   midpoint: "Two days left to update your card",
   final: "Last day to update your card",
+  lapsed: "Your account is moving to the Free plan",
 };
 export const PAST_DUE_STAFF_TYPE = "staff_premium_payment_past_due";
 const BILLING_PATH = "/founder/settings/billing";
@@ -31,6 +33,9 @@ const BILLING_PATH = "/founder/settings/billing";
  *
  * stage "midpoint" / "final": the daily reminder job (day 3 and day 5). Founder
  * only, once each per failed payment.
+ *
+ * stage "lapsed": the same job, once the grace period has run out. Founder only,
+ * once per failed payment, naming the date the account moves to the Free plan.
  *
  * Never throws, so a mail problem cannot fail the billing webhook or the job.
  */
@@ -58,7 +63,10 @@ export async function notifyPastDue(input: {
         recipientUserId: input.profileId,
         type: STAGE_TYPE[stage],
         title: STAGE_TITLE[stage],
-        message: `Update your card by ${date} to keep investor outreach running.`,
+        message:
+          stage === "lapsed"
+            ? `Update your card by ${formatPtDate(freeMoveDate(input.endsAt))} to stay on your ${planLabel} plan.`
+            : `Update your card by ${date} to keep investor outreach running.`,
         entityType: "subscription",
         entityId: input.subscriptionId,
         deepLink: BILLING_PATH,

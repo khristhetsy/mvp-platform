@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { formatPtDate, graceDaysLeft, type PastDueState } from "@/lib/billing/past-due";
+import { formatPtDate, freeMoveDate, graceDaysLeft, lapsedNoticeDue, type PastDueState } from "@/lib/billing/past-due";
 
 /**
  * Shown on every founder screen while a renewal payment has failed. Renders
@@ -9,6 +9,8 @@ export function PastDueBanner({ state, endsAt }: Readonly<{ state: PastDueState;
   if (!state || !endsAt) return null;
   const lapsed = state === "lapsed";
   const days = graceDaysLeft(endsAt);
+  // Once the grace period is over, name the date the account moves to the Free plan.
+  const moveNotice = lapsed && lapsedNoticeDue(endsAt);
   const message = lapsed
     ? "Investor outreach is paused because your last payment failed. Your tools are still on. Update your card to turn outreach back on."
     : `Your last payment failed. Update your card by ${formatPtDate(endsAt)} (${days} day${days === 1 ? "" : "s"} left) to keep investor outreach running.`;
@@ -19,7 +21,16 @@ export function PastDueBanner({ state, endsAt }: Readonly<{ state: PastDueState;
         lapsed ? "border-red-200 bg-red-50 text-red-900" : "border-amber-200 bg-amber-50 text-amber-900"
       }`}
     >
-      <span>{message}</span>
+      {moveNotice ? (
+        <span>
+          <span className="block font-semibold">Your account moves to the Free plan on {formatPtDate(freeMoveDate(endsAt))}</span>
+          <span className="block">
+            Your payment is past due. Update your card before then to keep your plan. Investor outreach stays paused until payment goes through.
+          </span>
+        </span>
+      ) : (
+        <span>{message}</span>
+      )}
       <Link
         href="/founder/settings/billing"
         className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-700"

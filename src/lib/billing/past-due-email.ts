@@ -1,7 +1,7 @@
 // The emails a founder gets when a renewal payment fails. No dashes in the copy.
 
 import { renderEmail, type RenderedEmail } from "@/lib/email/layout";
-import { formatPtDate, type PastDueStage } from "@/lib/billing/past-due";
+import { formatPtDate, freeMoveDate, type PastDueStage } from "@/lib/billing/past-due";
 
 export function renderFounderPastDueEmail(input: {
   firstName: string | null;
@@ -12,6 +12,7 @@ export function renderFounderPastDueEmail(input: {
 }): RenderedEmail {
   const stage = input.stage ?? "first";
   const date = formatPtDate(input.endsAt);
+  const moveDate = formatPtDate(freeMoveDate(input.endsAt));
   const greeting = input.firstName?.trim() ? `Hi ${input.firstName.trim()},` : "Hello,";
 
   const copy = {
@@ -33,7 +34,14 @@ export function renderFounderPastDueEmail(input: {
       intro: `${greeting} your ${input.planLabel} renewal payment is still unpaid, and today is the last day before investor outreach pauses.`,
       preheader: `Investor outreach pauses after ${date}.`,
     },
+    lapsed: {
+      subject: `Your iCapOS account will move to the Free plan on ${moveDate}`,
+      headline: "Your account moves to the Free plan",
+      intro: `${greeting} your ${input.planLabel} renewal payment is past due, and investor outreach is paused.`,
+      preheader: `Update your card by ${moveDate} to stay on your ${input.planLabel} plan.`,
+    },
   }[stage];
+  const lapsed = stage === "lapsed";
 
   return renderEmail({
     audience: "founder",
@@ -47,13 +55,15 @@ export function renderFounderPastDueEmail(input: {
         type: "facts",
         rows: [
           { label: "Plan", value: input.planLabel },
-          { label: "Investor outreach pauses", value: date },
+          lapsed ? { label: "Moves to the Free plan", value: moveDate } : { label: "Investor outreach pauses", value: date },
         ],
       },
       {
         type: "note",
         tone: "warning",
-        text: "Everything works as normal until that date. After it, investor outreach and introduction requests pause until the payment is fixed. Your tools stay on.",
+        text: lapsed
+          ? `If your card is not updated by ${moveDate}, your account moves to the Free plan. Free keeps your dashboard, documents, due diligence report, and Capital Readiness Rating. Every other tool, including investor matching and outreach, deal rooms, capital raise and SPVs, and Reg CF materials, is not part of Free.`
+          : "Everything works as normal until that date. After it, investor outreach and introduction requests pause until the payment is fixed. Your tools stay on.",
       },
       {
         type: "paragraph",

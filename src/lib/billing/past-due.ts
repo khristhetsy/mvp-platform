@@ -77,9 +77,11 @@ export function isNewPastDue(input: GraceInput): boolean {
  * Which follow up email is due for a subscription still inside its grace period.
  * The reminder job runs once a day, so each 24 hour window is hit exactly once:
  * "midpoint" with 24 to 48 hours left (day 3 of 5), "final" with under 24 hours
- * left (day 5 of 5). The first email is sent by the webhook (day 0).
+ * left (day 5 of 5). The first email is sent by the webhook (day 0). "lapsed" is the
+ * notice sent once the grace period has run out, naming the date the account moves
+ * to the Free plan.
  */
-export type PastDueStage = "first" | "midpoint" | "final";
+export type PastDueStage = "first" | "midpoint" | "final" | "lapsed";
 
 export function reminderDue(endsAt: string, now: Date = new Date()): "midpoint" | "final" | null {
   const hours = (new Date(endsAt).getTime() - now.getTime()) / 3_600_000;
@@ -87,4 +89,18 @@ export function reminderDue(endsAt: string, now: Date = new Date()): "midpoint" 
   if (hours <= 24) return "final";
   if (hours <= 48) return "midpoint";
   return null;
+}
+
+/** Days after the grace period ends that the account moves to the Free plan. */
+export const FREE_MOVE_DAYS = 3;
+
+/** ISO timestamp the account moves to the Free plan: FREE_MOVE_DAYS after the grace period ends. */
+export function freeMoveDate(endsAt: string): string {
+  return new Date(new Date(endsAt).getTime() + FREE_MOVE_DAYS * 86_400_000).toISOString();
+}
+
+/** True from the moment the grace period ends until the Free move date. */
+export function lapsedNoticeDue(endsAt: string, now: Date = new Date()): boolean {
+  const t = now.getTime();
+  return t >= new Date(endsAt).getTime() && t < new Date(freeMoveDate(endsAt)).getTime();
 }
