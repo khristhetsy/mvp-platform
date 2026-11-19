@@ -7,10 +7,10 @@
  * and makes it active; nothing is edited in place, so past months keep reporting
  * what was actually billed.
  *
- * LemonSqueezy is the one thing this screen can't change — their prices are
- * immutable and not writable through their API. We read the variant and warn
- * loudly when the two disagree, because a mismatch means the site quotes one
- * number and the customer is charged another.
+ * Card billing is now Stripe (from Nov 2026). The Stripe price ids come from the
+ * environment, set per plan in Vercel. The LemonSqueezy column only shows what
+ * the older subscribers who are still on Lemon Squeezy pay; it is expected to
+ * differ from the catalogue for anyone who kept an old price.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -106,7 +106,6 @@ export default function PricingAdminClient({ canEdit }: { canEdit: boolean }) {
     return <p className="text-[13px] text-slate-500">{error ?? "Loading pricing…"}</p>;
   }
 
-  const mismatches = data.provider.filter((p) => p.matches === false);
 
   return (
     <div>
@@ -120,7 +119,7 @@ export default function PricingAdminClient({ canEdit }: { canEdit: boolean }) {
           <div className="border-b border-slate-200 px-4 py-3">
             <h2 className="text-[14px] font-semibold text-slate-900">Pricing</h2>
             <p className="mt-0.5 text-[12px] text-slate-500">
-              What each plan costs, what customers are told it costs, and what LemonSqueezy actually charges.
+              What each plan costs, what customers are told it costs, and what older subscribers still on LemonSqueezy pay. New card customers are billed through Stripe.
               Saving writes a new version — nothing is edited in place. Active: <span className="font-medium text-slate-700">{data.active.version}</span>.
             </p>
           </div>
@@ -132,7 +131,7 @@ export default function PricingAdminClient({ canEdit }: { canEdit: boolean }) {
                 <th className={th}>Price / mo</th>
                 <th className={th}>Shown as</th>
                 <th className={th}>Sub-label</th>
-                <th className={th}>LemonSqueezy</th>
+                <th className={th}>LemonSqueezy (older plans)</th>
                 <th className={`${th} text-right`}>On this plan</th>
               </tr>
             </thead>
@@ -212,18 +211,6 @@ export default function PricingAdminClient({ canEdit }: { canEdit: boolean }) {
             </tbody>
           </table>
 
-          {mismatches.length ? (
-            <div className="border-t border-amber-200 bg-amber-50 px-4 py-3 text-[12.5px] text-amber-900">
-              <p>
-                <b>{mismatches.map((m) => PLAN_SHORT[m.plan] ?? m.plan).join(" and ")}</b> {mismatches.length === 1 ? "doesn’t" : "don’t"} match LemonSqueezy.
-                {mismatches.map((m) => (
-                  <span key={m.plan}> You&rsquo;ve set {money(data.active.plans[m.plan]?.cents ?? 0)} but variant {m.variantId} still charges {money(m.priceCents ?? 0)}.</span>
-                ))}
-                {" "}New customers would be billed the LemonSqueezy amount while every screen shows yours. LemonSqueezy prices can&rsquo;t be edited through their API — change it there first.
-              </p>
-              <button type="button" onClick={() => void load()} className={`${btn} mt-2`}>Re-check</button>
-            </div>
-          ) : null}
 
           <div className="flex items-center gap-2 border-t border-slate-200 px-4 py-3">
             <button type="button" className={btn} disabled={!dirty} onClick={() => setDraft(draftOf(data.active))}>Reset</button>
@@ -371,11 +358,11 @@ function SaveDialog({ current, candidate, counts, busy, onCancel, onSave }: {
           <legend className="text-[12px] font-medium text-slate-700">Existing {affected} paying customer{affected === 1 ? "" : "s"}</legend>
           <label className="mt-1 flex items-start gap-2 text-[12.5px] text-slate-700">
             <input type="radio" name="policy" checked={policy === "grandfather"} onChange={() => setPolicy("grandfather")} className="mt-0.5" />
-            <span>Grandfather — they keep their current LemonSqueezy price; the app shows each customer their own.</span>
+            <span>Grandfather — they keep the price they pay now; the app shows each customer their own.</span>
           </label>
           <label className="mt-1 flex items-start gap-2 text-[12.5px] text-slate-700">
             <input type="radio" name="policy" checked={policy === "migrate"} onChange={() => setPolicy("migrate")} className="mt-0.5" />
-            <span>Migrate them in LemonSqueezy, then record here that they were moved.</span>
+            <span>Move them to the new price at the provider, then record here that they were moved.</span>
           </label>
         </fieldset>
 

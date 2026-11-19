@@ -20,7 +20,7 @@ export default async function AdminPricingPage() {
         <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">Admin workspace</p>
         <h1 className="mt-0.5 text-[22px] font-medium tracking-tight text-slate-950">Pricing</h1>
         <p className="mt-0.5 text-sm text-slate-600">
-          One place that decides what every screen says a plan costs. What customers are actually charged is set in Lemon Squeezy.
+          One place that decides what every screen says a plan costs. New card customers are charged through Stripe, using the price ids set in Vercel. Older subscribers still on Lemon Squeezy keep the price they pay now.
         </p>
       </div>
 

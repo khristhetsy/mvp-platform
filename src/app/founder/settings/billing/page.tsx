@@ -133,7 +133,6 @@ export default async function FounderSettingsBillingPage() {
           ) : (
             <WireCheckoutPanel
               monthlyLabel={wire.monthlyLabel}
-              quarterlyLabel={wire.quarterlyLabel}
               instructions={wire.instructions}
               openInvoice={wire.openInvoice}
             />

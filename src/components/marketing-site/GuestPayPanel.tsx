@@ -68,7 +68,7 @@ export function GuestPayPanel({
         {busy ? "Opening secure checkout…" : `Pay ${price} and continue`}
       </button>
       <p className="mt-3 text-center text-[12px] leading-5 text-site-muted">
-        Secure checkout by Lemon Squeezy. After you pay, you create your login and start onboarding.
+        Secure checkout by Stripe. After you pay, you create your login and start onboarding.
       </p>
     </div>
   );

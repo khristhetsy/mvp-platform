@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
-import { createCheckoutUrl } from "@/lib/lemonsqueezy";
+import { createAdminCheckoutUrl } from "@/lib/billing/admin-checkout";
+import { stripeConfigured } from "@/lib/stripe";
 import { sendEmail } from "@/lib/email/send-email";
 import { PLAN_LABELS } from "@/lib/subscriptions/plans";
 import { renderEmail } from "@/lib/email/layout";
@@ -21,8 +22,8 @@ function variantFor(plan: string): string | undefined {
   return undefined;
 }
 
-// POST /api/admin/billing/customers/[id]/checkout — generate a Lemon Squeezy
-// checkout link for this customer (the customer enters their own card at LS).
+// POST /api/admin/billing/customers/[id]/checkout — generate a card checkout link
+// (Stripe, or Lemon Squeezy until Stripe is configured) for this customer. The customer enters their own card.
 // Optionally email it to them. Never charges a card from the app.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   try {
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (!parsed.success) return NextResponse.json({ error: "Invalid request." }, { status: 400 });
 
     const variantId = variantFor(parsed.data.plan);
-    if (!variantId) return NextResponse.json({ error: `No Lemon Squeezy variant configured for ${parsed.data.plan}.` }, { status: 400 });
+    if (!stripeConfigured() && !variantId) return NextResponse.json({ error: `No Lemon Squeezy variant configured for ${parsed.data.plan}.` }, { status: 400 });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = serviceRoleClientUntyped() as any;
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (!email) return NextResponse.json({ error: "Customer has no email on file." }, { status: 400 });
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com";
-    const url = await createCheckoutUrl({ variantId, email, profileId, successUrl: `${appUrl}/admin/billing` });
+    const url = await createAdminCheckoutUrl({ plan: parsed.data.plan, variantId, email, profileId, successUrl: `${appUrl}/admin/billing` });
 
     let emailed = false;
     if (parsed.data.send) {

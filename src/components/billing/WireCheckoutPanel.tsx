@@ -3,7 +3,7 @@
 import { useState } from "react";
 import {
   WIRE_COPY, WIRE_CYCLE_LABEL, WIRE_STATUS_LABEL, WIRE_STATUS_TONE, wireDatePT, wireInstructionRows,
-  wireInstructionsComplete, wireMoney, type WireCycle, type WireInstructions, type WireInvoiceRow, type WireStatus,
+  wireInstructionsComplete, wireMoney, type WireInstructions, type WireInvoiceRow, type WireStatus,
 } from "@/lib/billing/wire-core";
 
 /**
@@ -82,25 +82,20 @@ export function WireInvoiceView({ invoice, instructions }: Readonly<{ invoice: W
 
 export function WireCheckoutPanel({
   monthlyLabel,
-  quarterlyLabel,
   instructions,
   openInvoice = null,
 }: Readonly<{
-  /** "$1,000", from the pricing catalogue. */
+  /** "$1,500", from the pricing catalogue. Premium is billed monthly only. */
   monthlyLabel: string;
-  /** "$2,500", three months of access. */
-  quarterlyLabel: string;
   instructions: WireInstructions;
   /** An invoice already awaiting payment, shown instead of the request form. */
   openInvoice?: WireInvoiceRow | null;
 }>) {
-  const [cycle, setCycle] = useState<WireCycle>(openInvoice?.billing_cycle ?? "monthly");
   const [invoice, setInvoice] = useState<WireInvoiceRow | null>(openInvoice);
   const [instr, setInstr] = useState<WireInstructions>(instructions);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [changing, setChanging] = useState(false);
 
   async function request() {
     setBusy(true);
@@ -110,7 +105,7 @@ export function WireCheckoutPanel({
       const res = await fetch("/api/billing/wire-invoice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cycle }),
+        body: JSON.stringify({ cycle: "monthly" }),
       });
       const data = (await res.json().catch(() => null)) as { invoice?: WireInvoiceRow; instructions?: WireInstructions; emailed?: boolean; reused?: boolean; error?: string } | null;
       if (!res.ok || !data?.invoice) {
@@ -119,7 +114,6 @@ export function WireCheckoutPanel({
       }
       setInvoice(data.invoice);
       if (data.instructions) setInstr(data.instructions);
-      setChanging(false);
       setNotice(
         data.reused
           ? "You already have this invoice open. Here it is."
@@ -134,7 +128,7 @@ export function WireCheckoutPanel({
     }
   }
 
-  const showForm = !invoice || changing || invoice.status === "void" || invoice.status === "received";
+  const showForm = !invoice || invoice.status === "void" || invoice.status === "received";
 
   return (
     <section className="rounded-2xl border border-[#1A6CE4]/30 bg-[#F5F8FE] p-6">
@@ -154,21 +148,10 @@ export function WireCheckoutPanel({
             </div>
           </div>
           <div>
-            <p className="text-xs font-medium text-slate-500">Billing cycle</p>
-            <div role="radiogroup" aria-label="Billing cycle" className="mt-1.5 grid grid-cols-2 gap-2">
-              {(["monthly", "quarterly"] as const).map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  role="radio"
-                  aria-checked={cycle === c}
-                  onClick={() => setCycle(c)}
-                  className={`rounded-lg border px-3 py-2 text-left text-sm ${cycle === c ? "border-2 border-[#1A6CE4] bg-white" : "border-slate-200 bg-white hover:border-slate-300"}`}
-                >
-                  <span className="block font-semibold text-[#0A1A40]">{WIRE_CYCLE_LABEL[c]}</span>
-                  <span className="block text-xs text-slate-600">{c === "monthly" ? monthlyLabel : quarterlyLabel}{c === "quarterly" ? " every 3 months" : " a month"}</span>
-                </button>
-              ))}
+            <p className="text-xs font-medium text-slate-500">Billing</p>
+            <div className="mt-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-[#0A1A40]">
+              <span className="font-semibold">Monthly</span>
+              <span className="ml-2 text-xs text-slate-600">{monthlyLabel} a month</span>
             </div>
           </div>
           <div className="md:col-span-2">
@@ -181,9 +164,6 @@ export function WireCheckoutPanel({
               >
                 {busy ? "Creating invoice…" : "Request wire invoice"}
               </button>
-              {changing ? (
-                <button type="button" onClick={() => setChanging(false)} className="text-sm font-medium text-slate-600 hover:underline">Cancel</button>
-              ) : null}
             </div>
             {error ? <p role="alert" className="mt-3 text-sm text-red-700">{error}</p> : null}
           </div>
@@ -194,11 +174,6 @@ export function WireCheckoutPanel({
         <div className="mt-5 space-y-3">
           {notice ? <p className="text-sm text-[#0A1A40]">{notice}</p> : null}
           <WireInvoiceView invoice={invoice} instructions={instr} />
-          {invoice.status === "awaiting" || invoice.status === "overdue" ? (
-            <button type="button" onClick={() => { setCycle(invoice.billing_cycle === "monthly" ? "quarterly" : "monthly"); setChanging(true); }} className="text-xs font-medium text-[#1A6CE4] hover:underline">
-              Switch to {invoice.billing_cycle === "monthly" ? "quarterly" : "monthly"} billing
-            </button>
-          ) : null}
         </div>
       ) : null}
 

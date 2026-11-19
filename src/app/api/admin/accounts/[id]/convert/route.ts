@@ -5,7 +5,8 @@ import { requireApiProfile } from "@/lib/api/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getOrganization } from "@/lib/organizations/organizations";
 import { isConvertPlan, variantIdForPlan, type ConvertPlan } from "@/lib/organizations/convert-to-paid";
-import { createCheckoutUrl } from "@/lib/lemonsqueezy";
+import { createAdminCheckoutUrl } from "@/lib/billing/admin-checkout";
+import { stripeConfigured } from "@/lib/stripe";
 import { sendEmail } from "@/lib/email/send-email";
 import { PLAN_LABELS } from "@/lib/subscriptions/plans";
 import { renderEmail } from "@/lib/email/layout";
@@ -29,7 +30,7 @@ const schema = z.object({
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // POST — convert an admin-created demo Founder account to a paying one by card. Makes a
-// Lemon Squeezy checkout link for the demo's founder profile, using the client's own
+// card checkout link (Stripe, or Lemon Squeezy until Stripe is configured) for the demo's founder profile, using the client's own
 // bill to email (the demo login uses a placeholder address), and optionally emails it.
 // The account stays a comped demo until the first payment: the billing webhook then
 // activates it (activateConvertedOrg). Calling it again for a pending account reuses the
@@ -87,14 +88,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const name = (body.billToName ?? saved?.conversion_name ?? "").trim() || null;
 
   const variantId = variantIdForPlan(plan);
-  if (!variantId) {
+  if (!stripeConfigured() && !variantId) {
     return NextResponse.json({ error: `No Lemon Squeezy variant is configured for ${PLAN_LABELS[plan]}.` }, { status: 400 });
   }
 
   let url: string;
   try {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com";
-    url = await createCheckoutUrl({ variantId, email, profileId: founder.founder_id, successUrl: `${appUrl}/admin/accounts`, name: name ?? undefined });
+    url = await createAdminCheckoutUrl({ plan, variantId, email, profileId: founder.founder_id, successUrl: `${appUrl}/admin/accounts`, name: name ?? undefined });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "Could not create the checkout link." }, { status: 502 });
   }

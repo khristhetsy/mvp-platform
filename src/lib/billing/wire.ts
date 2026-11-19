@@ -25,7 +25,7 @@ import { centsFor } from "@/lib/subscriptions/pricing-catalog";
 import {
   activationPeriod, cycleMonths, daysOverdue, dueDateFor, EMPTY_WIRE_INSTRUCTIONS, invoiceAmountCents,
   isOpenStatus, needsRenewalInvoice, normalizeWireInstructions, periodEnd, PREMIUM_MONTHLY_CENTS,
-  shouldPausePremium, statusFor, wireDatePT, type WireCycle, type WireInstructions, type WireInvoiceRow,
+  QUARTERLY_BILLED_MONTHS, shouldPausePremium, statusFor, wireDatePT, type WireCycle, type WireInstructions, type WireInvoiceRow,
 } from "@/lib/billing/wire-core";
 import {
   renderPremiumEndedEmail, renderWireInvoiceEmail, renderWirePausedEmail, renderWireReceiptEmail, renderWireReminderEmail,
@@ -176,6 +176,12 @@ export type CreateWireInvoiceInput = {
   companyId: string | null;
   cycle: WireCycle;
   isRenewal?: boolean;
+  /**
+   * The monthly price to bill, in cents. A renewal passes the price the founder was
+   * already paying, so a later change to the catalogue never raises it. Defaults to
+   * the current catalogue price.
+   */
+  monthlyCents?: number;
   /** Start of the period this invoice pays for. Defaults to now. */
   periodStart?: Date | string | null;
 };
@@ -200,7 +206,7 @@ export async function createWireInvoice(input: CreateWireInvoiceInput, client: D
 
   const issued = new Date();
   const start = input.periodStart ? new Date(input.periodStart) : issued;
-  const amount = invoiceAmountCents(input.cycle, await premiumMonthlyCents());
+  const amount = invoiceAmountCents(input.cycle, input.monthlyCents ?? (await premiumMonthlyCents()));
   const row = {
     invoice_number: number,
     profile_id: input.profileId,
@@ -406,18 +412,26 @@ export async function runWireInvoiceCron(now: Date = new Date(), client: Db = db
       try {
         const { data: last } = await client
           .from("wire_invoices")
-          .select("id, billing_cycle, company_id, status")
+          .select("id, billing_cycle, company_id, status, amount_cents")
           .eq("profile_id", sub.profile_id)
           .neq("status", "void")
           .order("issued_at", { ascending: false })
           .limit(1)
           .maybeSingle();
-        const lastRow = last as { billing_cycle: WireCycle; company_id: string | null; status: string } | null;
+        const lastRow = last as { billing_cycle: WireCycle; company_id: string | null; status: string; amount_cents: number } | null;
         // Not paid by wire (no invoice on file): nothing to renew here.
         if (!lastRow) continue;
         if (!needsRenewalInvoice(sub, isOpenStatus(lastRow.status), now)) continue;
         const created = await createWireInvoice(
-          { profileId: sub.profile_id, companyId: lastRow.company_id, cycle: lastRow.billing_cycle, isRenewal: true, periodStart: sub.current_period_end },
+          {
+            profileId: sub.profile_id,
+            companyId: lastRow.company_id,
+            cycle: lastRow.billing_cycle,
+            isRenewal: true,
+            periodStart: sub.current_period_end,
+            // Keep what they were paying: a renewal never jumps to a new catalogue price.
+            monthlyCents: Math.round(lastRow.amount_cents / (lastRow.billing_cycle === "quarterly" ? QUARTERLY_BILLED_MONTHS : 1)),
+          },
           client,
         );
         if (!created.reused) result.renewalsCreated += 1;
@@ -536,7 +550,6 @@ export type FounderWireState = {
   openInvoice: WireInvoiceRow | null;
   instructions: WireInstructions;
   monthlyLabel: string;
-  quarterlyLabel: string;
 };
 
 /** Everything the billing, upgrade and settings pages need for the wire panel. */
@@ -552,6 +565,5 @@ export async function loadFounderWireState(profileId: string): Promise<FounderWi
     openInvoice: invoices.find((i) => isOpenStatus(i.status)) ?? null,
     instructions,
     monthlyLabel: label(invoiceAmountCents("monthly", monthly)),
-    quarterlyLabel: label(invoiceAmountCents("quarterly", monthly)),
   };
 }
