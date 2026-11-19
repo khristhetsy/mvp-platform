@@ -1,7 +1,9 @@
 import type { SopEntry } from "./types";
+import { MENU_SOPS } from "./library-menu";
 
 /**
- * Admin Operations Manual — 57 SOPs across 14 parts.
+ * Admin Operations Manual: 66 SOPs across Parts A to O here, plus SOP 67 to 99 (Parts P to X)
+ * from library-menu.ts, 99 in all.
  *
  * Single source of truth for both the /admin/manual page and the assistant's
  * SOP answers. Each entry uses the same template: summary (Purpose), permission
@@ -484,6 +486,7 @@ export const ADMIN_SOPS: SopEntry[] = [
       "Admin → Marketing → Templates to create or edit a template.",
       "Open Sequences, add steps, and set delays/conditions.",
       "Bulk-enroll a contact list into the sequence.",
+      "Partner codes, Deal notices and Testimonials sit in the same Marketing menu. Suppressions lists the contacts excluded from every send (see SOP 66).",
     ],
     behindScenes: "Sequences are in src/lib/marketing/; enrollList performs idempotent bulk enrollment.",
     reversibility: "Pause a sequence to stop sends.",
@@ -1039,6 +1042,8 @@ export const ADMIN_SOPS: SopEntry[] = [
       "'Educational community content only — not an offer of securities' applies to all outbound marketing.",
     ],
   },
+  // Parts P to X: one procedure per sidebar area (see library-menu.ts).
+  ...MENU_SOPS,
 ];
 
 /** Lookup an SOP by id. */

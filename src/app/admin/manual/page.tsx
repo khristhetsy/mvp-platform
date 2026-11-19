@@ -4,6 +4,7 @@ import { AdminManualClient } from "@/components/admin/AdminManualClient";
 import { requirePermissionPage } from "@/lib/api/permissions";
 import { requireRole } from "@/lib/supabase/auth";
 import { visibleSops } from "@/lib/admin-sop/retrieve";
+import { manualReviewStatus } from "@/lib/admin-sop/review";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,7 @@ export default async function AdminManualPage() {
       profileName={profile.full_name ?? profile.email ?? "Admin"}
       profileSubtitle={t("operationsManual")}
     >
-      <AdminManualClient entries={entries} />
+      <AdminManualClient entries={entries} review={manualReviewStatus()} />
     </AppShell>
   );
 }
