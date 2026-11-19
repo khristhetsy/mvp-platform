@@ -21,7 +21,7 @@ export async function GET(): Promise<Response> {
   return NextResponse.json({ invoices, instructions });
 }
 
-const bodySchema = z.object({ cycle: z.enum(["monthly", "quarterly"]) });
+const bodySchema = z.object({ cycle: z.enum(["monthly"]) });
 
 /** POST: request a Premium wire invoice (founder only). Returns the invoice. */
 export async function POST(req: Request): Promise<Response> {
@@ -32,7 +32,7 @@ export async function POST(req: Request): Promise<Response> {
   if (blockedPost) return blockedPost;
 
   const parsed = bodySchema.safeParse(await req.json().catch(() => ({})));
-  if (!parsed.success) return NextResponse.json({ error: "Choose monthly or quarterly billing." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Premium is billed monthly." }, { status: 400 });
 
   try {
     const { company } = await getActiveCompanyForUser(profile);

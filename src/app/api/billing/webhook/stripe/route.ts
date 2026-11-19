@@ -14,6 +14,7 @@ import { alertStaffNewCustomer } from "@/lib/notifications/new-customer-alerts";
 import { activateConvertedOrg } from "@/lib/organizations/convert-to-paid";
 import { sendFounderWelcomeLetter } from "@/lib/notifications/founder-welcome-letter";
 import { assignAccountManagerForPremium } from "@/lib/team/account-manager";
+import { recordGuestPayment } from "@/lib/billing/paid-signup";
 
 export const dynamic = "force-dynamic";
 
@@ -118,7 +119,8 @@ async function syncSubscription(sub: Stripe.Subscription): Promise<NextResponse>
       existing = byProfile.data as Existing | null;
     }
   }
-  if (!existing && !profileId) {
+  const signupId = sub.metadata?.paid_signup_id ?? null;
+  if (!existing && !profileId && !signupId) {
     console.warn(`[billing/webhook/stripe] ${sub.id}: no subscription row and no profile_id in metadata, ignoring.`);
     return NextResponse.json({ received: true, ignored: "no target" });
   }
@@ -145,6 +147,33 @@ async function syncSubscription(sub: Stripe.Subscription): Promise<NextResponse>
   // An older Stripe subscription ending after the founder subscribed again.
   if (existing?.stripe_subscription_id && existing.stripe_subscription_id !== sub.id && mapped.status === "canceled") {
     return NextResponse.json({ received: true, ignored: "stale subscription" });
+  }
+
+  // A payment made before any login exists (pay first, account after). The money is
+  // recorded on the paid signup row; the founder claims it by creating a login on
+  // /start/paid. Once they have, the subscriptions row exists and the normal path above
+  // handles every later event.
+  if (!existing && signupId) {
+    const recorded = await recordGuestPayment({
+      signupId,
+      stripe: { subscriptionId: sub.id, customerId, priceId },
+      userEmail: typeof sub.customer === "string" ? "" : (sub.customer as Stripe.Customer).email ?? "",
+      plan,
+      status: mapped.status,
+      currentPeriodEnd: periodEnd,
+      graceEndsAt: keepGraceWindow({
+        existingEndsAt: null,
+        existingCancelAtPeriodEnd: false,
+        mappedEndsAt: mapped.gracePeriodEndsAt,
+        mappedCancelAtPeriodEnd: mapped.cancelAtPeriodEnd,
+      }),
+      cancelAtPeriodEnd: mapped.cancelAtPeriodEnd,
+    });
+    if (recorded.error) {
+      await reportServerFailure("billing.stripe.guest_payment_failed", new Error(recorded.error), { stripe_subscription_id: sub.id, signup_id: signupId });
+      return NextResponse.json({ error: "Could not save the payment" }, { status: 500 });
+    }
+    return NextResponse.json({ received: true, ...(recorded.found ? { guest: signupId } : { ignored: "unknown signup" }) });
   }
 
   const graceInput = {

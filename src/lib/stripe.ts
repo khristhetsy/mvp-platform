@@ -35,7 +35,10 @@ export function verifyStripeEvent(rawBody: string, signature: string): Stripe.Ev
 
 export type StripeCheckoutInput = {
   priceId: string;
-  profileId: string;
+  /** The signed in founder. Null for a guest who pays before any login exists. */
+  profileId: string | null;
+  /** The paid_signups row of a guest. The webhook reads it to find the row. */
+  signupId?: string | null;
   planType: string;
   email: string | null;
   /** An existing Stripe customer, so a returning subscriber keeps one customer record. */
@@ -49,13 +52,15 @@ export type StripeCheckoutInput = {
 
 /** A hosted Checkout Session for a monthly subscription. Returns the page URL. */
 export async function createStripeCheckoutUrl(input: StripeCheckoutInput): Promise<string> {
-  const metadata: Record<string, string> = { profile_id: input.profileId, plan_type: input.planType };
+  const metadata: Record<string, string> = { plan_type: input.planType };
+  if (input.profileId) metadata.profile_id = input.profileId;
+  if (input.signupId) metadata.paid_signup_id = input.signupId;
   if (input.replacesLsSubscriptionId) metadata.replaces_ls_subscription_id = input.replacesLsSubscriptionId;
 
   const session = await getStripe().checkout.sessions.create({
     mode: "subscription",
     line_items: [{ price: input.priceId, quantity: 1 }],
-    client_reference_id: input.profileId,
+    client_reference_id: input.profileId ?? input.signupId ?? undefined,
     ...(input.customerId ? { customer: input.customerId } : input.email ? { customer_email: input.email } : {}),
     managed_payments: { enabled: input.managedPayments },
     metadata,

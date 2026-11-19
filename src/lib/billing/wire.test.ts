@@ -9,9 +9,9 @@ import { renderWireInvoiceEmail, renderWirePausedEmail, renderWireReceiptEmail }
 const iso = (s: string) => new Date(s).toISOString();
 
 describe("invoiceAmountCents", () => {
-  it("is $1,000 monthly and $2,500 quarterly", () => {
-    expect(invoiceAmountCents("monthly")).toBe(100000);
-    expect(invoiceAmountCents("quarterly")).toBe(250000);
+  it("is the monthly price, and 2.5 months for an old quarterly invoice", () => {
+    expect(invoiceAmountCents("monthly")).toBe(150000);
+    expect(invoiceAmountCents("quarterly", 100000)).toBe(250000);
   });
   it("follows the catalogue's monthly price", () => {
     expect(invoiceAmountCents("quarterly", 120000)).toBe(300000);

@@ -39,13 +39,16 @@ export type PaidSignupRow = {
   ls_customer_id: string | null;
   ls_variant_id: string | null;
   ls_status: string | null;
+  stripe_subscription_id: string | null;
+  stripe_customer_id: string | null;
+  stripe_price_id: string | null;
   current_period_end: string | null;
   grace_period_ends_at: string | null;
   cancel_at_period_end: boolean;
 };
 
 const COLUMNS =
-  "id, email, plan_type, full_name, company, consent_accepted_at, consent_policy_version, consent_user_agent, status, paid_at, ls_subscription_id, ls_customer_id, ls_variant_id, ls_status, current_period_end, grace_period_ends_at, cancel_at_period_end";
+  "id, email, plan_type, full_name, company, consent_accepted_at, consent_policy_version, consent_user_agent, status, paid_at, ls_subscription_id, ls_customer_id, ls_variant_id, ls_status, stripe_subscription_id, stripe_customer_id, stripe_price_id, current_period_end, grace_period_ends_at, cancel_at_period_end";
 
 export async function getPaidSignup(id: string): Promise<PaidSignupRow | null> {
   const { data } = await db().from("paid_signups").select(COLUMNS).eq("id", id).maybeSingle();
@@ -108,9 +111,12 @@ export function guestCheckoutUrl(input: { plan: PlanType; email: string; name?: 
  */
 export async function recordGuestPayment(input: {
   signupId: string;
-  lsSubscriptionId: string | null;
-  lsCustomerId: string;
-  lsVariantId: string;
+  /** Lemon Squeezy ids. Left out for a Stripe payment. */
+  lsSubscriptionId?: string | null;
+  lsCustomerId?: string;
+  lsVariantId?: string;
+  /** Stripe ids. Left out for a Lemon Squeezy payment. */
+  stripe?: { subscriptionId: string; customerId: string; priceId: string | null };
   userEmail: string;
   plan: PlanType | null;
   status: string;
@@ -123,10 +129,19 @@ export async function recordGuestPayment(input: {
   if (row.status === "claimed") return { found: true };
 
   const becamePaid = row.status === "checkout_started" && input.status === "active";
+  const providerIds: Record<string, unknown> = input.stripe
+    ? {
+        stripe_subscription_id: input.stripe.subscriptionId,
+        stripe_customer_id: input.stripe.customerId,
+        stripe_price_id: input.stripe.priceId,
+      }
+    : {
+        ls_subscription_id: input.lsSubscriptionId ?? null,
+        ls_customer_id: input.lsCustomerId ?? null,
+        ls_variant_id: input.lsVariantId ?? null,
+      };
   const patch: Record<string, unknown> = {
-    ls_subscription_id: input.lsSubscriptionId,
-    ls_customer_id: input.lsCustomerId,
-    ls_variant_id: input.lsVariantId,
+    ...providerIds,
     ls_status: input.status,
     current_period_end: input.currentPeriodEnd,
     grace_period_ends_at: input.graceEndsAt,
@@ -136,7 +151,7 @@ export async function recordGuestPayment(input: {
   if (becamePaid) {
     patch.status = "paid";
     patch.paid_at = new Date().toISOString();
-    patch.paid_email = input.userEmail;
+    patch.paid_email = input.userEmail || row.email;
   }
   const { error } = await db().from("paid_signups").update(patch).eq("id", row.id);
   if (error) return { found: true, error: error.message };
@@ -282,6 +297,10 @@ export async function claimPaidSignup(input: { signupId: string; password: strin
       ls_subscription_id: row.ls_subscription_id,
       ls_customer_id: row.ls_customer_id,
       ls_variant_id: row.ls_variant_id,
+      // A guest who paid through Stripe carries Stripe ids instead of Lemon Squeezy ones.
+      stripe_subscription_id: row.stripe_subscription_id,
+      stripe_customer_id: row.stripe_customer_id,
+      stripe_price_id: row.stripe_price_id,
       current_period_start: now,
       current_period_end: row.current_period_end,
       grace_period_ends_at: row.grace_period_ends_at,

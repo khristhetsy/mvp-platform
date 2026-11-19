@@ -2,9 +2,10 @@
  * Pricing page copy (Oct 9, 2026). Founders start free: a one time AI due
  * diligence report, the Capital Readiness Rating, sharing with any investor and
  * a Private Market listing for 7,000+ investors. They upgrade when investors are
- * interested: Basic $49 and Professional $199 (card, Lemon Squeezy) or Premium
- * $1,000 (done for you, paid by bank wire). The SPV Program stays (price on
- * request, contact sales). Investors are always free.
+ * interested: Basic, Professional and Premium, at the prices in the pricing
+ * catalogue (Basic $99, Professional $199, Premium $1,500 from Nov 20, 2026).
+ * Card billing is through Stripe; Premium can also be paid by bank wire. The SPV
+ * Program stays (price on request, contact sales). Investors are always free.
  *
  * Every figure a visitor reads comes from the pricing catalogue (pricingFor),
  * so the page can't drift from what we charge. No dashes as sentence
@@ -12,6 +13,11 @@
  */
 import { money, priceLabel, priceSublabel, type PricingCatalog } from "@/lib/subscriptions/pricing-catalog";
 import { BASIC_FEATURES, FREE_FEATURES, PREMIUM_FEATURES, PROFESSIONAL_FEATURES } from "@/lib/subscriptions/plans";
+
+/** The billing and refunds paragraph. Premium is billed monthly, at the price the page shows. */
+export function billingNoteFor(premium: string): string {
+  return `Billing and refunds. Basic and Professional are billed monthly by card. Premium is billed monthly (${premium}) and activates as soon as your payment is received. A paid plan begins delivering the moment it starts, so payments are non-refundable, including partial periods. Cancel any time to stop future billing; access continues through the end of the paid period.`;
+}
 
 export const PRICING_DISCLAIMER =
   "iCFO Capital does not solicit securities and is not an investment adviser. Fees are flat and never tied to funding outcomes.";
@@ -88,8 +94,7 @@ export const pricing = {
   ],
   investorNote: "Investors join free at icapos.com/investors. Investors are never charged, and iCapOS takes no fee from either side of an introduction.",
   investorLink: { label: "icapos.com/investors", href: "/investors" },
-  billingNote:
-    "Billing and refunds. Basic and Professional are billed monthly by card. Premium is billed monthly ($1,000) or quarterly ($2,500), and activates as soon as your payment is received. A paid plan begins delivering the moment it starts, so payments are non-refundable, including partial periods. Cancel any time to stop future billing; access continues through the end of the paid period.",
+  billingNote: billingNoteFor("$1,500"),
   disclaimer: PRICING_DISCLAIMER,
   comparison: {
     title: "Side by side",
@@ -141,6 +146,7 @@ export function pricingFor(catalog: PricingCatalog) {
   const premium = priceLabel(catalog, "founder_premium");
   return {
     ...pricing,
+    billingNote: billingNoteFor(premium),
     tiers: pricing.tiers.map((t) => {
       if (t.name === "Free") return { ...t, price: free };
       if (t.name === "Basic") return { ...t, price: basic, per: priceSublabel(catalog, "founder_basic") };

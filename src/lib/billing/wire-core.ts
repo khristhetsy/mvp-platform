@@ -1,9 +1,10 @@
 /**
  * Premium by bank wire: the pure parts (no database, no env), shared by the
  * server library (wire.ts), the cron, the API routes, the PDF and the client
- * panels. Approved Oct 9, 2026: Premium is paid ONLY by wire, monthly ($1,000)
- * or quarterly ($2,500, from Nov 13, 2026). Basic and Professional stay on Lemon
- * Squeezy.
+ * panels. Approved Oct 9, 2026: Premium is paid by wire. From Nov 20, 2026 it is
+ * billed monthly only, at the price in the pricing catalogue. Quarterly invoices
+ * issued before then are still read and renewed correctly. Basic and Professional
+ * are billed by card through Stripe.
  */
 
 export type WireCycle = "monthly" | "quarterly";
@@ -11,8 +12,8 @@ export type WireStatus = "awaiting" | "received" | "overdue" | "void";
 
 export const WIRE_CYCLES: readonly WireCycle[] = ["monthly", "quarterly"] as const;
 
-/** Premium monthly price in cents when the pricing catalogue can't be read. */
-export const PREMIUM_MONTHLY_CENTS = 100000;
+/** Premium monthly price in cents when the pricing catalogue can't be read: the current price. */
+export const PREMIUM_MONTHLY_CENTS = 150000;
 
 /** Days from issue to due date. */
 export const WIRE_DUE_DAYS = 7;
@@ -116,10 +117,10 @@ export function isWireCycle(value: unknown): value is WireCycle {
   return value === "monthly" || value === "quarterly";
 }
 
-/** A quarterly invoice charges this many months of the monthly price: $2,500 at $1,000 a month (Nov 13, 2026). */
+/** Old quarterly invoices charged this many months of the monthly price ($2,500 at $1,000 a month). New quarterly invoices are no longer offered. */
 export const QUARTERLY_BILLED_MONTHS = 2.5;
 
-/** Monthly $1,000 or quarterly $2,500 (the quarter still covers three months of access). */
+/** The invoice amount: the monthly price, or 2.5 months of it for an old quarterly invoice. */
 export function invoiceAmountCents(cycle: WireCycle, monthlyCents: number = PREMIUM_MONTHLY_CENTS): number {
   return Math.round(monthlyCents * (cycle === "quarterly" ? QUARTERLY_BILLED_MONTHS : 1));
 }
@@ -230,7 +231,7 @@ export function wireDatePT(iso: string | null | undefined): string {
 
 // ── Copy shared by the panel, the email and the PDF ──────────────────────────
 export const WIRE_COPY = {
-  panelTitle: "Premium, $1,000/mo. We do the heavy lifting so you can close the deal.",
+  panelTitle: "Premium. We do the heavy lifting so you can close the deal.",
   paymentMethod: "Bank wire transfer",
   emailNote: "We email an invoice with wire instructions. Premium activates as soon as your wire is received, usually within 1 to 2 business days.",
   flatFee: "Flat monthly fee. Fees are never tied to funding outcomes.",

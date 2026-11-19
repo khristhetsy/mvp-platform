@@ -3,6 +3,8 @@ import { z } from "zod";
 import { checkFormRateLimit } from "@/lib/ai-site/ratelimit";
 import { isPaymentsEnabled } from "@/lib/billing/pricing-guard";
 import { createPaidSignup, emailHasAccount, guestCheckoutUrl } from "@/lib/billing/paid-signup";
+import { createStripeCheckoutUrl, stripeConfigured } from "@/lib/stripe";
+import { managedPaymentsFor, stripePriceId } from "@/lib/billing/stripe-mapping";
 import { PAID_SIGNUP_CLAIM_DAYS, PAID_SIGNUP_COOKIE, makePaidSignupToken } from "@/lib/billing/paid-signup-core";
 import { recordFunnelEvent } from "@/lib/analytics/funnel";
 
@@ -20,8 +22,10 @@ const schema = z.object({
 
 /**
  * Checkout for someone who has no login yet (pay first, account after). Records the
- * billing terms they accepted, then returns the Lemon Squeezy link. The order carries
- * the paid signup id, which the payment webhook uses to find the row.
+ * billing terms they accepted, then returns the Stripe Checkout link (Lemon Squeezy
+ * only when Stripe is not configured). The order carries the paid signup id, which
+ * the payment webhook uses to find the row. A guest has never paid, so they always
+ * pay the current price, never a legacy one.
  */
 export async function POST(req: NextRequest): Promise<NextResponse> {
   if (!isPaymentsEnabled()) {
@@ -55,7 +59,30 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       policyVersion: input.refundPolicyVersion,
       userAgent: req.headers.get("user-agent"),
     });
-    const url = guestCheckoutUrl({ plan: input.planType, email: input.email, name: input.name, signupId });
+    let url: string | null;
+    if (stripeConfigured()) {
+      const priceId = stripePriceId(input.planType, "current");
+      if (!priceId) {
+        console.error(`[billing/guest-checkout] Stripe current price for ${input.planType} is not configured`);
+        url = null;
+      } else {
+        const origin = req.headers.get("origin") ?? process.env.NEXT_PUBLIC_SITE_URL ?? "https://icapos.com";
+        url = await createStripeCheckoutUrl({
+          priceId,
+          profileId: null,
+          signupId,
+          planType: input.planType,
+          email: input.email.trim().toLowerCase(),
+          customerId: null,
+          successUrl: `${origin}/start/paid`,
+          cancelUrl: `${origin}/start/pay?email=${encodeURIComponent(input.email)}&plan=${input.planType}`,
+          managedPayments: managedPaymentsFor(input.planType),
+          replacesLsSubscriptionId: null,
+        });
+      }
+    } else {
+      url = guestCheckoutUrl({ plan: input.planType, email: input.email, name: input.name, signupId });
+    }
     if (!url) {
       return NextResponse.json({ error: "Online checkout is not available for this plan yet. Please contact us." }, { status: 503 });
     }

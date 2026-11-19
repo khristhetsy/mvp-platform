@@ -110,7 +110,6 @@ export default async function BillingPage({
       ) : (
         <WireCheckoutPanel
           monthlyLabel={wire.monthlyLabel}
-          quarterlyLabel={wire.quarterlyLabel}
           instructions={wire.instructions}
           openInvoice={wire.openInvoice}
         />

@@ -76,7 +76,7 @@ export default async function PaymentRequiredPage({
               <div className="mt-5">
                 <CheckoutButton planType={subscription.plan_type} label={`Pay ${price} and continue`} recommended pricing={pricing} />
               </div>
-              <p className="mt-3 text-xs leading-5 text-slate-500">Secure checkout by Lemon Squeezy. You return here after paying, and onboarding opens as soon as the payment is confirmed.</p>
+              <p className="mt-3 text-xs leading-5 text-slate-500">Secure checkout by Stripe. You return here after paying, and onboarding opens as soon as the payment is confirmed.</p>
             </>
           ) : (
             <div className="mt-5"><BillingOwnerOnlyCard /></div>
