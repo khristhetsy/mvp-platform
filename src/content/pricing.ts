@@ -11,7 +11,7 @@
  * punctuation anywhere in this copy.
  */
 import { money, priceLabel, priceSublabel, type PricingCatalog } from "@/lib/subscriptions/pricing-catalog";
-import { FREE_FEATURES, PREMIUM_FEATURES } from "@/lib/subscriptions/plans";
+import { BASIC_FEATURES, FREE_FEATURES, PREMIUM_FEATURES, PROFESSIONAL_FEATURES } from "@/lib/subscriptions/plans";
 
 export const PRICING_DISCLAIMER =
   "iCFO Capital does not solicit securities and is not an investment adviser. Fees are flat and never tied to funding outcomes.";
@@ -45,15 +45,7 @@ export const pricing = {
       price: "$99",
       per: "/month",
       desc: "See who is interested and start reaching investors yourself.",
-      features: [
-        "Every tool: CRR, Due diligence report, Pitch deck analyzer, Valuation, Financial model, Cap table, Data room, Deal room, Market claim grader, Pitch practice simulator, e-learning",
-        "See which investors are interested",
-        "Up to 5 matched investors, identities revealed",
-        "Your one-pager distributed to them",
-        "Attend our Investor Conference Virtual Event",
-        "DIY outreach, self-serve start to finish",
-        "Up to 5 intro requests a month",
-      ],
+      features: BASIC_FEATURES,
       cta: { label: "Start on Basic", href: "/start?plan=basic" },
       featured: false,
     },
@@ -63,12 +55,7 @@ export const pricing = {
       per: "/month",
       badge: "Includes stage time",
       desc: "For founders actively in market who want the stage.",
-      features: [
-        "Everything in Basic",
-        "Up to 50 matched investors",
-        "Monthly live presentation slot",
-        "Up to 20 intro requests a month",
-      ],
+      features: PROFESSIONAL_FEATURES,
       cta: { label: "Start on Professional", href: "/start?plan=professional" },
       featured: true,
     },
