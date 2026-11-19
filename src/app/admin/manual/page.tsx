@@ -4,7 +4,8 @@ import { AdminManualClient } from "@/components/admin/AdminManualClient";
 import { requirePermissionPage } from "@/lib/api/permissions";
 import { requireRole } from "@/lib/supabase/auth";
 import { visibleSops } from "@/lib/admin-sop/retrieve";
-import { manualReviewStatus } from "@/lib/admin-sop/review";
+import { manualReviewStatus, newSopTagsVisible, NEW_SOPS_FROM_ID } from "@/lib/admin-sop/review";
+import { buildCoverageTiles } from "@/lib/admin-sop/coverage";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,12 @@ export default async function AdminManualPage() {
       profileName={profile.full_name ?? profile.email ?? "Admin"}
       profileSubtitle={t("operationsManual")}
     >
-      <AdminManualClient entries={entries} review={manualReviewStatus()} />
+      <AdminManualClient
+        entries={entries}
+        review={manualReviewStatus()}
+        coverage={buildCoverageTiles()}
+        newFromId={newSopTagsVisible() ? NEW_SOPS_FROM_ID : null}
+      />
     </AppShell>
   );
 }

@@ -33,3 +33,13 @@ export function manualReviewStatus(
     due: daysSince > intervalDays,
   };
 }
+
+/** Procedures added with the menu coverage update show a "New" tag for a while. */
+export const NEW_SOPS_ADDED_ON = "2026-11-19";
+export const NEW_SOPS_FROM_ID = 67;
+export const NEW_SOPS_VISIBLE_DAYS = 60;
+
+/** True while procedures from NEW_SOPS_FROM_ID up should carry the "New" tag. */
+export function newSopTagsVisible(now: Date = new Date()): boolean {
+  return manualReviewStatus(now, NEW_SOPS_ADDED_ON, NEW_SOPS_VISIBLE_DAYS).daysSince <= NEW_SOPS_VISIBLE_DAYS;
+}

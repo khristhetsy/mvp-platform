@@ -7,6 +7,7 @@ import { SOP_PARTS, sopAnchor } from "@/lib/admin-sop/types";
 import type { SopEntry, SopPartId } from "@/lib/admin-sop/types";
 import { INTERNAL_PERMISSION_LABELS } from "@/lib/rbac/constants";
 import type { ManualReviewStatus } from "@/lib/admin-sop/review";
+import type { CoverageTile } from "@/lib/admin-sop/coverage";
 
 type Entry = { sop: SopEntry; locked: boolean };
 
@@ -17,7 +18,18 @@ function permissionLabel(sop: SopEntry): string {
 
 type ReportState = "idle" | "sending" | "sent" | "error";
 
-export function AdminManualClient({ entries, review }: { entries: Entry[]; review: ManualReviewStatus }) {
+export function AdminManualClient({
+  entries,
+  review,
+  coverage,
+  newFromId,
+}: {
+  entries: Entry[];
+  review: ManualReviewStatus;
+  coverage: CoverageTile[];
+  /** Procedures with this id or higher carry a "New" tag; null hides the tags. */
+  newFromId: number | null;
+}) {
   const t = useTranslations("adminCmp");
   const [search, setSearch] = useState("");
   const [reports, setReports] = useState<Record<number, ReportState>>({});
@@ -66,6 +78,9 @@ export function AdminManualClient({ entries, review }: { entries: Entry[]; revie
   }, [filtered]);
 
   const activeParts = SOP_PARTS.filter((p) => (byPart.get(p.id)?.length ?? 0) > 0);
+  const isNew = (id: number) => newFromId !== null && id >= newFromId;
+  const partHasNew = (partId: SopPartId) => (byPart.get(partId) ?? []).some(({ sop }) => isNew(sop.id));
+  const sectionsCovered = coverage.filter((c) => c.coveredPages === c.pages).length;
 
   return (
     <div className="space-y-4">
@@ -91,6 +106,46 @@ export function AdminManualClient({ entries, review }: { entries: Entry[]; revie
         </div>
       ) : null}
 
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {[
+          { value: String(entries.length), label: "Procedures you can see" },
+          { value: String(SOP_PARTS.length), label: "Parts" },
+          { value: `${sectionsCovered} of ${coverage.length}`, label: "Sidebar sections covered" },
+          { value: review.lastReviewed, label: "Last reviewed" },
+        ].map((stat) => (
+          <div key={stat.label} className="rounded-xl border border-slate-200/80 bg-white px-3 py-2.5">
+            <p className="text-xl font-semibold text-slate-950">{stat.value}</p>
+            <p className="text-xs text-slate-500">{stat.label}</p>
+          </div>
+        ))}
+      </div>
+
+      <div>
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Menu coverage</p>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+          {coverage.map((tile) => {
+            const full = tile.coveredPages === tile.pages;
+            const inner = (
+              <>
+                <p className="text-[13px] font-semibold text-slate-900">{tile.label}</p>
+                <p className="mt-0.5 text-[11.5px] text-slate-500">
+                  {tile.sopIds.length > 0
+                    ? `SOP ${tile.sopIds.length > 3 ? `${tile.sopIds[0]} to ${tile.sopIds[tile.sopIds.length - 1]}` : tile.sopIds.join(", ")}`
+                    : "No procedure yet"}
+                  {` · ${tile.coveredPages} of ${tile.pages} pages`}
+                </p>
+              </>
+            );
+            const cls = `block rounded-lg border border-slate-200/80 border-l-4 bg-white px-3 py-2 ${full ? "border-l-green-600" : tile.coveredPages > 0 ? "border-l-yellow-500" : "border-l-red-600"}`;
+            return tile.anchor ? (
+              <a key={tile.label} href={`#${tile.anchor}`} className={`${cls} hover:bg-slate-50`}>{inner}</a>
+            ) : (
+              <div key={tile.label} className={cls}>{inner}</div>
+            );
+          })}
+        </div>
+      </div>
+
       <div className="relative max-w-md">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
         <input
@@ -109,7 +164,10 @@ export function AdminManualClient({ entries, review }: { entries: Entry[]; revie
           <ul className="space-y-1 text-sm">
             {activeParts.map((part) => (
               <li key={part.id}>
-                <a href={`#part-${part.id}`} className="block rounded-md px-2 py-1 text-slate-600 hover:bg-slate-100 hover:text-slate-900">
+                <a
+                  href={`#part-${part.id}`}
+                  className={`block rounded-md px-2 py-1 hover:bg-slate-100 hover:text-slate-900 ${partHasNew(part.id) ? "bg-blue-50 text-blue-800" : "text-slate-600"}`}
+                >
                   {part.id} · {part.title}
                 </a>
               </li>
@@ -136,7 +194,12 @@ export function AdminManualClient({ entries, review }: { entries: Entry[]; revie
                     >
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="text-[11px] font-medium text-slate-400">SOP {sop.id}</p>
+                          <p className="text-[11px] font-medium text-slate-400">
+                            {isNew(sop.id) ? (
+                              <span className="mr-1.5 rounded-md bg-blue-100 px-2 py-0.5 text-[11px] font-semibold text-blue-800">New</span>
+                            ) : null}
+                            SOP {sop.id}
+                          </p>
                           <h3 className="text-base font-semibold text-slate-950">{sop.title}</h3>
                           <p className="mt-0.5 text-sm text-slate-600">{sop.summary}</p>
                         </div>
