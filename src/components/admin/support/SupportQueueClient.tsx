@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import type { SupportCareSettings } from "@/lib/support/settings";
 import type { SupportAiTriage, SupportChannel } from "@/lib/support/support";
 import { dueLabel } from "@/lib/support/business-hours";
+import { NewClientMessageModal } from "./NewClientMessageModal";
 import { SupportSettingsPanel } from "./SupportSettingsPanel";
 import { SupportTicketView } from "./SupportTicketView";
 
@@ -109,6 +110,7 @@ export function SupportQueueClient({
   const [sort, setSort] = useState<"oldest" | "newest" | "due">("due");
   const [gearOpen, setGearOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [newMessageOpen, setNewMessageOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(params.get("request"));
   const gearRef = useRef<HTMLDivElement>(null);
 
@@ -240,6 +242,13 @@ export function SupportQueueClient({
                 aria-label="Search support requests"
               />
             </div>
+            <button
+              type="button"
+              onClick={() => setNewMessageOpen(true)}
+              className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700"
+            >
+              <i className="ti ti-message-plus text-sm" aria-hidden="true" /> New message
+            </button>
             <div className="relative" ref={gearRef}>
               <button
                 type="button"
@@ -303,6 +312,20 @@ export function SupportQueueClient({
           )}
         </div>
       </div>
+
+      {newMessageOpen ? (
+        <NewClientMessageModal
+          staff={staff}
+          currentStaffId={currentStaffId}
+          aiDrafts={settings.ai.drafts}
+          onClose={() => setNewMessageOpen(false)}
+          onCreated={(id) => {
+            setNewMessageOpen(false);
+            setSelectedId(id);
+            router.refresh();
+          }}
+        />
+      ) : null}
 
       {settingsOpen ? (
         <SupportSettingsPanel initial={settings} staff={staff} canEdit={canEditSettings} onClose={() => { setSettingsOpen(false); router.refresh(); }} />
