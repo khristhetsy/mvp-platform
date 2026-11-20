@@ -4,6 +4,7 @@ import { AppShell } from "@/components/AppShell";
 import { MetricCard } from "@/components/MetricCard";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { TrainingBanner } from "@/components/training/TrainingBanner";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { AdminLearningAtRisk } from "@/components/admin/learning/AdminLearningAtRisk";
@@ -118,6 +119,8 @@ export default async function AdminLearningDashboardPage() {
             </div>
           }
         />
+
+        <TrainingBanner userId={profile.id} />
 
         <section className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <MetricCard label="Total courses" value={String(coursesTotal.count ?? 0)} detail="learning_programs" accent="indigo" href="/admin/learning/courses" />
