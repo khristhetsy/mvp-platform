@@ -155,7 +155,7 @@ export function renderAgreementCopyEmail(input: { firstName: string | null; comp
   const subject = "Your iCFO Services Agreement";
   const date = agreementDatePT(input.acceptedAt);
   const hello = input.firstName ? `Hi ${input.firstName},` : "Hello,";
-  const body = `${hello} you accepted the iCFO Services Agreement for ${input.companyName} on ${date}. A copy is attached. It is a monthly subscription, month to month, with no commission or finder's fee. You can cancel with 5 days written notice.`;
+  const body = `${hello} you accepted the iCFO Services Agreement for ${input.companyName} on ${date}. A copy is attached. It is a $1,500 monthly subscription, month to month, with no commission or finder's fee. You can cancel with 5 days written notice.`;
   const html = shell(
     `<p style="margin:0 0 14px;">${escapeHtml(body)}</p><p style="margin:0 0 14px;">You can download it again any time from your billing page.</p>${button("Open billing", input.billingUrl, true)}`,
     { audience: "founder", subject, preheader: "A copy of your Services Agreement is attached.", reason: "You are receiving this because you accepted the iCFO Services Agreement for the Premium plan.", lines: [NOT_A_BROKER_DEALER] },

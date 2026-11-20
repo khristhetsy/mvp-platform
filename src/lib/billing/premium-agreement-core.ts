@@ -4,13 +4,13 @@
  * the checkout dialog, the routes and the tests share one definition.
  *
  * What the agreement says is decided by the Word master
- * (src/lib/contracts/masters/premium-services-agreement.ts): a monthly
- * recurring subscription, month to month, no finder's fee, no signature blocks.
+ * (src/lib/contracts/masters/premium-services-agreement.ts): $1,500 a month as a
+ * recurring subscription (from Nov 20, 2026; v3 and earlier said $1,000), month to month, no finder's fee, no signature blocks.
  * Bump AGREEMENT_VERSION whenever the master changes, so every acceptance is
  * tied to the exact text the founder agreed to.
  */
 
-export const AGREEMENT_VERSION = "2026-11-premium-v3";
+export const AGREEMENT_VERSION = "2026-11-premium-v4";
 export const AGREEMENT_PLAN = "founder_premium" as const;
 
 /**
@@ -85,7 +85,7 @@ export function agreementValues(input: AgreementInput, acceptedAt: string | Date
 
 /** What the checkout dialog shows next to the agreement. Mirrors the master; the test checks both. */
 export const AGREEMENT_TERMS: Array<{ label: string; value: string }> = [
-  { label: "Billing", value: "Monthly subscription, at the Premium price shown at checkout" },
+  { label: "Billing", value: "$1,500 monthly subscription" },
   { label: "Term", value: "Month to month" },
   { label: "Cancel", value: "5 days written notice" },
   { label: "Commission or finder fee", value: "None" },
