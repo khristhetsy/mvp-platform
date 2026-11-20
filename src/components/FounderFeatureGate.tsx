@@ -6,10 +6,14 @@ import { SubscriptionLockedPanel } from "@/components/SubscriptionPanel";
 export async function FounderFeatureGate({
   featureKey,
   children,
+  bypass = false,
 }: Readonly<{
   featureKey: FeatureKey;
   children: ReactNode;
+  /** Invitation only courses: the invitation is the access, so the plan feature does not apply. */
+  bypass?: boolean;
 }>) {
+  if (bypass) return children;
   const access = await getFounderFeatureAccess(featureKey);
 
   if (!access.allowed) {

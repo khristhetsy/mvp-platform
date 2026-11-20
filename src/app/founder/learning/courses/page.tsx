@@ -63,7 +63,7 @@ export default async function BrowseCoursesPage({ searchParams }: PageProps) {
   const coached = await loadCoachedCourseSummaries({ profile, company });
 
   // DB courses
-  const dbCourses = await listPublishedAdminCourses();
+  const dbCourses = await listPublishedAdminCourses(profile.id);
   const dbBySlug = new Map(dbCourses.map((c) => [c.slug, c]));
   const dbSlugs = new Set(dbCourses.map((c) => c.slug));
 

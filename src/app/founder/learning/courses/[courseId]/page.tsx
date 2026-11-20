@@ -6,6 +6,7 @@ import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { getPublishedAdminCourse, getPublishedCourseQuiz, listPublishedAdminCourseModules, listPublishedAdminLessonsForModule } from "@/lib/learning/admin-courses";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { requireRole } from "@/lib/supabase/auth";
+import { mayTakeCourse } from "@/lib/learning/course-access";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +24,7 @@ export default async function FounderAdminCoursePage({ params }: PageProps) {
 
   const course = await getPublishedAdminCourse(courseId);
   if (!course) notFound();
+  if (!(await mayTakeCourse(course, profile.id))) notFound();
 
   const [modules, quiz] = await Promise.all([
     listPublishedAdminCourseModules(courseId),
@@ -106,7 +108,7 @@ export default async function FounderAdminCoursePage({ params }: PageProps) {
 
   return (
     <FounderAppShell profileName={profile.full_name ?? profile.email ?? "Founder"} profileSubtitle={company.company_name}>
-      <FounderFeatureGate featureKey="elearning">
+      <FounderFeatureGate featureKey="elearning" bypass={course.access_mode === "invite_only"}>
         <div className="space-y-8">
 
           {/* Hero banner */}

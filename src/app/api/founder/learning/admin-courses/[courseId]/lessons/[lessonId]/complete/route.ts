@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { mayTakeCourse } from "@/lib/learning/course-access";
 import { requireApiProfile } from "@/lib/api/auth";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -26,6 +27,9 @@ export async function POST(
 
   const [course, lesson] = await Promise.all([getPublishedAdminCourse(courseId), getPublishedAdminLesson(lessonId)]);
   if (!course || !lesson || lesson.module_slug !== moduleSlug || lesson.lesson_key !== lessonKey) {
+    return NextResponse.json({ error: "Lesson not found." }, { status: 404 });
+  }
+  if (!(await mayTakeCourse(course, auth.profile.id))) {
     return NextResponse.json({ error: "Lesson not found." }, { status: 404 });
   }
 

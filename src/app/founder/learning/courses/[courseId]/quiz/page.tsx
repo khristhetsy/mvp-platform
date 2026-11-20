@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { requireRole } from "@/lib/supabase/auth";
+import { mayTakeCourse } from "@/lib/learning/course-access";
 import { getPublishedAdminCourse, getPublishedCourseQuiz, listPublishedQuizQuestionsPublic } from "@/lib/learning/admin-courses";
 import { FounderAdminCourseQuizClient } from "@/components/founder/learning/FounderAdminCourseQuizClient";
 
@@ -25,6 +26,7 @@ export default async function FounderAdminCourseQuizPage({ params }: PageProps) 
 
   const course = await getPublishedAdminCourse(courseId);
   if (!course) notFound();
+  if (!(await mayTakeCourse(course, profile.id))) notFound();
 
   const quiz = await getPublishedCourseQuiz(courseId);
   if (!quiz) notFound();
@@ -33,7 +35,7 @@ export default async function FounderAdminCourseQuizPage({ params }: PageProps) 
 
   return (
     <FounderAppShell profileName={profile.full_name ?? profile.email ?? "Founder"} profileSubtitle={company.company_name}>
-      <FounderFeatureGate featureKey="elearning">
+      <FounderFeatureGate featureKey="elearning" bypass={course.access_mode === "invite_only"}>
         <div className="space-y-6">
           <PageHeader
             eyebrow={t("course_quiz")}

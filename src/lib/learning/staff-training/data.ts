@@ -53,12 +53,12 @@ export async function getOrClaimEnrollment(profile: ProfileLite): Promise<Enroll
   const db = service();
   const { data } = await db
     .from("staff_training_invites")
-    .select("id, email, audience, organization_label, reviewer_label, coach_enabled, status, expires_at, created_at")
+    .select("id, email, audience, organization_label, reviewer_label, coach_enabled, status, expires_at, created_at, program_id")
     .ilike("email", profile.email.trim())
     .eq("status", "invited")
     .limit(20);
   const invite = pickClaimableInvite((data ?? []) as (ClaimableInvite & {
-    audience: TrainingAudience; organization_label: string; reviewer_label: string; coach_enabled: boolean;
+    audience: TrainingAudience; organization_label: string; reviewer_label: string; coach_enabled: boolean; program_id: string | null;
   })[], profile.email);
   if (!invite) return null;
   // Single use: only flip an invite that is still "invited".
@@ -67,7 +67,7 @@ export async function getOrClaimEnrollment(profile: ProfileLite): Promise<Enroll
     .eq("id", invite.id).eq("status", "invited").select("id");
   if (!flipped || flipped.length === 0) return getEnrollment(profile.id);
   await db.from("staff_training_enrollments").upsert({
-    user_id: profile.id, invite_id: invite.id, audience: invite.audience,
+    user_id: profile.id, invite_id: invite.id, program_id: invite.program_id, audience: invite.audience,
     organization_label: invite.organization_label, reviewer_label: invite.reviewer_label,
     coach_on: invite.coach_enabled, status: "active",
   }, { onConflict: "user_id" });

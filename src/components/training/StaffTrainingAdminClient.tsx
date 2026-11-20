@@ -13,7 +13,7 @@ async function call(method: string, url: string, body: unknown) {
   if (!r.ok) throw new Error(j.error ?? "Request failed.");
 }
 
-export function StaffTrainingAdminClient({ invites, enrollments, exercises }: { invites: Invite[]; enrollments: Enr[]; exercises: Ex[] }) {
+export function StaffTrainingAdminClient({ invites, enrollments, exercises, programId }: { invites: Invite[]; enrollments: Enr[]; exercises: Ex[]; programId?: string }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [audience, setAudience] = useState("staff");
@@ -45,7 +45,7 @@ export function StaffTrainingAdminClient({ invites, enrollments, exercises }: { 
           {audience === "licensee" ? <label className="text-xs text-slate-600">Organization<input value={org} onChange={(e) => setOrg(e.target.value)} className="mt-1 block w-48 rounded-lg border border-slate-300 px-2 py-1.5 text-sm" /></label> : null}
           <label className="flex items-center gap-1.5 text-xs text-slate-600"><input type="checkbox" checked={coach} onChange={(e) => setCoach(e.target.checked)} />AI coach on</label>
           <button type="button" disabled={busy || !email.includes("@")} className="rounded-lg bg-[#1A6CE4] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#2E78F5] disabled:opacity-50"
-            onClick={() => run(async () => { await call("POST", "/api/admin/learning/staff-training/invites", { email, audience, organizationLabel: org, coachEnabled: coach }); setEmail(""); }, "Done. The person was emailed.")}>
+            onClick={() => run(async () => { await call("POST", "/api/admin/learning/staff-training/invites", { email, audience, organizationLabel: org, coachEnabled: coach, programId }); setEmail(""); }, "Done. The person was emailed.")}>
             Give access
           </button>
         </div>

@@ -332,6 +332,7 @@ export type Database = {
           is_published: boolean;
           content_status?: string;
           banner_image_url?: string | null;
+          access_mode?: "open" | "invite_only";
           created_at: string;
           updated_at?: string;
         };

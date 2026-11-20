@@ -9,6 +9,8 @@ import { AdminCourseEditor } from "@/components/admin/learning/AdminCourseEditor
 import { AdminCourseModulesManager } from "@/components/admin/learning/AdminCourseModulesManager";
 import { AdminCourseContentStudio } from "@/components/admin/learning/AdminCourseContentStudio";
 import { AdminCourseQuizGenerator } from "@/components/admin/learning/AdminCourseQuizGenerator";
+import { CourseAccessPanel } from "@/components/admin/learning/CourseAccessPanel";
+import { StaffTrainingAdminClient } from "@/components/training/StaffTrainingAdminClient";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { isAdminModuleComingSoon } from "@/lib/admin/module-flags";
 import { requireRole } from "@/lib/supabase/auth";
@@ -33,7 +35,7 @@ export default async function AdminLearningCourseDetailPage({ params }: PageProp
   const { data: program } = await supabase
     .from("learning_programs")
     .select(
-      "id, slug, title, description, readiness_focus, content_status, is_published, category, difficulty, order_index, banner_image_url, created_at",
+      "id, slug, title, description, readiness_focus, content_status, is_published, category, difficulty, order_index, banner_image_url, access_mode, created_at",
     )
     .eq("id", courseId)
     .maybeSingle();
@@ -94,6 +96,21 @@ export default async function AdminLearningCourseDetailPage({ params }: PageProp
         .eq("module_slug", `course:${courseId}`)
         .eq("passed", true),
     ]);
+
+  // Access list, for an invitation only course.
+  type AccessRow = Record<string, string | number | boolean | null>;
+  const inviteOnly = program?.access_mode === "invite_only";
+  const [accessInvites, accessEnrollments] = inviteOnly
+    ? await Promise.all([
+        supabase.from("staff_training_invites").select("id, email, audience, status, expires_at, organization_label").eq("program_id", courseId).order("created_at", { ascending: false }).limit(200),
+        supabase.from("staff_training_enrollments").select("id, user_id, audience, coach_on, coach_tone").eq("program_id", courseId).eq("status", "active").limit(500),
+      ])
+    : [{ data: [] as AccessRow[] }, { data: [] as AccessRow[] }];
+  const accessUserIds = ((accessEnrollments.data ?? []) as AccessRow[]).map((e) => e.user_id as string);
+  const { data: accessProfiles } = accessUserIds.length
+    ? await supabase.from("profiles").select("id, email").in("id", accessUserIds)
+    : { data: [] as AccessRow[] };
+  const accessEmail = new Map(((accessProfiles ?? []) as AccessRow[]).map((p) => [p.id as string, (p.email as string) ?? "unknown"]));
 
   if (!program) {
     return (
@@ -163,6 +180,25 @@ export default async function AdminLearningCourseDetailPage({ params }: PageProp
             <div className="mt-3 text-xs text-slate-500">
               Note: founder learning module rendering remains code-driven in Phase 1. Admin module linking is operational metadata only.
             </div>
+          </WorkspacePanel>
+        </section>
+
+        <section className="mt-6">
+          <WorkspacePanel title="Who can take it" subtitle="Everyone, or by invitation with an access list">
+            <CourseAccessPanel courseId={program.id} accessMode={inviteOnly ? "invite_only" : "open"} />
+            {inviteOnly ? (
+              <div className="mt-4">
+                <StaffTrainingAdminClient
+                  programId={program.id}
+                  invites={(accessInvites.data ?? []) as never}
+                  enrollments={((accessEnrollments.data ?? []) as AccessRow[]).map((e) => ({
+                    id: e.id as string, email: accessEmail.get(e.user_id as string) ?? "unknown", audience: e.audience as string,
+                    coach_on: e.coach_on as boolean, coach_tone: e.coach_tone as string, done: 0, total: 0,
+                  }))}
+                  exercises={[]}
+                />
+              </div>
+            ) : null}
           </WorkspacePanel>
         </section>
 

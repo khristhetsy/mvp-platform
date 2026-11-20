@@ -53,7 +53,7 @@ export async function loadFounderCourseCatalog(profile: Profile) {
     };
   });
 
-  const adminPrograms = await listPublishedAdminCourses().catch(() => []);
+  const adminPrograms = await listPublishedAdminCourses(profile.id).catch(() => []);
   const supabase = await createServerSupabaseClient();
 
   // Coach format courses appear only while the coach is active for this founder (enrolled, course on).
