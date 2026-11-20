@@ -36,8 +36,12 @@ export type ScheduledEmailRow = {
 
 /** A row stuck in sending this long (the run timed out) is marked failed, never resent on its own. */
 const STUCK_MS = 15 * 60_000;
-/** Stop starting new sends after this long so the run ends inside its 300 second limit. */
-const RUN_BUDGET_MS = 200_000;
+/**
+ * Stop starting new sends after this long. One send can take up to its own 200 second budget (a mass
+ * email), so starting a send later than this could run past the 300 second limit. Rows not reached stay
+ * scheduled and go out on the next run, 5 minutes later.
+ */
+const RUN_BUDGET_MS = 60_000;
 
 function db(): SupabaseClient {
   return createServiceRoleClient() as unknown as SupabaseClient;

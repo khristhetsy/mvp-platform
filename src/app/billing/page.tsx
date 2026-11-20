@@ -129,7 +129,7 @@ export default async function BillingPage({
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">{t("billing")}</p>
         <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">{t("billing_overview")}</h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-          Basic, Professional and Premium are billed by card through Lemon Squeezy.
+          Basic and Professional are billed monthly by card. Premium is billed monthly by bank wire.
         </p>
 
         <dl className="mt-8 grid gap-4 text-sm text-slate-700 md:grid-cols-2 lg:grid-cols-3">

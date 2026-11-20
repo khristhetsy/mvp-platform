@@ -1,8 +1,10 @@
 /**
  * Premium by bank wire: server side. Approved Oct 9, 2026.
  *
- * Premium is paid ONLY by wire, monthly ($1,000) or quarterly ($2,500, from
- * Nov 13, 2026). A founder requests an invoice, wires the amount with the invoice
+ * Premium is paid ONLY by wire, monthly: $1,500 for new customers from Nov 20,
+ * 2026; existing wire customers keep $1,000 (a renewal repeats the previous
+ * invoice's monthly rate). Quarterly is no longer offered, though old quarterly
+ * invoices still read. A founder requests an invoice, wires the amount with the invoice
  * number as the reference, and staff mark it received in Admin, Billing, Wire
  * payments, which activates Premium. The daily cron (/api/cron/wire-invoices)
  * flags overdue invoices, issues renewals 7 days before a period ends and pauses
