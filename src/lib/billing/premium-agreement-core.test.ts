@@ -58,7 +58,7 @@ describe("agreementValues", () => {
 describe("AGREEMENT_TERMS", () => {
   it("states the agreed commercial terms", () => {
     const text = AGREEMENT_TERMS.map((t) => `${t.label} ${t.value}`).join(" | ");
-    expect(text).toContain("Monthly subscription");
+    expect(text).toContain("$1,500");
     expect(text).toContain("Month to month");
     expect(text).toContain("None");
   });
