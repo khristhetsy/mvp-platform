@@ -25,6 +25,8 @@ type Payload = {
   sets: HistoryEntry[];
   counts: Record<string, number>;
   provider: Provider[];
+  /** Per plan: true = Stripe adds sales tax at checkout, false = none, null = not a Stripe checkout plan. */
+  tax: Record<string, boolean | null>;
   surfaces: PriceSurface[];
   shape: { plans: Array<{ key: PricedPlanKey; label: string }>; codeDefaults: PricingCatalog };
 };
@@ -132,6 +134,7 @@ export default function PricingAdminClient({ canEdit }: { canEdit: boolean }) {
                 <th className={th}>Shown as</th>
                 <th className={th}>Sub-label</th>
                 <th className={th}>LemonSqueezy (older plans)</th>
+                <th className={th}>Sales tax</th>
                 <th className={`${th} text-right`}>On this plan</th>
               </tr>
             </thead>
@@ -186,6 +189,16 @@ export default function PricingAdminClient({ canEdit }: { canEdit: boolean }) {
                         </span>
                       )}
                     </td>
+                    <td className={td}>
+                      {data.tax[key] === true ? (
+                        <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">Applied by Stripe</span>
+                      ) : data.tax[key] === false ? (
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">Not applied</span>
+                      ) : (
+                        <span className="text-slate-400">n/a</span>
+                      )}
+                      {data.tax[key] !== null ? <div className="mt-1 text-[11px] text-slate-400">current and older price</div> : null}
+                    </td>
                     <td className={`${td} text-right tabular-nums`}>{data.counts[key] ?? 0}</td>
                   </tr>
                 );
@@ -205,7 +218,7 @@ export default function PricingAdminClient({ canEdit }: { canEdit: boolean }) {
                     className="ml-1 w-[86px] rounded-md border border-slate-300 px-2 py-1 text-right text-[13px] tabular-nums"
                   />
                 </td>
-                <td className={td} colSpan={3}><span className="text-slate-400">Quoted in the “add a company” refusal message.</span></td>
+                <td className={td} colSpan={4}><span className="text-slate-400">Quoted in the “add a company” refusal message.</span></td>
                 <td className={`${td} text-right tabular-nums`}>—</td>
               </tr>
             </tbody>

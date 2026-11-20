@@ -1,6 +1,6 @@
 /**
  * Subscription pricing — admin only.
- *   GET                                        → { active, sets, counts, provider, surfaces, shape }
+ *   GET                                        → { active, sets, counts, provider, tax, surfaces, shape }
  *   POST { action: "save", plans, addCompanyCents, reason, existingPolicy, effectiveAt, version }
  *   POST { action: "revert", id, reason }
  *
@@ -14,6 +14,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireApiProfile } from "@/lib/api/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { isStripePlan, managedPaymentsFor } from "@/lib/billing/stripe-mapping";
 import { writeAuditLog } from "@/lib/data/audit";
 import {
   CODE_DEFAULT_PRICING, PLAN_SHORT, PRICED_PLANS, diffPricing, nextPricingVersion,
@@ -53,7 +54,10 @@ export async function GET() {
       const rows = prev ? diffPricing(prev, s) : [];
       return { ...s, diff: rows, summary: prev ? summarizePricingDiff(rows) : "Seeded from the code constants" };
     });
-    return NextResponse.json({ active, sets: withDiff, counts, provider, surfaces: priceSurfaces(active), shape: SHAPE });
+    // Sales tax is collected by Stripe (Managed Payments) per plan, for both the current and the older price.
+    const tax: Record<string, boolean | null> = {};
+    for (const key of PRICED_PLANS) tax[key] = isStripePlan(key) ? managedPaymentsFor(key) : null;
+    return NextResponse.json({ active, sets: withDiff, counts, provider, tax, surfaces: priceSurfaces(active), shape: SHAPE });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "Couldn't load pricing." }, { status: 500 });
   }
