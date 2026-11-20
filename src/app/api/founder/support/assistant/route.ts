@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { gateAiRun } from "@/lib/ai-usage/gate";
 import { z } from "zod";
-import { requireRole } from "@/lib/supabase/auth";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { writeAuditLog } from "@/lib/data/audit";
+import { resolveSupportRequester } from "@/lib/support/requester";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { getJourneyOverview } from "@/lib/founder/stage-gate-status";
 import { getSubscription } from "@/lib/subscriptions/get-subscription";
@@ -68,8 +69,11 @@ function buildInvestorSystem(ctx: { name: string; stage: string | null }): strin
 type Handoff = { requestId: string; ownerName: string | null; dueAt: string | null; topic: string };
 
 export async function POST(req: NextRequest): Promise<Response> {
-  const profile = await requireRole(["founder", "investor"]).catch(() => null);
-  if (!profile) return NextResponse.json({ error: "Founders and investors only." }, { status: 403 });
+  // A founder or investor asks as themselves; staff acting as a founder ask for them.
+  const requester = await resolveSupportRequester();
+  if (!requester) return NextResponse.json({ error: "Founders and investors only." }, { status: 403 });
+  const profile = requester.profile;
+  const actingStaffId = requester.actingStaffId;
   const isInvestor = profile.role === "investor";
   const who = isInvestor ? "Investor" : "Founder";
 
@@ -84,7 +88,7 @@ export async function POST(req: NextRequest): Promise<Response> {
   let companyId: string | null = null;
   let stage: string | null = null;
   let plan: string | null = null;
-  const supabase = (await createServerSupabaseClient()) as unknown as SupabaseClient<Database>;
+  const supabase: SupabaseClient<Database> = requester.supabase;
   try {
     if (isInvestor) {
       const investorProfile = await getInvestorProfileByProfileId(profile.id);
@@ -95,7 +99,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       }
     } else {
     const [{ company: activeCompany }, journey, subscription] = await Promise.all([
-      getActiveCompanyForUser(profile),
+      requester.actingCompany ? Promise.resolve({ company: requester.actingCompany }) : getActiveCompanyForUser(profile),
       getJourneyOverview(supabase, profile.id).catch(() => null),
       getSubscription(profile.id).catch(() => null),
     ]);
@@ -133,6 +137,15 @@ export async function POST(req: NextRequest): Promise<Response> {
     });
     if ("error" in result) {
       return NextResponse.json({ reply: "I couldn't reach the team just now. Use “Hand off to the iCapOS team” below to try again." });
+    }
+    if (actingStaffId) {
+      await writeAuditLog(createServiceRoleClient(), {
+        userId: actingStaffId,
+        action: "support.request_created_acting",
+        entityType: "support_request",
+        entityId: result.id,
+        metadata: { actingForFounderId: profile!.id },
+      }).catch(() => {});
     }
     const handoff: Handoff = { requestId: result.id, ownerName: result.ownerName, dueAt: result.dueAt, topic };
     await logSupportEvent({
