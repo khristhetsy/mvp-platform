@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { TrainingBanner } from "@/components/training/TrainingBanner";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { requireRole } from "@/lib/supabase/auth";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
@@ -523,6 +524,7 @@ export default async function FounderLearningPage() {
             title={t("learning_overview")}
             description={t("track_your_capital_readiness_journey_across_al")}
           />
+          <TrainingBanner userId={profile.id} email={profile.email} />
           <LearningTabs tabs={tabs} />
         </WorkspacePageContainer>
       </FounderFeatureGate>

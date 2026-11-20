@@ -27,7 +27,7 @@ export function StaffTrainingClassClient({ mod, doneSteps, coachOn, reviewer }: 
     try { await fn(); } catch (e) { setErr(e instanceof Error ? e.message : "Failed."); } finally { setBusy(false); }
   }
   const markDone = () => guard(async () => {
-    await post("/api/learn-staff-training/progress", { moduleKey: mod.key, stepIndex: step });
+    await post("/api/learn-training/progress", { moduleKey: mod.key, stepIndex: step });
     setDone((d) => new Set(d).add(step));
     if (step < steps.length - 1) { setStep(step + 1); setReply(null); }
   });
@@ -64,7 +64,7 @@ export function StaffTrainingClassClient({ mod, doneSteps, coachOn, reviewer }: 
           <div className="mt-2 flex gap-2">
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ask about this lesson" className="flex-1 rounded-lg border border-slate-300 px-2 py-1.5 text-sm" />
             <button type="button" disabled={busy || !q.trim()} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium disabled:opacity-50"
-              onClick={() => guard(async () => { const j = await post("/api/learn-staff-training/coach", { moduleKey: mod.key, question: q }); setReply(j.reply ?? null); })}>Ask</button>
+              onClick={() => guard(async () => { const j = await post("/api/learn-training/coach", { moduleKey: mod.key, question: q }); setReply(j.reply ?? null); })}>Ask</button>
           </div>
           {reply ? <p className="mt-3 whitespace-pre-wrap rounded-lg bg-slate-50 p-3 text-sm text-slate-800">{reply}</p> : null}
           <p className="mt-2 text-xs text-slate-500">The coach answers from this lesson only and can be wrong. Check with {reviewer} when unsure.</p>
@@ -82,7 +82,7 @@ export function StaffTrainingClassClient({ mod, doneSteps, coachOn, reviewer }: 
               <textarea value={ans[i] ?? ""} onChange={(e) => setAns({ ...ans, [i]: e.target.value })} rows={3} className="mt-2 w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm" />
               <div className="mt-1 flex justify-end">
                 <button type="button" disabled={busy || !(ans[i] ?? "").trim()} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium disabled:opacity-50"
-                  onClick={() => guard(async () => { const j = await post("/api/learn-staff-training/exercise", { moduleKey: mod.key, exerciseIndex: i, answer: ans[i] }); setFb({ ...fb, [i]: j.feedback ?? "Submitted. Your reviewer will respond." }); })}>Submit</button>
+                  onClick={() => guard(async () => { const j = await post("/api/learn-training/exercise", { moduleKey: mod.key, exerciseIndex: i, answer: ans[i] }); setFb({ ...fb, [i]: j.feedback ?? "Submitted. Your reviewer will respond." }); })}>Submit</button>
               </div>
               {fb[i] ? <p className="mt-2 whitespace-pre-wrap rounded-lg bg-slate-50 p-3 text-sm text-slate-800">{fb[i]}</p> : null}
             </div>

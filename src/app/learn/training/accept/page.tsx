@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AcceptStaffTrainingPage({ searchParams }: { searchParams: Promise<{ token?: string }> }) {
   const { token } = await searchParams;
-  if (!token) redirect("/learn/staff-training");
+  if (!token) redirect("/learn/training");
   // requireUserProfile sends signed out visitors to sign in.
   await requireUserProfile();
   return (
