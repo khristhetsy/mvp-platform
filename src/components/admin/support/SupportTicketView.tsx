@@ -9,6 +9,7 @@ import type { SavedReply } from "@/lib/support/saved-replies";
 import { formatSupportTime, dueLabel } from "@/lib/support/business-hours";
 import { STATUS_LABEL, type QueueRow, type StaffOption } from "./SupportQueueClient";
 import { SupportAttachments } from "@/components/support/SupportAttachments";
+import { REWRITE_INSTRUCTION_MAX, REWRITE_TONE_LABELS, type RewriteTone } from "@/lib/support/manual-message";
 
 type Message = {
   id: string;
@@ -96,6 +97,14 @@ export function SupportTicketView({
   const [suggesting, setSuggesting] = useState(false);
   const [suggestTried, setSuggestTried] = useState(false);
 
+  // Rewrite of the text staff typed: shown beside the original, applied only on Replace.
+  const [rewriteMenu, setRewriteMenu] = useState(false);
+  const [rewriteCustom, setRewriteCustom] = useState("");
+  const [rewriting, setRewriting] = useState<RewriteTone | null>(null);
+  const [rewrite, setRewrite] = useState<{ tone: RewriteTone; instruction: string; before: string; after: string } | null>(null);
+  const [rewriteNote, setRewriteNote] = useState<string | null>(null);
+  const [undoText, setUndoText] = useState<string | null>(null);
+
   const [saved, setSaved] = useState<SavedReply[] | null>(null);
   const [savedOpen, setSavedOpen] = useState(false);
   const [manageSaved, setManageSaved] = useState(false);
@@ -140,6 +149,30 @@ export function SupportTicketView({
       } finally {
         setSuggesting(false);
         setSuggestTried(true);
+      }
+    },
+    [row.id],
+  );
+
+  const rewriteDraft = useCallback(
+    async (tone: RewriteTone, base: string, instruction = "") => {
+      setRewriteMenu(false);
+      setRewriteNote(null);
+      setUndoText(null);
+      setRewriting(tone);
+      try {
+        const res = await fetch(`/api/admin/support/${row.id}/draft`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tone, base, instruction, noSign: true }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (json.draft) setRewrite({ tone, instruction, before: base, after: json.draft as string });
+        else setRewriteNote("AI is not available right now. Your draft is unchanged.");
+      } catch {
+        setRewriteNote("AI is not available right now. Your draft is unchanged.");
+      } finally {
+        setRewriting(null);
       }
     },
     [row.id],
@@ -192,6 +225,8 @@ export function SupportTicketView({
       setFiles([]);
       setResolveAfter(false);
       if (mode === "reply") setSuggestion(null);
+      setRewrite(null);
+      setUndoText(null);
     }
   }
 
@@ -472,6 +507,117 @@ export function SupportTicketView({
               placeholder={mode === "note" ? "Only staff can see internal notes." : `Write to ${row.founderName}…`}
               className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none ${mode === "note" ? "border-amber-200 bg-amber-50/60 focus:border-amber-400" : "border-slate-200 focus:border-indigo-400"}`}
             />
+            {aiDrafts && mode === "reply" ? (
+              <div className="relative mt-1.5 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  disabled={!text.trim() || !!rewriting}
+                  onClick={() => setRewriteMenu((o) => !o)}
+                  title={text.trim() ? undefined : "Write a draft first, or use the suggested reply."}
+                  className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <i className="ti ti-sparkles" aria-hidden="true" /> Rewrite <i className="ti ti-chevron-down" aria-hidden="true" />
+                </button>
+                <span className="text-[11px] text-slate-500">
+                  {rewriting ? `Rewriting (${REWRITE_TONE_LABELS[rewriting].toLowerCase()}), keeping every fact…` : !text.trim() ? "Write a draft first, or use the suggested reply." : "Rewrites your draft. Nothing sends until you press Send."}
+                </span>
+                {undoText !== null ? (
+                  <span className="text-[11px] text-slate-500">
+                    Rewrite applied.{" "}
+                    <button
+                      type="button"
+                      className="font-semibold text-indigo-600 hover:underline"
+                      onClick={() => {
+                        setText(undoText);
+                        setUndoText(null);
+                      }}
+                    >
+                      Undo
+                    </button>
+                  </span>
+                ) : null}
+                {rewriteMenu ? (
+                  <div className="absolute left-0 top-8 z-20 w-72 rounded-xl border border-slate-200 bg-white p-1.5 text-xs shadow-lg">
+                    {(["grammar", "shorter", "friendlier", "formal", "direct"] as const).map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => void rewriteDraft(t, text.trim())}
+                        className="block w-full rounded-lg px-2.5 py-1.5 text-left text-slate-700 hover:bg-indigo-50"
+                      >
+                        {REWRITE_TONE_LABELS[t]}
+                      </button>
+                    ))}
+                    <div className="mt-1 flex gap-1 border-t border-slate-100 pt-1.5">
+                      <input
+                        value={rewriteCustom}
+                        maxLength={REWRITE_INSTRUCTION_MAX}
+                        onChange={(e) => setRewriteCustom(e.target.value)}
+                        placeholder="Or say what to change…"
+                        aria-label="Custom rewrite instruction"
+                        className="min-w-0 flex-1 rounded-lg border border-slate-200 px-2 py-1 text-xs focus:border-indigo-400 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        disabled={!rewriteCustom.trim()}
+                        onClick={() => void rewriteDraft("custom", text.trim(), rewriteCustom.trim())}
+                        className="rounded-lg bg-indigo-600 px-2.5 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+                      >
+                        Go
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+            {rewriteNote ? <p className="mt-1.5 text-xs text-slate-500">{rewriteNote}</p> : null}
+            {rewrite && mode === "reply" ? (
+              <div className="mt-2 overflow-hidden rounded-lg border border-slate-200">
+                <p className="flex items-center gap-2 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+                  <i className="ti ti-check" aria-hidden="true" /> {REWRITE_TONE_LABELS[rewrite.tone]}
+                  <span className="ml-auto rounded-full border border-emerald-200 bg-white px-2 py-0.5 font-normal">
+                    {wordCount(rewrite.after)} words, was {wordCount(rewrite.before)}
+                  </span>
+                </p>
+                <div className="grid sm:grid-cols-2">
+                  <div className="p-3 text-[13px] leading-snug">
+                    <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Your draft</p>
+                    <p className="whitespace-pre-wrap text-slate-700">{rewrite.before}</p>
+                  </div>
+                  <div className="border-t border-slate-200 bg-emerald-50/30 p-3 text-[13px] leading-snug sm:border-l sm:border-t-0">
+                    <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Rewrite</p>
+                    <p className="whitespace-pre-wrap text-slate-900">{rewrite.after}</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5 border-t border-slate-200 px-3 py-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUndoText(text);
+                      setText(rewrite.after);
+                      setAiDraft(rewrite.after);
+                      setRewrite(null);
+                    }}
+                    className="rounded-lg bg-indigo-600 px-3 py-1 text-xs font-semibold text-white hover:bg-indigo-700"
+                  >
+                    Replace my draft
+                  </button>
+                  <button type="button" onClick={() => setRewrite(null)} className="rounded-lg border border-slate-200 px-3 py-1 text-xs text-slate-700 hover:bg-slate-50">
+                    Keep mine
+                  </button>
+                  <span className="ml-auto flex gap-1.5">
+                    <button
+                      type="button"
+                      disabled={!!rewriting}
+                      onClick={() => void rewriteDraft(rewrite.tone, rewrite.before, rewrite.instruction)}
+                      className="rounded-lg border border-slate-200 px-3 py-1 text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                    >
+                      Try again
+                    </button>
+                  </span>
+                </div>
+              </div>
+            ) : null}
             {files.length ? (
               <div className="mt-1.5 flex flex-wrap gap-1.5">
                 {files.map((f) => (
@@ -704,6 +850,10 @@ export function SupportTicketView({
       ) : null}
     </div>
   );
+}
+
+function wordCount(t: string): number {
+  return t.trim() ? t.trim().split(/\s+/).length : 0;
 }
 
 function QuickButton({ icon, label, onClick, disabled, tone }: { icon: string; label: string; onClick: () => void; disabled?: boolean; tone?: "emerald" }) {

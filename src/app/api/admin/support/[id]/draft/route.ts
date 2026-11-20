@@ -7,6 +7,7 @@ import { getSupportSettings } from "@/lib/support/settings";
 import { logSupportEvent, type AiCost } from "@/lib/support/events";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { REWRITE_INSTRUCTION_MAX, REWRITE_SYSTEM, REWRITE_TONES, rewritePrompt, type RewriteTone } from "@/lib/support/manual-message";
 
 export const dynamic = "force-dynamic";
 
@@ -26,10 +27,14 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     return NextResponse.json({ draft: "", unavailable: true });
   }
 
-  // Optional rewrite of an existing draft: { tone: "shorter" | "friendlier", base: "..." }.
-  const opts = (await req.json().catch(() => ({}))) as { tone?: string; base?: string; auto?: boolean };
-  const tone = opts.tone === "shorter" || opts.tone === "friendlier" ? opts.tone : null;
+  // Optional rewrite of an existing draft: { tone, base, instruction? }. Tones are listed in
+  // REWRITE_TONES. "noSign" keeps a rewrite of staff typed text from gaining a signature.
+  const opts = (await req.json().catch(() => ({}))) as { tone?: string; base?: string; auto?: boolean; instruction?: string; noSign?: boolean };
+  const tone = (REWRITE_TONES as readonly string[]).includes(opts.tone ?? "") ? (opts.tone as RewriteTone) : null;
   const base = typeof opts.base === "string" ? opts.base.slice(0, 4000) : "";
+  const instruction = typeof opts.instruction === "string" ? opts.instruction.trim().slice(0, REWRITE_INSTRUCTION_MAX) : "";
+  if (tone === "custom" && !instruction) return NextResponse.json({ error: "Say what to change." }, { status: 400 });
+  const isRewrite = !!tone && !!base.trim();
 
   // The reply goes out as the assignee, so the draft is signed by them.
   let signer = profile.full_name?.trim() || "";
@@ -42,7 +47,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     signer = ((owner as { full_name: string | null } | null)?.full_name ?? "").trim() || signer;
   }
   const signFirst = signer.split(/\s+/)[0] ?? "";
-  const signed = (t: string) => (signFirst && !t.trimEnd().endsWith(signFirst) ? `${t.trimEnd()}\n\n${signFirst}` : t);
+  const signed = (t: string) => (opts.noSign && isRewrite ? t : signFirst && !t.trimEnd().endsWith(signFirst) ? `${t.trimEnd()}\n\n${signFirst}` : t);
 
   // The suggestion made when a ticket opens is reused until a new message arrives,
   // so opening the same ticket again doesn't spend another AI call.
@@ -77,16 +82,17 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       [
         {
           role: "user",
-          content: tone && base
-            ? `Rewrite this support reply to a founder so it is ${tone === "shorter" ? "shorter and more direct, keeping every fact" : "warmer and friendlier, keeping every fact"}. Plain text only. Keep the sign-off name at the end unchanged.\n\nReply:\n${base}`
+          content: isRewrite && tone
+            ? rewritePrompt(tone, base, instruction)
             : `A founder on the iCapOS fundraising platform opened a support request titled "${thread.request.subject}". ${context}\n\nConversation so far:\n${transcript || "(no messages yet)"}\n\nDraft a concise, warm, practical reply to the founder that moves them forward. Only state facts that appear in the conversation; never invent numbers, cells or figures from their documents. Plain text, no salutation line beyond a short greeting, no sign-off block.`,
         },
       ],
       { usage: { category: "internal", feature: "admin_support" },
         maxTokens: 400,
         temperature: 0.4,
-        system:
-          "You are an iCapOS support specialist helping founders prepare to raise capital. Be specific and actionable. Never promise funding or make legal/financial guarantees. Keep it under 120 words.",
+        system: isRewrite
+          ? REWRITE_SYSTEM
+          : "You are an iCapOS support specialist helping founders prepare to raise capital. Be specific and actionable. Never promise funding or make legal/financial guarantees. Keep it under 120 words.",
         onUsage: (u) => (cost = u),
       },
     );

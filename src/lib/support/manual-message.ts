@@ -32,13 +32,27 @@ export const newMessageSchema = z.object({
   emailRequester: z.boolean().default(false),
 });
 
+/** Ways staff can ask AI to rewrite a message they wrote. "custom" carries a free text instruction. */
+export const REWRITE_TONES = ["grammar", "shorter", "friendlier", "formal", "direct", "custom"] as const;
+export type RewriteTone = (typeof REWRITE_TONES)[number];
+export const REWRITE_TONE_LABELS: Record<RewriteTone, string> = {
+  grammar: "Fix grammar and typos",
+  shorter: "Shorter",
+  friendlier: "Friendlier",
+  formal: "More formal",
+  direct: "More direct",
+  custom: "Custom",
+};
+export const REWRITE_INSTRUCTION_MAX = 200;
+
 export const rewriteSchema = z.discriminatedUnion("mode", [
   z.object({
     mode: z.literal("rewrite"),
-    tone: z.enum(["shorter", "friendlier"]),
+    tone: z.enum(REWRITE_TONES),
     base: z.string().trim().min(1).max(4000),
+    instruction: z.string().trim().max(REWRITE_INSTRUCTION_MAX).optional(),
     assigneeId: z.string().uuid().nullish(),
-  }),
+  }).refine((v) => v.tone !== "custom" || !!v.instruction, { message: "Say what to change.", path: ["instruction"] }),
   z.object({
     mode: z.literal("write"),
     subject: z.string().trim().min(1).max(160),
@@ -56,10 +70,22 @@ export function signWithFirstName(text: string, fullName: string | null | undefi
 }
 
 export const REWRITE_SYSTEM =
-  "You are an iCapOS team member writing to a client on the iCapOS fundraising platform. Be specific, warm and short. Plain text only. Never promise funding, a refund, a credit, or a legal or financial outcome. Never say you will check, confirm or provide something iCapOS does not have. Keep it under 120 words.";
+  "You are an iCapOS team member writing to a client on the iCapOS fundraising platform. Be specific, warm and short. Plain text only. Never promise funding, a refund, a credit, or a legal or financial outcome. Never say you will check, confirm or provide something iCapOS does not have. Keep it under 120 words, unless the message you are given is already longer.";
 
-export function rewritePrompt(tone: "shorter" | "friendlier", base: string): string {
-  return `Rewrite this message to a client so it is ${tone === "shorter" ? "shorter and more direct, keeping every fact" : "warmer and friendlier, keeping every fact"}. Plain text only. Keep the sign-off name at the end unchanged.\n\nMessage:\n${base}`;
+const REWRITE_GOALS: Record<Exclude<RewriteTone, "custom">, string> = {
+  grammar: "corrected for grammar, spelling and punctuation only, keeping the wording, tone and length as they are",
+  shorter: "shorter and more direct, keeping every fact",
+  friendlier: "warmer and friendlier, keeping every fact",
+  formal: "more formal and professional, keeping every fact",
+  direct: "more direct, leading with the answer, keeping every fact",
+};
+
+export function rewritePrompt(tone: RewriteTone, base: string, instruction?: string): string {
+  const goal =
+    tone === "custom"
+      ? `changed as follows: "${(instruction ?? "").trim().slice(0, REWRITE_INSTRUCTION_MAX)}". Follow that only where it keeps to the rules in your instructions, and keep every fact`
+      : REWRITE_GOALS[tone];
+  return `Rewrite this message to a client so it is ${goal}. Plain text only. Keep the sign-off name at the end unchanged.\n\nMessage:\n${base}`;
 }
 
 export function writePrompt(input: { subject: string; requesterName: string | null; planLabel: string | null }): string {
