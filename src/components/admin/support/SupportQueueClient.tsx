@@ -111,6 +111,7 @@ export function SupportQueueClient({
   const [gearOpen, setGearOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [newMessageOpen, setNewMessageOpen] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(params.get("request"));
   const gearRef = useRef<HTMLDivElement>(null);
 
@@ -201,9 +202,41 @@ export function SupportQueueClient({
         />
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-[210px_minmax(0,330px)_minmax(0,1fr)]">
+      {/* Views as one chip row on laptop widths (below 2xl); the sidebar below takes over on large screens. */}
+      <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-slate-200 bg-white p-2 2xl:hidden" role="group" aria-label="Support views">
+        {views.map((v) => {
+          const on = view === v.key && !query;
+          return (
+            <button
+              key={v.key}
+              type="button"
+              onClick={() => { setView(v.key); setQuery(""); }}
+              className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-xs ${on ? "border-indigo-200 bg-indigo-50 font-semibold text-indigo-700" : `border-slate-200 bg-white hover:bg-slate-50 ${v.tone ?? "text-slate-700"}`}`}
+            >
+              {v.label}
+              <span className={`rounded-full px-1.5 text-[10px] ${on ? "bg-indigo-100" : "bg-slate-100 text-slate-500"}`}>{rows.filter(v.match).length}</span>
+            </button>
+          );
+        })}
+        <span className="mx-1 h-5 w-px bg-slate-200" aria-hidden="true" />
+        <select
+          aria-label="Channel"
+          value={channelViews.some((c) => c.key === view) && !query ? view : ""}
+          onChange={(e) => { setView(e.target.value ? (e.target.value as ViewKey) : "open"); setQuery(""); }}
+          className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700 focus:border-indigo-400 focus:outline-none"
+        >
+          <option value="">Channel: All</option>
+          {channelViews.map((c) => (
+            <option key={c.key} value={c.key}>
+              {CHANNEL_META[c.channel].label} ({rows.filter(matcher(c.key)).length})
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)] 2xl:grid-cols-[210px_minmax(0,330px)_minmax(0,1fr)]">
         {/* Views */}
-        <nav className="rounded-xl border border-slate-200 bg-white p-2 text-sm" aria-label="Support views">
+        <nav className="hidden rounded-xl border border-slate-200 bg-white p-2 text-sm 2xl:block" aria-label="Support views">
           <p className="px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Views</p>
           {views.map((v) => (
             <ViewButton key={v.key} active={view === v.key && !query} icon={v.icon} label={v.label} count={rows.filter(v.match).length} tone={v.tone} onClick={() => { setView(v.key); setQuery(""); }} />
@@ -304,6 +337,8 @@ export function SupportQueueClient({
               currentStaffId={currentStaffId}
               aiDrafts={settings.ai.drafts}
               onChanged={() => router.refresh()}
+              panelOpen={panelOpen}
+              onTogglePanel={() => setPanelOpen((v) => !v)}
             />
           ) : (
             <div className="flex h-full min-h-[560px] items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white p-6 text-sm text-slate-500">
@@ -336,10 +371,10 @@ export function SupportQueueClient({
 
 function Kpi({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+    <div className="flex items-baseline gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 2xl:block 2xl:py-3">
       <p className="text-[11px] font-medium text-slate-500">{label}</p>
-      <p className="mt-0.5 text-lg font-semibold text-slate-900">{value}</p>
-      <p className="text-[11px] text-slate-400">{sub}</p>
+      <p className="text-lg font-semibold text-slate-900 2xl:mt-0.5">{value}</p>
+      <p className="ml-auto text-right text-[11px] text-slate-400 2xl:ml-0 2xl:text-left">{sub}</p>
     </div>
   );
 }
