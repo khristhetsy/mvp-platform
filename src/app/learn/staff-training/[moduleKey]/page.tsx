@@ -11,13 +11,13 @@ export default async function StaffTrainingClassPage({ params }: { params: Promi
   const { moduleKey } = await params;
   const profile = await requireUserProfile();
   const enr = await getEnrollment(profile.id);
-  if (!enr) redirect("/training/staff");
+  if (!enr) redirect("/learn/staff-training");
   const mod = getTrainingModule(moduleKey);
   if (!mod || mod.status !== "ready" || !modulesForAudience(enr.audience).some((m) => m.key === mod.key)) notFound();
   const progress = await getProgress(profile.id);
   return (
     <main className="mx-auto max-w-3xl px-4 py-10">
-      <Link href="/training/staff" className="text-xs font-medium text-[#1A6CE4]">Back to my training</Link>
+      <Link href="/learn/staff-training" className="text-xs font-medium text-[#1A6CE4]">Back to my training</Link>
       <h1 className="mb-1 mt-2 text-2xl font-semibold text-[#0A1A40]">{mod.title}</h1>
       <p className="mb-6 text-sm text-slate-600">Goal: {mod.goal}</p>
       <StaffTrainingClassClient mod={mod} doneSteps={progress[mod.key] ?? []} coachOn={enr.coach_on} reviewer={enr.reviewer_label} />

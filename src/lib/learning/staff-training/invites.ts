@@ -43,7 +43,7 @@ export const INVITE_DENIED_COPY: Record<Exclude<InviteCheck, { ok: true }>["reas
 };
 
 export function inviteLink(appUrl: string, token: string): string {
-  return `${appUrl.replace(/\/$/, "")}/training/staff/accept?token=${encodeURIComponent(token)}`;
+  return `${appUrl.replace(/\/$/, "")}/learn/staff-training/accept?token=${encodeURIComponent(token)}`;
 }
 
 export function inviteEmail(input: { audience: TrainingAudience; link: string; inviterName: string; days?: number }) {

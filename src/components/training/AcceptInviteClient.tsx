@@ -9,9 +9,9 @@ export function AcceptInviteClient({ token }: { token: string }) {
   const [busy, setBusy] = useState(false);
   async function accept() {
     setBusy(true); setErr(null);
-    const r = await fetch("/api/training/staff/accept", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token }) });
+    const r = await fetch("/api/learn-staff-training/accept", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token }) });
     const j = (await r.json().catch(() => ({}))) as { error?: string };
-    if (r.ok) { router.push("/training/staff"); return; }
+    if (r.ok) { router.push("/learn/staff-training"); return; }
     setErr(j.error ?? "Could not accept the invitation."); setBusy(false);
   }
   return (

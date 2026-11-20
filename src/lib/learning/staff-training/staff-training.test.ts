@@ -26,7 +26,7 @@ describe("invites", () => {
   it("expires in 7 days and builds a link", () => {
     const d = new Date("2026-11-20T00:00:00Z");
     expect(inviteExpiry(d).toISOString()).toBe("2026-11-27T00:00:00.000Z");
-    expect(inviteLink("https://x.com/", "t k")).toBe("https://x.com/training/staff/accept?token=t%20k");
+    expect(inviteLink("https://x.com/", "t k")).toBe("https://x.com/learn/staff-training/accept?token=t%20k");
   });
 });
 

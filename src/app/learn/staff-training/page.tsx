@@ -30,7 +30,7 @@ export default async function MyStaffTrainingPage() {
             <li key={m.key} className="flex items-center justify-between gap-3 px-4 py-3">
               <div><p className="text-sm font-medium text-slate-900">{m.title}</p><p className="text-xs text-slate-500">{m.part}</p></div>
               {m.status === "ready"
-                ? <Link href={`/training/staff/${m.key}`} className="text-xs font-semibold text-[#1A6CE4]">{done} of {total} steps, open</Link>
+                ? <Link href={`/learn/staff-training/${m.key}`} className="text-xs font-semibold text-[#1A6CE4]">{done} of {total} steps, open</Link>
                 : <span className="text-xs text-slate-400">Coming soon</span>}
             </li>
           );
