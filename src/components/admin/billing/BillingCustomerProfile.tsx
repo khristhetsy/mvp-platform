@@ -64,7 +64,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 export function BillingCustomerProfile({ detail, pricing = CODE_DEFAULT_PRICING }: { detail: Detail; pricing?: PricingCatalog }) {
   const router = useRouter();
   const c = detail.customer;
-  const [coPlan, setCoPlan] = useState<"founder_basic" | "founder_professional">("founder_basic");
+  const [coPlan, setCoPlan] = useState<"founder_basic" | "founder_professional" | "founder_premium">("founder_basic");
   const [coBusy, setCoBusy] = useState<null | "link" | "email">(null);
   const [coUrl, setCoUrl] = useState<string | null>(null);
   const [coMsg, setCoMsg] = useState<string | null>(null);
@@ -220,9 +220,10 @@ export function BillingCustomerProfile({ detail, pricing = CODE_DEFAULT_PRICING 
       <div style={{ background: "#fff", border: "0.5px solid #E4E8F0", borderRadius: 12, padding: 14, marginTop: 14 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: navy, marginBottom: 10 }}>Create checkout link</div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          <select value={coPlan} onChange={(e) => setCoPlan(e.target.value as "founder_basic" | "founder_professional")} style={{ fontSize: 12.5, padding: "7px 10px", borderRadius: 8, border: "1px solid #E4E8F0" }}>
+          <select value={coPlan} onChange={(e) => setCoPlan(e.target.value as "founder_basic" | "founder_professional" | "founder_premium")} style={{ fontSize: 12.5, padding: "7px 10px", borderRadius: 8, border: "1px solid #E4E8F0" }}>
             <option value="founder_basic">Basic — {priceShort(pricing, "founder_basic")}</option>
             <option value="founder_professional">Professional — {priceShort(pricing, "founder_professional")}</option>
+            <option value="founder_premium">Premium — {priceShort(pricing, "founder_premium")}</option>
           </select>
           <button type="button" onClick={() => void createCheckout(false)} disabled={coBusy !== null} style={btn(navy, "#fff")}>{coBusy === "link" ? "Creating…" : "Create link"}</button>
           <button type="button" onClick={() => void createCheckout(true)} disabled={coBusy !== null} style={btn("#EEF3FC", blue)}>{coBusy === "email" ? "Sending…" : "Email to customer"}</button>

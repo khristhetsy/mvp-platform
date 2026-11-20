@@ -12,13 +12,14 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 const schema = z.object({
-  plan: z.enum(["founder_basic", "founder_professional"]),
+  plan: z.enum(["founder_basic", "founder_professional", "founder_premium"]),
   send: z.boolean().optional(),
 });
 
 function variantFor(plan: string): string | undefined {
   if (plan === "founder_basic") return process.env.LEMONSQUEEZY_VARIANT_ID_BASIC;
   if (plan === "founder_professional") return process.env.LEMONSQUEEZY_VARIANT_ID_PROFESSIONAL;
+  if (plan === "founder_premium") return process.env.LEMONSQUEEZY_VARIANT_ID_PREMIUM;
   return undefined;
 }
 
