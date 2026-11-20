@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   keepsLegacyPrice,
+  lemonRenewalAnchor,
   managedPaymentsFor,
   mapStripeStatus,
   planFromStripePrice,
@@ -126,5 +127,18 @@ describe("managedPaymentsFor", () => {
     expect(managedPaymentsFor("founder_premium", { STRIPE_MANAGED_PAYMENTS_PLANS: "founder_basic,founder_premium" })).toBe(true);
     expect(managedPaymentsFor("founder_professional", { STRIPE_MANAGED_PAYMENTS_PLANS: "founder_basic" })).toBe(false);
     expect(managedPaymentsFor("founder_basic", { STRIPE_MANAGED_PAYMENTS_PLANS: "none" })).toBe(false);
+  });
+});
+
+describe("lemonRenewalAnchor", () => {
+  const now = new Date("2026-11-20T12:00:00Z");
+  it("is the end of the paid Lemon Squeezy period, in Unix seconds", () => {
+    expect(lemonRenewalAnchor("2026-12-12T00:00:00Z", now)).toBe(Math.floor(Date.parse("2026-12-12T00:00:00Z") / 1000));
+  });
+  it("is null when the date is missing, invalid, past, or under an hour away", () => {
+    expect(lemonRenewalAnchor(null, now)).toBeNull();
+    expect(lemonRenewalAnchor("not a date", now)).toBeNull();
+    expect(lemonRenewalAnchor("2026-11-19T00:00:00Z", now)).toBeNull();
+    expect(lemonRenewalAnchor("2026-11-20T12:30:00Z", now)).toBeNull();
   });
 });

@@ -68,6 +68,19 @@ export function managedPaymentsFor(plan: StripePlan, env: Env = process.env): bo
   return raw.split(",").map((s) => s.trim()).includes(plan);
 }
 
+/**
+ * When Stripe should take its first payment from a subscriber moving off Lemon
+ * Squeezy: the end of the period they already paid for, in Unix seconds. Null when
+ * that date is missing, already past, or less than an hour away, in which case the
+ * customer is charged at checkout as usual.
+ */
+export function lemonRenewalAnchor(currentPeriodEnd: string | null | undefined, now: Date = new Date()): number | null {
+  if (!currentPeriodEnd) return null;
+  const end = Date.parse(currentPeriodEnd);
+  if (!Number.isFinite(end) || end - now.getTime() < 60 * 60 * 1000) return null;
+  return Math.floor(end / 1000);
+}
+
 // ── Who keeps the old price ──────────────────────────────────────────────────
 
 export type PriceHolder = {

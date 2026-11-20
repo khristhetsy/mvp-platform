@@ -10,7 +10,7 @@ import { recordFunnelEvent } from "@/lib/analytics/funnel";
 import type { PlanType } from "@/lib/subscriptions/plans";
 import { findCurrentAcceptance } from "@/lib/billing/premium-agreement";
 import { createStripeCheckoutUrl, stripeConfigured } from "@/lib/stripe";
-import { isStripePlan, keepsLegacyPrice, managedPaymentsFor, stripePriceId, type PriceHolder } from "@/lib/billing/stripe-mapping";
+import { isStripePlan, keepsLegacyPrice, lemonRenewalAnchor, managedPaymentsFor, stripePriceId, type PriceHolder } from "@/lib/billing/stripe-mapping";
 import { isCardSubscription } from "@/lib/billing/plan-change";
 
 const PLAN_TO_VARIANT: Partial<Record<PlanType, string>> = {
@@ -91,13 +91,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       const db = createServiceRoleClient();
       const { data: rowRaw } = await db
         .from("subscriptions")
-        .select("plan_type, subscription_status, ls_subscription_id, ls_variant_id, stripe_subscription_id, stripe_customer_id, cancel_at_period_end, grace_period_ends_at")
+        .select("plan_type, subscription_status, ls_subscription_id, ls_variant_id, stripe_subscription_id, stripe_customer_id, cancel_at_period_end, grace_period_ends_at, current_period_end")
         .eq("profile_id", profile.id)
         .maybeSingle();
       const row = rowRaw as (PriceHolder & {
         ls_variant_id: string | null;
         stripe_subscription_id: string | null;
         stripe_customer_id: string | null;
+        current_period_end: string | null;
       }) | null;
 
       if (
@@ -132,6 +133,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         cancelUrl: `${origin}/billing`,
         managedPayments: managedPaymentsFor(planType),
         replacesLsSubscriptionId: replaces,
+        // Already paid to the end of the Lemon Squeezy period: Stripe's first charge is then.
+        billingCycleAnchor: replaces ? lemonRenewalAnchor(row?.current_period_end) : null,
       });
       return NextResponse.json({ url });
     }
