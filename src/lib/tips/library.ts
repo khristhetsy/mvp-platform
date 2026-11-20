@@ -102,6 +102,7 @@ const FOUNDER_MENU_TIPS: Tip[] = [
   menuTip("learning-stage-1", "/founder/learning/stages/stage_1", "Stage 1 Seed Round", "Stage 1 Seed Round collects the lessons for preparing a seed round.", "qualify"),
   menuTip("learning-stage-2", "/founder/learning/stages/stage_2", "Stage 2 Series A", "Stage 2 Series A collects the lessons for preparing a Series A.", "qualify"),
   menuTip("learning-stage-3", "/founder/learning/stages/stage_3", "Stage 3 Exit", "Stage 3 Exit collects the lessons for planning an exit.", "qualify"),
+  menuTip("training", "/learn/training", "Training", "Open Training to continue the course you were invited to."),
   // After the raise
   menuTip("milestones", "/founder/milestones", "Milestones", "Track Milestones so investors can see steady progress after you close.", "optimize"),
   menuTip("analytics", "/founder/analytics", "Analytics", "Check Analytics to see how your raise is performing.", "optimize"),

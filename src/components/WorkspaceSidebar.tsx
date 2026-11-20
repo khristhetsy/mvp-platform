@@ -395,6 +395,18 @@ export function WorkspaceSidebar({
     return () => { active = false; };
   }, []);
 
+  // Training row: shown only to people enrolled in the course (fail closed until the fetch answers).
+  const [trainingEnrolled, setTrainingEnrolled] = useState(false);
+  useEffect(() => {
+    if (workspace !== "founder") return;
+    let active = true;
+    void fetch("/api/learn-training/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { enrolled?: boolean } | null) => { if (active) setTrainingEnrolled(Boolean(d?.enrolled)); })
+      .catch(() => { /* silent: the row stays hidden */ });
+    return () => { active = false; };
+  }, [workspace]);
+
   const canShowNavItem = useMemo(() => {
     return (item: WorkspaceNavItem) => {
       // Founder: Reg-CF-only items stay hidden unless the founder is Reg CF
@@ -436,6 +448,7 @@ export function WorkspaceSidebar({
   const gateItems = useMemo(() => {
     const hidden = new Set(disabledHrefs);
     if (!points.enabled) hidden.add("/credits");
+    if (!trainingEnrolled) hidden.add("/learn/training");
     const gate = (list: WorkspaceNavItem[]): WorkspaceNavItem[] => list
       .filter(canShowNavItem)
       .map((item) => (item.children?.length ? { ...item, children: gate(item.children) } : item))
@@ -444,7 +457,7 @@ export function WorkspaceSidebar({
         return !hidden.has(item.href) && deptAllows(item.href);
       });
     return gate;
-  }, [canShowNavItem, deptAllows, disabledHrefs, points.enabled]);
+  }, [canShowNavItem, deptAllows, disabledHrefs, points.enabled, trainingEnrolled]);
 
   const items = useMemo(() => gateItems(getWorkspaceNav(workspace)), [gateItems, workspace]);
 

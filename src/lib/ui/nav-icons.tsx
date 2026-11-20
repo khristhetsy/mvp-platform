@@ -222,6 +222,7 @@ export const workspaceNavIconByHref: Record<string, LucideIcon> = {
   "/founder/matching": GitCompare,
   "/founder/capital-raise": TrendingUp,
   "/founder/learning": GraduationCap,
+  "/learn/training": BookCheck,
   "/founder/analytics": LineChart,
   "/founder/journey": ListChecks,
   "/founder/actions": ListTodo,

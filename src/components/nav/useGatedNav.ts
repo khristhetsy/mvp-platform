@@ -62,6 +62,7 @@ export function useGatedNav(workspace: WorkspaceId): GatedNav {
   const offeringL = useJson<{ offeringType?: string | null }>(isFounder ? "/api/founder/offering-type" : null);
   const pointsL = useJson<{ enabled?: boolean }>("/api/credits/balance");
   const controlsL = useJson<{ disabledHrefs?: string[]; founderNavV2?: boolean }>("/api/feature-controls");
+  const trainingL = useJson<{ enrolled?: boolean }>(isFounder ? "/api/learn-training/me" : null);
 
   const sections = useMemo(() => {
     // Same fallbacks as the sidebar: permissions unknown = gated items hidden; a failed
@@ -90,6 +91,7 @@ export function useGatedNav(workspace: WorkspaceId): GatedNav {
     };
     const hidden = new Set(controlsL.data?.disabledHrefs ?? []);
     if (!pointsL.data?.enabled) hidden.add("/credits");
+    if (!trainingL.data?.enrolled) hidden.add("/learn/training");
     const gate = (list: WorkspaceNavItem[]): WorkspaceNavItem[] => list
       .filter(canShow)
       .map((item) => (item.children?.length ? { ...item, children: gate(item.children) } : item))
@@ -103,7 +105,7 @@ export function useGatedNav(workspace: WorkspaceId): GatedNav {
     return source
       .map((section) => ({ ...section, items: gate(section.items) }))
       .filter((section) => section.items.length > 0);
-  }, [isAdmin, isFounder, permsL.done, permsL.data, deptL.done, deptL.data, offeringL.data, controlsL.data, pointsL.data]);
+  }, [isAdmin, isFounder, permsL.done, permsL.data, deptL.done, deptL.data, offeringL.data, controlsL.data, pointsL.data, trainingL.data]);
 
   const stageName = stageL.data?.stage;
   const stageIndex = isFounder && stageName && JOURNEY_STAGES.includes(stageName as JourneyStage)
