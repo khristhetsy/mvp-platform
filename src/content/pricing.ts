@@ -72,7 +72,7 @@ export const pricing = {
       badge: "Done for you",
       desc: "Done for you. We do the heavy lifting so you can close the deal.",
       features: PREMIUM_FEATURES,
-      cta: { label: "Start on Premium", href: "/auth/sign-up?role=founder&plan=founder_premium" },
+      cta: { label: "Start on Premium", href: "/start?plan=premium" },
       featured: false,
     },
     {
