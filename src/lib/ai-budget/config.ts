@@ -46,6 +46,7 @@ export const AI_FEATURE_META: Record<string, { label: string; group?: string }> 
   intro_note_drafts: { label: "Intro note drafts" },
   outreach_drafts: { label: "Outreach drafts" },
   class_assistant: { label: "Class assistant" },
+  staff_training_coach: { label: "Staff training coach", group: "Learning" },
   ai_coach: { label: "AI coach chat" },
   support_assistant: { label: "Support assistant" },
   document_summaries: { label: "Document summaries" },
