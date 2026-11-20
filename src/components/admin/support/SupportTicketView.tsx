@@ -62,12 +62,17 @@ export function SupportTicketView({
   currentStaffId,
   aiDrafts,
   onChanged,
+  panelOpen = true,
+  onTogglePanel,
 }: Readonly<{
   row: QueueRow;
   staff: StaffOption[];
   currentStaffId: string;
   aiDrafts: boolean;
   onChanged: () => void;
+  /** Laptop widths: the side panel can be hidden. Large screens always show it. */
+  panelOpen?: boolean;
+  onTogglePanel?: () => void;
 }>) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [events, setEvents] = useState<SupportEventRow[]>([]);
@@ -247,7 +252,7 @@ export function SupportTicketView({
   const open = row.status !== "resolved";
 
   return (
-    <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_260px]">
+    <div className={`grid gap-3 ${panelOpen ? "xl:grid-cols-[minmax(0,1fr)_260px]" : "2xl:grid-cols-[minmax(0,1fr)_260px]"}`}>
       {/* Conversation */}
       <div className="flex min-h-[560px] min-w-0 flex-col rounded-xl border border-slate-200 bg-white">
         <div className="border-b border-slate-100 p-3">
@@ -280,6 +285,16 @@ export function SupportTicketView({
             ) : (
               <span className="rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700">Resolved</span>
             )}
+            {onTogglePanel ? (
+              <button
+                type="button"
+                onClick={onTogglePanel}
+                aria-expanded={panelOpen}
+                className="ml-auto inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-white px-2.5 py-1 text-[11px] font-medium text-indigo-700 hover:bg-indigo-50 2xl:hidden"
+              >
+                <i className="ti ti-layout-sidebar-right" aria-hidden="true" /> {panelOpen ? "Hide details" : "Show details"}
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -552,7 +567,7 @@ export function SupportTicketView({
       </div>
 
       {/* Side panel */}
-      <aside className="space-y-3">
+      <aside className={`space-y-3 ${panelOpen ? "" : "hidden 2xl:block"}`}>
         {context ? <GuidePanel key={context.guide.topic} guide={context.guide} /> : null}
 
         <Panel title="Founder">
