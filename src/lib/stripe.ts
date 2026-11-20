@@ -48,6 +48,12 @@ export type StripeCheckoutInput = {
   managedPayments: boolean;
   /** The Lemon Squeezy subscription this one replaces. Cancelled once payment succeeds. */
   replacesLsSubscriptionId: string | null;
+  /**
+   * Unix seconds of the first Stripe charge. A subscriber moving from Lemon Squeezy
+   * has already paid it for the current period, so Stripe starts charging when that
+   * period ends. The subscription is active at once and nothing is charged today.
+   */
+  billingCycleAnchor?: number | null;
 };
 
 /** A hosted Checkout Session for a monthly subscription. Returns the page URL. */
@@ -64,7 +70,10 @@ export async function createStripeCheckoutUrl(input: StripeCheckoutInput): Promi
     ...(input.customerId ? { customer: input.customerId } : input.email ? { customer_email: input.email } : {}),
     managed_payments: { enabled: input.managedPayments },
     metadata,
-    subscription_data: { metadata },
+    subscription_data: {
+      metadata,
+      ...(input.billingCycleAnchor ? { billing_cycle_anchor: input.billingCycleAnchor, proration_behavior: "none" as const } : {}),
+    },
     success_url: input.successUrl,
     cancel_url: input.cancelUrl,
   });
