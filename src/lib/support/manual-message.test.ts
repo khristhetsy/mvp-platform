@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { newMessageSchema, rewritePrompt, rewriteSchema, signWithFirstName, writePrompt } from "./manual-message";
+import { REWRITE_TONES, newMessageSchema, rewritePrompt, rewriteSchema, signWithFirstName, writePrompt } from "./manual-message";
 
 const ID = "3f2b8c1e-5a4d-4e6f-9b7a-1c2d3e4f5a6b";
 
@@ -71,5 +71,29 @@ describe("prompts", () => {
     expect(p).toContain("Onboarding call");
     expect(p).toContain("Maria");
     expect(p).toContain("Never invent");
+  });
+});
+
+describe("rewrite tones", () => {
+  it("accepts every listed tone, and a custom tone only with an instruction", () => {
+    for (const tone of REWRITE_TONES.filter((t) => t !== "custom")) {
+      expect(rewriteSchema.safeParse({ mode: "rewrite", tone, base: "Hi" }).success).toBe(true);
+    }
+    expect(rewriteSchema.safeParse({ mode: "rewrite", tone: "custom", base: "Hi" }).success).toBe(false);
+    expect(rewriteSchema.safeParse({ mode: "rewrite", tone: "custom", base: "Hi", instruction: "Mention Friday" }).success).toBe(true);
+    expect(rewriteSchema.safeParse({ mode: "rewrite", tone: "custom", base: "Hi", instruction: "x".repeat(201) }).success).toBe(false);
+  });
+
+  it("builds a prompt per tone that keeps the facts and the sign-off", () => {
+    expect(rewritePrompt("grammar", "hi gary")).toContain("grammar, spelling and punctuation only");
+    expect(rewritePrompt("formal", "hi gary")).toContain("more formal");
+    expect(rewritePrompt("direct", "hi gary")).toContain("leading with the answer");
+    for (const tone of REWRITE_TONES) expect(rewritePrompt(tone, "hi gary", "Mention Friday")).toContain("Keep the sign-off name at the end unchanged");
+  });
+
+  it("carries a custom instruction but holds it to the support rules", () => {
+    const p = rewritePrompt("custom", "hi gary", "Mention Friday");
+    expect(p).toContain("Mention Friday");
+    expect(p).toContain("keeps to the rules in your instructions");
   });
 });
