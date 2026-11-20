@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { TrainingFrame } from "@/components/training/TrainingFrame";
 import { requireUserProfile } from "@/lib/supabase/auth";
-import { getEnrollment, getProgress } from "@/lib/learning/staff-training/data";
+import { getOrClaimEnrollment, getProgress } from "@/lib/learning/staff-training/data";
 import { modulesForAudience } from "@/lib/learning/staff-training/catalog";
 
 export const dynamic = "force-dynamic";
 
 export default async function MyStaffTrainingPage() {
   const profile = await requireUserProfile();
-  const enr = await getEnrollment(profile.id);
+  const enr = await getOrClaimEnrollment(profile);
   if (!enr) {
     return (
       <main className="mx-auto max-w-md px-4 py-16">

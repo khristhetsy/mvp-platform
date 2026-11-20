@@ -46,17 +46,42 @@ export function inviteLink(appUrl: string, token: string): string {
   return `${appUrl.replace(/\/$/, "")}/learn/training/accept?token=${encodeURIComponent(token)}`;
 }
 
-export function inviteEmail(input: { audience: TrainingAudience; link: string; inviterName: string; days?: number }) {
+export function inviteEmail(input: { audience: TrainingAudience; signUp: string; training: string; inviterName: string; existingUser: boolean; days?: number }) {
   const days = input.days ?? INVITE_TTL_DAYS;
-  const subject = input.audience === "licensee" ? "You are invited to your platform training" : "You are invited to iCapOS Staff Training";
-  const body = [
-    "Hello,",
-    "",
-    `${input.inviterName} has invited you to the ${input.audience === "licensee" ? "platform training" : "iCapOS Staff Training"} course.`,
-    "",
-    `Open your invitation: ${input.link}`,
-    "",
-    `The link works once and expires in ${days} days. Sign in with the account this email was sent to.`,
-  ].join("\n");
-  return { subject, body };
+  const course = input.audience === "licensee" ? "platform training" : "Training";
+  const subject = input.existingUser ? `You now have access to ${course}` : `You are invited to ${course}`;
+  const lines = input.existingUser
+    ? ["Hello,", "", `${input.inviterName} gave you access to the ${course} course.`, "", `Open it here: ${input.training}`]
+    : [
+        "Hello,",
+        "",
+        `${input.inviterName} has invited you to the ${course} course.`,
+        "",
+        `1. Create your free account with this email address: ${input.signUp}`,
+        `2. Then open your course: ${input.training}`,
+        "",
+        `The invitation is open for ${days} days.`,
+      ];
+  return { subject, body: lines.join("\n") };
+}
+
+export type ClaimableInvite = InviteRow & { id: string; created_at?: string };
+
+/** The newest invitation that is still open for this email, or null. Matching is by email, case insensitive. */
+export function pickClaimableInvite<T extends ClaimableInvite>(invites: T[], email: string | null | undefined, now: Date = new Date()): T | null {
+  if (!email) return null;
+  const open = invites
+    .filter((i) => checkInvite(i, email, now).ok)
+    .sort((a, b) => String(b.created_at ?? "").localeCompare(String(a.created_at ?? "")));
+  return open[0] ?? null;
+}
+
+/** Link in the invitation email. People who have no account sign up as a free founder, then open the course. */
+export function signUpLink(appUrl: string, email: string): string {
+  const base = appUrl.replace(/\/$/, "");
+  return `${base}/auth/sign-up?role=founder&plan=founder_free&email=${encodeURIComponent(email)}`;
+}
+
+export function trainingLink(appUrl: string): string {
+  return `${appUrl.replace(/\/$/, "")}/learn/training`;
 }

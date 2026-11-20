@@ -61,3 +61,34 @@ describe("coach prompts", () => {
     expect(p.system).toContain("human reviewer decides");
   });
 });
+
+import { pickClaimableInvite, signUpLink, inviteEmail } from "./invites";
+
+describe("sign up invitations", () => {
+  const base = { expires_at: new Date(Date.now() + 86_400_000).toISOString(), status: "invited" };
+  it("claims the newest open invitation for the email, ignoring case", () => {
+    const rows = [
+      { ...base, id: "old", email: "a@x.com", created_at: "2026-11-01" },
+      { ...base, id: "new", email: "A@X.com", created_at: "2026-11-10" },
+      { ...base, id: "other", email: "b@x.com", created_at: "2026-11-15" },
+    ];
+    expect(pickClaimableInvite(rows, "a@x.com")?.id).toBe("new");
+  });
+  it("claims nothing when expired, revoked, used or no email", () => {
+    const old = new Date(Date.now() - 1000).toISOString();
+    expect(pickClaimableInvite([{ ...base, id: "1", email: "a@x.com", expires_at: old }], "a@x.com")).toBeNull();
+    expect(pickClaimableInvite([{ ...base, id: "2", email: "a@x.com", status: "revoked" }], "a@x.com")).toBeNull();
+    expect(pickClaimableInvite([{ ...base, id: "3", email: "a@x.com", status: "accepted" }], "a@x.com")).toBeNull();
+    expect(pickClaimableInvite([{ ...base, id: "4", email: "a@x.com" }], null)).toBeNull();
+  });
+  it("sends new people to a free founder sign up with their email filled in", () => {
+    expect(signUpLink("https://x.com/", "a+b@x.com")).toBe("https://x.com/auth/sign-up?role=founder&plan=founder_free&email=a%2Bb%40x.com");
+  });
+  it("words the email for new and existing users", () => {
+    const n = inviteEmail({ audience: "staff", signUp: "S", training: "T", inviterName: "K", existingUser: false });
+    const e = inviteEmail({ audience: "licensee", signUp: "S", training: "T", inviterName: "K", existingUser: true });
+    expect(n.body).toContain("S");
+    expect(e.subject).toContain("platform training");
+    expect(e.body).not.toContain("Create your free account");
+  });
+});

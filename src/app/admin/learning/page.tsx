@@ -120,7 +120,7 @@ export default async function AdminLearningDashboardPage() {
           }
         />
 
-        <TrainingBanner userId={profile.id} />
+        <TrainingBanner userId={profile.id} email={profile.email} />
 
         <section className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <MetricCard label="Total courses" value={String(coursesTotal.count ?? 0)} detail="learning_programs" accent="indigo" href="/admin/learning/courses" />

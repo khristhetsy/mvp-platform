@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { getEnrollment } from "@/lib/learning/staff-training/data";
+import { getOrClaimEnrollment } from "@/lib/learning/staff-training/data";
 import { modulesForAudience, readyModuleCount } from "@/lib/learning/staff-training/catalog";
 
 /** Shown on the Learning overview, only to people who hold a training invitation. Renders nothing otherwise. */
-export async function TrainingBanner({ userId }: { userId: string }) {
-  const enr = await getEnrollment(userId).catch(() => null);
+export async function TrainingBanner({ userId, email }: { userId: string; email?: string | null }) {
+  const enr = await getOrClaimEnrollment({ id: userId, email }).catch(() => null);
   if (!enr) return null;
   const mods = modulesForAudience(enr.audience);
   return (

@@ -524,7 +524,7 @@ export default async function FounderLearningPage() {
             title={t("learning_overview")}
             description={t("track_your_capital_readiness_journey_across_al")}
           />
-          <TrainingBanner userId={profile.id} />
+          <TrainingBanner userId={profile.id} email={profile.email} />
           <LearningTabs tabs={tabs} />
         </WorkspacePageContainer>
       </FounderFeatureGate>

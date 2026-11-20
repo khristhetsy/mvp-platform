@@ -33,7 +33,8 @@ export function StaffTrainingAdminClient({ invites, enrollments, exercises }: { 
       {msg ? <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">{msg}</p> : null}
 
       <section className="rounded-xl border border-slate-200 bg-white p-4">
-        <h2 className="text-sm font-semibold text-slate-900">Invite someone</h2>
+        <h2 className="text-sm font-semibold text-slate-900">Give access</h2>
+        <p className="mt-1 text-xs text-slate-500">Already a user: access turns on now. Not a user yet: they get an email to create a free account, and the course opens after they sign up.</p>
         <div className="mt-3 flex flex-wrap items-end gap-3">
           <label className="text-xs text-slate-600">Email<input value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1 block w-64 rounded-lg border border-slate-300 px-2 py-1.5 text-sm" /></label>
           <label className="text-xs text-slate-600">Audience
@@ -44,8 +45,8 @@ export function StaffTrainingAdminClient({ invites, enrollments, exercises }: { 
           {audience === "licensee" ? <label className="text-xs text-slate-600">Organization<input value={org} onChange={(e) => setOrg(e.target.value)} className="mt-1 block w-48 rounded-lg border border-slate-300 px-2 py-1.5 text-sm" /></label> : null}
           <label className="flex items-center gap-1.5 text-xs text-slate-600"><input type="checkbox" checked={coach} onChange={(e) => setCoach(e.target.checked)} />AI coach on</label>
           <button type="button" disabled={busy || !email.includes("@")} className="rounded-lg bg-[#1A6CE4] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#2E78F5] disabled:opacity-50"
-            onClick={() => run(async () => { await call("POST", "/api/admin/learning/staff-training/invites", { email, audience, organizationLabel: org, coachEnabled: coach }); setEmail(""); }, "Invitation sent.")}>
-            Send invitation
+            onClick={() => run(async () => { await call("POST", "/api/admin/learning/staff-training/invites", { email, audience, organizationLabel: org, coachEnabled: coach }); setEmail(""); }, "Done. The person was emailed.")}>
+            Give access
           </button>
         </div>
       </section>
