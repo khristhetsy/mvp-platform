@@ -91,7 +91,7 @@ export function GuestPayPanel({
     <div>
       {isPremium ? (
         <div className="mb-5 space-y-3">
-          <p className="text-[13px] leading-5 text-site-muted">Premium includes a Services Agreement with iCFO. Check the details, review it, then accept it before you pay.</p>
+          <p className="text-[13px] leading-5 text-site-muted">Premium includes a Services Agreement with iCFO. Check the details, review it, then accept it before you pay. Notices go to {email}.</p>
           <div className="overflow-hidden rounded-lg border border-site-line">
             {AGREEMENT_TERMS.map((t, i) => (
               <div key={t.label} className={`flex justify-between gap-3 px-3 py-2 text-[13px] ${i ? "border-t border-site-line" : ""}`}>
@@ -102,7 +102,6 @@ export function GuestPayPanel({
           </div>
           <Field id="agr-company" label="Company legal name" value={agr.companyName} onChange={(v) => setAgr({ ...agr, companyName: v })} />
           <Field id="agr-address" label="Company address" value={agr.companyAddress} onChange={(v) => setAgr({ ...agr, companyAddress: v })} multiline />
-          <Field id="agr-email" label="Email for notices" type="email" value={agr.companyEmail} onChange={(v) => setAgr({ ...agr, companyEmail: v })} />
           <Field id="agr-name" label="Your name" value={agr.acceptedName} onChange={(v) => setAgr({ ...agr, acceptedName: v })} />
           <Field id="agr-title" label="Your title" value={agr.acceptedTitle} onChange={(v) => setAgr({ ...agr, acceptedTitle: v })} />
           <button type="button" onClick={reviewAgreement} disabled={!agrComplete || reviewing} className="text-[13px] font-medium text-site-blue underline disabled:cursor-not-allowed disabled:opacity-50">
