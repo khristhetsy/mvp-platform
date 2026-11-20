@@ -63,6 +63,7 @@ export const PAGE_NOTES: Record<string, string> = {
   "/founder/learning/plan": "My learning plan: the courses recommended for this founder.",
   "/founder/learning/schedule": "My schedule: planned learning sessions.",
   "/founder/learning/progress": "My progress: course completion.",
+  "/learn/training": "Training: the invitation only course you have been given access to.",
   "/founder/learning/stages/stage_0": "Learning track Stage 0 Foundation.",
   "/founder/learning/stages/stage_1": "Learning track Stage 1 Seed Round.",
   "/founder/learning/stages/stage_2": "Learning track Stage 2 Series A.",

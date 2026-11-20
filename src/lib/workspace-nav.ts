@@ -414,6 +414,8 @@ export const founderWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/founder/learning/stages/stage_3", label: "Stage 3 — Exit", minStage: "qualify" },
         ],
       },
+      // Only enrolled learners see this row (the menus fetch /api/learn-training/me and hide it otherwise).
+      { href: "/learn/training", label: "Training" },
       { href: "/founder/milestones", label: "Milestones", minStage: "optimize" },
       { href: "/founder/analytics", label: "Analytics", minStage: "optimize" },
     ],
@@ -493,6 +495,7 @@ export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
           { href: "/founder/readiness/diligence", label: "Diligence & review", menuGroup: "Diligence", minStage: "deploy" },
           { href: "/founder/pitch-practice", label: "Prep & practice", menuGroup: "Learn", minStage: "qualify" },
           { href: "/founder/learning", label: "Learning", menuGroup: "Learn", minStage: "qualify" },
+          { href: "/learn/training", label: "Training", menuGroup: "Learn" },
         ],
       },
       {
