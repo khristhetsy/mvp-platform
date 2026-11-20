@@ -117,7 +117,7 @@ function planCta(
   if (plan.planType === "founder_premium") {
     return currentPlan
       ? { href: `/upgrade?plan=${plan.planType}`, label: "View upgrade options" }
-      : { href: "/auth/sign-up?role=founder&plan=founder_premium", label: "Start on Premium" };
+      : { href: "/start?plan=premium", label: "Start on Premium" };
   }
   return currentPlan ? { href: `/upgrade?plan=${plan.planType}`, label: "View upgrade options" } : { href: founderCtaHref, label: founderCtaLabel };
 }
@@ -141,8 +141,8 @@ export function PlanComparisonSection({
   /** Plan types that include the Investor Relations Agent. Empty while the agent switch is off. */
   agentPlans?: string[];
 }>) {
-  // Free and Premium are always listed (Oct 9, 2026). Premium is paid by wire,
-  // so a signed in founder goes to the wire panel on /billing, never to checkout.
+  // Free and Premium are always listed. Premium is paid by card like Basic and
+  // Professional: a visitor starts on /start, a signed in founder goes to /upgrade.
   const founderPlans = founderPricingPlans(pricing);
   const comparisonRows = featureComparison(pricing);
   const t = useTranslations("sharedCmp");

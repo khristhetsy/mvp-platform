@@ -108,8 +108,9 @@ export async function agreementDefaultsFor(profile: Profile): Promise<AgreementD
 export type RecordedAcceptance = { row: AcceptanceRow; pdf: Buffer; emailed: boolean };
 
 /** Render the agreement, record the acceptance, and email the founder a copy. The render runs first so nothing is recorded that cannot be produced again. */
-export async function recordAcceptance(args: { profile: Profile; input: AgreementInput; userAgent: string | null; baseUrl: string }): Promise<RecordedAcceptance> {
-  const acceptedAt = new Date().toISOString();
+export async function recordAcceptance(args: { profile: Profile; input: AgreementInput; userAgent: string | null; baseUrl: string; acceptedAt?: string }): Promise<RecordedAcceptance> {
+  // A guest checked the box before any account existed, so their own time is kept, not the claim time.
+  const acceptedAt = args.acceptedAt ?? new Date().toISOString();
   const pdf = await renderAgreementPdf(args.input, acceptedAt);
   let companyId: string | null = null;
   try {

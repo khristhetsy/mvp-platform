@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
 
-/** Payment comes first for Basic and Professional: this page, then secure checkout, then the login. */
+/** Payment comes first for Basic, Professional and Premium: this page, then secure checkout, then the login. */
 export default async function StartPayPage({ searchParams }: Readonly<{ searchParams?: Promise<Record<string, string | string[] | undefined>> }>) {
   const params = (await searchParams) ?? {};
   const email = one(params.email).trim();

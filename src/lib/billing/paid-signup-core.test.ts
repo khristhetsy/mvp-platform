@@ -13,11 +13,11 @@ import {
 const ID = "3f6b0c7e-8a41-4d2b-9c55-1e2f3a4b5c6d";
 
 describe("guest checkout plans", () => {
-  it("allows only Basic and Professional before an account exists", () => {
-    expect(GUEST_CHECKOUT_PLANS).toEqual(["founder_basic", "founder_professional"]);
+  it("allows Basic, Professional and Premium before an account exists", () => {
+    expect(GUEST_CHECKOUT_PLANS).toEqual(["founder_basic", "founder_professional", "founder_premium"]);
     expect(isGuestCheckoutPlan("founder_basic")).toBe(true);
     expect(isGuestCheckoutPlan("founder_professional")).toBe(true);
-    expect(isGuestCheckoutPlan("founder_premium")).toBe(false);
+    expect(isGuestCheckoutPlan("founder_premium")).toBe(true);
     expect(isGuestCheckoutPlan("founder_free")).toBe(false);
     expect(isGuestCheckoutPlan("founder_managed_ir")).toBe(false);
     expect(isGuestCheckoutPlan(null)).toBe(false);
@@ -73,9 +73,12 @@ describe("where the Start form sends someone", () => {
     expect(startDestination({ ...base, startChoice: "founder_professional" })).toBe("/start/pay?email=a%2Bb%40acme.com&plan=founder_professional");
   });
 
-  it("keeps the sign up page for Free, Premium and investors", () => {
+  it("sends Premium to payment first like the other paid plans", () => {
+    expect(startDestination({ ...base, startChoice: "founder_premium" })).toBe("/start/pay?email=a%2Bb%40acme.com&plan=founder_premium");
+  });
+
+  it("keeps the sign up page for Free and investors", () => {
     expect(startDestination({ ...base, startChoice: "founder_free" })).toBe("/auth/sign-up?email=a%2Bb%40acme.com&role=founder&plan=founder_free");
-    expect(startDestination({ ...base, startChoice: "founder_premium" })).toBe("/auth/sign-up?email=a%2Bb%40acme.com&role=founder&plan=founder_premium");
     expect(startDestination({ ...base, startChoice: "investor" })).toBe("/auth/sign-up?email=a%2Bb%40acme.com&role=investor");
     expect(startDestination({ ...base, startChoice: "founder_basic", role: "investor" })).toBe("/auth/sign-up?email=a%2Bb%40acme.com&role=investor");
   });

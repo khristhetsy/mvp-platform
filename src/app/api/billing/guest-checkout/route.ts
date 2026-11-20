@@ -6,6 +6,7 @@ import { createPaidSignup, emailHasAccount, guestCheckoutUrl } from "@/lib/billi
 import { createStripeCheckoutUrl, stripeConfigured } from "@/lib/stripe";
 import { managedPaymentsFor, stripePriceId } from "@/lib/billing/stripe-mapping";
 import { PAID_SIGNUP_CLAIM_DAYS, PAID_SIGNUP_COOKIE, makePaidSignupToken } from "@/lib/billing/paid-signup-core";
+import { AGREEMENT_VERSION, parseAgreementInput } from "@/lib/billing/premium-agreement-core";
 import { recordFunnelEvent } from "@/lib/analytics/funnel";
 
 export const runtime = "nodejs";
@@ -13,11 +14,14 @@ export const dynamic = "force-dynamic";
 
 const schema = z.object({
   email: z.string().email().max(320),
-  planType: z.enum(["founder_basic", "founder_professional"]),
+  planType: z.enum(["founder_basic", "founder_professional", "founder_premium"]),
   name: z.string().max(200).optional(),
   company: z.string().max(200).optional(),
   refundPolicyAcceptedAt: z.string().min(1).max(64),
   refundPolicyVersion: z.string().max(80).optional(),
+  /** Premium only: the Services Agreement fields and the check mark. */
+  agreement: z.record(z.string(), z.unknown()).optional(),
+  agree: z.boolean().optional(),
 });
 
 /**
@@ -43,6 +47,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
   const input = parsed.data;
 
+  // Premium carries the iCFO Services Agreement. It is checked here, before any payment,
+  // and kept on the signup so it is recorded against the account when the login is created.
+  let premiumAgreement: Parameters<typeof createPaidSignup>[0]["premiumAgreement"] = null;
+  if (input.planType === "founder_premium") {
+    if (input.agree !== true) return NextResponse.json({ error: "Please check the box to accept the Services Agreement." }, { status: 400 });
+    const agreement = parseAgreementInput(input.agreement);
+    if (!agreement.ok) return NextResponse.json({ error: agreement.error }, { status: 400 });
+    premiumAgreement = { ...agreement.value, acceptedAt: new Date().toISOString(), version: AGREEMENT_VERSION, userAgent: req.headers.get("user-agent")?.slice(0, 500) ?? null };
+  }
+
   try {
     if (await emailHasAccount(input.email)) {
       return NextResponse.json(
@@ -58,6 +72,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       consentAcceptedAt: input.refundPolicyAcceptedAt,
       policyVersion: input.refundPolicyVersion,
       userAgent: req.headers.get("user-agent"),
+      premiumAgreement,
     });
     let url: string | null;
     if (stripeConfigured()) {

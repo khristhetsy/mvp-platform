@@ -17,6 +17,7 @@ import { alertStaffNewCustomer } from "@/lib/notifications/new-customer-alerts";
 import { alertStaffGuestPayment } from "@/lib/notifications/guest-payment-alert";
 import { sendFounderWelcomeLetter } from "@/lib/notifications/founder-welcome-letter";
 import { PLAN_LABELS, PLAN_PRICES, type PlanType } from "@/lib/subscriptions/plans";
+import type { AgreementInput } from "@/lib/billing/premium-agreement-core";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Db = any;
@@ -45,10 +46,11 @@ export type PaidSignupRow = {
   current_period_end: string | null;
   grace_period_ends_at: string | null;
   cancel_at_period_end: boolean;
+  premium_agreement: (AgreementInput & { acceptedAt: string; version: string; userAgent: string | null }) | null;
 };
 
 const COLUMNS =
-  "id, email, plan_type, full_name, company, consent_accepted_at, consent_policy_version, consent_user_agent, status, paid_at, ls_subscription_id, ls_customer_id, ls_variant_id, ls_status, stripe_subscription_id, stripe_customer_id, stripe_price_id, current_period_end, grace_period_ends_at, cancel_at_period_end";
+  "id, email, plan_type, full_name, company, consent_accepted_at, consent_policy_version, consent_user_agent, status, paid_at, ls_subscription_id, ls_customer_id, ls_variant_id, ls_status, stripe_subscription_id, stripe_customer_id, stripe_price_id, current_period_end, grace_period_ends_at, cancel_at_period_end, premium_agreement";
 
 export async function getPaidSignup(id: string): Promise<PaidSignupRow | null> {
   const { data } = await db().from("paid_signups").select(COLUMNS).eq("id", id).maybeSingle();
@@ -73,6 +75,8 @@ export async function createPaidSignup(input: {
   consentAcceptedAt: string;
   policyVersion?: string | null;
   userAgent?: string | null;
+  /** Premium only: the Services Agreement details and the time the box was checked. Recorded against the account at claim. */
+  premiumAgreement?: (AgreementInput & { acceptedAt: string; version: string; userAgent: string | null }) | null;
 }): Promise<string> {
   const { data, error } = await db()
     .from("paid_signups")
@@ -84,6 +88,7 @@ export async function createPaidSignup(input: {
       consent_accepted_at: input.consentAcceptedAt,
       consent_policy_version: input.policyVersion ?? null,
       consent_user_agent: input.userAgent?.slice(0, 500) ?? null,
+      ...(input.premiumAgreement ? { premium_agreement: input.premiumAgreement } : {}),
     })
     .select("id")
     .single();
@@ -329,6 +334,21 @@ export async function claimPaidSignup(input: { signupId: string; password: strin
     console.error("[paid-signup] consent record failed (non-fatal)", err);
   }
 
+  // Premium: the Services Agreement checked before payment is recorded against the new account, with the time it was accepted.
+  if (row.plan_type === "founder_premium" && row.premium_agreement) {
+    try {
+      const { data: profile } = await admin.from("profiles").select("*").eq("id", profileId).maybeSingle();
+      if (profile) {
+        const { recordAcceptance } = await import("@/lib/billing/premium-agreement");
+        const { acceptedAt, userAgent, version: _version, ...input } = row.premium_agreement;
+        void _version;
+        await recordAcceptance({ profile, input, userAgent, baseUrl: absoluteUrl("/").replace(/\/$/, ""), acceptedAt });
+      }
+    } catch (err) {
+      console.error("[paid-signup] premium agreement record failed (non-fatal)", err);
+    }
+  }
+
   await admin
     .from("paid_signups")
     .update({ status: "claimed", claimed_at: now, claimed_profile_id: profileId })
@@ -339,6 +359,10 @@ export async function claimPaidSignup(input: { signupId: string; password: strin
   try {
     await recordFunnelEvent({ sessionId: `webhook_${profileId}`, eventName: "checkout_complete", properties: { plan: row.plan_type, event: "guest_claim" } });
     await sendFounderWelcomeLetter({ founderId: profileId, plan: row.plan_type });
+    if (row.plan_type === "founder_premium") {
+      const { assignAccountManagerForPremium } = await import("@/lib/team/account-manager");
+      await assignAccountManagerForPremium({ founderId: profileId });
+    }
     await alertStaffNewCustomer({ event: "payment", founderId: profileId, plan: row.plan_type });
   } catch (err) {
     console.error("[paid-signup] first payment steps failed (non-fatal)", err);

@@ -33,8 +33,8 @@ export type PricingPlanCard = {
 };
 
 // Free is shown again (Oct 9, 2026): a one time AI due diligence report, the
-// CRR, sharing with any investor and a Private Market listing. Premium is paid
-// by bank wire only; Basic and Professional check out through Lemon Squeezy.
+// CRR, sharing with any investor and a Private Market listing. Basic,
+// Professional and Premium all pay by card (Stripe).
 const WEBSITE_TIER_BY_PLAN: Partial<Record<PlanType, string>> = {
   founder_free: "Free",
   founder_basic: "Basic",
@@ -62,8 +62,8 @@ function websiteCopy(planType: PlanType) {
 }
 
 // Free is shown again (Oct 9, 2026): a one time AI due diligence report, the
-// CRR, sharing with any investor and a Private Market listing. Premium is paid
-// by bank wire only; Basic and Professional check out through Lemon Squeezy.
+// CRR, sharing with any investor and a Private Market listing. Basic,
+// Professional and Premium all pay by card (Stripe).
 export const FOUNDER_PRICING_PLANS: PricingPlanCard[] = [
   {
     planType: "founder_free",

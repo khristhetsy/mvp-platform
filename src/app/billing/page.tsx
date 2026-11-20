@@ -86,8 +86,7 @@ export default async function BillingPage({
     .single();
   const hasLsCustomer = Boolean((subRaw as Record<string, unknown> | null)?.ls_customer_id);
 
-  // Premium is paid by bank wire only (Oct 9, 2026), so its panel shows
-  // whether or not Lemon Squeezy checkout is enabled.
+  // Premium is now paid by card. The wire state still loads for founders who already pay by wire.
   const wire = await loadFounderWireState(profile.id);
   const params = (await searchParams) ?? {};
   // Accepted Services Agreement copy (Premium). A lookup failure just hides the link.
@@ -129,7 +128,7 @@ export default async function BillingPage({
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">{t("billing")}</p>
         <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">{t("billing_overview")}</h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-          Basic and Professional are billed monthly by card. Premium is billed monthly by bank wire.
+          Basic, Professional and Premium are billed monthly by card.{hasWireHistory ? " Founders who already pay Premium by wire keep their wire invoices." : ""}
         </p>
 
         <dl className="mt-8 grid gap-4 text-sm text-slate-700 md:grid-cols-2 lg:grid-cols-3">

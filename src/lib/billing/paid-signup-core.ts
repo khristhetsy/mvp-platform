@@ -7,10 +7,10 @@ import type { PlanType } from "@/lib/subscriptions/plans";
  * that opens the "create your login" step, and where /start sends a founder.
  */
 
-/** Plans a founder can pay for before they have an account. Premium is not here: its Services Agreement is recorded against an account before checkout. */
-export const GUEST_CHECKOUT_PLANS: readonly PlanType[] = ["founder_basic", "founder_professional"] as const;
+/** Plans a founder can pay for before they have an account. Premium is included: its Services Agreement is collected on the payment step, kept on the paid signup, and recorded against the account when the login is created. */
+export const GUEST_CHECKOUT_PLANS: readonly PlanType[] = ["founder_basic", "founder_professional", "founder_premium"] as const;
 
-export function isGuestCheckoutPlan(plan: PlanType | string | null | undefined): plan is "founder_basic" | "founder_professional" {
+export function isGuestCheckoutPlan(plan: PlanType | string | null | undefined): plan is "founder_basic" | "founder_professional" | "founder_premium" {
   return GUEST_CHECKOUT_PLANS.includes(plan as PlanType);
 }
 
@@ -59,8 +59,8 @@ export type StartChoice = "founder_free" | "founder_basic" | "founder_profession
 
 /**
  * Where /api/lead sends someone after the Start form.
- * - Basic or Professional with online payment on: the payment step, before any login exists.
- * - Everything else keeps the sign up page (Free, Premium with its agreement, investors, or payment not set up).
+ * - Basic, Professional or Premium with online payment on: the payment step, before any login exists.
+ * - Everything else keeps the sign up page (Free, investors, or payment not set up).
  */
 export function startDestination(input: {
   email: string;
