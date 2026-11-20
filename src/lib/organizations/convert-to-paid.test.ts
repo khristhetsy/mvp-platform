@@ -35,10 +35,11 @@ function fakeAdmin(results: {
 afterEach(() => vi.unstubAllEnvs());
 
 describe("convert plan helpers", () => {
-  it("accepts only Basic and Professional", () => {
+  it("accepts Basic, Professional and Premium", () => {
     expect(isConvertPlan("founder_basic")).toBe(true);
     expect(isConvertPlan("founder_professional")).toBe(true);
-    expect(isConvertPlan("founder_premium")).toBe(false);
+    expect(isConvertPlan("founder_premium")).toBe(true);
+    expect(isConvertPlan("founder_free")).toBe(false);
     expect(isConvertPlan(null)).toBe(false);
   });
 

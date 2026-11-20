@@ -376,6 +376,7 @@ export function AdminAccountsClient({
                   <select value={vPlan} onChange={(e) => setVPlan(e.target.value as ConvertPlan)} className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
                     <option value="founder_professional">{PLAN_LABELS.founder_professional} · ${Math.round(PLAN_PRICES.founder_professional / 100)} per month</option>
                     <option value="founder_basic">{PLAN_LABELS.founder_basic} · ${Math.round(PLAN_PRICES.founder_basic / 100)} per month</option>
+                    <option value="founder_premium">{PLAN_LABELS.founder_premium} · $1,500 per month</option>
                   </select>
                 </div>
                 <div>
@@ -392,7 +393,7 @@ export function AdminAccountsClient({
                 </div>
               </div>
               <ul className="mt-3 space-y-1 text-xs text-slate-600">
-                <li>The client enters their own card at Lemon Squeezy and is billed every month.</li>
+                <li>{vPlan === "founder_premium" ? "The client accepts the Services Agreement, then enters their own card at Stripe and is billed every month." : "The client enters their own card at Stripe and is billed every month."}</li>
                 <li>Receipts and failed payment notices go to the bill to email.</li>
                 <li>The account stays comped and a demo until the first payment arrives.</li>
               </ul>

@@ -6,7 +6,7 @@ import { isCardSubscription } from "@/lib/billing/plan-change";
 const origin = () => process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com";
 
 export type AdminCheckoutInput = {
-  plan: "founder_basic" | "founder_professional";
+  plan: "founder_basic" | "founder_professional" | "founder_premium";
   email: string;
   profileId: string;
   successUrl: string;

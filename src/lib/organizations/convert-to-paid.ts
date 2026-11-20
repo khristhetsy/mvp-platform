@@ -2,25 +2,27 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PlanType } from "@/lib/subscriptions/plans";
 
 // Converting an admin-created demo Founder account to a paying one, by card
-// (Lemon Squeezy, recurring). Staff send the client a checkout link; the demo stays a
+// (Stripe, recurring). Staff send the client a checkout link; the demo stays a
 // comped demo until the first payment arrives, then the billing webhook calls
-// activateConvertedOrg. The client enters their own card at Lemon Squeezy, iCapOS never
-// touches it.
+// activateConvertedOrg. The client enters their own card at Stripe, iCapOS never
+// touches it. Premium sends an agreement page first: the client accepts the Services
+// Agreement there, then goes on to Stripe.
 
 function loose(client: unknown): SupabaseClient {
   return client as SupabaseClient;
 }
 
-export type ConvertPlan = "founder_basic" | "founder_professional";
+export type ConvertPlan = "founder_basic" | "founder_professional" | "founder_premium";
 
-export const CONVERT_PLANS: ConvertPlan[] = ["founder_basic", "founder_professional"];
+export const CONVERT_PLANS: ConvertPlan[] = ["founder_basic", "founder_professional", "founder_premium"];
 
 export function isConvertPlan(value: unknown): value is ConvertPlan {
-  return value === "founder_basic" || value === "founder_professional";
+  return value === "founder_basic" || value === "founder_professional" || value === "founder_premium";
 }
 
 export function variantIdForPlan(plan: ConvertPlan): string | undefined {
   if (plan === "founder_basic") return process.env.LEMONSQUEEZY_VARIANT_ID_BASIC;
+  if (plan === "founder_premium") return undefined; // Premium is Stripe only
   return process.env.LEMONSQUEEZY_VARIANT_ID_PROFESSIONAL;
 }
 

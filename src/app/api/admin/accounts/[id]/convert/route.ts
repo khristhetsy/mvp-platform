@@ -10,6 +10,7 @@ import { stripeConfigured } from "@/lib/stripe";
 import { sendEmail } from "@/lib/email/send-email";
 import { PLAN_LABELS } from "@/lib/subscriptions/plans";
 import { renderEmail } from "@/lib/email/layout";
+import { agreementLinkPath, makeAgreementLinkToken } from "@/lib/billing/agreement-link-core";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -78,7 +79,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const planInput = body.plan ?? saved?.conversion_plan ?? null;
   if (!isConvertPlan(planInput)) {
-    return NextResponse.json({ error: "Choose Basic or Professional." }, { status: 400 });
+    return NextResponse.json({ error: "Choose Basic, Professional or Premium." }, { status: 400 });
   }
   const plan: ConvertPlan = planInput;
   const email = (body.billToEmail ?? saved?.conversion_email ?? "").trim();
@@ -88,6 +89,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const name = (body.billToName ?? saved?.conversion_name ?? "").trim() || null;
 
   const variantId = variantIdForPlan(plan);
+  if (plan === "founder_premium" && !stripeConfigured()) {
+    return NextResponse.json({ error: "Premium is paid through Stripe, which is not configured." }, { status: 400 });
+  }
   if (!stripeConfigured() && !variantId) {
     return NextResponse.json({ error: `No Lemon Squeezy variant is configured for ${PLAN_LABELS[plan]}.` }, { status: 400 });
   }
@@ -95,7 +99,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   let url: string;
   try {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com";
-    url = await createAdminCheckoutUrl({ plan, variantId, email, profileId: founder.founder_id, successUrl: `${appUrl}/admin/accounts`, name: name ?? undefined });
+    // Premium: the client accepts the Services Agreement first, then goes on to Stripe from that page.
+    url = plan === "founder_premium"
+      ? `${appUrl}${agreementLinkPath(makeAgreementLinkToken(org.id))}`
+      : await createAdminCheckoutUrl({ plan, variantId, email, profileId: founder.founder_id, successUrl: `${appUrl}/admin/accounts`, name: name ?? undefined });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "Could not create the checkout link." }, { status: 502 });
   }
@@ -123,9 +130,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       context: "Billing",
       eyebrow: "Billing",
       headline: `Activate your ${planName} plan`,
-      intro: `${first ? `Hi ${first}, h` : "H"}ere is your secure checkout link to activate ${planName}.`,
+      intro: plan === "founder_premium"
+        ? `${first ? `Hi ${first}, h` : "H"}ere is your link to accept the iCFO Services Agreement and activate ${planName}. You review and accept the agreement first, then pay by card.`
+        : `${first ? `Hi ${first}, h` : "H"}ere is your secure checkout link to activate ${planName}.`,
       blocks: [{ type: "facts", rows: [{ label: "Plan", value: planName }, { label: "Includes", value: "Every tool on iCapOS" }] }],
-      primary: { label: "Complete checkout", url },
+      primary: { label: plan === "founder_premium" ? "Review agreement and pay" : "Complete checkout", url },
       footer: { reason: "You get this because an iCFO admin started checkout for your account." },
     });
     emailed = await sendEmail({ to: email, subject: mail.subject, html: mail.html, text: mail.text, fromName: "iCapOS" });
