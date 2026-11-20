@@ -65,6 +65,11 @@ export function BillingCustomerProfile({ detail, pricing = CODE_DEFAULT_PRICING 
   const router = useRouter();
   const c = detail.customer;
   const [coPlan, setCoPlan] = useState<"founder_basic" | "founder_professional" | "founder_premium">("founder_basic");
+  // The plan the customer is already on at Lemon Squeezy: the link moves them at the price they pay now.
+  const coLabel = (plan: "founder_basic" | "founder_professional" | "founder_premium", name: string) =>
+    c?.lsSubscriptionId && c.planType === plan && c.priceCents > 0
+      ? `${name} — ${money(c.priceCents, c.currency)}/mo (keeps current price)`
+      : `${name} — ${priceShort(pricing, plan)}`;
   const [coBusy, setCoBusy] = useState<null | "link" | "email">(null);
   const [coUrl, setCoUrl] = useState<string | null>(null);
   const [coMsg, setCoMsg] = useState<string | null>(null);
@@ -221,9 +226,9 @@ export function BillingCustomerProfile({ detail, pricing = CODE_DEFAULT_PRICING 
         <div style={{ fontSize: 13, fontWeight: 600, color: navy, marginBottom: 10 }}>Create checkout link</div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           <select value={coPlan} onChange={(e) => setCoPlan(e.target.value as "founder_basic" | "founder_professional" | "founder_premium")} style={{ fontSize: 12.5, padding: "7px 10px", borderRadius: 8, border: "1px solid #E4E8F0" }}>
-            <option value="founder_basic">Basic — {priceShort(pricing, "founder_basic")}</option>
-            <option value="founder_professional">Professional — {priceShort(pricing, "founder_professional")}</option>
-            <option value="founder_premium">Premium — {priceShort(pricing, "founder_premium")}</option>
+            <option value="founder_basic">{coLabel("founder_basic", "Basic")}</option>
+            <option value="founder_professional">{coLabel("founder_professional", "Professional")}</option>
+            <option value="founder_premium">{coLabel("founder_premium", "Premium")}</option>
           </select>
           <button type="button" onClick={() => void createCheckout(false)} disabled={coBusy !== null} style={btn(navy, "#fff")}>{coBusy === "link" ? "Creating…" : "Create link"}</button>
           <button type="button" onClick={() => void createCheckout(true)} disabled={coBusy !== null} style={btn("#EEF3FC", blue)}>{coBusy === "email" ? "Sending…" : "Email to customer"}</button>
@@ -235,7 +240,7 @@ export function BillingCustomerProfile({ detail, pricing = CODE_DEFAULT_PRICING 
           </div>
         )}
         {coMsg && <div style={{ fontSize: 11.5, color: /Failed|didn't/.test(coMsg) ? "#A32D2D" : "#0F6E56", marginTop: 6 }}>{coMsg}</div>}
-        <div style={{ fontSize: 10.5, color: "#98A2B3", marginTop: 6, lineHeight: 1.5 }}>The customer enters their own card at Lemon Squeezy — this never charges a card from here.</div>
+        <div style={{ fontSize: 10.5, color: "#98A2B3", marginTop: 6, lineHeight: 1.5 }}>The customer enters their own card at Stripe — this never charges a card from here.</div>
       </div>
     </div>
   );
