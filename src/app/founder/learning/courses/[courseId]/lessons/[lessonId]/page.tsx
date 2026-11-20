@@ -14,6 +14,7 @@ import {
   resolveLessonVideoPlaybackUrl,
 } from "@/lib/learning/video/learning-videos-storage";
 import { requireRole } from "@/lib/supabase/auth";
+import { mayTakeCourse } from "@/lib/learning/course-access";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,7 @@ export default async function FounderAdminLessonPage({ params }: PageProps) {
 
   const [course, lesson] = await Promise.all([getPublishedAdminCourse(courseId), getPublishedAdminLesson(lessonId)]);
   if (!course || !lesson) notFound();
+  if (!(await mayTakeCourse(course, profile.id))) notFound();
 
   const courseSlug = `admin-${courseId}`;
   const lessonSlug = lesson.lesson_key;
@@ -48,7 +50,7 @@ export default async function FounderAdminLessonPage({ params }: PageProps) {
 
   return (
     <FounderAppShell profileName={profile.full_name ?? profile.email ?? "Founder"} profileSubtitle={company.company_name}>
-      <FounderFeatureGate featureKey="elearning">
+      <FounderFeatureGate featureKey="elearning" bypass={course.access_mode === "invite_only"}>
         <div className="space-y-6">
           <PageHeader
             eyebrow={t("admin_authored_lesson")}

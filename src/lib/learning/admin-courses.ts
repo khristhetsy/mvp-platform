@@ -1,4 +1,5 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { enrolledProgramIds } from "@/lib/learning/course-access";
 
 // Published learning content is global and already gated by is_published /
 // content_status = 'published'. Read it with the service role so founder
@@ -22,6 +23,7 @@ export type AdminPublishedCourse = {
   created_at: string;
   video_url: string | null;
   banner_image_url: string | null;
+  access_mode?: "open" | "invite_only";
 };
 
 export type AdminPublishedModule = {
@@ -72,19 +74,26 @@ export type AdminPublishedQuizQuestionPublic = {
   options: string[];
 };
 
-export async function listPublishedAdminCourses(): Promise<AdminPublishedCourse[]> {
+/**
+ * Published courses. Invitation only courses are left out unless `viewerId` is on their access list,
+ * so a listing never shows a course the person cannot open.
+ */
+export async function listPublishedAdminCourses(viewerId?: string | null): Promise<AdminPublishedCourse[]> {
   const supabase = publishedReadClient();
   const { data } = await supabase
     .from("learning_programs")
     .select(
-      "id, slug, title, description, readiness_focus, category, difficulty, content_status, is_published, order_index, created_at, video_url, banner_image_url",
+      "id, slug, title, description, readiness_focus, category, difficulty, content_status, is_published, order_index, created_at, video_url, banner_image_url, access_mode",
     )
     .eq("is_published", true)
     .order("order_index", { ascending: true })
     .order("created_at", { ascending: false })
     .limit(200);
 
-  return (data ?? []) as unknown as AdminPublishedCourse[];
+  const all = (data ?? []) as unknown as AdminPublishedCourse[];
+  if (!all.some((c) => c.access_mode === "invite_only")) return all;
+  const mine = await enrolledProgramIds(viewerId);
+  return all.filter((c) => c.access_mode !== "invite_only" || mine.has(c.id));
 }
 
 export async function getPublishedAdminCourse(courseId: string): Promise<AdminPublishedCourse | null> {
@@ -92,7 +101,7 @@ export async function getPublishedAdminCourse(courseId: string): Promise<AdminPu
   const { data } = await supabase
     .from("learning_programs")
     .select(
-      "id, slug, title, description, readiness_focus, category, difficulty, content_status, is_published, order_index, created_at, video_url, banner_image_url",
+      "id, slug, title, description, readiness_focus, category, difficulty, content_status, is_published, order_index, created_at, video_url, banner_image_url, access_mode",
     )
     .eq("id", courseId)
     .eq("is_published", true)
@@ -106,7 +115,7 @@ export async function getPublishedAdminCourseBySlug(slug: string): Promise<Admin
   const { data } = await supabase
     .from("learning_programs")
     .select(
-      "id, slug, title, description, readiness_focus, category, difficulty, content_status, is_published, order_index, created_at, video_url, banner_image_url",
+      "id, slug, title, description, readiness_focus, category, difficulty, content_status, is_published, order_index, created_at, video_url, banner_image_url, access_mode",
     )
     .eq("slug", slug)
     .eq("is_published", true)
