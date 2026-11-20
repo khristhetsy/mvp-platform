@@ -4,11 +4,13 @@ import { newMessageSchema, rewritePrompt, rewriteSchema, signWithFirstName, writ
 const ID = "3f2b8c1e-5a4d-4e6f-9b7a-1c2d3e4f5a6b";
 
 describe("newMessageSchema", () => {
-  it("accepts a client, subject and message, and emails by default", () => {
+  it("accepts a client, subject and message, with the email off by default", () => {
     const r = newMessageSchema.parse({ requesterId: ID, subject: " Onboarding call ", body: " Hello " });
     expect(r.subject).toBe("Onboarding call");
     expect(r.body).toBe("Hello");
-    expect(r.emailRequester).toBe(true);
+    expect(r.emailRequester).toBe(false);
+    expect(r.priority).toBe("normal");
+    expect(r.channel).toBe("phone");
   });
 
   it("rejects a missing subject, an empty message and a bad client id", () => {
@@ -17,8 +19,17 @@ describe("newMessageSchema", () => {
     expect(newMessageSchema.safeParse({ requesterId: "nope", subject: "x", body: "x" }).success).toBe(false);
   });
 
-  it("lets staff turn the email off", () => {
-    expect(newMessageSchema.parse({ requesterId: ID, subject: "s", body: "b", emailRequester: false }).emailRequester).toBe(false);
+  it("lets staff turn the email on", () => {
+    expect(newMessageSchema.parse({ requesterId: ID, subject: "s", body: "b", emailRequester: true }).emailRequester).toBe(true);
+  });
+});
+
+describe("ticket channel and priority", () => {
+  it("accepts a known channel and priority only", () => {
+    const base = { requesterId: ID, subject: "s", body: "b" };
+    expect(newMessageSchema.parse({ ...base, channel: "in_person", priority: "high" })).toMatchObject({ channel: "in_person", priority: "high" });
+    expect(newMessageSchema.safeParse({ ...base, channel: "carrier pigeon" }).success).toBe(false);
+    expect(newMessageSchema.safeParse({ ...base, priority: "urgent" }).success).toBe(false);
   });
 });
 

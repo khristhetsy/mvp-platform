@@ -107,6 +107,7 @@ export type CreateSupportRequestInput = {
   subject: string;
   body: string;
   source?: SupportSource;
+  priority?: "low" | "normal" | "high";
   contextStage?: string | null;
   contextItem?: string | null;
 };
@@ -123,6 +124,7 @@ export async function createSupportRequest(
       requester_role: input.requesterRole ?? "founder",
       subject: input.subject.trim().slice(0, 160),
       source: input.source ?? "request_help",
+      priority: input.priority ?? "normal",
       context_stage: input.contextStage ?? null,
       context_item: input.contextItem ?? null,
       status: "open",

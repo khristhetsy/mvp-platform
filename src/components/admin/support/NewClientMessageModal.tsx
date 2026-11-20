@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { MANUAL_CHANNEL_LABELS, MANUAL_CHANNELS, type ManualChannel } from "@/lib/support/manual-message";
 import type { PickerClient } from "@/lib/support/client-picker";
 import { ClientPicker } from "./ClientPicker";
 import type { StaffOption } from "./SupportQueueClient";
@@ -27,7 +28,9 @@ export function NewClientMessageModal({
   const [client, setClient] = useState<PickerClient | null>(null);
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
-  const [emailClient, setEmailClient] = useState(true);
+  const [emailClient, setEmailClient] = useState(false);
+  const [channel, setChannel] = useState<ManualChannel>("phone");
+  const [priority, setPriority] = useState<"low" | "normal" | "high">("normal");
   const [assigneeId, setAssigneeId] = useState(currentStaffId);
   const [suggestion, setSuggestion] = useState<{ before: string; text: string } | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
@@ -59,7 +62,7 @@ export function NewClientMessageModal({
 
   async function send() {
     if (!client) return setError("Pick a client first.");
-    if (!subject.trim() || !body.trim()) return setError("Add a subject and a message.");
+    if (!subject.trim() || !body.trim()) return setError("Add a subject and the details.");
     setSending(true);
     setError(null);
     try {
@@ -72,16 +75,18 @@ export function NewClientMessageModal({
           body: body.trim(),
           assigneeId,
           emailRequester: emailClient,
+          channel,
+          priority,
         }),
       });
       const json = (await res.json()) as { id?: string; error?: string };
       if (!res.ok || !json.id) {
-        setError(json.error ?? "Could not send the message.");
+        setError(json.error ?? "Could not create the ticket.");
         return;
       }
       onCreated(json.id);
     } catch {
-      setError("Could not send the message.");
+      setError("Could not create the ticket.");
     } finally {
       setSending(false);
     }
@@ -93,12 +98,12 @@ export function NewClientMessageModal({
   const field = "w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm focus:border-indigo-400 focus:outline-none";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 sm:items-center" role="dialog" aria-modal="true" aria-label="New message to client">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 sm:items-center" role="dialog" aria-modal="true" aria-label="New ticket">
       <div className="w-full max-w-xl rounded-2xl bg-white shadow-xl">
         <div className="flex items-start justify-between border-b border-slate-100 px-5 py-4">
           <div>
-            <h2 className="text-base font-semibold text-slate-900">New message to client</h2>
-            <p className="mt-0.5 text-xs text-slate-500">Starts a support thread the client can reply to.</p>
+            <h2 className="text-base font-semibold text-slate-900">New ticket</h2>
+            <p className="mt-0.5 text-xs text-slate-500">Opens a support ticket the client sees and can reply to.</p>
           </div>
           <button type="button" onClick={onClose} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100" aria-label="Close">
             <i className="ti ti-x" aria-hidden="true" />
@@ -109,10 +114,28 @@ export function NewClientMessageModal({
           <label className={label} htmlFor="ncm-client">Client</label>
           <ClientPicker value={client} onChange={setClient} />
 
+          <p className={label}>How did this reach us?</p>
+          <div className="flex gap-1.5" role="radiogroup" aria-label="How did this reach us?">
+            {MANUAL_CHANNELS.map((c) => (
+              <button key={c} type="button" role="radio" aria-checked={channel === c} onClick={() => setChannel(c)} className={`flex-1 rounded-lg border px-2 py-1.5 text-xs ${channel === c ? "border-indigo-400 bg-indigo-50 font-bold text-indigo-700" : "border-slate-200 text-slate-700 hover:bg-slate-50"}`}>
+                {MANUAL_CHANNEL_LABELS[c]}
+              </button>
+            ))}
+          </div>
+
+          <p className={label}>Priority</p>
+          <div className="flex gap-1.5" role="radiogroup" aria-label="Priority">
+            {(["low", "normal", "high"] as const).map((p) => (
+              <button key={p} type="button" role="radio" aria-checked={priority === p} onClick={() => setPriority(p)} className={`flex-1 rounded-lg border px-2 py-1.5 text-xs capitalize ${priority === p ? (p === "high" ? "border-red-300 bg-red-50 font-bold text-red-700" : "border-indigo-400 bg-indigo-50 font-bold text-indigo-700") : "border-slate-200 text-slate-700 hover:bg-slate-50"}`}>
+                {p}
+              </button>
+            ))}
+          </div>
+
           <label className={label} htmlFor="ncm-subject">Subject</label>
           <input id="ncm-subject" value={subject} onChange={(e) => setSubject(e.target.value)} maxLength={160} className={field} />
 
-          <label className={label} htmlFor="ncm-body">Message</label>
+          <label className={label} htmlFor="ncm-body">Details</label>
           <textarea id="ncm-body" value={body} onChange={(e) => setBody(e.target.value)} maxLength={4000} rows={6} className={field} />
 
           {aiDrafts ? (
@@ -169,7 +192,7 @@ export function NewClientMessageModal({
           <div className="mt-4 flex justify-end gap-2">
             <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
             <button type="button" onClick={send} disabled={sending} className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">
-              {sending ? "Sending" : "Send message"}
+              {sending ? "Creating" : "Create ticket"}
             </button>
           </div>
         </div>

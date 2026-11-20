@@ -10,7 +10,7 @@ import {
   requesterSupportLink,
   staffSupportLink,
 } from "@/lib/support/support";
-import { MANUAL_REQUESTER_ROLES, newMessageSchema } from "@/lib/support/manual-message";
+import { MANUAL_CHANNEL_LABELS, MANUAL_REQUESTER_ROLES, newMessageSchema } from "@/lib/support/manual-message";
 import { logSupportEvent } from "@/lib/support/events";
 import { onStaffReply } from "@/lib/support/care";
 import { createNotification } from "@/lib/notifications/notifications";
@@ -74,6 +74,8 @@ export async function POST(req: NextRequest): Promise<Response> {
     subject: input.subject,
     body: "",
     source: "manual",
+    priority: input.priority,
+    contextItem: MANUAL_CHANNEL_LABELS[input.channel],
   });
   if ("error" in created) return NextResponse.json({ error: created.error }, { status: 400 });
   const id = created.id;
@@ -114,7 +116,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     kind: "submitted",
     summary: `${profile.full_name ?? "Staff"} started this conversation`,
     detail: input.body,
-    meta: { source: "manual", emailRequester: input.emailRequester },
+    meta: { source: "manual", channel: input.channel, priority: input.priority, emailRequester: input.emailRequester },
   });
 
   // Email the client a link to the thread, from the assignee. Same path as a staff reply.

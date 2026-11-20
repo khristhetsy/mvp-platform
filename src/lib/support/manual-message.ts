@@ -9,13 +9,27 @@ import { z } from "zod";
 /** Only founders and investors have a support page to reply from. */
 export const MANUAL_REQUESTER_ROLES = ["founder", "investor"] as const;
 
+/** How a staff created ticket reached iCFO, with the label stored as the ticket topic. */
+export const MANUAL_CHANNELS = ["phone", "in_person", "email", "other"] as const;
+export type ManualChannel = (typeof MANUAL_CHANNELS)[number];
+export const MANUAL_CHANNEL_LABELS: Record<ManualChannel, string> = {
+  phone: "Phone call",
+  in_person: "In person",
+  email: "Email",
+  other: "Other",
+};
+
 export const newMessageSchema = z.object({
   requesterId: z.string().uuid(),
   subject: z.string().trim().min(1).max(160),
   body: z.string().trim().min(1).max(4000),
   assigneeId: z.string().uuid().nullish(),
-  /** Email the client a link to the thread. The in app notification is always sent. */
-  emailRequester: z.boolean().default(true),
+  /** Priority staff set on the ticket. */
+  priority: z.enum(["low", "normal", "high"]).default("normal"),
+  /** How the request reached iCFO. Shown as the ticket topic in the queue. */
+  channel: z.enum(MANUAL_CHANNELS).default("phone"),
+  /** Email the client a link to the thread. The in app notification is always sent. Off unless staff turn it on. */
+  emailRequester: z.boolean().default(false),
 });
 
 export const rewriteSchema = z.discriminatedUnion("mode", [

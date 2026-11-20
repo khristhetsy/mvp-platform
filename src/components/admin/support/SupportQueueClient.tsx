@@ -247,7 +247,7 @@ export function SupportQueueClient({
               onClick={() => setNewMessageOpen(true)}
               className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700"
             >
-              <i className="ti ti-message-plus text-sm" aria-hidden="true" /> New message
+              <i className="ti ti-message-plus text-sm" aria-hidden="true" /> New ticket
             </button>
             <div className="relative" ref={gearRef}>
               <button
