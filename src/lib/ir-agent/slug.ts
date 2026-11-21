@@ -11,7 +11,7 @@
  * fails when src/app gains a folder that is not listed here.
  */
 export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
-  "about", "about-us", "admin", "api", "app", "apple-icon", "assessment", "auth",
+  "about", "about-us", "admin", "agreement", "api", "app", "apple-icon", "assessment", "auth",
   "billing", "blog", "campaigns", "checkout", "claim", "clients", "configuration-error", "connect",
   "contact", "contracts", "credits", "daniela", "dashboard", "deal", "deals", "deck",
   "disclosures", "dr", "e", "email", "events", "f", "favicon", "fit", "founder",

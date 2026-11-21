@@ -48,6 +48,6 @@ describe("Premium founder plan", () => {
     const premium = pricingFor(CODE_DEFAULT_PRICING).tiers.find((t) => t.name === "Premium");
     expect(premium?.price).toBe("$1,500");
     expect(premium?.desc).not.toContain("wire");
-    expect(premium?.cta.href).toBe("/auth/sign-up?role=founder&plan=founder_premium");
+    expect(premium?.cta.href).toBe("/start?plan=premium");
   });
 });
