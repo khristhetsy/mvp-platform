@@ -26,6 +26,14 @@ type EventRow = { id: string; slug: string; title: string; starts_at: string };
 type ListRow = { id: string; name: string; count: number };
 type Data = { campaigns: Campaign[]; events: EventRow[]; lists: ListRow[]; today: Record<string, StatCounts> };
 
+type PreviewStep = "invite" | "day3" | "day7" | "lastcall";
+const STEP_OPTIONS: Array<{ key: PreviewStep; label: string }> = [
+  { key: "invite", label: "Invite" },
+  { key: "day3", label: "Day 3 follow up" },
+  { key: "day7", label: "Day 7 follow up" },
+  { key: "lastcall", label: "Last call" },
+];
+
 type Draft = {
   id: string | null; name: string; eventIds: string[]; audiences: Audience[]; when: "now" | "later";
   scheduleAt: string; stats: StatSettings; fromName: string; fromEmail: string; status: string;
@@ -63,7 +71,10 @@ export function InvitationsClient() {
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
-  const [preview, setPreview] = useState<{ role: InviteRole; subject: string; html: string } | null>(null);
+  const [preview, setPreview] = useState<{ role: InviteRole; step: PreviewStep; subject: string; html: string } | null>(null);
+  // The panel's own selection, kept apart from the loaded email so the tabs and step list respond at once.
+  const [panelRole, setPanelRole] = useState<InviteRole>("founder");
+  const [panelStep, setPanelStep] = useState<PreviewStep>("invite");
 
   const [reloadKey, setReloadKey] = useState(0);
   const load = useCallback(async () => { setReloadKey((k) => k + 1); }, []);
@@ -105,17 +116,17 @@ export function InvitationsClient() {
     return j.campaign.id as string;
   }
 
-  async function act(action: "schedule" | "pause" | "resume" | "test" | "preview", role?: InviteRole) {
+  async function act(action: "schedule" | "pause" | "resume" | "test" | "preview", role?: InviteRole, step?: PreviewStep) {
     if (!draft) return;
     setBusy(true); setMsg(null);
     try {
       if (action === "schedule" && draft.when === "later" && !draft.scheduleAt) { setMsg({ kind: "err", text: "Pick a send time, or choose Send now." }); return; }
       const id = locked ? draft.id : await save();
       if (!id) return;
-      const r = await fetch(`/api/admin/events/invitations/${id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, role }) });
+      const r = await fetch(`/api/admin/events/invitations/${id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, role, step }) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) { setMsg({ kind: "err", text: j.error ?? "Action failed." }); return; }
-      if (action === "preview") { setPreview({ role: role ?? "founder", subject: j.subject, html: j.html }); return; }
+      if (action === "preview") { setPreview({ role: role ?? "founder", step: step ?? "invite", subject: j.subject, html: j.html }); return; }
       if (action === "test") { setMsg({ kind: "ok", text: `Test sent to ${j.to}.` }); return; }
       if (action === "schedule") setMsg({ kind: "ok", text: `Scheduled. ${j.enrolled} people will be invited${j.skipped ? `, ${j.skipped} left out (unsubscribed or flagged)` : ""}.` });
       if (action === "pause") setMsg({ kind: "ok", text: "Paused." });
@@ -218,7 +229,7 @@ export function InvitationsClient() {
       {msg ? <p className={`mt-3 rounded-md px-3 py-2 text-[13px] ${msg.kind === "ok" ? "bg-emerald-50 text-emerald-800" : "bg-rose-50 text-rose-800"}`}>{msg.text}</p> : null}
       {locked ? <p className="mt-3 text-[12.5px] text-slate-500">This campaign is {draft.status}. Events and audiences are fixed; live number settings can still change.</p> : null}
 
-      <div className="mt-4 grid gap-5 lg:grid-cols-2">
+      <div className="mt-4 grid gap-5 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)_minmax(380px,440px)]">
         <section>
           <p className="mb-2 text-[12px] font-medium text-slate-500">1. Events attendees can choose</p>
           <div className="grid gap-1.5">
@@ -275,24 +286,42 @@ export function InvitationsClient() {
                   <textarea disabled={locked} value={a.intro ?? ""} onChange={(e) => patchAudience(a.role, { intro: e.target.value })} rows={2} placeholder="You're invited. Here's who is already coming." className="mt-1.5 w-full rounded-md border border-slate-300 px-2 py-1.5 text-[12.5px]" />
                 </details>
                 <div className="mt-2 flex gap-2">
-                  <button type="button" disabled={busy || !draft.eventIds.length} onClick={() => act("preview", a.role)} className="rounded-md border border-slate-300 px-2.5 py-1 text-[12px]">Preview</button>
+                  <button type="button" disabled={busy || !draft.eventIds.length} onClick={() => { setPanelRole(a.role); void act("preview", a.role, panelStep); }} className="rounded-md border border-slate-300 px-2.5 py-1 text-[12px]">Preview</button>
                   <button type="button" disabled={busy || !draft.eventIds.length} onClick={() => act("test", a.role)} className="rounded-md border border-slate-300 px-2.5 py-1 text-[12px]">Send test to me</button>
                 </div>
               </div>
             ))}
           </div>
         </section>
-      </div>
 
-      {preview ? (
-        <section className="mt-5 rounded-xl border border-slate-200">
-          <div className="flex items-center gap-2 border-b border-slate-200 px-3 py-2 text-[12.5px]">
-            <span className="text-slate-500">{ROLE_LABEL[preview.role]} · Subject:</span><span className="font-medium text-slate-900">{preview.subject}</span>
-            <button type="button" onClick={() => setPreview(null)} className="ml-auto text-slate-500" aria-label="Close preview"><i className="ti ti-x" aria-hidden="true" /></button>
+        <aside aria-label="Email preview" className="overflow-hidden rounded-xl border border-slate-200 bg-white lg:col-span-2 xl:sticky xl:top-4 xl:col-span-1 xl:self-start">
+          <div className="flex items-center gap-2 border-b border-slate-200 px-3 py-2.5">
+            <p className="text-[13.5px] font-semibold text-slate-900">Preview</p>
+            <button type="button" disabled={busy || !draft.eventIds.length} onClick={() => act("test", panelRole, panelStep)} className="ml-auto rounded-md bg-[#2E78F5] px-2.5 py-1 text-[12px] font-semibold text-white disabled:opacity-50">Send test to me</button>
           </div>
-          <iframe title="Email preview" srcDoc={preview.html} className="h-[560px] w-full bg-white" sandbox="" />
-        </section>
-      ) : null}
+          <div className="flex flex-wrap gap-1.5 px-3 pt-2.5">
+            {draft.audiences.map((a) => (
+              <button key={a.role} type="button" disabled={busy || !draft.eventIds.length} onClick={() => { setPanelRole(a.role); void act("preview", a.role, panelStep); }} className={`rounded-full border px-3 py-1 text-[12px] ${panelRole === a.role ? "border-[#2E78F5] bg-[#2E78F5] text-white" : "border-slate-300 text-slate-700"}`}>{ROLE_LABEL[a.role]}</button>
+            ))}
+          </div>
+          <div className="px-3 pt-2.5">
+            <label className="text-[11px] text-slate-500">Email step
+              <select value={panelStep} disabled={busy || !draft.eventIds.length} onChange={(e) => { const st = e.target.value as PreviewStep; setPanelStep(st); void act("preview", panelRole, st); }} className="mt-0.5 w-full rounded-md border border-slate-300 px-2 py-1.5 text-[12.5px] text-slate-900">
+                {STEP_OPTIONS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+              </select>
+            </label>
+          </div>
+          {preview ? (
+            <>
+              <p className="mx-3 mt-2.5 rounded-md bg-slate-50 px-2.5 py-2 text-[12.5px]"><span className="block text-[11px] text-slate-500">Subject</span><span className="font-medium text-slate-900">{preview.subject}</span></p>
+              <iframe title="Email preview" srcDoc={preview.html} className="mt-2.5 h-[520px] w-full border-t border-slate-200 bg-white" sandbox="" />
+            </>
+          ) : (
+            <p className="px-3 py-10 text-center text-[12.5px] text-slate-500">{draft.eventIds.length ? "Choose a role to see the email as it will be sent." : "Choose an event to preview the email."}</p>
+          )}
+          <p className="border-t border-slate-200 px-3 py-2 text-[11.5px] text-slate-500">Real numbers and a sample name. Press a role to refresh after you change offers or wording.</p>
+        </aside>
+      </div>
 
       <section className="mt-6">
         <div className="flex flex-wrap items-center gap-2">
