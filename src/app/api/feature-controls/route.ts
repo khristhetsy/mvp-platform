@@ -33,8 +33,9 @@ export async function GET(): Promise<Response> {
   //   2. otherwise a cohort rollout %: this founder is in if navBucket(id) < pct.
   //   3. otherwise the NEXT_PUBLIC_FOUNDER_NAV_V2 build flag.
   // Absent everywhere = off (current nav). All runtime — no redeploy needed.
+  // Staff are included so an admin acting as a founder gets the same menu the founder sees.
   let founderNavV2 = false;
-  if (audience === "founder") {
+  if (audience === "founder" || audience === "admin") {
     const navV2Row = flags["founder:nav_v2"];
     if (navV2Row === true) {
       founderNavV2 = true;
