@@ -66,6 +66,11 @@ export const FEATURES: FeatureDef[] = [
   } },
   { key: "events", label: "Events", group: "Fundraising & market", hrefs: { founder: ["/events", "/founder/events"], investor: ["/events"], admin: ["/admin/events", "/admin/events/applications", "/admin/events/sponsors", "/admin/events/analytics", "/admin/events/gamification"] } },
   { key: "partner_score", label: "Partner Score", group: "Fundraising & market", hrefs: { investor: ["/investor/partner-score"] } },
+  { key: "my_contacts", label: "My contacts", group: "Fundraising & market", hrefs: { founder: ["/founder/contacts"] } },
+  { key: "investor_matches", label: "Investor matches", group: "Fundraising & market", hrefs: { founder: ["/founder/matches"] } },
+  { key: "outreach", label: "Outreach", group: "Fundraising & market", hrefs: { founder: ["/founder/deploy"] } },
+  { key: "present_at_event", label: "Present at event", group: "Fundraising & market", hrefs: { founder: ["/founder/events/present"] } },
+  { key: "offering_type", label: "Offering type", group: "Fundraising & market", hrefs: { founder: ["/founder/offering-type"] } },
   // In-page feature, no nav href. Off hides pledge amounts and totals wherever a screen checks it.
   { key: "pledged", label: "Pledged amounts", group: "Fundraising & market", hrefs: {}, audiences: ["founder", "investor", "admin"] },
   // In-page feature, no nav href. Off hides Facebook and LinkedIn groups from the Social Media Compose "Post to" list.
@@ -76,12 +81,17 @@ export const FEATURES: FeatureDef[] = [
   // ── Readiness & documents ──────────────────────────────────────────────
   { key: "readiness", label: "Readiness", group: "Readiness & documents", hrefs: { founder: ["/founder/readiness", "/founder/readiness/wizard", "/founder/readiness/diligence", "/founder/readiness/documents", "/founder/report"] } },
   { key: "documents", label: "Documents", group: "Readiness & documents", hrefs: { founder: ["/founder/documents"] } },
+  { key: "data_room", label: "Data room", group: "Readiness & documents", hrefs: { founder: ["/founder/readiness/data-room"] } },
+  { key: "one_pager", label: "One pager", group: "Readiness & documents", hrefs: { founder: ["/founder/preview"] } },
 
   // ── Raise Toolkit ──────────────────────────────────────────────────────
   { key: "raise_toolkit_guides", label: "Raise Toolkit guides", group: "Raise Toolkit", hrefs: { founder: ["/founder/term-sheet", "/founder/pitch-practice", "/founder/email-sequence", "/founder/due-diligence", "/founder/investor-update", "/founder/funding-timeline", "/founder/board-prep", "/founder/kpi-glossary"] } },
   { key: "pitch_deck_analyzer", label: "Pitch deck analyzer", group: "Raise Toolkit", hrefs: { founder: ["/founder/pitch-deck-analyzer"] } },
   { key: "valuation", label: "Valuation range and advisor", group: "Raise Toolkit", hrefs: { founder: ["/founder/valuation"] } },
   { key: "business_plan", label: "AI Business Plan", group: "Raise Toolkit", hrefs: { founder: ["/founder/business-plan"] } },
+  { key: "pitch_deck", label: "Pitch deck", group: "Raise Toolkit", hrefs: { founder: ["/founder/pitch-deck"] } },
+  { key: "market_claim", label: "Market claim grader", group: "Raise Toolkit", hrefs: { founder: ["/founder/market-claim"] } },
+  { key: "round_structure", label: "Round structure", group: "Raise Toolkit", hrefs: { founder: ["/founder/round-structure"] } },
   { key: "financial_model", label: "Financial model", group: "Raise Toolkit", hrefs: { founder: ["/founder/financial-model"] } },
   { key: "cap_table", label: "Cap table", group: "Raise Toolkit", hrefs: { founder: ["/founder/cap-table"] } },
   { key: "regcf", label: "Reg CF generator", group: "Raise Toolkit", hrefs: { founder: ["/founder/reg-cf"] } },
