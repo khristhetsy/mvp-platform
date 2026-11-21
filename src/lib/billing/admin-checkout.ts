@@ -20,6 +20,7 @@ export type AdminCheckoutInput = {
    * Lemon Squeezy subscription is cancelled once the card is saved.
    */
   subscription?: (PriceHolder & {
+    ls_variant_id?: string | null;
     stripe_subscription_id: string | null;
     stripe_customer_id: string | null;
     current_period_end: string | null;

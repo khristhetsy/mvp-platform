@@ -36,6 +36,13 @@ describe("describeMove", () => {
     expect(m.moving).toBe(true);
     expect(m.firstChargeDate).toBe(new Date(Math.floor(Date.parse(future) / 1000) * 1000).toISOString());
   });
+  it("is a move for a Lemon Squeezy Premium whose variant is the card Premium variant", () => {
+    vi.stubEnv("LEMONSQUEEZY_VARIANT_ID_PREMIUM", "555");
+    const premium = { ...lemonBasic, plan_type: "founder_premium", ls_variant_id: "555" };
+    expect(describeMove(premium, "founder_premium").moving).toBe(true);
+    // Without the variant (the admin route used to omit it) a card Premium looked like a wire plan.
+    expect(describeMove({ ...premium, ls_variant_id: undefined }, "founder_premium").moving).toBe(false);
+  });
   it("is not a move for a guest, a Stripe subscriber or a different plan", () => {
     expect(describeMove(null, "founder_basic").moving).toBe(false);
     expect(describeMove({ ...lemonBasic, stripe_subscription_id: "sub_1" }, "founder_basic").moving).toBe(false);

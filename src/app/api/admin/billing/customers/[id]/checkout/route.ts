@@ -45,7 +45,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com";
     const { data: subRaw } = await db
       .from("subscriptions")
-      .select("plan_type, subscription_status, ls_subscription_id, stripe_subscription_id, stripe_customer_id, cancel_at_period_end, grace_period_ends_at, current_period_end")
+      .select("plan_type, subscription_status, ls_subscription_id, ls_variant_id, stripe_subscription_id, stripe_customer_id, cancel_at_period_end, grace_period_ends_at, current_period_end")
       .eq("profile_id", profileId)
       .maybeSingle();
     const subscription = (subRaw ?? null) as AdminCheckoutInput["subscription"];
