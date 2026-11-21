@@ -84,7 +84,7 @@ const STEPS: { title: string; desc: string; screens: ReactNode }[] = [
   },
   {
     title: "Tap Follow up",
-    desc: "We email the investor a Book a time link to your scheduling page. It works after the event too.",
+    desc: "We email the investor a Book a time link to your scheduling page. The link works for 30 days from each email, even after the event.",
     screens: (
       <Screens
         tap={
