@@ -4,7 +4,7 @@ import { defaultStatSettings, normalizeStatSettings, statTiles, STAT_ORDER, type
 import { bannerBlock, NETWORKING_NOTE_TEXT, inviteSubject, renderInviteEmail, seriesName, DISCLAIMER } from "@/lib/icfo-events/invitations/emails";
 import { chosenActivities, nextAttendeeStep, nextInviteStep } from "@/lib/icfo-events/invitations/runner";
 import { countFounderInvestorMatches } from "@/lib/icfo-events/invitations/live-stats";
-import { cleanAudiences } from "@/lib/icfo-events/invitations/store";
+import { cleanAudiences, mergeWording } from "@/lib/icfo-events/invitations/store";
 
 const base: ContactSnapshot = {
   name: "Maya Chen", company: "Ridgeline Bio", title: "CEO", country: "Australia",
@@ -214,5 +214,18 @@ describe("cleanAudiences", () => {
   it("keeps known roles and offers, once each", () => {
     const a = cleanAudiences([{ role: "investor", listId: "l1", offers: ["panelist", "bogus"] }, { role: "investor" }, { role: "x" }]);
     expect(a).toEqual([{ role: "investor", listId: "l1", offers: ["panelist"], subject: null, intro: null }]);
+  });
+});
+
+describe("mergeWording", () => {
+  const existing = cleanAudiences([{ role: "founder", listId: "l1", offers: ["networking"], subject: "Old", intro: "Old intro" }]);
+
+  it("takes only the subject and opening line, keeping lists and offers", () => {
+    const incoming = cleanAudiences([{ role: "founder", listId: "other", offers: [], subject: "New subject", intro: "" }]);
+    expect(mergeWording(existing, incoming)).toEqual([{ role: "founder", listId: "l1", offers: ["networking"], subject: "New subject", intro: "" }]);
+  });
+
+  it("leaves a role alone when the edit does not mention it", () => {
+    expect(mergeWording(existing, [])).toEqual(existing);
   });
 });

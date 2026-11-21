@@ -75,6 +75,17 @@ export function cleanAudiences(raw: unknown): Audience[] {
   return out;
 }
 
+/**
+ * For a campaign that is already sending: keep its lists and offers exactly as
+ * they are, and take only the subject and opening line from the edit. Pure.
+ */
+export function mergeWording(existing: Audience[], incoming: Audience[]): Audience[] {
+  return existing.map((a) => {
+    const n = incoming.find((x) => x.role === a.role);
+    return n ? { ...a, subject: n.subject ?? null, intro: n.intro ?? null } : a;
+  });
+}
+
 export async function getCampaign(id: string): Promise<Campaign | null> {
   const { data } = await db().from("event_invitation_campaigns").select("*").eq("id", id).maybeSingle();
   return data ? mapCampaign(data as Row) : null;
@@ -131,10 +142,11 @@ export async function saveCampaign(id: string | null, input: CampaignInput, acto
   }
   const existing = await getCampaign(id);
   if (!existing) throw new Error("Campaign not found.");
-  // A campaign that is sending keeps its events and audiences; only the live
-  // number settings can still change.
+  // A campaign that is sending keeps its events, lists and offers; only the live
+  // number settings and the wording can still change.
   const locked = existing.status === "scheduled" || existing.status === "sending" || existing.status === "done";
-  const patch = locked ? { stats_settings: row.stats_settings, updated_at: row.updated_at } : row;
+  // Wording (subject and opening line) can still change; it applies to emails not yet sent.
+  const patch = locked ? { stats_settings: row.stats_settings, audiences: mergeWording(existing.audiences, row.audiences), updated_at: row.updated_at } : row;
   const { data, error } = await db().from("event_invitation_campaigns").update(patch).eq("id", id).select("*").single();
   if (error) throw new Error(error.message);
   return mapCampaign(data as Row);

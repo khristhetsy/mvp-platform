@@ -75,6 +75,8 @@ export function InvitationsClient() {
   // The panel's own selection, kept apart from the loaded email so the tabs and step list respond at once.
   const [panelRole, setPanelRole] = useState<InviteRole>("founder");
   const [panelStep, setPanelStep] = useState<PreviewStep>("invite");
+  const [editing, setEditing] = useState(false);
+  const [wordingBackup, setWordingBackup] = useState<{ role: InviteRole; subject: string | null; intro: string | null } | null>(null);
 
   const [reloadKey, setReloadKey] = useState(0);
   const load = useCallback(async () => { setReloadKey((k) => k + 1); }, []);
@@ -116,6 +118,54 @@ export function InvitationsClient() {
     return j.campaign.id as string;
   }
 
+  // The wording currently typed for a role, so a preview or test shows it even before it is saved.
+  function wordingFor(role?: InviteRole): { subject?: string; intro?: string } {
+    const a = role ? draft?.audiences.find((x) => x.role === role) : null;
+    return a ? { subject: a.subject ?? "", intro: a.intro ?? "" } : {};
+  }
+
+  // While editing, the email below follows what is typed. It asks the server to render only; nothing is saved.
+  const typed = draft?.audiences.find((x) => x.role === panelRole);
+  const typedSubject = typed?.subject ?? "";
+  const typedIntro = typed?.intro ?? "";
+  const draftId = draft?.id ?? null;
+  useEffect(() => {
+    if (!editing || !draftId) return;
+    const t = setTimeout(() => {
+      fetch(`/api/admin/events/invitations/${draftId}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "preview", role: panelRole, step: panelStep, subject: typedSubject, intro: typedIntro }),
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j: { subject?: string; html?: string } | null) => { if (j?.html) setPreview({ role: panelRole, step: panelStep, subject: j.subject ?? "", html: j.html }); })
+        .catch(() => undefined);
+    }, 500);
+    return () => clearTimeout(t);
+  }, [editing, draftId, panelRole, panelStep, typedSubject, typedIntro]);
+
+  async function saveWording() {
+    setBusy(true); setMsg(null);
+    const id = await save();
+    if (id) { setMsg({ kind: "ok", text: "Wording saved. It applies to emails not yet sent." }); setEditing(false); setWordingBackup(null); await load(); }
+    setBusy(false);
+  }
+
+  function startEdit() {
+    const a = draft?.audiences.find((x) => x.role === panelRole);
+    setWordingBackup(a ? { role: a.role, subject: a.subject ?? null, intro: a.intro ?? null } : null);
+    setEditing(true);
+  }
+
+  function cancelEdit() {
+    if (wordingBackup) patchAudience(wordingBackup.role, { subject: wordingBackup.subject, intro: wordingBackup.intro });
+    setEditing(false); setWordingBackup(null);
+    void act("preview", panelRole, panelStep);
+  }
+
+  function resetWording() {
+    patchAudience(panelRole, { subject: null, intro: null });
+  }
+
   async function act(action: "schedule" | "pause" | "resume" | "test" | "preview", role?: InviteRole, step?: PreviewStep) {
     if (!draft) return;
     setBusy(true); setMsg(null);
@@ -123,7 +173,7 @@ export function InvitationsClient() {
       if (action === "schedule" && draft.when === "later" && !draft.scheduleAt) { setMsg({ kind: "err", text: "Pick a send time, or choose Send now." }); return; }
       const id = locked ? draft.id : await save();
       if (!id) return;
-      const r = await fetch(`/api/admin/events/invitations/${id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, role, step }) });
+      const r = await fetch(`/api/admin/events/invitations/${id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, role, step, ...wordingFor(role) }) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) { setMsg({ kind: "err", text: j.error ?? "Action failed." }); return; }
       if (action === "preview") { setPreview({ role: role ?? "founder", step: step ?? "invite", subject: j.subject, html: j.html }); return; }
@@ -265,11 +315,6 @@ export function InvitationsClient() {
                     </label>
                   ))}
                 </div>
-                <details className="mt-2">
-                  <summary className="cursor-pointer text-[11.5px] text-slate-500">Subject and opening line</summary>
-                  <input disabled={locked} value={a.subject ?? ""} onChange={(e) => patchAudience(a.role, { subject: e.target.value })} placeholder="Leave blank to lead with the live number" className="mt-1.5 w-full rounded-md border border-slate-300 px-2 py-1.5 text-[12.5px]" />
-                  <textarea disabled={locked} value={a.intro ?? ""} onChange={(e) => patchAudience(a.role, { intro: e.target.value })} rows={2} placeholder="You're invited. Here's who is already coming." className="mt-1.5 w-full rounded-md border border-slate-300 px-2 py-1.5 text-[12.5px]" />
-                </details>
                 <div className="mt-2 flex gap-2">
                   <button type="button" disabled={busy || !draft.eventIds.length} onClick={() => { setPanelRole(a.role); void act("preview", a.role, panelStep); }} className="rounded-md border border-slate-300 px-2.5 py-1 text-[12px]">Preview</button>
                   <button type="button" disabled={busy || !draft.eventIds.length} onClick={() => act("test", a.role)} className="rounded-md border border-slate-300 px-2.5 py-1 text-[12px]">Send test to me</button>
@@ -299,11 +344,12 @@ export function InvitationsClient() {
         <aside aria-label="Email preview" className="overflow-hidden rounded-xl border border-slate-200 bg-white xl:sticky xl:top-4 xl:self-start">
           <div className="flex items-center gap-2 border-b border-slate-200 px-3 py-2.5">
             <p className="text-[13.5px] font-semibold text-slate-900">Preview</p>
-            <button type="button" disabled={busy || !draft.eventIds.length} onClick={() => act("test", panelRole, panelStep)} className="ml-auto rounded-md bg-[#2E78F5] px-2.5 py-1 text-[12px] font-semibold text-white disabled:opacity-50">Send test to me</button>
+            <button type="button" disabled={busy || !preview} onClick={() => (editing ? cancelEdit() : startEdit())} className="ml-auto rounded-md border border-slate-300 px-2.5 py-1 text-[12px] disabled:opacity-50">{editing ? "Close edit" : "Edit wording"}</button>
+            <button type="button" disabled={busy || !draft.eventIds.length} onClick={() => act("test", panelRole, panelStep)} className="rounded-md bg-[#2E78F5] px-2.5 py-1 text-[12px] font-semibold text-white disabled:opacity-50">Send test to me</button>
           </div>
           <div className="flex flex-wrap gap-1.5 px-3 pt-2.5">
             {draft.audiences.map((a) => (
-              <button key={a.role} type="button" disabled={busy || !draft.eventIds.length} onClick={() => { setPanelRole(a.role); void act("preview", a.role, panelStep); }} className={`rounded-full border px-3 py-1 text-[12px] ${panelRole === a.role ? "border-[#2E78F5] bg-[#2E78F5] text-white" : "border-slate-300 text-slate-700"}`}>{ROLE_LABEL[a.role]}</button>
+              <button key={a.role} type="button" disabled={busy || editing || !draft.eventIds.length} onClick={() => { setPanelRole(a.role); void act("preview", a.role, panelStep); }} className={`rounded-full border px-3 py-1 text-[12px] ${panelRole === a.role ? "border-[#2E78F5] bg-[#2E78F5] text-white" : "border-slate-300 text-slate-700"}`}>{ROLE_LABEL[a.role]}</button>
             ))}
           </div>
           <div className="px-3 pt-2.5">
@@ -313,6 +359,23 @@ export function InvitationsClient() {
               </select>
             </label>
           </div>
+          {editing ? (
+            <div className="mx-3 mt-2.5 rounded-lg border border-blue-200 bg-blue-50/50 p-2.5">
+              <p className="text-[12.5px] font-semibold text-slate-900">Editing {ROLE_LABEL[panelRole]}{locked ? <span className="ml-1.5 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800">Sending: applies to emails not yet sent</span> : null}</p>
+              <label className="mt-1.5 block text-[11px] text-slate-500">Subject
+                <input value={typedSubject} onChange={(e) => patchAudience(panelRole, { subject: e.target.value })} maxLength={200} placeholder="Leave blank to lead with the live number" className="mt-0.5 w-full rounded-md border border-slate-300 px-2 py-1.5 text-[12.5px] text-slate-900" />
+              </label>
+              <label className="mt-1.5 block text-[11px] text-slate-500">Opening line
+                <textarea value={typedIntro} onChange={(e) => patchAudience(panelRole, { intro: e.target.value })} maxLength={1000} rows={3} placeholder="You're invited. Here's who is already coming." className="mt-0.5 w-full rounded-md border border-slate-300 px-2 py-1.5 text-[12.5px] text-slate-900" />
+              </label>
+              <p className="mt-1.5 text-[11px] text-slate-500">Used in the Invite and Day 7 emails. Day 3 and Last call keep their standard wording. The preview follows what you type.</p>
+              <div className="mt-2 flex justify-end gap-2">
+                <button type="button" onClick={resetWording} className="rounded-md border border-slate-300 px-2.5 py-1 text-[12px]">Reset to default</button>
+                <button type="button" onClick={cancelEdit} className="rounded-md border border-slate-300 px-2.5 py-1 text-[12px]">Cancel</button>
+                <button type="button" disabled={busy} onClick={saveWording} className="rounded-md bg-[#2E78F5] px-2.5 py-1 text-[12px] font-semibold text-white disabled:opacity-50">Save wording</button>
+              </div>
+            </div>
+          ) : null}
           {preview ? (
             <>
               <p className="mx-3 mt-2.5 rounded-md bg-slate-50 px-2.5 py-2 text-[12.5px]"><span className="block text-[11px] text-slate-500">Subject</span><span className="font-medium text-slate-900">{preview.subject}</span></p>
@@ -321,7 +384,7 @@ export function InvitationsClient() {
           ) : (
             <p className="px-3 py-10 text-center text-[12.5px] text-slate-500">{draft.eventIds.length ? "Choose a role to see the email as it will be sent." : "Choose an event to preview the email."}</p>
           )}
-          <p className="border-t border-slate-200 px-3 py-2 text-[11.5px] text-slate-500">Real numbers and a sample name. Press a role to refresh after you change offers or wording.</p>
+          <p className="border-t border-slate-200 px-3 py-2 text-[11.5px] text-slate-500">Real numbers and a sample name. Press a role to refresh after you change offers.</p>
         </aside>
       </div>
 

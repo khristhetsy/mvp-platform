@@ -53,7 +53,7 @@ export async function POST(req: NextRequest, { params }: Ctx): Promise<Response>
   const auth = await requirePermissionApi("manage_events");
   if ("error" in auth) return auth.error ?? NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
-  const body = (await req.json().catch(() => null)) as { action?: string; role?: string; step?: string } | null;
+  const body = (await req.json().catch(() => null)) as { action?: string; role?: string; step?: string; subject?: unknown; intro?: unknown } | null;
   try {
     if (body?.action === "schedule") return NextResponse.json(await scheduleCampaign(id, auth.userId));
     if (body?.action === "pause") { await setCampaignStatus(id, "paused"); return NextResponse.json({ ok: true }); }
@@ -75,8 +75,9 @@ export async function POST(req: NextRequest, { params }: Ctx): Promise<Response>
         // Preview shows the fallback table; the live image needs a real invitation.
         statsImageUrl: null,
         ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com"}/events`,
-        subjectOverride: audience?.subject,
-        introOverride: audience?.intro,
+        // Wording typed in the panel but not yet saved wins over the saved wording.
+        subjectOverride: typeof body.subject === "string" ? body.subject.slice(0, 200) : audience?.subject,
+        introOverride: typeof body.intro === "string" ? body.intro.slice(0, 1000) : audience?.intro,
       });
       if (body.action === "preview") return NextResponse.json(email);
       const to = auth.profile.email;
