@@ -7,6 +7,7 @@ import { stripeConfigured } from "@/lib/stripe";
 import { sendEmail } from "@/lib/email/send-email";
 import { PLAN_LABELS } from "@/lib/subscriptions/plans";
 import { renderEmail } from "@/lib/email/layout";
+import { makeMoveLinkToken, moveLinkPath } from "@/lib/billing/move-link-core";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -67,7 +68,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           ? `${first ? `Hi ${first}, o` : "O"}ur card payments are moving from Lemon Squeezy to Stripe. Add your card once with the secure link below and your ${planName} plan continues at the same price. Nothing is charged today${move.firstChargeDate ? `: your first Stripe payment is on ${new Date(move.firstChargeDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" })}, your usual renewal date` : ""}. Your Lemon Squeezy subscription is cancelled automatically.`
           : `${first ? `Hi ${first}, h` : "H"}ere is your secure checkout link to activate ${planName}.`,
         blocks: [{ type: "facts", rows: [{ label: "Plan", value: planName }, { label: "Includes", value: "Every tool on iCapOS" }] }],
-        primary: { label: move.moving ? "Add my card" : "Complete checkout", url },
+        // A Stripe checkout link expires after a day, so a move email links to a page that makes a fresh one on click.
+        primary: { label: move.moving ? "Add my card" : "Complete checkout", url: move.moving ? `${appUrl}${moveLinkPath(makeMoveLinkToken(profileId))}` : url },
         footer: { reason: "You get this because an iCFO admin started checkout for your account." },
       });
       const ok = await sendEmail({ to: email, subject: mail.subject, html: mail.html, text: mail.text, fromName: "iCapOS" });

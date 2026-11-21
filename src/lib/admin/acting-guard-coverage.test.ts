@@ -79,7 +79,7 @@ describe("billing routes are owner only", () => {
   // Public on purpose, for someone who has no account yet. premium-agreement/link is opened with
   // a signed token from an admin sent link, and guest-agreement-preview only renders a PDF of what
   // the visitor typed. Neither reads or changes a signed in account.
-  const EXEMPT_FILES = new Set(["premium-agreement/link/route.ts", "guest-agreement-preview/route.ts"]);
+  const EXEMPT_FILES = new Set(["premium-agreement/link/route.ts", "guest-agreement-preview/route.ts", "move-link/route.ts"]);
   const files = routeFiles(dir).filter(
     (f) => !EXEMPT.has(path.relative(dir, f).split(path.sep)[0]) && !EXEMPT_FILES.has(path.relative(dir, f).split(path.sep).join("/")),
   );
