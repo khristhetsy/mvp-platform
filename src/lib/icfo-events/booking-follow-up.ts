@@ -7,11 +7,9 @@
  */
 import "server-only";
 
-import { introDetail } from "@/lib/icfo-events/introductions-server";
+import { bookUrlFor, introDetail } from "@/lib/icfo-events/introductions-server";
 import { sendBookingFollowUp } from "@/lib/icfo-events/introduction-emails";
 import { formatSlot } from "@/lib/icfo-events/calendar-links";
-
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com";
 
 export type BookingFollowUpResult = { ok: true } | { ok: false; error: string; noAccount?: boolean };
 
@@ -29,7 +27,7 @@ export async function sendBookingFollowUpFor(introId: string): Promise<BookingFo
     founderCompany: detail.founder?.company ?? null,
     eventTitle: detail.event?.title ?? "the event",
     when: detail.event?.startsAt ? formatSlot(detail.event.startsAt, detail.event.timezone) : null,
-    bookUrl: `${BASE_URL.replace(/\/$/, "")}/schedule/${hostId}`,
+    bookUrl: bookUrlFor(hostId, introId),
   });
   return sent ? { ok: true } : { ok: false, error: "The email could not be sent." };
 }

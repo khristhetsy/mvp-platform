@@ -9251,6 +9251,7 @@ export type Database = {
       }
       event_introductions: {
         Row: {
+          booking_link_requested_at: string | null
           created_at: string
           created_by: string | null
           event_id: string
@@ -9278,6 +9279,7 @@ export type Database = {
           status: Database["public"]["Enums"]["introduction_status"]
         }
         Insert: {
+          booking_link_requested_at?: string | null
           created_at?: string
           created_by?: string | null
           event_id: string
@@ -9305,6 +9307,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["introduction_status"]
         }
         Update: {
+          booking_link_requested_at?: string | null
           created_at?: string
           created_by?: string | null
           event_id?: string

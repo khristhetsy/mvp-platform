@@ -14,7 +14,7 @@ import {
   DEFAULT_PAIR_TYPES, sanitizeRules, type PairTypeKey,
 } from "@/lib/icfo-events/pair-types";
 import {
-  canFounderFollowUp, introVars, renderBody, renderTemplate, shouldFollowUp, shouldRemindFounder,
+  BOOK_LINK_DAYS, bookLinkExpired, canFounderFollowUp, introVars, renderBody, renderTemplate, shouldFollowUp, shouldRemindFounder,
   type Introduction, type IntroductionStatus,
 } from "@/lib/icfo-events/introductions";
 
@@ -28,6 +28,7 @@ const ACTION_RESPOND = "intro";
 /** How many days the founder's set a time link works. The investor's booking page has no expiry. */
 export const SCHEDULE_LINK_DAYS = 30;
 const ACTION_SCHEDULE = "intro-schedule";
+const ACTION_BOOK = "intro-book";
 const ACTION_RESCHEDULE = "intro-reschedule";
 
 /** A signed link, so an investor with no account can answer from the email. */
@@ -68,6 +69,31 @@ export function introFromExpiredScheduleToken(token: string): string | null {
 export function scheduleUrlFor(id: string): string {
   const base = (process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com").replace(/\/$/, "");
   return `${base}/e/intro/schedule/${scheduleToken(id)}`;
+}
+
+/** Signed token carried on the Book a time link in a follow up email. */
+export function bookToken(id: string): string {
+  return makeToken({
+    kind: "event_invite",
+    id,
+    action: ACTION_BOOK,
+    expiresAt: Date.now() + BOOK_LINK_DAYS * 24 * 60 * 60 * 1000,
+  });
+}
+
+export function introFromBookToken(token: string): string | null {
+  return verifyToken({ token, kind: "event_invite", action: ACTION_BOOK });
+}
+
+/** Who an expired Book a time link was cut for. The signature is checked, the expiry is not. */
+export function introFromExpiredBookToken(token: string): string | null {
+  return verifyToken({ token, kind: "event_invite", action: ACTION_BOOK, now: 0 });
+}
+
+/** The full Book a time URL for an email: the founder's booking page plus a 30 day token. */
+export function bookUrlFor(hostProfileId: string, introId: string): string {
+  const base = (process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com").replace(/\/$/, "");
+  return `${base}/schedule/${hostProfileId}?fu=${encodeURIComponent(bookToken(introId))}`;
 }
 
 /** The investor's link for asking for a different time. Deliberately not the
@@ -131,6 +157,8 @@ export type IntroRow = Introduction & {
   /** The investor asked for a different time; the founder still picks it. */
   rescheduleRequestedAt: string | null;
   rescheduleNote: string | null;
+  /** The investor asked for a new Book a time link after the first one ran out. */
+  bookingLinkRequestedAt: string | null;
 };
 
 function mapIntro(r: Row): IntroRow {
@@ -154,6 +182,7 @@ function mapIntro(r: Row): IntroRow {
     lastFounderReminderAt: (r.last_founder_reminder_at as string | null) ?? null,
     rescheduleRequestedAt: (r.reschedule_requested_at as string | null) ?? null,
     rescheduleNote: (r.reschedule_note as string | null) ?? null,
+    bookingLinkRequestedAt: (r.booking_link_requested_at as string | null) ?? null,
   };
 }
 
@@ -610,6 +639,10 @@ export type FounderFollowUpRow = {
   /** Set once a time is booked. */
   scheduledAt: string | null;
   canFollowUp: boolean;
+  /** The Book a time link in the last email has run out. */
+  linkExpired: boolean;
+  /** When the investor asked for a new link, if they did. */
+  linkRequestedAt: string | null;
 };
 
 export type FounderFollowUpEvent = {
@@ -659,6 +692,8 @@ export async function listFounderFollowUps(profileId: string): Promise<FounderFo
           lastFollowUpAt: i.lastFollowUpAt,
           scheduledAt: i.scheduledAt,
           canFollowUp: canFounderFollowUp(i).send,
+          linkExpired: bookLinkExpired(i),
+          linkRequestedAt: i.scheduledAt ? null : i.bookingLinkRequestedAt,
         };
       });
     out.push({ eventId: id, title: String(e.title ?? "Event"), startsAt: (e.starts_at as string | null) ?? null, rows });
@@ -671,5 +706,22 @@ export async function recordFollowUp(id: string, count: number, now: Date = new 
   await raw()
     .from("event_introductions")
     .update({ follow_ups: count + 1, last_follow_up_at: now.toISOString() })
+    .eq("id", id);
+}
+
+/**
+ * A fresh Book a time link went out without being a follow up.
+ *
+ * Moves "last sent" so the 30 days count from this email, and does not touch the
+ * follow up count. Pass `requested` when the investor asked for it.
+ */
+export async function recordLinkSent(id: string, now: Date = new Date(), requested = false): Promise<void> {
+  await raw()
+    .from("event_introductions")
+    .update(
+      requested
+        ? { last_follow_up_at: now.toISOString(), booking_link_requested_at: now.toISOString() }
+        : { last_follow_up_at: now.toISOString() },
+    )
     .eq("id", id);
 }

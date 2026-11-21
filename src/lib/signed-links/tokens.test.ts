@@ -83,3 +83,12 @@ describe("reading who an expired link was cut for", () => {
     expect(verifyToken({ token: `${forged}.${sig}`, kind: "event_invite", action: "intro-schedule", now: 0 })).toBeNull();
   });
 });
+
+describe("the Book a time link token", () => {
+  it("is a different action from the founder's set a time link", () => {
+    const t = makeToken({ kind: "event_invite", id: ID, action: "intro-book" });
+    expect(verifyToken({ token: t, kind: "event_invite", action: "intro-book" })).toBe(ID);
+    expect(verifyToken({ token: t, kind: "event_invite", action: "intro-schedule" })).toBeNull();
+    expect(verifyToken({ token: t, kind: "event_invite", action: "intro-schedule", now: 0 })).toBeNull();
+  });
+});

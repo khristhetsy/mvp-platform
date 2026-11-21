@@ -16,6 +16,8 @@ import { matchReason } from "@/lib/icfo-events/match-reason";
 
 export const MAX_FOLLOW_UPS = 2;
 export const FOLLOW_UP_AFTER_DAYS = 3;
+/** How long the Book a time link in an email works. The booking page itself stays open. */
+export const BOOK_LINK_DAYS = 30;
 
 export type IntroductionStatus = "sent" | "accepted" | "declined";
 
@@ -85,6 +87,20 @@ export function canFounderFollowUp(
     return { send: false, reason: `You have already followed up ${intro.followUps} times.` };
   }
   return { send: true };
+}
+
+/**
+ * Whether the Book a time link in the last email has run out.
+ *
+ * Counted from the last email sent to the investor. An introduction with no
+ * follow up yet has no link out, and a booked one needs none.
+ */
+export function bookLinkExpired(
+  intro: Pick<Introduction, "status" | "scheduledAt" | "lastFollowUpAt">,
+  now: Date = new Date(),
+): boolean {
+  if (intro.status !== "accepted" || intro.scheduledAt || !intro.lastFollowUpAt) return false;
+  return now.getTime() - new Date(intro.lastFollowUpAt).getTime() > BOOK_LINK_DAYS * 24 * 3_600_000;
 }
 
 export type Recipient = {

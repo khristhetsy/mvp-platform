@@ -3,6 +3,7 @@
  */
 import { describe, it, expect } from "vitest";
 import {
+  bookLinkExpired,
   introVars,
   planBulkSend,
   renderBody,
@@ -279,5 +280,21 @@ describe("a token nobody answered", () => {
   it("leaves the name alone when there is no company", () => {
     expect(bare.founder_line).toBe("Shan");
     expect(vars.founder_line).toBe("Shan Padda — Harvard MedTech");
+  });
+});
+
+describe("bookLinkExpired", () => {
+  const now = new Date("2026-12-31T12:00:00Z");
+  const daysAgo = (n: number) => new Date(now.getTime() - n * 24 * 3_600_000).toISOString();
+
+  it("expires 30 days after the last email", () => {
+    expect(bookLinkExpired({ status: "accepted", scheduledAt: null, lastFollowUpAt: daysAgo(31) }, now)).toBe(true);
+    expect(bookLinkExpired({ status: "accepted", scheduledAt: null, lastFollowUpAt: daysAgo(29) }, now)).toBe(false);
+  });
+
+  it("is never expired with no email out, a booked time, or a declined introduction", () => {
+    expect(bookLinkExpired({ status: "accepted", scheduledAt: null, lastFollowUpAt: null }, now)).toBe(false);
+    expect(bookLinkExpired({ status: "accepted", scheduledAt: daysAgo(-3), lastFollowUpAt: daysAgo(60) }, now)).toBe(false);
+    expect(bookLinkExpired({ status: "declined", scheduledAt: null, lastFollowUpAt: daysAgo(60) }, now)).toBe(false);
   });
 });
