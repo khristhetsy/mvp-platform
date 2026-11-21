@@ -19,6 +19,7 @@ import "server-only";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { sendMarketingEmail, makeUnsubscribeToken } from "@/lib/marketing/send";
 import { formatSlot } from "@/lib/icfo-events/calendar-links";
+import { bannerPublicUrl } from "@/lib/icfo-events/banner";
 import { getLiveCounts } from "@/lib/icfo-events/invitations/live-stats";
 import { registeredEventIds } from "@/lib/icfo-events/invitations/person";
 import { getCampaign, type Campaign } from "@/lib/icfo-events/invitations/store";
@@ -39,13 +40,13 @@ export function appUrl(): string {
   return (process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com").replace(/\/$/, "");
 }
 
-export type EventInfo = { id: string; slug: string; title: string; startsAt: string; endsAt: string | null; timezone: string | null; status: string };
+export type EventInfo = { id: string; slug: string; title: string; startsAt: string; endsAt: string | null; timezone: string | null; status: string; coverPath?: string | null };
 
 export async function loadEvents(ids: string[]): Promise<EventInfo[]> {
   if (!ids.length) return [];
-  const { data } = await db().from("events").select("id, slug, title, starts_at, ends_at, timezone, status").in("id", ids);
+  const { data } = await db().from("events").select("id, slug, title, starts_at, ends_at, timezone, status, cover_path").in("id", ids);
   return ((data ?? []) as Array<Record<string, string | null>>)
-    .map((e) => ({ id: String(e.id), slug: String(e.slug), title: String(e.title), startsAt: String(e.starts_at), endsAt: e.ends_at, timezone: e.timezone, status: String(e.status) }))
+    .map((e) => ({ id: String(e.id), slug: String(e.slug), title: String(e.title), startsAt: String(e.starts_at), endsAt: e.ends_at, timezone: e.timezone, status: String(e.status), coverPath: e.cover_path ?? null }))
     .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
 }
 
@@ -62,7 +63,14 @@ export function upcomingEvents(events: EventInfo[]): EventInfo[] {
 }
 
 export function emailEvent(e: EventInfo): EmailEvent {
-  return { title: e.title, dateLabel: formatSlot(e.startsAt, e.timezone), url: `${appUrl()}/events/${e.slug}`, joinUrl: `${appUrl()}/events/${e.slug}/lobby` };
+  return {
+    title: e.title,
+    dateLabel: formatSlot(e.startsAt, e.timezone),
+    url: `${appUrl()}/events/${e.slug}`,
+    joinUrl: `${appUrl()}/events/${e.slug}/lobby`,
+    // The event's own cover image, already set in Admin Events. Null when none.
+    bannerUrl: bannerPublicUrl(db(), e.coverPath ?? null),
+  };
 }
 
 /**
