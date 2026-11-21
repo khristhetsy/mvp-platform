@@ -42,6 +42,34 @@ describe("feature-controls registry integrity", () => {
   });
 });
 
+describe("founder menu gaps", () => {
+  const governed = new Set(Object.values(FEATURE_HREFS.founder).flat());
+
+  it("governs the founder menu pages that used to have no switch", () => {
+    for (const href of [
+      "/founder/readiness/data-room",
+      "/founder/preview",
+      "/founder/pitch-deck",
+      "/founder/market-claim",
+      "/founder/round-structure",
+      "/founder/contacts",
+      "/founder/matches",
+      "/founder/deploy",
+      "/founder/events/present",
+      "/founder/offering-type",
+    ]) {
+      expect(governed.has(href), `${href} has no feature switch`).toBe(true);
+    }
+  });
+
+  it("hides only the switched-off page and leaves its neighbours visible", () => {
+    const hidden = disabledHrefsFor({ "founder:outreach": false }, "founder");
+    expect(hidden).toContain("/founder/deploy");
+    expect(hidden).not.toContain("/founder/deploy/social");
+    expect(hidden).not.toContain("/founder/contacts");
+  });
+});
+
 describe("feature flag semantics", () => {
   const map: FeatureFlagMap = { "founder:cap_table": false };
 
