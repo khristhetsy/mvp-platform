@@ -229,8 +229,9 @@ export function InvitationsClient() {
       {msg ? <p className={`mt-3 rounded-md px-3 py-2 text-[13px] ${msg.kind === "ok" ? "bg-emerald-50 text-emerald-800" : "bg-rose-50 text-rose-800"}`}>{msg.text}</p> : null}
       {locked ? <p className="mt-3 text-[12.5px] text-slate-500">This campaign is {draft.status}. Events and audiences are fixed; live number settings can still change.</p> : null}
 
-      <div className="mt-4 grid gap-5 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)_minmax(380px,440px)]">
-        <section>
+      <div className="mt-4 grid gap-5 lg:grid-cols-1 xl:grid-cols-[minmax(0,1fr)_400px] xl:items-start">
+        <div className="grid min-w-0 gap-5">
+          <section>
           <p className="mb-2 text-[12px] font-medium text-slate-500">1. Events attendees can choose</p>
           <div className="grid gap-1.5">
             {data.events.length === 0 ? <p className="text-sm text-slate-500">No upcoming published events.</p> : null}
@@ -243,23 +244,7 @@ export function InvitationsClient() {
             ))}
           </div>
 
-          <p className="mb-2 mt-5 text-[12px] font-medium text-slate-500">3. Send</p>
-          <div className="flex flex-wrap gap-2">
-            <select disabled={locked} value={draft.when} onChange={(e) => setDraft({ ...draft, when: e.target.value as Draft["when"] })} className="rounded-md border border-slate-300 px-2 py-1.5 text-[13px]">
-              <option value="later">Schedule</option>
-              <option value="now">Send now</option>
-            </select>
-            {draft.when === "later" ? (
-              <input type="datetime-local" disabled={locked} value={draft.scheduleAt} onChange={(e) => setDraft({ ...draft, scheduleAt: e.target.value })} className="rounded-md border border-slate-300 px-2 py-1.5 text-[13px]" />
-            ) : null}
-          </div>
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            <label className="text-[11.5px] text-slate-500">From name<input disabled={locked} value={draft.fromName} onChange={(e) => setDraft({ ...draft, fromName: e.target.value })} className="mt-0.5 w-full rounded-md border border-slate-300 px-2 py-1.5 text-[13px] text-slate-900" /></label>
-            <label className="text-[11.5px] text-slate-500">From email<input disabled={locked} value={draft.fromEmail} onChange={(e) => setDraft({ ...draft, fromEmail: e.target.value })} className="mt-0.5 w-full rounded-md border border-slate-300 px-2 py-1.5 text-[13px] text-slate-900" /></label>
-          </div>
-          <p className="mt-2 rounded-md bg-slate-50 px-3 py-2 text-[12px] text-slate-600">Skips unsubscribed and flagged addresses. Follow ups stop when someone registers for every chosen event, replies by unsubscribing, or the events pass.</p>
-        </section>
-
+          </section>
         <section>
           <p className="mb-2 text-[12px] font-medium text-slate-500">2. Audience and what each role is offered</p>
           <div className="grid gap-2.5">
@@ -293,8 +278,25 @@ export function InvitationsClient() {
             ))}
           </div>
         </section>
-
-        <aside aria-label="Email preview" className="overflow-hidden rounded-xl border border-slate-200 bg-white lg:col-span-2 xl:sticky xl:top-4 xl:col-span-1 xl:self-start">
+          <section>
+          <p className="mb-2 text-[12px] font-medium text-slate-500">3. Send</p>
+          <div className="flex flex-wrap gap-2">
+            <select disabled={locked} value={draft.when} onChange={(e) => setDraft({ ...draft, when: e.target.value as Draft["when"] })} className="rounded-md border border-slate-300 px-2 py-1.5 text-[13px]">
+              <option value="later">Schedule</option>
+              <option value="now">Send now</option>
+            </select>
+            {draft.when === "later" ? (
+              <input type="datetime-local" disabled={locked} value={draft.scheduleAt} onChange={(e) => setDraft({ ...draft, scheduleAt: e.target.value })} className="rounded-md border border-slate-300 px-2 py-1.5 text-[13px]" />
+            ) : null}
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <label className="text-[11.5px] text-slate-500">From name<input disabled={locked} value={draft.fromName} onChange={(e) => setDraft({ ...draft, fromName: e.target.value })} className="mt-0.5 w-full rounded-md border border-slate-300 px-2 py-1.5 text-[13px] text-slate-900" /></label>
+            <label className="text-[11.5px] text-slate-500">From email<input disabled={locked} value={draft.fromEmail} onChange={(e) => setDraft({ ...draft, fromEmail: e.target.value })} className="mt-0.5 w-full rounded-md border border-slate-300 px-2 py-1.5 text-[13px] text-slate-900" /></label>
+          </div>
+          <p className="mt-2 rounded-md bg-slate-50 px-3 py-2 text-[12px] text-slate-600">Skips unsubscribed and flagged addresses. Follow ups stop when someone registers for every chosen event, replies by unsubscribing, or the events pass.</p>
+          </section>
+        </div>
+        <aside aria-label="Email preview" className="overflow-hidden rounded-xl border border-slate-200 bg-white xl:sticky xl:top-4 xl:self-start">
           <div className="flex items-center gap-2 border-b border-slate-200 px-3 py-2.5">
             <p className="text-[13.5px] font-semibold text-slate-900">Preview</p>
             <button type="button" disabled={busy || !draft.eventIds.length} onClick={() => act("test", panelRole, panelStep)} className="ml-auto rounded-md bg-[#2E78F5] px-2.5 py-1 text-[12px] font-semibold text-white disabled:opacity-50">Send test to me</button>
