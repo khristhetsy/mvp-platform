@@ -1,10 +1,12 @@
 import { notFound } from "next/navigation";
 import {
-  founderTakenSlots, introDetail, introFromScheduleToken,
+  founderTakenSlots, introDetail, introFromExpiredScheduleToken, introFromScheduleToken,
 } from "@/lib/icfo-events/introductions-server";
+import { maskEmail } from "@/lib/icfo-events/mask-email";
 import { slotsFor } from "@/lib/icfo-events/intro-scheduling";
 import { formatSlot } from "@/lib/icfo-events/calendar-links";
 import { IntroScheduleClient } from "./IntroScheduleClient";
+import { ExpiredScheduleLink } from "./ExpiredScheduleLink";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Pick a time · iCFO Events" };
@@ -20,7 +22,22 @@ export default async function IntroSchedulePage({ params }: {
 }) {
   const { token } = await params;
   const id = introFromScheduleToken(token);
-  if (!id) notFound();
+  if (!id) {
+    // Validly signed but past its 30 days: offer a fresh link. Anything else is a 404.
+    const expiredId = introFromExpiredScheduleToken(token);
+    if (!expiredId) notFound();
+    const lapsed = await introDetail(expiredId);
+    if (!lapsed) notFound();
+    return (
+      <main className="mx-auto max-w-xl px-4 py-16">
+        <ExpiredScheduleLink
+          token={token}
+          investorName={lapsed.investor?.name ?? "the investor"}
+          maskedEmail={lapsed.founder?.email ? maskEmail(lapsed.founder.email) : null}
+        />
+      </main>
+    );
+  }
 
   const detail = await introDetail(id);
   if (!detail) notFound();

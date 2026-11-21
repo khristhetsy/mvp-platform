@@ -35,8 +35,13 @@ export async function POST(req: NextRequest): Promise<Response> {
     const sent = await sendBookingFollowUpFor(detail.intro.id);
     if (!sent.ok) return NextResponse.json({ error: sent.error }, { status: 400 });
 
-    await recordFollowUp(detail.intro.id, detail.intro.followUps);
-    return NextResponse.json({ ok: true, followUps: detail.intro.followUps + 1 });
+    const now = new Date();
+    await recordFollowUp(detail.intro.id, detail.intro.followUps, now);
+    return NextResponse.json({
+      ok: true,
+      followUps: detail.intro.followUps + 1,
+      lastFollowUpAt: now.toISOString(),
+    });
   } catch (err) {
     Sentry.captureException(err);
     return NextResponse.json({ error: "Could not send the follow up." }, { status: 500 });

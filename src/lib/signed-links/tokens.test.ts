@@ -65,3 +65,21 @@ describe("the nonce is what makes a link revocable", () => {
     expect(verifyToken({ token: t, kind: "event_invite", action: "respond", nonce: "n1" })).toBeNull();
   });
 });
+
+describe("reading who an expired link was cut for", () => {
+  it("opens an expired token only when expiry is skipped, never otherwise", () => {
+    const t = makeToken({ kind: "event_invite", id: ID, action: "intro-schedule", expiresAt: Date.now() - 1000 });
+    expect(verifyToken({ token: t, kind: "event_invite", action: "intro-schedule" })).toBeNull();
+    expect(verifyToken({ token: t, kind: "event_invite", action: "intro-schedule", now: 0 })).toBe(ID);
+  });
+
+  it("still refuses a forged or different action when expiry is skipped", () => {
+    const t = makeToken({ kind: "event_invite", id: ID, action: "intro-schedule", expiresAt: Date.now() - 1000 });
+    expect(verifyToken({ token: t, kind: "event_invite", action: "intro-respond", now: 0 })).toBeNull();
+    const [, sig] = t.split(".");
+    const forged = Buffer.from(
+      JSON.stringify({ k: "event_invite", id: "someone-else", a: "intro-schedule", n: null, exp: 1 }),
+    ).toString("base64url");
+    expect(verifyToken({ token: `${forged}.${sig}`, kind: "event_invite", action: "intro-schedule", now: 0 })).toBeNull();
+  });
+});

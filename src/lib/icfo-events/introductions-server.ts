@@ -25,6 +25,8 @@ function raw(): SupabaseClient {
 type Row = Record<string, unknown>;
 
 const ACTION_RESPOND = "intro";
+/** How many days the founder's set a time link works. The investor's booking page has no expiry. */
+export const SCHEDULE_LINK_DAYS = 30;
 const ACTION_SCHEDULE = "intro-schedule";
 const ACTION_RESCHEDULE = "intro-reschedule";
 
@@ -40,11 +42,32 @@ export function introFromToken(token: string): string | null {
 /** The founder's link for setting a time. A different action, so an investor's
  * accept link can never be replayed into the scheduling page. */
 export function scheduleToken(id: string): string {
-  return makeToken({ kind: "event_invite", id, action: ACTION_SCHEDULE });
+  return makeToken({
+    kind: "event_invite",
+    id,
+    action: ACTION_SCHEDULE,
+    expiresAt: Date.now() + SCHEDULE_LINK_DAYS * 24 * 60 * 60 * 1000,
+  });
 }
 
 export function introFromScheduleToken(token: string): string | null {
   return verifyToken({ token, kind: "event_invite", action: ACTION_SCHEDULE });
+}
+
+/**
+ * Who an expired set a time link was cut for.
+ *
+ * The signature is still checked, only the expiry is skipped, so a link that
+ * ran out can offer to send a fresh one. It must never open the picker.
+ */
+export function introFromExpiredScheduleToken(token: string): string | null {
+  return verifyToken({ token, kind: "event_invite", action: ACTION_SCHEDULE, now: 0 });
+}
+
+/** A fresh set a time link, as the full URL for an email. */
+export function scheduleUrlFor(id: string): string {
+  const base = (process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com").replace(/\/$/, "");
+  return `${base}/e/intro/schedule/${scheduleToken(id)}`;
 }
 
 /** The investor's link for asking for a different time. Deliberately not the
@@ -582,6 +605,8 @@ export type FounderFollowUpRow = {
   investorName: string;
   investorCompany: string | null;
   followUps: number;
+  /** When the last follow up was sent, or null if none has been. */
+  lastFollowUpAt: string | null;
   /** Set once a time is booked. */
   scheduledAt: string | null;
   canFollowUp: boolean;
@@ -631,6 +656,7 @@ export async function listFounderFollowUps(profileId: string): Promise<FounderFo
           investorName: c?.name ?? "Investor",
           investorCompany: c?.company ?? null,
           followUps: i.followUps,
+          lastFollowUpAt: i.lastFollowUpAt,
           scheduledAt: i.scheduledAt,
           canFollowUp: canFounderFollowUp(i).send,
         };
