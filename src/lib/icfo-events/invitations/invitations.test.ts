@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { mergePrefill, normPhone, planContactChanges, type ContactSnapshot } from "@/lib/icfo-events/invitations/contact-sync";
 import { defaultStatSettings, normalizeStatSettings, statTiles, STAT_ORDER, type StatCounts } from "@/lib/icfo-events/invitations/types";
-import { inviteSubject, renderInviteEmail, seriesName, DISCLAIMER } from "@/lib/icfo-events/invitations/emails";
+import { bannerBlock, NETWORKING_NOTE_TEXT, inviteSubject, renderInviteEmail, seriesName, DISCLAIMER } from "@/lib/icfo-events/invitations/emails";
 import { chosenActivities, nextAttendeeStep, nextInviteStep } from "@/lib/icfo-events/invitations/runner";
 import { countFounderInvestorMatches } from "@/lib/icfo-events/invitations/live-stats";
 import { cleanAudiences } from "@/lib/icfo-events/invitations/store";
@@ -113,6 +113,45 @@ describe("emails", () => {
     expect(html).toContain("One on one founder meetings");
     expect(html).not.toContain("Talk show panelist");
     expect(subject).not.toMatch(/ — | – /);
+  });
+});
+
+describe("networking note", () => {
+  const base = { step: "invite" as const, firstName: "Khris", events: [], tiles: [], statsImageUrl: null, ctaUrl: "https://icapos.com/events/invite/x" };
+
+  it("sits right under the Networking sessions line for founders and investors", () => {
+    for (const role of ["founder", "investor"] as const) {
+      const { html } = renderInviteEmail({ ...base, role, offers: ["networking"] });
+      expect(html).toContain(NETWORKING_NOTE_TEXT);
+      expect(html.indexOf("Networking sessions.")).toBeLessThan(html.indexOf(NETWORKING_NOTE_TEXT));
+    }
+  });
+
+  it("is left out when Networking sessions is not offered", () => {
+    const { html } = renderInviteEmail({ ...base, role: "investor", offers: ["prescreened", "one_on_one"] });
+    expect(html).not.toContain(NETWORKING_NOTE_TEXT);
+  });
+});
+
+describe("event banner", () => {
+  const base = { role: "founder" as const, step: "invite" as const, firstName: "Khris", offers: ["networking"], tiles: [], statsImageUrl: null, ctaUrl: "https://icapos.com/events/invite/x" };
+  const ev = { title: "iCFO PE Expo — Paris | Dec 15", dateLabel: "Dec 15", url: "https://icapos.com/events/paris" };
+
+  it("shows the first chosen event's cover above the greeting", () => {
+    const { html } = renderInviteEmail({ ...base, events: [{ ...ev, bannerUrl: "https://cdn/x/paris.jpg" }] });
+    expect(html).toContain('src="https://cdn/x/paris.jpg"');
+    expect(html.indexOf("paris.jpg")).toBeLessThan(html.indexOf("Hi Khris"));
+  });
+
+  it("is unchanged when no chosen event has a cover", () => {
+    const { html } = renderInviteEmail({ ...base, events: [ev] });
+    expect(html).not.toContain("<img");
+    expect(bannerBlock([ev])).toBe("");
+  });
+
+  it("uses the first event that has a cover", () => {
+    const html = bannerBlock([ev, { ...ev, title: "Singapore", bannerUrl: "https://cdn/x/sg.jpg" }]);
+    expect(html).toContain("sg.jpg");
   });
 });
 

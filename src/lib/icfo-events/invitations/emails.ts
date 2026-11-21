@@ -16,7 +16,7 @@ export type InviteStep = (typeof INVITE_STEPS)[number];
 export const ATTENDEE_STEPS = ["confirm", "reminder_1d", "reminder_1h", "followup"] as const;
 export type AttendeeStep = (typeof ATTENDEE_STEPS)[number];
 
-export type EmailEvent = { title: string; dateLabel: string; url: string; joinUrl?: string | null };
+export type EmailEvent = { title: string; dateLabel: string; url: string; joinUrl?: string | null; bannerUrl?: string | null };
 
 const BLUE = "#1d5fd1";
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -64,9 +64,23 @@ function statsBlock(tiles: StatTile[], imgUrl: string | null): string {
   return `<table role="presentation" cellspacing="6" style="width:100%;margin:12px 0;">${rows.join("")}</table>`;
 }
 
+/** The first chosen event's cover image, shown under the logo. Empty when no chosen event has one. Pure. */
+export function bannerBlock(events: EmailEvent[]): string {
+  const e = events.find((x) => x.bannerUrl);
+  if (!e || !e.bannerUrl) return "";
+  return `<div style="margin:0 0 16px;"><img src="${esc(e.bannerUrl)}" width="520" alt="${esc(e.title)}" style="display:block;width:100%;max-width:520px;height:auto;border:0;border-radius:10px;" /></div>`;
+}
+
+/** Shown under the Networking sessions line: matching only covers people who registered for them. */
+export const NETWORKING_NOTE_TEXT = "you must register for the Networking sessions to be connected.";
+const NETWORKING_NOTE = `<div style="margin:6px 0 10px;padding:10px 12px;background:#f5f9ff;border-left:3px solid ${BLUE};border-radius:6px;font-size:13px;line-height:1.5;color:#33415a;"><b>Note:</b> ${NETWORKING_NOTE_TEXT}</div>`;
+
 function offersBlock(role: InviteRole, offerKeys: string[]): string {
   const offers = OFFERS[role].filter((o) => offerKeys.includes(o.key));
-  return offers.map((o) => `<p style="margin:8px 0;font-size:14px;line-height:1.5;"><b>${esc(o.label)}.</b> ${esc(o.blurb)}</p>`).join("");
+  return offers.map((o) => {
+    const line = `<p style="margin:8px 0;font-size:14px;line-height:1.5;"><b>${esc(o.label)}.</b> ${esc(o.blurb)}</p>`;
+    return o.key === "networking" ? line + NETWORKING_NOTE : line;
+  }).join("");
 }
 
 function eventsBlock(events: EmailEvent[]): string {
@@ -113,6 +127,7 @@ export function renderInviteEmail(i: InviteEmailInput): { subject: string; html:
     return "You're invited. Here's who is already coming.";
   })();
   const html = wrap(
+    bannerBlock(i.events) +
     `${hi}<p style="font-size:14px;line-height:1.6;">${intro}</p>` +
     statsBlock(i.tiles, i.statsImageUrl) +
     offersBlock(i.role, i.offers) +
