@@ -6,6 +6,9 @@ import { BookingClient } from "@/components/calendar/BookingClient";
 import { sourceTagFromQuery } from "@/lib/attribution/source";
 import { verifyFounderToken } from "@/lib/marketing/match-campaign/token";
 import { founderBookingPrefill } from "@/lib/marketing/match-campaign/store";
+import { introDetail, introFromBookToken, introFromExpiredBookToken } from "@/lib/icfo-events/introductions-server";
+import { maskEmail } from "@/lib/icfo-events/mask-email";
+import { ExpiredBookingLink } from "./ExpiredBookingLink";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +50,26 @@ export default async function BookingPage({ params, searchParams }: Props) {
     redirect("/");
   }
   const hostName = host.full_name ?? host.email ?? "this member";
+
+  // The Book a time link in a follow up email carries a 30 day token (?fu=). A
+  // link past its 30 days offers a fresh one. The plain page, with no token or
+  // with one that is not ours, stays open to anyone.
+  const fu = typeof sp.fu === "string" ? sp.fu : null;
+  if (fu && !introFromBookToken(fu)) {
+    const expiredId = introFromExpiredBookToken(fu);
+    const lapsed = expiredId ? await introDetail(expiredId) : null;
+    if (lapsed && lapsed.founder?.profileId === hostId && !lapsed.intro.scheduledAt) {
+      return (
+        <div className="mx-auto max-w-xl px-4 py-16">
+          <ExpiredBookingLink
+            token={fu}
+            founderName={hostName}
+            maskedEmail={lapsed.investor?.email ? maskEmail(lapsed.investor.email) : null}
+          />
+        </div>
+      );
+    }
+  }
   const availability = await loadAvailability(admin, hostId);
 
   return (
