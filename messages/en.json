@@ -2068,7 +2068,12 @@
     "e_g_california": "e.g. California",
     "e_g_delaware_c_corp_uk_ltd_singapore_pte": "e.g. Delaware C-Corp, UK Ltd, Singapore Pte",
     "e_g_united_states": "e.g. United States",
-    "e_g_we_help_smb_operators_cut_payroll_proces": "e.g. We help SMB operators cut payroll processing time by 70% using AI-powered automation. Unlike legacy providers, we integrate in 10 minutes with no IT required."
+    "e_g_we_help_smb_operators_cut_payroll_proces": "e.g. We help SMB operators cut payroll processing time by 70% using AI-powered automation. Unlike legacy providers, we integrate in 10 minutes with no IT required.",
+    "social_connect_title": "Connect a social account to use Social media",
+    "social_connect_body": "Posts publish to your own accounts, so connect at least one before composing, scheduling or publishing.",
+    "social_connect_founder_only": "Only the founder can connect their accounts.",
+    "social_connect_accounts": "Connect accounts",
+    "social_network_not_connected": "{network} not connected"
   },
   "adminCmp": {
     "a_short_description_shown_on_the_public_even": "A short description shown on the public event page.",

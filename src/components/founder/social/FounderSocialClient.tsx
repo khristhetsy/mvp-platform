@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import type { SocialUsage } from "@/lib/social/usage";
 import type { CampaignFunnel, StageKey } from "@/components/admin/social/funnel-types";
 import { fmt } from "@/components/admin/social/funnel-types";
@@ -74,10 +75,12 @@ async function api<T>(url: string, init?: RequestInit): Promise<{ ok: boolean; s
   }
 }
 
-export function FounderSocialClient({ initialUsage, companyName, founderName, initialDraft, initialTab }: { initialUsage: SocialUsage; companyName: string | null; founderName: string; initialDraft: string; initialTab: string | null }) {
+export function FounderSocialClient({ initialUsage, companyName, founderName, initialDraft, initialTab, acting }: { initialUsage: SocialUsage; companyName: string | null; founderName: string; initialDraft: string; initialTab: string | null; acting: boolean }) {
   const [tab, setTab] = useState<Tab>(TABS.some((t) => t.key === initialTab) ? (initialTab as Tab) : "compose");
   const [usage, setUsage] = useState<SocialUsage>(initialUsage);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  // Only true once the account list has loaded, so the not connected note never flashes or shows on a failed load.
+  const [accountsLoaded, setAccountsLoaded] = useState(false);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [funnels, setFunnels] = useState<CampaignFunnel[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -98,10 +101,11 @@ export function FounderSocialClient({ initialUsage, companyName, founderName, in
       api<{ posts: Post[] }>("/api/founder/social/library"),
     ]);
     if (u.ok && u.data.usage) setUsage(u.data.usage);
-    if (a.ok) setAccounts(a.data.accounts ?? []);
+    if (a.ok) { setAccounts(a.data.accounts ?? []); setAccountsLoaded(true); }
     if (c.ok) { setCampaigns(c.data.campaigns ?? []); setFunnels(c.data.funnels ?? []); setIntros(c.data.intros ?? 0); setIntrosOther(c.data.introsOther ?? 0); setIntrosByTag(c.data.introsByTag ?? {}); }
     if (l.ok) setPosts(l.data.posts ?? []);
   }, []);
+  const noAccounts = accountsLoaded && accounts.length === 0;
 
   // Deferred a tick so state is never set synchronously inside the effect.
   useEffect(() => { const t = setTimeout(() => void reload(), 0); return () => clearTimeout(t); }, [reload]);
@@ -125,7 +129,7 @@ export function FounderSocialClient({ initialUsage, companyName, founderName, in
   return (
     <div>
       <div className="flex flex-wrap items-center gap-3">
-        <button type="button" className={btnPrimary} onClick={() => setTab("compose")}>+ New post</button>
+        <button type="button" className={btnPrimary} disabled={noAccounts} onClick={() => setTab("compose")}>+ New post</button>
         <h1 className="text-2xl font-semibold text-slate-900">Social media</h1>
         <button type="button" className={`${btn} ml-auto`} onClick={() => setGuideOpen(true)}>? How to use</button>
       </div>
@@ -167,7 +171,7 @@ export function FounderSocialClient({ initialUsage, companyName, founderName, in
             <AlertsPanel />
           </div>
         )}
-        {tab === "compose" && <Compose usage={usage} accounts={accounts} campaigns={campaigns} companyName={companyName} founderName={founderName} initialDraft={initialDraft} onSaved={reload} goSettings={() => setTab("settings")} onScheduled={(count) => { setJustScheduled({ count, before: posts.map((p) => p.id) }); setTab("schedule"); }} />}
+        {tab === "compose" && <Compose usage={usage} accounts={accounts} campaigns={campaigns} companyName={companyName} founderName={founderName} initialDraft={initialDraft} noAccounts={noAccounts} acting={acting} onSaved={reload} goSettings={() => setTab("settings")} onScheduled={(count) => { setJustScheduled({ count, before: posts.map((p) => p.id) }); setTab("schedule"); }} />}
         {tab === "schedule" && (
           <div>
             <ScheduleBoard posts={posts} onChange={reload} notice={justScheduled} onDismissNotice={() => setJustScheduled(null)} />
@@ -325,8 +329,32 @@ function Campaigns({ campaigns, funnels, onChange }: { campaigns: Campaign[]; fu
 
 // ───────────────────────────── Compose ─────────────────────────────
 
-function Compose({ usage, accounts, campaigns, companyName, founderName, initialDraft, onSaved, goSettings, onScheduled }: {
-  usage: SocialUsage; accounts: Account[]; campaigns: Campaign[]; companyName: string | null; founderName: string; initialDraft: string; onSaved: () => Promise<void>; goSettings: () => void; onScheduled: (count: number) => void;
+function NotConnectedNote({ acting, onConnect }: { acting: boolean; onConnect: () => void }) {
+  const t = useTranslations("founderCmp");
+  return (
+    <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900" role="status">
+      <div className="flex flex-wrap items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold">{t("social_connect_title")}</p>
+          <p className="mt-1 text-sm text-amber-800">
+            {t("social_connect_body")}{acting && <> {t("social_connect_founder_only")}</>}
+          </p>
+        </div>
+        {!acting && <button type="button" className={btnPrimary} onClick={onConnect}>{t("social_connect_accounts")}</button>}
+      </div>
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {NETWORKS.map((n) => (
+          <span key={n} className="rounded-full border border-amber-300 bg-white px-3 py-1 text-xs text-amber-800">
+            {t("social_network_not_connected", { network: PLATFORM_LABEL[n] ?? n })}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Compose({ usage, accounts, campaigns, companyName, founderName, initialDraft, noAccounts, acting, onSaved, goSettings, onScheduled }: {
+  usage: SocialUsage; accounts: Account[]; campaigns: Campaign[]; companyName: string | null; founderName: string; initialDraft: string; noAccounts: boolean; acting: boolean; onSaved: () => Promise<void>; goSettings: () => void; onScheduled: (count: number) => void;
 }) {
   // Opens with a short starter draft built from the founder's own profile. Edits are kept on this
   // device as you type, so leaving and coming back never loses them. Nothing is posted or saved to
@@ -362,6 +390,8 @@ function Compose({ usage, accounts, campaigns, companyName, founderName, initial
   const setLocal = (value: SocialUsage) => setOverride({ base: usage, value });
 
   const reached = local.state === "reached";
+  // While nothing is connected the kept draft stays on the device but is not shown.
+  const shownBody = noAccounts ? "" : body;
   const chosen = accounts.filter((a) => picked.includes(a.id));
   const rawNet = previewNet ?? chosen[0]?.platform ?? "linkedin";
   const shownNet: Network = (NETWORKS as readonly string[]).includes(rawNet) ? (rawNet as Network) : "linkedin";
@@ -520,6 +550,7 @@ function Compose({ usage, accounts, campaigns, companyName, founderName, initial
 
   return (
     <div className="mx-auto max-w-5xl">
+      {noAccounts && <NotConnectedNote acting={acting} onConnect={goSettings} />}
       {local.state === "warn" && (
         <div className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
           {local.remaining} post{local.remaining === 1 ? "" : "s"} left this month. Your limit resets {pt(local.resetAt, false)}.
@@ -531,14 +562,14 @@ function Compose({ usage, accounts, campaigns, companyName, founderName, initial
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:items-start">
+      <fieldset disabled={noAccounts} className={`grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:items-start ${noAccounts ? "opacity-50" : ""}`}>
       <div className="grid gap-4">
       <div className={card}>
         <div className="flex items-center justify-between gap-2">
           <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#1A6CE4] text-xs font-semibold text-white">1</span>Compose post</h2>
-          <span className="text-xs text-slate-500">{body ? "Draft kept on this device" : "Draft empty"}</span>
+          <span className="text-xs text-slate-500">{shownBody ? "Draft kept on this device" : "Draft empty"}</span>
         </div>
-        {accounts.length === 0 ? (
+        {noAccounts ? null : accounts.length === 0 ? (
           <p className="mt-2 text-sm text-slate-600">No connected accounts yet. <button type="button" className="font-medium text-[#1A6CE4] hover:underline" onClick={goSettings}>Open Settings</button> to connect one.</p>
         ) : (
           <div className="mt-2 flex flex-wrap gap-1.5">
@@ -553,7 +584,7 @@ function Compose({ usage, accounts, campaigns, companyName, founderName, initial
             })}
           </div>
         )}
-        <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={7} placeholder="Write your post, or jot a few notes and pick a template from the AI agent menu." className="mt-3 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+        <textarea value={shownBody} onChange={(e) => setBody(e.target.value)} rows={7} placeholder="Write your post, or jot a few notes and pick a template from the AI agent menu." className="mt-3 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
 
         <div className="mt-2 flex items-start justify-between gap-2">
           <div className="relative" ref={aiRef}>
@@ -572,7 +603,7 @@ function Compose({ usage, accounts, campaigns, companyName, founderName, initial
               </div>
             )}
           </div>
-          <span className="text-xs text-slate-500">{body.length.toLocaleString()} characters</span>
+          <span className="text-xs text-slate-500">{shownBody.length.toLocaleString()} characters</span>
         </div>
         <p className="mt-1 text-xs text-slate-500">Free mode. The draft is written from your profile and you review every change. Drafts never count toward your post limit.</p>
       </div>
@@ -673,9 +704,9 @@ function Compose({ usage, accounts, campaigns, companyName, founderName, initial
       </div>
       </div>
       <div className="lg:sticky lg:top-4">
-        <SocialPreview body={body} network={shownNet} onNetwork={setPreviewNet} name={founderName} company={companyName} linkUrl={effectiveLink} firstComment={useAgent && shownNet !== "reddit" ? `${AGENT_COMMENT} ${effectiveLink}` : null} />
+        <SocialPreview body={shownBody} network={shownNet} onNetwork={setPreviewNet} name={founderName} company={companyName} linkUrl={effectiveLink} firstComment={useAgent && shownNet !== "reddit" ? `${AGENT_COMMENT} ${effectiveLink}` : null} />
       </div>
-      </div>
+      </fieldset>
 
       {dialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" role="dialog" aria-modal="true" aria-label="Monthly post limit reached">

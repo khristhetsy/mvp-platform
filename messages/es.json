@@ -2068,7 +2068,12 @@
     "e_g_california": "p. ej. California",
     "e_g_delaware_c_corp_uk_ltd_singapore_pte": "p. ej. Delaware C-Corp, UK Ltd, Singapore Pte",
     "e_g_united_states": "p. ej. Estados Unidos",
-    "e_g_we_help_smb_operators_cut_payroll_proces": "p. ej. Ayudamos a operadores de pymes a reducir el tiempo de procesamiento de nóminas en un 70% con automatización basada en IA. A diferencia de los proveedores tradicionales, nos integramos en 10 minutos sin necesidad de TI."
+    "e_g_we_help_smb_operators_cut_payroll_proces": "p. ej. Ayudamos a operadores de pymes a reducir el tiempo de procesamiento de nóminas en un 70% con automatización basada en IA. A diferencia de los proveedores tradicionales, nos integramos en 10 minutos sin necesidad de TI.",
+    "social_connect_title": "Conecta una cuenta social para usar Redes sociales",
+    "social_connect_body": "Las publicaciones salen en tus propias cuentas, así que conecta al menos una antes de redactar, programar o publicar.",
+    "social_connect_founder_only": "Solo el fundador puede conectar sus cuentas.",
+    "social_connect_accounts": "Conectar cuentas",
+    "social_network_not_connected": "{network} sin conectar"
   },
   "adminCmp": {
     "a_short_description_shown_on_the_public_even": "Una descripción breve que se muestra en la página pública del evento.",
