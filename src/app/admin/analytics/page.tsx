@@ -40,13 +40,14 @@ function Sparkline({ values }: Readonly<{ values: number[] }>) {
 
 export default async function AdminAnalyticsPage({
   searchParams,
-}: Readonly<{ searchParams?: Record<string, string | string[] | undefined> }>) {
+}: Readonly<{ searchParams?: Promise<Record<string, string | string[] | undefined>> }>) {
+  const sp = await searchParams;
   const profile = await requireRole(["admin", "analyst"]);
   const t = await getTranslations("adminPages");
   const windowDays = clampTrendWindowDays(
-    typeof searchParams?.window === "string" ? searchParams.window : null,
+    typeof sp?.window === "string" ? sp.window : null,
   );
-  const view = typeof searchParams?.view === "string" ? searchParams.view : null;
+  const view = typeof sp?.view === "string" ? sp.view : null;
   const supabase = createServiceRoleClient();
   const [analytics, funnelRes] = await Promise.all([
     loadPlatformAnalyticsSnapshot(supabase, windowDays),
