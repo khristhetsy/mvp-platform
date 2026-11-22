@@ -1,8 +1,12 @@
 const ACCENT = "#2E78F5";
 
+import type { ReactNode } from "react";
+
 type Step = {
   icon: string;
   label: string;
+  /** Ticks the step green when it is already done. */
+  done?: boolean;
 };
 
 type Props = {
@@ -16,6 +20,8 @@ type Props = {
     label: string;
     href: string;
   };
+  /** Replaces the primary CTA with custom content, such as a button that opens a sheet. */
+  actionSlot?: ReactNode;
   /** Optional secondary link */
   secondaryAction?: {
     label: string;
@@ -33,6 +39,7 @@ export function FounderEmptyState({
   description,
   steps,
   action,
+  actionSlot,
   secondaryAction,
 }: Props) {
   return (
@@ -80,13 +87,13 @@ export function FounderEmptyState({
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div style={{
                   width: 28, height: 28, borderRadius: "50%",
-                  background: "#EEEDFE", color: "#4338CA",
+                  background: step.done ? "#16a34a" : "#EEEDFE", color: step.done ? "#ffffff" : "#4338CA",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   fontSize: 14, flexShrink: 0,
                 }}>
-                  <i className={`ti ${step.icon}`} aria-hidden="true" />
+                  <i className={`ti ${step.done ? "ti-check" : step.icon}`} aria-hidden="true" />
                 </div>
-                <p style={{ fontSize: 13, color: "#374151", margin: 0 }}>{step.label}</p>
+                <p style={{ fontSize: 13, color: step.done ? "#6b7280" : "#374151", margin: 0 }}>{step.label}</p>
               </div>
             ))}
           </div>
@@ -94,9 +101,10 @@ export function FounderEmptyState({
       )}
 
       {/* Actions */}
-      {(action || secondaryAction) && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
-          {action && (
+      {(action || actionSlot || secondaryAction) && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center", alignItems: "flex-start" }}>
+          {actionSlot}
+          {!actionSlot && action && (
             <a
               href={action.href}
               style={{

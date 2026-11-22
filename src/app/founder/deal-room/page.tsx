@@ -12,6 +12,10 @@ import { DealRoomActivityFeed, type ActivityEvent } from "@/components/founder/D
 import { FounderEmptyState } from "@/components/founder/FounderEmptyState";
 import { ManualInvestorsPanel } from "@/components/founder/ManualInvestorsPanel";
 import { listManualInvestors } from "@/lib/founder/manual-investors";
+import { listDataRoomAccess } from "@/lib/data-room/access";
+import { DealRoomOnePagerStatus } from "@/components/founder/DealRoomOnePagerStatus";
+import { InviteInvestorsSheet } from "@/components/founder/InviteInvestorsSheet";
+import { InvitedInvestorsList } from "@/components/founder/InvitedInvestorsList";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +52,8 @@ export default async function FounderDealRoomIndexPage() {
       : [{ data: [] }, { data: [] }, { data: [] }, { data: [] }];
 
   const manualInvestors = company ? await listManualInvestors(supabase, company.id) : [];
+  const invitedInvestors = company ? await listDataRoomAccess(company.id).catch(() => []) : [];
+  const isPublished = company?.is_published ?? false;
 
   // Build room title lookup
   const roomTitles: Record<string, string> = {};
@@ -89,19 +95,25 @@ export default async function FounderDealRoomIndexPage() {
             metadata={`${(rooms ?? []).length} rooms`}
           />
 
+          <DealRoomOnePagerStatus
+            isPublished={isPublished}
+            slug={company?.slug ?? null}
+            publishedAt={company?.published_at ?? null}
+          />
+
           <WorkspacePanel title={t("rooms")} subtitle={t("your_company_deal_rooms")}>
             {(rooms ?? []).length === 0 ? (
               <FounderEmptyState
                 icon="ti-lock-access"
                 title={t("no_deal_rooms_yet")}
-                description={t("deal_rooms_open_when_an_investor_expresses_int")}
+                description="A deal room opens when an investor expresses interest. You can also invite investors yourself."
                 steps={[
-                  { icon: "ti-clipboard-list", label: "Publish your company profile to become visible to investors" },
-                  { icon: "ti-eye", label: "An investor views your listing and requests access" },
-                  { icon: "ti-lock-access", label: "A deal room opens — you exchange documents and answer questions" },
+                  { icon: "ti-clipboard-list", label: "Publish your company profile to become visible to investors", done: isPublished },
+                  { icon: "ti-eye", label: "Invite investors, or an investor requests access" },
+                  { icon: "ti-lock-access", label: "A deal room opens and you exchange documents and answer questions" },
                   { icon: "ti-users", label: "Diligence completes and you negotiate terms" },
                 ]}
-                action={{ label: "Publish your profile", href: "/founder/settings" }}
+                actionSlot={<InviteInvestorsSheet canInvite={isPublished} />}
                 secondaryAction={{ label: "Upload documents", href: "/founder/documents" }}
               />
             ) : (
@@ -179,6 +191,15 @@ export default async function FounderDealRoomIndexPage() {
                 })}
               </div>
             )}
+          </WorkspacePanel>
+
+          <WorkspacePanel title="Invited investors" subtitle="Investors you have given access to your one pager and data room">
+            {(rooms ?? []).length > 0 ? (
+              <div className="mb-3">
+                <InviteInvestorsSheet canInvite={isPublished} variant="compact" />
+              </div>
+            ) : null}
+            <InvitedInvestorsList grants={invitedInvestors} />
           </WorkspacePanel>
 
           {/* Investors the founder is tracking (sourced off-platform) */}
