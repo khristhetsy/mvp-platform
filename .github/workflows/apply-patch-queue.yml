@@ -83,7 +83,7 @@ jobs:
             jq -r ".[$i].patch" ../pending.json > "../patch-$id.patch"
             echo "Applying #$id: $title"
             if out=$(git am --committer-date-is-author-date "../patch-$id.patch" 2>&1); then
-              if tc=$(npx tsc --noEmit 2>&1); then
+              if tc=$(npm run typecheck 2>&1); then
                 if push=$(git push origin HEAD:main 2>&1); then
                   report "$id" applied "Pushed $(git rev-parse --short HEAD)" "$(git rev-parse HEAD)"
                 else

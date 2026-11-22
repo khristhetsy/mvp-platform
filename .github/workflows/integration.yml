@@ -32,7 +32,8 @@ jobs:
       - name: Install Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # Pinned: "latest" resolves through the GitHub API, which rate limits shared runners.
+          version: 2.122.0
 
       # `supabase start` boots the local stack (Postgres + auth + storage) and
       # applies everything in supabase/migrations in order. This provides the
