@@ -20,7 +20,7 @@ function privateIp(ip: string): boolean {
   return a === 0 || a === 10 || a === 127 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127) || a >= 224;
 }
 
-async function safeUrl(raw: string): Promise<URL> {
+export async function safeUrl(raw: string): Promise<URL> {
   const u = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
   if (u.protocol !== "http:" && u.protocol !== "https:") throw new Error("Only web addresses can be read.");
   const host = u.hostname.replace(/^\[|\]$/g, "");
