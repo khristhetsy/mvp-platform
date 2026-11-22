@@ -14,6 +14,7 @@ import { logOutboundEmail, type EmailRole } from "@/lib/email/email-log";
 import { holdForFounderDigest } from "@/lib/notifications/founder-email-budget/gate";
 import { personalFromHeader, verifiedSenderDomains } from "@/lib/email/sender-domains";
 import { parseRecipients } from "@/lib/email/recipients";
+import { isQuotaExceeded } from "@/lib/email/quota-error";
 
 const RESEND_API = "https://api.resend.com/emails";
 
@@ -184,6 +185,8 @@ async function sendEmailNow(payload: EmailPayload): Promise<{ ok: boolean; skipp
         }),
       });
       if (res.status !== 429 || attempt === MAX_ATTEMPTS) break;
+      // A plan quota (monthly or daily) does not clear in seconds, so retrying only adds delay.
+      if (await isQuotaExceeded(res)) break;
       const retryAfter = Number(res.headers.get("retry-after"));
       const waitMs = Number.isFinite(retryAfter) && retryAfter > 0 ? Math.min(retryAfter * 1000, 5000) : 400 * attempt;
       await new Promise((resolve) => setTimeout(resolve, waitMs));
