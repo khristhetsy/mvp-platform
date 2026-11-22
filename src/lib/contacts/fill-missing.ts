@@ -38,6 +38,7 @@ import { reindexContacts } from "@/lib/fit/match-index";
 import { mergeOverrides } from "@/lib/sales/overrides";
 import { canonicalInvestorType } from "@/lib/fit/options";
 import { claudeComplete, isClaudeConfigured, CLAUDE_HAIKU } from "@/lib/claude";
+import { safeUrl } from "@/lib/investor-directory/site-text";
 import { loadVocabulary } from "@/lib/vocabulary/store";
 import { offered, resolveSlug } from "@/lib/vocabulary/lists";
 
@@ -361,13 +362,26 @@ export function pageText(html: string): string {
 
 const UA = "iCapOS-enrichment/1.0 (+https://icapos.com)";
 
+const MAX_REDIRECTS = 3;
+
+/** Fetches one page. Private and local addresses are refused (SSRF) and every redirect is re-checked. */
 async function fetchHtml(url: string, ms = 4500): Promise<string | null> {
   try {
-    const res = await fetch(url, { redirect: "follow", signal: AbortSignal.timeout(ms), headers: { "user-agent": UA, accept: "text/html" } });
-    if (!res.ok) return null;
-    const type = res.headers.get("content-type") ?? "";
-    if (type && !/html|text\/plain/i.test(type)) return null;
-    return (await res.text()).slice(0, 300000);
+    let target = await safeUrl(url);
+    for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+      const res = await fetch(target, { redirect: "manual", signal: AbortSignal.timeout(ms), headers: { "user-agent": UA, accept: "text/html" } });
+      if (res.status >= 300 && res.status < 400) {
+        const loc = res.headers.get("location");
+        if (!loc) return null;
+        target = await safeUrl(new URL(loc, target).toString());
+        continue;
+      }
+      if (!res.ok) return null;
+      const type = res.headers.get("content-type") ?? "";
+      if (type && !/html|text\/plain/i.test(type)) return null;
+      return (await res.text()).slice(0, 300000);
+    }
+    return null;
   } catch { return null; }
 }
 
