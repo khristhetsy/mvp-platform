@@ -608,17 +608,37 @@ export async function recordPayment(
 }
 
 export async function deletePayment(paymentId: string, client: Db = db()): Promise<Invoice> {
-  const { data: p } = await client.from("acct_payments").select("id, invoice_id, amount_cents, bank_transaction_id").eq("id", paymentId).maybeSingle();
+  const { data: p, error: findError } = await client.from("acct_payments").select("id, invoice_id, amount_cents, bank_transaction_id").eq("id", paymentId).maybeSingle();
+  if (findError) throw new Error(`Could not load the payment: ${findError.message}`);
   if (!p) throw new Error("Payment not found.");
   const pay = p as { invoice_id: string; amount_cents: number; bank_transaction_id: string | null };
-  await client.from("acct_payments").delete().eq("id", paymentId);
-  if (pay.bank_transaction_id) {
-    await client.from("acct_bank_transactions").update({ status: "review", matched_invoice_id: null, decided_by: null, decided_at: null }).eq("id", pay.bank_transaction_id);
-  }
   const inv = await getInvoice(pay.invoice_id, client);
   if (!inv) throw new Error("Invoice not found.");
   const paid = Math.max(0, inv.amount_paid_cents - pay.amount_cents);
-  const { data } = await client.from("acct_invoices").update({ amount_paid_cents: paid, status: "sent", paid_at: null, updated_at: new Date().toISOString() }).eq("id", inv.id).select(INVOICE_COLS).single();
+  // Lower the invoice first. If removing the payment then fails, the invoice is put
+  // back, so the invoice and its payments never disagree. Every write is checked.
+  const { data, error: invoiceError } = await client
+    .from("acct_invoices")
+    .update({ amount_paid_cents: paid, status: inv.status === "paid" ? "sent" : inv.status, paid_at: null, updated_at: new Date().toISOString() })
+    .eq("id", inv.id)
+    .select(INVOICE_COLS)
+    .single();
+  if (invoiceError) throw new Error(`Could not update the invoice: ${invoiceError.message}`);
+  const { error: deleteError } = await client.from("acct_payments").delete().eq("id", paymentId);
+  if (deleteError) {
+    await client
+      .from("acct_invoices")
+      .update({ amount_paid_cents: inv.amount_paid_cents, status: inv.status, paid_at: inv.paid_at ?? null, updated_at: new Date().toISOString() })
+      .eq("id", inv.id);
+    throw new Error(`Could not delete the payment: ${deleteError.message}`);
+  }
+  if (pay.bank_transaction_id) {
+    const { error: txError } = await client
+      .from("acct_bank_transactions")
+      .update({ status: "review", matched_invoice_id: null, decided_by: null, decided_at: null })
+      .eq("id", pay.bank_transaction_id);
+    if (txError) throw new Error(`The payment was deleted, but its bank transaction could not be reset to review: ${txError.message}`);
+  }
   return (data as Invoice) ?? inv;
 }
 
@@ -791,7 +811,12 @@ async function autoMatchDeposits(accountIds: string[], client: Db, errors: strin
 export async function syncAllBanks(client: Db = db()): Promise<SyncResult> {
   const total: SyncResult = { added: 0, updated: 0, removed: 0, suggested: 0, errors: [] };
   if (!plaid.plaidConfigured()) return total;
-  const { data } = await client.from("acct_bank_items").select("id, entity, plaid_item_id, access_token_enc, institution_name, sync_cursor, status, last_error, last_synced_at").neq("status", "removed");
+  const { data, error } = await client.from("acct_bank_items").select("id, entity, plaid_item_id, access_token_enc, institution_name, sync_cursor, status, last_error, last_synced_at").neq("status", "removed");
+  if (error) {
+    // Report it. An empty result here would look like a sync that found nothing.
+    total.errors.push(`Could not load the bank connections: ${error.message}`);
+    return total;
+  }
   for (const item of (data ?? []) as BankItemRow[]) {
     const r = await syncItem(item, client);
     total.added += r.added; total.updated += r.updated; total.removed += r.removed; total.errors.push(...r.errors);
@@ -992,9 +1017,11 @@ export async function accountingSummary(client: Db = db()): Promise<AccountingSu
 /** Sends scheduled invoices whose issue date has come, then syncs the bank feed. */
 export async function runAccountingDaily(client: Db = db()): Promise<{ sent: number; sendErrors: string[]; bank: SyncResult }> {
   const today = todayPT();
-  const { data } = await client.from("acct_invoices").select("id, invoice_number").eq("status", "scheduled").lte("issue_date", today).limit(200);
+  const { data, error } = await client.from("acct_invoices").select("id, invoice_number").eq("status", "scheduled").lte("issue_date", today).limit(200);
   let sent = 0;
   const sendErrors: string[] = [];
+  // A failed read must not look like "nothing was due".
+  if (error) sendErrors.push(`Could not load the scheduled invoices: ${error.message}`);
   for (const row of (data ?? []) as Array<{ id: string; invoice_number: string }>) {
     try {
       await sendInvoice(row.id, null, {}, client);
