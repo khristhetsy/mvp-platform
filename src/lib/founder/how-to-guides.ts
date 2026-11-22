@@ -458,6 +458,60 @@ export const HOW_TO_GUIDES: HowToGuideData[] = [
     ]
   },
   {
+    "key": "term-sheet-creator",
+    "routes": [
+      "/founder/term-sheet-creator"
+    ],
+    "title": "How the term sheet creator works",
+    "steps": [
+      {
+        "title": "Read the notice",
+        "desc": "iCFO does not advise you or review compliance. Tick the notice to continue.",
+        "tap": {
+          "kind": "button",
+          "label": "I have read this notice"
+        },
+        "then": "Create term sheet unlocks"
+      },
+      {
+        "title": "Choose where it starts",
+        "desc": "Generate from your saved Round structure, or build from scratch, then pick the template.",
+        "tap": {
+          "kind": "button",
+          "label": "Generate from my Round structure"
+        },
+        "then": "Template cards highlight"
+      },
+      {
+        "title": "Fill in the blanks",
+        "desc": "Work through the clauses on the left. Only the blanks change. The clause wording stays as written.",
+        "tap": {
+          "kind": "button",
+          "label": "Clause list on the left"
+        },
+        "then": "Blanks for that clause open"
+      },
+      {
+        "title": "Save and preview",
+        "desc": "Save your work and preview the term sheet as the investor will see it.",
+        "tap": {
+          "kind": "button",
+          "label": "Save"
+        },
+        "then": "Saved time shows"
+      },
+      {
+        "title": "Upload to Documents",
+        "desc": "Finalize to save the PDF and Word file to Documents under Term Sheet.",
+        "tap": {
+          "kind": "button",
+          "label": "Finalize and upload to Documents"
+        },
+        "then": "Saved to Documents message"
+      }
+    ]
+  },
+  {
     "key": "pitch-deck",
     "routes": [
       "/founder/pitch-deck"

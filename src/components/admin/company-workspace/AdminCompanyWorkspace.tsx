@@ -7,6 +7,7 @@ import { AdminCompanyCard } from "@/components/AdminCompanyCard";
 import { CompanyCompliancePanel } from "@/components/admin/company-workspace/CompanyCompliancePanel";
 import { CompanyDocumentsPanel } from "@/components/admin/company-workspace/CompanyDocumentsPanel";
 import { CompanyBusinessPlanPanel } from "@/components/admin/company-workspace/CompanyBusinessPlanPanel";
+import { CompanyTermSheetsPanel } from "@/components/admin/company-workspace/CompanyTermSheetsPanel";
 import { CompanyCapTablePanel } from "@/components/admin/company-workspace/CompanyCapTablePanel";
 import { CompanyInvestorActivityPanel } from "@/components/admin/company-workspace/CompanyInvestorActivityPanel";
 import { CompanyQueuesPanel } from "@/components/admin/company-workspace/CompanyQueuesPanel";
@@ -304,6 +305,10 @@ export function AdminCompanyWorkspace({
 
           <WorkspaceSection icon="ti-clipboard-text" tone="purple" title={t("business_plan")} subtitle={t("founder_s_ai_assisted_plan_sections_projecti")}>
             <CompanyBusinessPlanPanel companyId={data.company.id} />
+          </WorkspaceSection>
+
+          <WorkspaceSection icon="ti-file-text" tone="blue" title="Term sheets" subtitle="Founder's filled in term sheets (read only)">
+            <CompanyTermSheetsPanel companyId={data.company.id} />
           </WorkspaceSection>
 
           <WorkspaceSection icon="ti-table" tone="teal" title={t("cap_table")} subtitle={t("founder_s_shareholders_ownership_split_and_m")}>

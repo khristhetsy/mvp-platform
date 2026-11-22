@@ -90,6 +90,11 @@ export const FEATURES: FeatureDef[] = [
   { key: "pitch_deck_analyzer", label: "Pitch deck analyzer", group: "Raise Toolkit", hrefs: { founder: ["/founder/pitch-deck-analyzer"] } },
   { key: "valuation", label: "Valuation range and advisor", group: "Raise Toolkit", hrefs: { founder: ["/founder/valuation"] } },
   { key: "business_plan", label: "AI Business Plan", group: "Raise Toolkit", hrefs: { founder: ["/founder/business-plan"] } },
+  { key: "term_sheet_creator", label: "Term sheet creator", group: "Raise Toolkit", hrefs: { founder: ["/founder/term-sheet-creator"] } },
+  // Term sheet creator sub switches. In page features, so they have no nav href. Founder and Admin only.
+  { key: "term_sheet_round_structure", label: "Term sheet: generate from Round structure", group: "Raise Toolkit", hrefs: {}, audiences: ["founder", "admin"] },
+  { key: "term_sheet_documents_upload", label: "Term sheet: upload to Documents", group: "Raise Toolkit", hrefs: {}, audiences: ["founder", "admin"] },
+  { key: "term_sheet_word_export", label: "Term sheet: Word export", group: "Raise Toolkit", hrefs: {}, audiences: ["founder", "admin"] },
   { key: "pitch_deck", label: "Pitch deck", group: "Raise Toolkit", hrefs: { founder: ["/founder/pitch-deck"] } },
   { key: "market_claim", label: "Market claim grader", group: "Raise Toolkit", hrefs: { founder: ["/founder/market-claim"] } },
   { key: "round_structure", label: "Round structure", group: "Raise Toolkit", hrefs: { founder: ["/founder/round-structure"] } },

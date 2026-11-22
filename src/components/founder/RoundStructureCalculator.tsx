@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import {
   computeRound,
@@ -130,10 +130,25 @@ export function RoundStructureCalculator() {
   const [interestPct, setInterestPct] = useState(DEFAULT_INPUTS.interestPct);
   const [maturityMonths, setMaturityMonths] = useState(DEFAULT_INPUTS.maturityMonths);
   const [warrantPct, setWarrantPct] = useState(0);
+  // Saved copy of the inputs, so the Term sheet creator can pull from them. Never changes the maths.
+  const [savedNote, setSavedNote] = useState<string | null>(null);
   // The inputs the report was run on. Null until the founder taps Run AI analysis.
   const [reportInputs, setReportInputs] = useState<RoundInputs | null>(null);
   // Bumped on every run so the report remounts and shows its loading state again.
   const [runId, setRunId] = useState(0);
+
+  const saveInputs = useCallback(async (toSave: RoundInputs, announce: boolean) => {
+    try {
+      const res = await fetch("/api/founder/round-structure", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ inputs: toSave }),
+      });
+      if (announce) setSavedNote(res.ok ? "Saved. Your Term sheet creator can pull from this." : "Could not save right now.");
+    } catch {
+      if (announce) setSavedNote("Could not save right now.");
+    }
+  }, []);
 
   const inputs: RoundInputs = useMemo(
     () => ({ roundType, safeType, preMoney, raiseAmount, optionPoolPct, discountPct, interestPct, maturityMonths, warrantPct }),
@@ -367,7 +382,7 @@ export function RoundStructureCalculator() {
               </p>
               <button
                 type="button"
-                onClick={() => { setReportInputs(inputs); setRunId((n) => n + 1); }}
+                onClick={() => { setReportInputs(inputs); setRunId((n) => n + 1); void saveInputs(inputs, false); }}
                 className="mt-3 w-full rounded-lg py-2.5 text-xs font-bold text-white transition hover:opacity-90"
                 style={{ background: "#2563EB" }}
               >
@@ -376,6 +391,14 @@ export function RoundStructureCalculator() {
               {reportStale ? (
                 <p className="mt-2 text-[11px] font-semibold text-amber-700">Inputs changed since the last run. Run again to update the report.</p>
               ) : null}
+              <button
+                type="button"
+                onClick={() => void saveInputs(inputs, true)}
+                className="mt-2 w-full rounded-lg border border-slate-300 bg-white py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Save these inputs for my term sheet
+              </button>
+              {savedNote ? <p className="mt-2 text-[11px] font-semibold text-emerald-700">{savedNote}</p> : null}
             </div>
 
             <p className="mt-4 text-[10px] leading-relaxed text-slate-400">

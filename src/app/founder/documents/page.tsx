@@ -22,6 +22,7 @@ const DOC_TYPE_LABEL_MAP: Record<string, string> = {};
 const _FOUNDER_DOCUMENT_TYPES_RAW: { label: string; value: string; aliases?: string[]; hint?: string }[] = [
   { label: "Pitch Deck", value: "PITCH_DECK" },
   { label: "Business Plan", value: "BUSINESS_PLAN" },
+  { label: "Term Sheet", value: "TERM_SHEET" },
   { label: "Financials", value: "FINANCIALS", aliases: ["FINANCIAL_STATEMENTS"] },
   { label: "Cap Table", value: "CAP_TABLE" },
   { label: "Team Bios", value: "TEAM_BIOS" },

@@ -344,6 +344,7 @@ export const founderWorkspaceNavSections: WorkspaceNavSection[] = [
         label: "Docs & models",
         children: [
           { href: "/founder/business-plan", label: "Business plan", minStage: "qualify" },
+          { href: "/founder/term-sheet-creator", label: "Term sheet creator", minStage: "qualify" },
           { href: "/founder/pitch-deck", label: "Pitch deck", minStage: "qualify" },
           { href: "/founder/financial-model", label: "Financial model", minStage: "qualify" },
           { href: "/founder/cap-table", label: "Cap table", minStage: "qualify" },
@@ -483,6 +484,7 @@ export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
           { href: "/founder/documents", label: "Documents", menuGroup: "Readiness", minStage: "qualify" },
           { href: "/founder/preview", label: "One pager", menuGroup: "Materials" },
           { href: "/founder/business-plan", label: "Business plan", menuGroup: "Materials", minStage: "qualify" },
+          { href: "/founder/term-sheet-creator", label: "Term sheet creator", menuGroup: "Materials", minStage: "qualify" },
           { href: "/founder/pitch-deck", label: "Pitch deck", menuGroup: "Materials", minStage: "qualify" },
           { href: "/founder/pitch-deck-analyzer", label: "Pitch deck analyzer", menuGroup: "Analyzers", minStage: "qualify" },
           { href: "/founder/market-claim", label: "Market claim grader", menuGroup: "Analyzers", minStage: "qualify" },

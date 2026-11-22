@@ -58,6 +58,7 @@ const PAGES: PageShortcut[] = [
   { id: "f-report", title: "Report", subtitle: "Readiness report", href: "/founder/report", keywords: ["report", "readiness report"], workspace: "founder" },
   { id: "f-pitch-practice", title: "Pitch practice", subtitle: "Rehearse your pitch", href: "/founder/pitch-practice", keywords: ["pitch practice", "rehearse", "practice", "pitch"], workspace: "founder" },
   { id: "f-board-prep", title: "Board prep", subtitle: "Prepare for the board", href: "/founder/board-prep", keywords: ["board prep", "board", "board meeting"], workspace: "founder" },
+  { id: "f-term-sheet-creator", title: "Term sheet creator", subtitle: "Fill in a direct to investor term sheet", href: "/founder/term-sheet-creator", keywords: ["term sheet", "safe", "convertible note", "series a", "create term sheet"], workspace: "founder" },
   { id: "f-term-sheet", title: "Term sheet", subtitle: "Understand your terms", href: "/founder/term-sheet", keywords: ["term sheet", "terms", "safe", "convertible"], workspace: "founder" },
   { id: "f-kpi-glossary", title: "KPI glossary", subtitle: "Metrics explained", href: "/founder/kpi-glossary", keywords: ["kpi", "glossary", "metrics definitions"], workspace: "founder" },
   { id: "f-raise-toolkit", title: "Raise toolkit", subtitle: "Templates and guides", href: "/founder/raise-toolkit", keywords: ["toolkit", "templates", "guides"], workspace: "founder" },
@@ -392,7 +393,7 @@ function catOfFounder(p: string): CatKey {
   if (p === "/founder/stages/marketing") return "marketing";
   if (p === "/founder/stages/closing") return "closing";
   if (starts("/founder/events/present")) return "marketing";
-  if (starts("/founder/readiness", "/founder/documents", "/founder/preview", "/founder/business-plan", "/founder/pitch-deck", "/founder/pitch-deck-analyzer", "/founder/market-claim", "/founder/round-structure", "/founder/financial-model", "/founder/cap-table", "/founder/valuation", "/founder/reg-cf", "/founder/report", "/founder/pitch-practice", "/founder/board-prep", "/founder/term-sheet", "/founder/kpi-glossary", "/founder/raise-toolkit")) return "preparation";
+  if (starts("/founder/readiness", "/founder/documents", "/founder/preview", "/founder/business-plan", "/founder/pitch-deck", "/founder/pitch-deck-analyzer", "/founder/market-claim", "/founder/round-structure", "/founder/financial-model", "/founder/cap-table", "/founder/valuation", "/founder/reg-cf", "/founder/report", "/founder/pitch-practice", "/founder/board-prep", "/founder/term-sheet", "/founder/term-sheet-creator", "/founder/kpi-glossary", "/founder/raise-toolkit")) return "preparation";
   if (starts("/founder/investors", "/founder/contacts", "/founder/matches", "/founder/matching", "/founder/deploy", "/founder/ir-agent", "/founder/investor-directory", "/founder/investor-pipeline", "/founder/private-market", "/founder/marketplace")) return "marketing";
   if (starts("/founder/deal-room", "/founder/offering-type", "/founder/spvs", "/founder/capital-raise", "/founder/investor-update", "/founder/milestones")) return "closing";
   if (starts("/founder/analytics")) return "analytics";

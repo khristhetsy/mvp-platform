@@ -51,7 +51,7 @@ function fmtDay(iso: string) { return new Date(iso).toLocaleDateString("en-US", 
 function guessType(name: string, types: { value: string }[]): string | null {
   const n = name.toLowerCase();
   const rules: Array<[RegExp, string]> = [
-    [/deck|pitch/, "PITCH_DECK"], [/business\s*plan|bplan/, "BUSINESS_PLAN"], [/cap\s*table|captable/, "CAP_TABLE"],
+    [/term\s*sheet|termsheet/, "TERM_SHEET"], [/deck|pitch/, "PITCH_DECK"], [/business\s*plan|bplan/, "BUSINESS_PLAN"], [/cap\s*table|captable/, "CAP_TABLE"],
     [/p&l|pnl|balance|cash|financ|budget|forecast|statement|bank/, "FINANCIALS"], [/team|bio|resume|cv\b/, "TEAM_BIOS"],
     [/patent|trademark|moat|(^|[^a-z])ip([^a-z]|$)/, "IP_MOAT"],
     [/contract|msa|agreement|loi|po\b|purchase order|sow/, "CUSTOMER_CONTRACTS"], [/incorporat|bylaw|board|minutes|resolution|consent/, "CORPORATE_DOCUMENTS"],

@@ -54,6 +54,7 @@ const FOUNDER_MENU_TIPS: Tip[] = [
   menuTip("documents", "/founder/documents", "Documents", "Upload and keep current the documents your readiness score depends on, starting with your cap table.", "qualify"),
   // Materials
   menuTip("business-plan", "/founder/business-plan", "Business plan", "Your business plan is a core readiness document. Keep it consistent with your pitch deck and financial model.", "qualify"),
+  menuTip("term-sheet-creator", "/founder/term-sheet-creator", "Term sheet creator", "Fill in a Convertible Note, SAFE or Series A term sheet from your Round structure, then export it as PDF or Word. Have your own securities counsel review it before you send it.", "qualify"),
   menuTip("pitch-deck", "/founder/pitch-deck", "Pitch deck", "Build or update your pitch deck here, then run it through the Pitch deck analyzer for feedback.", "qualify"),
   menuTip("financial-model", "/founder/financial-model", "Financial model", "Keep your financial model in sync with your business plan, since investors compare the two.", "qualify"),
   menuTip("cap-table", "/founder/cap-table", "Cap table", "A clean cap table is one of the first things an investor asks to see. Update it after every issuance.", "qualify"),
