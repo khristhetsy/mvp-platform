@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildReminderMessages, formatRange, type DueEvent } from "./reminders";
+import { buildReminderMessages, formatRange, shouldStampReminder, type DueEvent } from "./reminders";
 import { renderEmail } from "@/lib/email/layout";
 
 const event: DueEvent = {
@@ -91,5 +91,17 @@ describe("buildReminderMessages", () => {
     });
     expect(messages).toHaveLength(1);
     expect(messages[0].to).toEqual(["khris@example.com"]);
+  });
+});
+
+describe("shouldStampReminder", () => {
+  it("stamps when at least one email was sent", () => {
+    expect(shouldStampReminder(2, true)).toBe(true);
+  });
+  it("does not stamp when every send failed, so it retries on the next run", () => {
+    expect(shouldStampReminder(2, false)).toBe(false);
+  });
+  it("stamps when there was nobody to email, so it is not retried forever", () => {
+    expect(shouldStampReminder(0, false)).toBe(true);
   });
 });

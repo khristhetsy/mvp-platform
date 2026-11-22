@@ -239,6 +239,16 @@ export function buildReminderMessages(input: {
   return messages;
 }
 
+/**
+ * Whether an event's reminder stamp should be set. Stamp when at least one email
+ * went out, or when there was nobody to email (so it is not retried forever). A
+ * failed send, such as a provider quota error, leaves the event unstamped so the
+ * next cron run tries again while the meeting is still ahead.
+ */
+export function shouldStampReminder(messageCount: number, anySent: boolean): boolean {
+  return messageCount === 0 || anySent;
+}
+
 async function sendTier(
   admin: SupabaseClient,
   tier: ReminderTier,
@@ -298,7 +308,7 @@ async function sendTier(
       if (ok) sent = true;
     }
     if (sent) reminded += 1;
-    done.push(event.id);
+    if (shouldStampReminder(messages.length, sent)) done.push(event.id);
   }
   if (done.length > 0) {
     await raw(admin).from("calendar_events").update({ [stampCol]: nowISO }).in("id", done);
