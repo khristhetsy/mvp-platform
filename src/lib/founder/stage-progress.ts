@@ -18,6 +18,7 @@ import { businessPlanCoreProgress } from "@/lib/business-plan/completion";
 import { automatedStatusLine, manualResultsLine } from "@/lib/founder/outreach-status-lines";
 import { getFounderSocialUsage } from "@/lib/social/founder-limits";
 import { isFeatureEnabled, loadFeatureFlags } from "@/lib/feature-controls";
+import { isInWeek, latestIso, weekWindow, type WeekWindow } from "@/lib/founder/week";
 
 export type StepState = "done" | "in_progress" | "not_started" | "unknown";
 export interface StepPart {
@@ -54,12 +55,20 @@ export interface StepProgress {
   primary?: { label: string; href: string };
   /** Secondary link on the collapsed completed card. */
   doneLink?: { label: string; href: string };
+  /** Resets every Monday (Marketing): done means done for the current week only. */
+  weekly?: boolean;
+  /** When it was done this week (ISO), for a weekly step that is done. */
+  thisWeekAt?: string | null;
+  /** The last time it was done before this week (ISO), for a weekly step that reopened. */
+  lastDoneAt?: string | null;
 }
 export interface StageProgress {
   /** keyed by step href */
   steps: Record<string, StepProgress>;
   /** equal-weight average over measured steps, or null if none are measurable */
   overall: number | null;
+  /** Set for a stage that runs on a weekly cycle (Marketing). */
+  week?: WeekWindow;
 }
 
 const EMPTY: StageProgress = { steps: {}, overall: null };
@@ -87,6 +96,20 @@ async function hasRow(
   for (const [k, v] of Object.entries(filters)) q = q.eq(k, v);
   const { count } = await q;
   return (count ?? 0) > 0;
+}
+
+/** The most recent value of a timestamp column for a company (ISO), or null when there is none. */
+async function latestAt(
+  admin: SupabaseClient,
+  table: string,
+  filters: Record<string, string>,
+  column: string,
+): Promise<string | null> {
+  let q = admin.from(table).select(column).not(column, "is", null);
+  for (const [k, v] of Object.entries(filters)) q = q.eq(k, v);
+  const { data } = await q.order(column, { ascending: false }).limit(1);
+  const value = ((data ?? [])[0] as unknown as Record<string, unknown> | undefined)?.[column];
+  return typeof value === "string" ? value : null;
 }
 
 export async function computeStageProgress(
@@ -161,19 +184,26 @@ export async function computeStageProgress(
 
   if (slug === "marketing") {
     const admin = createServiceRoleClient() as unknown as SupabaseClient;
-    const [outreach, social, flags, hasIntro, hasInterest, hasSaved, hasApplication] = await Promise.all([
+    const [outreach, social, flags, manualLast, introLast, interestLast, savedLast, hasApplication] = await Promise.all([
       loadOutreachStatus(company.id),
       getFounderSocialUsage(profileId).catch(() => null),
       loadFeatureFlags(admin as never),
-      hasRow(admin, "intro_requests", { company_id: company.id }),
-      hasRow(admin, "investor_interests", { company_id: company.id }),
-      hasRow(admin, "saved_deals", { company_id: company.id }),
+      latestAt(admin, "founder_manual_outreach_recipients", { company_id: company.id }, "last_sent_at").catch(() => null),
+      latestAt(admin, "intro_requests", { company_id: company.id }, "updated_at").catch(() => null),
+      latestAt(admin, "investor_interests", { company_id: company.id }, "updated_at").catch(() => null),
+      latestAt(admin, "saved_deals", { company_id: company.id }, "updated_at").catch(() => null),
       hasRow(admin, "speaker_applications", { applicant_id: profileId }),
     ]);
-    const inPipeline = hasIntro || hasInterest || hasSaved;
-    // Outreach is done only when both modes are used: automated launched AND
-    // the first manual email sent. Each half is worth 50%.
-    const outreachDone = [outreach.automated.launched, outreach.manual.started].filter(Boolean).length;
+    // Marketing runs on a weekly cycle (Monday to Sunday, PT): a step is done for the
+    // current week once its required action happened this week. Applying to present
+    // is a one time action, so it keeps its all time signal.
+    const week = weekWindow();
+    const manualThisWeek = isInWeek(manualLast, week.startIso);
+    const crmLast = latestIso([introLast, interestLast, savedLast]);
+    const crmThisWeek = isInWeek(crmLast, week.startIso);
+    // Outreach is done for the week only when both modes are used: automated launched
+    // AND a manual email sent this week. Each half is worth 50%.
+    const outreachDone = [outreach.automated.launched, manualThisWeek].filter(Boolean).length;
     const AUTOMATED_HREF = "/founder/deploy?step=outreach&mode=automated";
     const MANUAL_HREF = "/founder/deploy?step=outreach&mode=manual";
     const automatedLine = automatedStatusLine(outreach);
@@ -184,6 +214,9 @@ export async function computeStageProgress(
     const outreachStep: StepProgress = {
       ...step(outreachDone * 50),
       badge: `${outreachDone} of 2`,
+      weekly: true,
+      thisWeekAt: outreachDone === 2 ? manualLast : null,
+      lastDoneAt: outreachDone < 2 && manualLast && !manualThisWeek ? manualLast : null,
       // Two-way door: feature_flags row founder:social_offer = false turns the offer off for everyone.
       socialOffer: isFeatureEnabled(flags, "founder", "social_offer") && Boolean(social?.enabled) && socialUsed === 0 && social?.state !== "reached",
       parts: [
@@ -201,12 +234,12 @@ export async function computeStageProgress(
           key: "manual",
           label: "Manual outreach",
           desc: "Your own emails to contacts you pick.",
-          status: outreach.manual.started ? manualResultsLine(outreach) : "Not started",
+          status: manualThisWeek ? manualResultsLine(outreach) : outreach.manual.started ? "Nothing sent this week" : "Not started",
           howItWorks: ["Pick contacts: My contacts, file, LinkedIn", "3 emails: day 0, 3, 7", "One pager attached"],
           chip: `Manual: ${manualResultsLine(outreach)}`,
-          done: outreach.manual.started,
+          done: manualThisWeek,
           href: MANUAL_HREF,
-          linkLabel: outreach.manual.started ? "Open" : "Start",
+          linkLabel: manualThisWeek ? "Open" : outreach.manual.started ? "Send" : "Start",
         },
         {
           key: "social",
@@ -221,18 +254,26 @@ export async function computeStageProgress(
         },
       ],
       // Send the founder straight to the half that is still missing.
-      primary: !outreach.manual.started
-        ? { label: "Start manual outreach", href: MANUAL_HREF }
+      primary: !manualThisWeek
+        ? { label: outreach.manual.started ? "Send this week's emails" : "Start manual outreach", href: MANUAL_HREF }
         : !outreach.automated.launched
           ? { label: "Open automated outreach", href: AUTOMATED_HREF }
           : undefined,
       doneLink: { label: "Open manual", href: MANUAL_HREF },
     };
-    return rollup({
-      "/founder/deploy": outreachStep,
-      "/founder/investor-pipeline": step(inPipeline ? 100 : 0),
-      "/founder/events/present": step(hasApplication ? 100 : 0),
-    });
+    return {
+      ...rollup({
+        "/founder/deploy": outreachStep,
+        "/founder/investor-pipeline": {
+          ...step(crmThisWeek ? 100 : 0),
+          weekly: true,
+          thisWeekAt: crmThisWeek ? crmLast : null,
+          lastDoneAt: crmThisWeek ? null : crmLast,
+        },
+        "/founder/events/present": step(hasApplication ? 100 : 0),
+      }),
+      week,
+    };
   }
 
   if (slug === "closing") {
