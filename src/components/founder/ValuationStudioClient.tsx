@@ -375,6 +375,15 @@ export function ValuationStudioClient({ profile, saved = [] }: { profile: Valuat
         <p style={{ fontSize: 14, marginBottom: 20, maxWidth: 560, color: C.mute }}>
           Pull what iCapOS already holds on your company, or build a valuation from scratch for a company that isn&apos;t on the platform yet.
         </p>
+        <div role="note" style={{ display: "flex", gap: 10, maxWidth: 560, marginBottom: 20, borderRadius: 12, padding: "12px 14px", background: "#FFF8E6", border: "1px solid #F1D58A" }}>
+          <div aria-hidden="true" style={{ flex: "none", width: 20, height: 20, borderRadius: "50%", background: "#B7791F", color: "#FFFFFF", fontSize: 12, fontWeight: 700, lineHeight: "20px", textAlign: "center", marginTop: 1 }}>i</div>
+          <div>
+            <div style={{ fontFamily: mono, fontSize: 11, letterSpacing: "0.08em", color: "#8A5A0B", marginBottom: 3 }}>PLEASE NOTE</div>
+            <p style={{ fontSize: 14, lineHeight: 1.5, margin: 0, color: "#4A3A12" }}>
+              This tool provides an estimate of valuation only. The final valuation is for you and the investor to decide.
+            </p>
+          </div>
+        </div>
         <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>
           <button type="button" onClick={continueWithProfile} disabled={!profile}
             style={{ textAlign: "left", borderRadius: 8, padding: 20, background: C.panel, border: `1px solid ${C.panelEdge}`, cursor: profile ? "pointer" : "not-allowed", opacity: profile ? 1 : 0.55, color: C.text }}>
