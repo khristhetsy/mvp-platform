@@ -14,13 +14,14 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminInsightsPage({
   searchParams,
-}: Readonly<{ searchParams?: Record<string, string | string[] | undefined> }>) {
+}: Readonly<{ searchParams?: Promise<Record<string, string | string[] | undefined>> }>) {
+  const sp = await searchParams;
   const profile = await requireRole(["admin", "analyst"]);
   const t = await getTranslations("adminPages");
   const windowDays = clampTrendWindowDays(
-    typeof searchParams?.window === "string" ? searchParams.window : null,
+    typeof sp?.window === "string" ? sp.window : null,
   );
-  const view = typeof searchParams?.view === "string" ? searchParams.view : null;
+  const view = typeof sp?.view === "string" ? sp.view : null;
   const insights = await loadPlatformInsights({ window: String(windowDays) });
 
   const topSignals = insights.signals.slice(0, 10);
