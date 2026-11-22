@@ -6,6 +6,10 @@ import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { grantDataRoomAccess, revokeDataRoomAccess, listDataRoomAccess } from "@/lib/data-room/access";
 import { writeAuditLog } from "@/lib/data/audit";
 import { emitActivity } from "@/lib/activity/emit";
+import { sendTransactionalEmail } from "@/lib/email/transactional-send";
+import { absoluteUrl } from "@/lib/activity/email-templates";
+import { founderOnePagerPath } from "@/lib/listing/one-pager-link";
+import { buildDataRoomInviteEmail } from "@/lib/data-room/invite-email";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +17,8 @@ const grantSchema = z.object({
   email: z.string().email(),
   expiresInDays: z.number().int().min(1).max(365).nullable().optional(),
   scope: z.enum(["full", "financials"]).optional(),
+  /** Optional note from the founder, sent in the invitation email. */
+  message: z.string().trim().max(1000).optional(),
 });
 const revokeSchema = z.object({ investorId: z.string().uuid() });
 
@@ -81,6 +87,32 @@ export async function POST(request: Request) {
     title: `Granted data-room access to ${parsed.data.email.trim()}`,
     metadata: { scope: parsed.data.scope, expires_at: expiresAt, action: "granted" },
   });
+
+  // Tell the investor. Best effort: the grant already stands if the email fails.
+  try {
+    const email = buildDataRoomInviteEmail({
+      founderName: auth.profile.full_name ?? auth.profile.email ?? "A founder",
+      companyName: company.company_name,
+      message: parsed.data.message ?? null,
+      onePagerUrl: company.is_published && company.slug ? absoluteUrl(founderOnePagerPath(company.slug)) : null,
+      appUrl: absoluteUrl("/investor/dashboard"),
+      expiresInDays: parsed.data.expiresInDays ?? null,
+    });
+    await sendTransactionalEmail({
+      to: parsed.data.email.trim(),
+      subject: email.subject,
+      body: email.text,
+      html: email.html,
+      founderId: investor.id,
+      notificationType: "data_room_invite",
+      deepLink: "/investor/dashboard",
+      entityType: "company",
+      entityId: company.id,
+      replyTo: auth.profile.email ?? null,
+    });
+  } catch (emailError) {
+    console.error("data-room invite email failed", emailError);
+  }
 
   return NextResponse.json({ grants: await listDataRoomAccess(company.id) });
 }
