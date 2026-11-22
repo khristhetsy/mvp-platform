@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { getFounderSocialUsage } from "@/lib/social/founder-limits";
 import { FounderSocialClient } from "@/components/founder/social/FounderSocialClient";
 import { autoDraft } from "@/lib/social/templates";
+import { isActingAsFounder } from "@/lib/admin/acting-central";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Social media" };
@@ -16,6 +17,7 @@ export default async function FounderSocialPage({ searchParams }: { searchParams
   const profile = await requireRole(["founder"]);
   const { company } = await getActiveCompanyForUser(profile);
   const usage = await getFounderSocialUsage(profile.id).catch(() => null);
+  const acting = await isActingAsFounder();
 
   return (
     <FounderAppShell profileName={profile.full_name ?? profile.email ?? "Founder"} profileSubtitle={company?.company_name ?? "Your company"}>
@@ -30,6 +32,7 @@ export default async function FounderSocialPage({ searchParams }: { searchParams
             founderName={profile.full_name ?? profile.email ?? "You"}
             initialDraft={autoDraft({ company: company?.company_name, description: company?.business_description, industry: company?.industry, raiseBand: company?.funding_amount_band })}
             initialTab={sp.tab ?? null}
+            acting={acting}
           />
         ) : (
           <>
