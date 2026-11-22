@@ -16,7 +16,8 @@ const TWIML_EMPTY = '<?xml version="1.0" encoding="UTF-8"?><Response></Response>
 
 export async function POST(req: NextRequest): Promise<Response> {
   const secret = process.env.VOICE_AGENT_SECRET?.trim();
-  if (secret && req.nextUrl.searchParams.get("s") !== secret) {
+  // Fails closed: with no secret configured nobody can post here, the same as the email webhooks.
+  if (!secret || req.nextUrl.searchParams.get("s") !== secret) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
