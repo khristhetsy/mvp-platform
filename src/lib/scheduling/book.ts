@@ -5,7 +5,7 @@ import { getGoogleBusyIntervals } from "@/lib/integrations/google-freebusy";
 import { listEvents, createEvent, insertLocalEvent } from "@/lib/calendar/events";
 import { loadAvailability } from "./store";
 import { configFromSettings, expandWindows } from "./availability";
-import { createBooking } from "./bookings";
+import { createBooking, claimBookingSlot, finalizeBooking, releaseBookingClaim, attachEventToBooking } from "./bookings";
 import { bookingProfile } from "./booking-profile";
 import { logActivity } from "@/lib/sales/activity";
 import { fireCrmAutomation } from "@/lib/sales/automation";
@@ -108,34 +108,49 @@ export async function bookSlot(input: BookSlotInput): Promise<BookSlotResult> {
     ...(input.answers ?? []).filter((a) => a.value).map((a) => `${a.label}: ${a.value}`),
   ].filter(Boolean).join("\n") || null;
 
-  // Host event (authoritative) — creates the Google event + Meet, invites booker.
-  const hostEvent = await createEvent(admin, input.hostId, {
-    title,
-    description,
-    startTime: input.startTime,
-    endTime: input.endTime,
-    timezone: input.timezone,
-    attendees: input.booker.email ? [{ email: input.booker.email, name: input.booker.name ?? undefined }] : [],
-    addMeet: true,
+  // Claim the slot first. A second request for the same slot fails here instead of
+  // creating a second calendar event. Null means the claim could not be recorded
+  // (database error), in which case booking carries on as before.
+  const claimId = await claimBookingSlot({
+    host_id: input.hostId, start_time: input.startTime, end_time: input.endTime, timezone: input.timezone,
+    event_type: title, booker_name: input.booker.name, booker_email: input.booker.email,
   });
 
-  // Mirror onto the booker's own calendar (only if they have a iCapOS account) —
-  // local only, since the host's Google event already invites them.
-  if (input.booker.id) {
-    await insertLocalEvent(admin, input.booker.id, {
-      title: isAutoTitle ? (hostName ? `Meeting with ${hostName}` : title) : (hostName ? `${title} (with ${hostName})` : title),
-      description: input.note ?? null,
+  let hostEvent: Awaited<ReturnType<typeof createEvent>>;
+  try {
+    // Host event (authoritative) — creates the Google event + Meet, invites booker.
+    hostEvent = await createEvent(admin, input.hostId, {
+      title,
+      description,
       startTime: input.startTime,
       endTime: input.endTime,
       timezone: input.timezone,
-      attendees: hostEmail ? [{ email: hostEmail, name: hostName ?? undefined }] : [],
-      meetUrl: hostEvent.meet_url,
+      attendees: input.booker.email ? [{ email: input.booker.email, name: input.booker.name ?? undefined }] : [],
+      addMeet: true,
     });
+
+    // Mirror onto the booker's own calendar (only if they have a iCapOS account) —
+    // local only, since the host's Google event already invites them.
+    if (input.booker.id) {
+      await insertLocalEvent(admin, input.booker.id, {
+        title: isAutoTitle ? (hostName ? `Meeting with ${hostName}` : title) : (hostName ? `${title} (with ${hostName})` : title),
+        description: input.note ?? null,
+        startTime: input.startTime,
+        endTime: input.endTime,
+        timezone: input.timezone,
+        attendees: hostEmail ? [{ email: hostEmail, name: hostName ?? undefined }] : [],
+        meetUrl: hostEvent.meet_url,
+      });
+    }
+  } catch (err) {
+    if (claimId) await releaseBookingClaim(claimId);
+    throw err;
   }
+  if (claimId) await attachEventToBooking(claimId, hostEvent.id, hostEvent.meet_url).catch(() => {});
 
   // Persist a structured booking (Calendly-style detail) + link it to the CRM and the
   // contact timeline. All best-effort: a failure here must never fail the booking.
-  let bookingId: string | null = null;
+  let bookingId: string | null = claimId;
   let contactCrmId: string | null = null;
   try {
     const answers = (input.answers ?? []).filter((a) => a.value);
@@ -183,7 +198,7 @@ export async function bookSlot(input: BookSlotInput): Promise<BookSlotResult> {
       }
     }
 
-    bookingId = await createBooking({
+    const bookingInput = {
       host_id: input.hostId, event_id: hostEvent.id, event_type: title,
       booker_name: input.booker.name, booker_email: input.booker.email, booker_phone: phoneForStorage(input.booker.phone),
       booker_company: company,
@@ -195,7 +210,12 @@ export async function bookSlot(input: BookSlotInput): Promise<BookSlotResult> {
       // that is why meetings booked outside the /fit funnel counted as zero.
       source_tag: input.source?.tag ?? null,
       source_confidence: input.source?.confidence ?? null,
-    });
+    };
+    if (claimId) {
+      await finalizeBooking(claimId, bookingInput);
+    } else {
+      bookingId = await createBooking(bookingInput);
+    }
 
     if (contactCrmId) {
       const when = new Date(input.startTime).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
