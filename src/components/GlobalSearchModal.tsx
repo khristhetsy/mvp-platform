@@ -258,7 +258,7 @@ const PAGES: PageShortcut[] = [
   { id: "sec-ai-usage-limits", title: "AI usage limits", subtitle: "Administration › Feature Controls", href: "/admin/feature-controls#ai-usage-limits", keywords: ["ai usage limits", "usage limits", "run caps", "founder ai limits", "per founder limits"], workspace: "admin", section: true },
   { id: "sec-upload-limits", title: "Upload limits", subtitle: "Administration › Feature Controls", href: "/admin/feature-controls#upload-limits", keywords: ["upload limits", "file size", "upload size", "import limit"], workspace: "admin", section: true },
   { id: "sec-ir-agent", title: "IR agent controls", subtitle: "Administration › Feature Controls", href: "/admin/feature-controls#ir-agent", keywords: ["ir agent", "johnny", "investor relations agent", "agent controls"], workspace: "admin", section: true },
-  { id: "sec-stage-menu", title: "Stage menu", subtitle: "Administration › Feature Controls", href: "/admin/feature-controls#stage-menu", keywords: ["stage menu", "founder stages", "menu editor", "stages"], workspace: "admin", section: true },
+  { id: "sec-stage-menu", title: "Stage menu", subtitle: "Administration › Feature Controls", href: "/admin/feature-controls", keywords: ["stage menu", "founder stages", "menu editor", "stages"], workspace: "admin", section: true },
   { id: "sec-founder-social", title: "Founder social controls", subtitle: "Administration › Feature Controls", href: "/admin/feature-controls#founder-social", keywords: ["founder social", "social limits", "post limits", "social media limits"], workspace: "admin", section: true },
 ];
 

@@ -3,7 +3,6 @@ import { FounderSocialControls } from "@/components/admin/FounderSocialControls"
 import { getTranslations } from "next-intl/server";
 import { DepartmentsControls } from "@/components/admin/DepartmentsControls";
 import { OutreachAutomationToggle } from "@/components/admin/OutreachAutomationToggle";
-import { StageMenuEditor } from "@/components/admin/StageMenuEditor";
 import { AiUsageLimitsControls } from "@/components/admin/AiUsageLimitsControls";
 import { AiBudgetControls } from "@/components/admin/AiBudgetControls";
 import { UploadLimitsControls } from "@/components/admin/UploadLimitsControls";
@@ -31,7 +30,6 @@ export default async function AdminFeatureControlsPage() {
       <div id="ai-usage-limits" className="scroll-mt-24"><AiUsageLimitsControls /></div>
       <div id="upload-limits" className="scroll-mt-24"><UploadLimitsControls /></div>
       <div id="ir-agent" className="scroll-mt-24"><IrAgentControls /></div>
-      <div id="stage-menu" className="scroll-mt-24"><StageMenuEditor /></div>
       <div id="founder-social" className="scroll-mt-24"><FounderSocialControls /></div>
     </AppShell>
   );

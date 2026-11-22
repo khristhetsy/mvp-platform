@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireApiProfile } from "@/lib/api/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { loadFeatureFlags, disabledHrefsFor, type FeatureAudience } from "@/lib/feature-controls";
-import { getFounderNavV2RolloutPct, getFounderStageMenuHidden } from "@/lib/settings/platform-settings";
+import { getFounderNavV2RolloutPct, getFounderStageMenuHidden, getInvestorStageMenuHidden } from "@/lib/settings/platform-settings";
 import { getAdminHomeSettings } from "@/lib/settings/admin-home";
 import { listFounderSocialLimits } from "@/lib/social/founder-limits";
 
@@ -66,7 +66,11 @@ export async function GET(): Promise<Response> {
   }
 
   const merged =
-    audience === "founder" ? [...new Set([...disabledHrefs, ...(await getFounderStageMenuHidden())])] : disabledHrefs;
+    audience === "founder"
+      ? [...new Set([...disabledHrefs, ...(await getFounderStageMenuHidden())])]
+      : audience === "investor"
+        ? [...new Set([...disabledHrefs, ...(await getInvestorStageMenuHidden())])]
+        : disabledHrefs;
 
   // Odoo-style top menu layout, per workspace. feature_flags row `<workspace>:nav_topmenu`
   // (true/false) overrides; absent = on for admin, off for founder and investor.
