@@ -16,6 +16,7 @@ function db(): SupabaseClient {
 
 const AUTOMATION_KEY = "investor_outreach_automation";
 const FOUNDER_STAGE_MENU_KEY = "founder_stage_menu";
+const INVESTOR_STAGE_MENU_KEY = "investor_stage_menu";
 const UPLOAD_LIMITS_KEY = "upload_limits";
 
 /** Founder document-upload limits (admin-editable). Applies to all founder uploads. */
@@ -62,13 +63,12 @@ export async function setUploadLimits(limits: Partial<UploadLimits>, updatedBy: 
   }
 }
 
-/** Founder-nav menu hrefs hidden per the admin stage-menu editor (global). */
-export async function getFounderStageMenuHidden(): Promise<string[]> {
+async function readStageMenuHidden(key: string): Promise<string[]> {
   try {
     const { data } = await db()
       .from("platform_settings")
       .select("value")
-      .eq("key", FOUNDER_STAGE_MENU_KEY)
+      .eq("key", key)
       .maybeSingle();
     const hidden = (data as { value?: { hidden?: unknown } } | null)?.value?.hidden;
     return Array.isArray(hidden) ? hidden.filter((h): h is string => typeof h === "string") : [];
@@ -77,19 +77,37 @@ export async function getFounderStageMenuHidden(): Promise<string[]> {
   }
 }
 
-export async function setFounderStageMenuHidden(hidden: string[], updatedBy: string | null): Promise<boolean> {
+async function writeStageMenuHidden(key: string, hidden: string[], updatedBy: string | null): Promise<boolean> {
   try {
     const clean = [...new Set(hidden.filter((h) => typeof h === "string" && h.startsWith("/")))];
     const { error } = await db()
       .from("platform_settings")
       .upsert(
-        { key: FOUNDER_STAGE_MENU_KEY, value: { hidden: clean }, updated_by: updatedBy, updated_at: new Date().toISOString() },
+        { key, value: { hidden: clean }, updated_by: updatedBy, updated_at: new Date().toISOString() },
         { onConflict: "key" },
       );
     return !error;
   } catch {
     return false;
   }
+}
+
+/** Founder-nav menu hrefs hidden per the admin stage-menu editor (global). */
+export async function getFounderStageMenuHidden(): Promise<string[]> {
+  return readStageMenuHidden(FOUNDER_STAGE_MENU_KEY);
+}
+
+export async function setFounderStageMenuHidden(hidden: string[], updatedBy: string | null): Promise<boolean> {
+  return writeStageMenuHidden(FOUNDER_STAGE_MENU_KEY, hidden, updatedBy);
+}
+
+/** Investor-nav menu hrefs hidden from the Feature Controls page (global). */
+export async function getInvestorStageMenuHidden(): Promise<string[]> {
+  return readStageMenuHidden(INVESTOR_STAGE_MENU_KEY);
+}
+
+export async function setInvestorStageMenuHidden(hidden: string[], updatedBy: string | null): Promise<boolean> {
+  return writeStageMenuHidden(INVESTOR_STAGE_MENU_KEY, hidden, updatedBy);
 }
 
 /**
