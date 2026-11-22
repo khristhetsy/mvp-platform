@@ -153,12 +153,13 @@ export async function POST(req: NextRequest): Promise<Response> {
       target = body.options.map((o) => ({ ...o, description: o.description ?? null }));
       note = body.note?.trim() || "Saved";
     } else {
-      const { data } = await db()
+      const { data, error: versionError } = await db()
         .from("profile_field_versions")
         .select("snapshot")
         .eq("list", body.list)
         .eq("version", body.version)
         .maybeSingle();
+      if (versionError) return NextResponse.json({ error: "Could not load that version. Please try again." }, { status: 500 });
       const snap = (data as { snapshot?: DraftOption[] } | null)?.snapshot;
       if (!snap) return NextResponse.json({ error: "That version no longer exists." }, { status: 404 });
       // Options added after that version stay, retired, so no answer is orphaned.

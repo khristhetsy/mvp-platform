@@ -45,11 +45,13 @@ export async function POST(req: Request) {
   const blocked = await billingOwnerOnlyResponse(user.id);
   if (blocked) return blocked;
 
-  const { data } = await admin
+  const { data, error: loadError } = await admin
     .from("subscriptions")
     .select("id, plan_type, ls_subscription_id, ls_variant_id, stripe_subscription_id, current_period_end, cancel_at_period_end, cancel_reason, pending_plan_type")
     .eq("profile_id", user.id)
     .maybeSingle();
+  // A failed read is not "no subscription": do not tell a paying founder they have none.
+  if (loadError) return NextResponse.json({ error: "We could not load your subscription. Please try again." }, { status: 500 });
   const sub = data as Sub | null;
   // Premium paid by wire has no Lemon Squeezy subscription. Premium bought by card does,
   // and follows the card rules below so Stop payment really cancels it at Lemon Squeezy.
