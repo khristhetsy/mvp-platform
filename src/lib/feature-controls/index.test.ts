@@ -70,6 +70,62 @@ describe("founder menu gaps", () => {
   });
 });
 
+describe("admin menu gaps", () => {
+  const governed = new Set(Object.values(FEATURE_HREFS.admin).flat());
+
+  it("governs the admin menu pages that used to have no switch", () => {
+    for (const href of [
+      "/admin/contacts",
+      "/admin/ceo",
+      "/admin/sales/pipeline",
+      "/admin/ir/projects",
+      "/admin/accounting/invoices",
+      "/admin/social",
+      "/admin/linkedin",
+      "/admin/ai-agent",
+      "/admin/voice/calls",
+      "/admin/meetings",
+      "/admin/activity/alerts",
+      "/admin/ir-funnel",
+      "/admin/fit",
+      "/admin/support/log",
+      "/admin/founders-stuck",
+      "/admin/ai-usage",
+      "/admin/manual",
+      "/admin/investors/enrich",
+      "/admin/crm/unclassified",
+      "/admin/crm/connectors",
+      "/admin/prospect-intros",
+      "/admin/partner-scores",
+      "/admin/private-market/weekly-emailer",
+      "/admin/data-room",
+      "/admin/marketing/aeo",
+      "/admin/events/brochure",
+      "/admin/funnels",
+      "/admin/message-activity",
+      "/admin/learning/coach",
+      "/admin/pricing",
+      "/admin/accounts",
+      "/admin/scheduled-jobs",
+    ]) {
+      expect(governed.has(href), `${href} has no feature switch`).toBe(true);
+    }
+  });
+
+  it("never lets an admin switch hide the essentials", () => {
+    for (const href of ["/admin", "/admin/profile", "/admin/profile-fields", "/admin/feature-controls"]) {
+      expect(governed.has(href), `${href} must stay always on`).toBe(false);
+    }
+  });
+
+  it("shares the Private Market switch across audiences without hiding another audience's link", () => {
+    const hidden = disabledHrefsFor({ "admin:private_market": false }, "admin");
+    expect(hidden).toContain("/admin/private-market/weekly-emailer");
+    expect(hidden).not.toContain("/investor/opportunities");
+    expect(disabledHrefsFor({ "admin:private_market": false }, "founder")).toHaveLength(0);
+  });
+});
+
 describe("feature flag semantics", () => {
   const map: FeatureFlagMap = { "founder:cap_table": false };
 
