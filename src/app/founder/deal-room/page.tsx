@@ -95,11 +95,13 @@ export default async function FounderDealRoomIndexPage() {
             metadata={`${(rooms ?? []).length} rooms`}
           />
 
-          <DealRoomOnePagerStatus
-            isPublished={isPublished}
-            slug={company?.slug ?? null}
-            publishedAt={company?.published_at ?? null}
-          />
+          {!isPublished ? (
+            <DealRoomOnePagerStatus
+              isPublished={isPublished}
+              slug={company?.slug ?? null}
+              publishedAt={company?.published_at ?? null}
+            />
+          ) : null}
 
           <WorkspacePanel title={t("rooms")} subtitle={t("your_company_deal_rooms")}>
             {(rooms ?? []).length === 0 ? (
