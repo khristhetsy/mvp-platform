@@ -145,7 +145,10 @@ export async function computeStageProgress(
     return rollup({
       // Keyed on the step's own href — the rating step links to the rating.
       "/founder/readiness": readinessStep,
-      "/founder/business-plan": { ...step(planProgress.percent), note: naSummaryNote(planProgress.naTitles, "section") },
+      // An uploaded business plan document completes the step, same as the pitch deck.
+      "/founder/business-plan": hasDoc("Business plan")
+        ? step(100)
+        : { ...step(planProgress.percent), note: naSummaryNote(planProgress.naTitles, "section") },
       "/founder/pitch-deck": hasDoc("Pitch deck")
         ? step(100)
         : isNaDoc("Pitch deck")
