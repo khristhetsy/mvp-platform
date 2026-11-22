@@ -19,9 +19,19 @@ export async function getPage(id: string): Promise<AeoPage | null> {
   return data ? rowToPage(data as AeoPageRow) : null;
 }
 
-/** Published page by slug — the public render path. */
+/**
+ * Published page by slug, the public render path. A database error throws instead
+ * of returning null: the page is cached for an hour, and null would cache a
+ * "not found" for a page that exists. A thrown error keeps the last good copy.
+ */
 export async function getPublishedBySlug(slug: string): Promise<AeoPage | null> {
-  const { data } = await db().from("aeo_pages").select(COLS).eq("slug", slug).eq("status", "published").maybeSingle();
+  const { data, error } = await db()
+    .from("aeo_pages")
+    .select(COLS)
+    .eq("slug", slug)
+    .eq("status", "published")
+    .maybeSingle();
+  if (error) throw new Error(`Could not load published page: ${error.message}`);
   return data ? rowToPage(data as AeoPageRow) : null;
 }
 
