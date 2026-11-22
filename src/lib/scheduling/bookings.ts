@@ -57,8 +57,8 @@ export type CreateBookingInput = Omit<
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return createServiceRoleClient(); }
 
-export async function createBooking(input: CreateBookingInput): Promise<string | null> {
-  const { data, error } = await db().from("scheduling_bookings").insert({
+function bookingRow(input: CreateBookingInput) {
+  return {
     host_id: input.host_id,
     event_id: input.event_id,
     event_type: input.event_type,
@@ -78,9 +78,50 @@ export async function createBooking(input: CreateBookingInput): Promise<string |
     source_set_by: input.source_set_by ?? null,
     source_set_at: input.source_set_at ?? null,
     status: input.status ?? "confirmed",
-  }).select("id").single();
+  };
+}
+
+export async function createBooking(input: CreateBookingInput): Promise<string | null> {
+  const { data, error } = await db().from("scheduling_bookings").insert(bookingRow(input)).select("id").single();
   if (error) return null;
   return (data?.id as string) ?? null;
+}
+
+/**
+ * Reserve a slot before the calendar event exists. A partial unique index on
+ * (host_id, start_time) for confirmed bookings makes a second claim for the same
+ * slot fail, which closes the gap between the availability check and the insert.
+ * Throws when the slot is taken. Any other database error returns null so a
+ * bookkeeping failure never blocks a booking (the old behaviour).
+ */
+export async function claimBookingSlot(input: {
+  host_id: string; start_time: string; end_time: string; timezone: string;
+  event_type: string; booker_name: string | null; booker_email: string | null;
+}): Promise<string | null> {
+  const { data, error } = await db().from("scheduling_bookings").insert({
+    host_id: input.host_id, start_time: input.start_time, end_time: input.end_time, timezone: input.timezone,
+    event_type: input.event_type, booker_name: input.booker_name, booker_email: input.booker_email, status: "confirmed",
+  }).select("id").single();
+  if (error) {
+    if ((error as { code?: string }).code === "23505") throw new Error("That time is no longer available.");
+    return null;
+  }
+  return (data?.id as string) ?? null;
+}
+
+/** Fill in a claimed booking with the full record once the calendar event exists. */
+export async function finalizeBooking(id: string, input: CreateBookingInput): Promise<void> {
+  await db().from("scheduling_bookings").update(bookingRow(input)).eq("id", id);
+}
+
+/** Link a claimed booking to its calendar event as soon as the event exists. */
+export async function attachEventToBooking(id: string, eventId: string, meetUrl: string | null): Promise<void> {
+  await db().from("scheduling_bookings").update({ event_id: eventId, meet_url: meetUrl }).eq("id", id);
+}
+
+/** Give a claimed slot back when the booking did not go through. */
+export async function releaseBookingClaim(id: string): Promise<void> {
+  await db().from("scheduling_bookings").delete().eq("id", id);
 }
 
 function mapRow(r: Record<string, unknown>): Booking {
