@@ -43,6 +43,7 @@ function normalizeDocumentType(input: string) {
 const FOUNDER_ALLOWED_DOCUMENT_TYPES = new Set([
   "PITCH_DECK",
   "BUSINESS_PLAN",
+  "TERM_SHEET",
   "FINANCIAL_STATEMENTS",
   "FINANCIALS",           // alias — normalised to FINANCIAL_STATEMENTS on checklist
   "CAP_TABLE",

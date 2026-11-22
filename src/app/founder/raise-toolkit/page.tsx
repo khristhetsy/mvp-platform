@@ -74,6 +74,13 @@ function ToolIcon({ name }: Readonly<{ name: string }>) {
 
 const TOOLS = [
   {
+    href: "/founder/term-sheet-creator",
+    label: "Term sheet creator",
+    description: "Fill in a direct to investor Convertible Note, SAFE or Series A term sheet from your Round structure or from scratch, then save it to Documents.",
+    icon: "document",
+    tag: "Create",
+  },
+  {
     href: "/founder/term-sheet",
     label: "Term sheet explainer",
     description: "Decode every clause in a term sheet — valuation, pro-rata rights, liquidation preferences, anti-dilution, and more.",

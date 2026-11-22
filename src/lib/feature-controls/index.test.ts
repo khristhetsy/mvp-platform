@@ -57,6 +57,7 @@ describe("founder menu gaps", () => {
       "/founder/deploy",
       "/founder/events/present",
       "/founder/offering-type",
+      "/founder/term-sheet-creator",
     ]) {
       expect(governed.has(href), `${href} has no feature switch`).toBe(true);
     }

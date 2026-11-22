@@ -124,6 +124,7 @@ export const documentUploadSchema = z.object({
     "PITCH_DECK",
     "CAP_TABLE",
     "BUSINESS_PLAN",
+    "TERM_SHEET",
     "FINANCIAL_STATEMENTS",
     "FINANCIALS",
     "TEAM_BIOS",

@@ -52,6 +52,7 @@ import {
   FileCheck,
   FileInput,
   FilePen,
+  FilePenLine,
   FileSearch,
   FileText,
   Files,
@@ -180,6 +181,7 @@ export const workspaceNavIconByHref: Record<string, LucideIcon> = {
   "/founder/readiness/data-room": FolderOpen,
   "/founder/preview": FileText, // One pager
   "/founder/business-plan": BookOpen,
+  "/founder/term-sheet-creator": FilePenLine,
   "/founder/pitch-deck": Presentation,
   "/founder/pitch-deck-analyzer": ScanLine,
   "/founder/market-claim": Crosshair,

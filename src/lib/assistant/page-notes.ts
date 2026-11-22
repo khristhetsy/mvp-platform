@@ -31,6 +31,7 @@ export const PAGE_NOTES: Record<string, string> = {
   "/founder/market-claim": "Market claim grader: grades the market narrative the way the investor network reads it, then shows the objections reviewers raise and what clears them.",
   "/founder/pitch-practice": "Pitch practice: rehearse the pitch with an AI simulator.",
   "/founder/board-prep": "Board meeting prep: prepare materials and talking points for a board meeting.",
+  "/founder/term-sheet-creator": "Term sheet creator: fills in the blanks of a direct to investor Convertible Note, SAFE or Series A term sheet from the Round structure or from scratch. The clauses stay as written. iCFO does not give legal or compliance advice.",
   "/founder/term-sheet": "Term sheet explainer: plain language explanations of term sheet terms (educational, not legal advice).",
   "/founder/kpi-glossary": "KPI glossary: definitions of the metrics investors ask about.",
   "/founder/reg-cf": "Reg CF materials: materials for founders running a Reg CF offering.",
