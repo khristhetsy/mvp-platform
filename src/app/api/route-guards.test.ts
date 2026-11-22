@@ -47,7 +47,6 @@ const OPEN_ROUTES: Record<string, string> = {
   "fit/sectors/route.ts": "public sector list, read only",
   "scheduling/slots/route.ts": "public booking page, read only",
   "ir-agent/[agentId]/reply/route.ts": "public AI reply, rate limit and budget live inside agentReply",
-  "events/[slug]/assistant/route.ts": "public event assistant, no rate limit or AI budget yet",
 };
 
 // Public on purpose. Each one is rate limited. Add a route here only with a reason.
@@ -57,6 +56,7 @@ const PUBLIC_ROUTES: Record<string, string> = {
   "johnny/reply/route.ts": "public site assistant, rate limited and budget capped",
   "scheduling/book/route.ts": "public booking page, rate limited",
   "events/[slug]/register/route.ts": "public event registration, rate limited",
+  "events/[slug]/assistant/route.ts": "public event assistant, rate limited, monthly public AI budget applies",
   "ai/route.ts": "public site assistant, rate limited and AI budget capped",
   "assessment/route.ts": "public form, rate limited",
   "auth/forgot-password/route.ts": "public form, rate limited",
