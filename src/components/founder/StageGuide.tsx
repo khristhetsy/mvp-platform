@@ -39,9 +39,18 @@ const PT_DATE = new Intl.DateTimeFormat("en-US", {
 });
 
 function completedLabel(sp: StepProgress | undefined): string {
-  if (!sp?.completedAt) return "Completed";
-  const d = new Date(sp.completedAt);
+  // A weekly step shows when it was done this week, not the first time ever.
+  const at = sp?.thisWeekAt ?? sp?.completedAt;
+  if (!at) return "Completed";
+  const d = new Date(at);
   return Number.isNaN(d.getTime()) ? "Completed" : `Completed ${PT_DATE.format(d)}`;
+}
+
+/** "Nov 12, 2026" from an ISO timestamp, or null when unreadable. */
+function dateLabel(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? null : PT_DATE.format(d);
 }
 
 function pctLabel(p: StepProgress | undefined): string | null {
@@ -124,10 +133,25 @@ export function StageGuideView({
         </div>
       ) : null}
 
+      {/* Weekly stage (Marketing): which week this is and when it resets. */}
+      {progress?.week ? (
+        <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-[var(--border-subtle)] bg-white px-4 py-3">
+          <div>
+            <p className="text-sm font-semibold text-[var(--text-primary)]">This week: {progress.week.label}</p>
+            <p className="text-xs text-[var(--text-muted)]">Resets {progress.week.resetsLabel}</p>
+          </div>
+          <span className="text-sm font-semibold text-[var(--text-primary)]">{doneCount} of {total} done</span>
+        </div>
+      ) : null}
+
       {progress && progress.overall !== null && (
         <div className="mt-4">
           <div className="mb-1 flex items-center justify-between text-xs text-[var(--text-muted)]">
-            <span>Materials progress <span className="text-slate-400">· helps your rating</span></span>
+            {progress.week ? (
+              <span>This week&apos;s progress</span>
+            ) : (
+              <span>Materials progress <span className="text-slate-400">· helps your rating</span></span>
+            )}
             <span>{progress.overall}%</span>
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-slate-100">
@@ -141,8 +165,17 @@ export function StageGuideView({
         <div className="mt-6 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
           <CheckCircle2 className="h-6 w-6 flex-none text-emerald-600" aria-hidden="true" />
           <div className="flex-1 text-sm text-emerald-900">
-            <p className="font-semibold">Stage {stageNumber ?? ""} complete</p>
-            <p>Nothing left here. Edit any step anytime.</p>
+            {progress.week ? (
+              <>
+                <p className="font-semibold">All steps done for this week</p>
+                <p>They reopen {progress.week.resetsLabel}.</p>
+              </>
+            ) : (
+              <>
+                <p className="font-semibold">Stage {stageNumber ?? ""} complete</p>
+                <p>Nothing left here. Edit any step anytime.</p>
+              </>
+            )}
           </div>
           {nextStageSlug ? (
             <Link
@@ -158,7 +191,11 @@ export function StageGuideView({
           <p className="font-semibold">
             {doneCount} of {total} done
           </p>
-          <p>Completed steps are saved. Open one only if you want to edit it.</p>
+          <p>
+            {progress.week
+              ? "Done steps stay done until the week resets."
+              : "Completed steps are saved. Open one only if you want to edit it."}
+          </p>
         </div>
       ) : null}
 
@@ -196,8 +233,18 @@ export function StageGuideView({
                   /* Completed: one line, date, and an Edit link. No need to go back. */
                   <div className="flex items-center gap-3 rounded-xl border border-[var(--border-subtle)] bg-white px-4 py-3">
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-sm font-semibold text-[var(--text-primary)]">{step.title}</h3>
+                      <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+                        {step.title}
+                        {sp?.weekly ? (
+                          <span className="ml-2 rounded-md bg-emerald-100 px-2 py-0.5 align-middle text-[10px] font-bold uppercase text-emerald-800">
+                            Completed this week
+                          </span>
+                        ) : null}
+                      </h3>
                       <p className="text-xs text-emerald-700">{completedLabel(sp)}</p>
+                      {sp?.weekly && progress?.week ? (
+                        <p className="text-xs text-slate-500">Reopens {progress.week.resetsLabel}</p>
+                      ) : null}
                       {sp?.note ? (
                         <p className="mt-1.5 inline-block rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-600">{sp.note}</p>
                       ) : null}
@@ -236,7 +283,7 @@ export function StageGuideView({
                       className="inline-flex flex-none items-center gap-1.5 self-start rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
                     >
                       <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-                      Edit
+                      {sp?.weekly ? "Open again" : "Edit"}
                     </Link>
                   </div>
                 ) : (
@@ -277,6 +324,9 @@ export function StageGuideView({
                       </div>
                     )}
                     <p className="mt-2 text-sm text-[var(--text-muted)]">{step.desc}</p>
+                    {sp?.weekly && dateLabel(sp.lastDoneAt) ? (
+                      <p className="mt-1 text-xs text-slate-400">Last done {dateLabel(sp.lastDoneAt)}</p>
+                    ) : null}
                     {sp?.note ? (
                       <p className="mt-2 inline-block rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-600">{sp.note}</p>
                     ) : null}

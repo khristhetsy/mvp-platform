@@ -17,14 +17,18 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import type { StageGuide } from "@/lib/founder/stage-guides";
 import type { StageProgress, StepProgress } from "@/lib/founder/stage-progress";
+import { isInWeek } from "@/lib/founder/week";
 
-type MemoryRow = { step_href: string; first_visited_at: string | null; completed_at: string | null };
+type MemoryRow = { step_href: string; first_visited_at: string | null; completed_at: string | null; updated_at: string | null };
 
 function db(): SupabaseClient {
   return createServiceRoleClient() as unknown as SupabaseClient;
 }
 
-/** Record that the founder opened a guide step. First visit wins. */
+/**
+ * Record that the founder opened a guide step. The first visit sets first_visited_at.
+ * Later visits only refresh updated_at, which weekly stages read as "last opened".
+ */
 export async function recordStepVisit(companyId: string, stepHref: string): Promise<void> {
   try {
     const now = new Date().toISOString();
@@ -35,7 +39,14 @@ export async function recordStepVisit(companyId: string, stepHref: string): Prom
       .eq("company_id", companyId)
       .eq("step_href", stepHref)
       .maybeSingle();
-    if ((data as { first_visited_at?: string | null } | null)?.first_visited_at) return;
+    if ((data as { first_visited_at?: string | null } | null)?.first_visited_at) {
+      await client
+        .from("founder_stage_step_progress")
+        .update({ updated_at: now })
+        .eq("company_id", companyId)
+        .eq("step_href", stepHref);
+      return;
+    }
     await client
       .from("founder_stage_step_progress")
       .upsert({ company_id: companyId, step_href: stepHref, first_visited_at: now, updated_at: now }, { onConflict: "company_id,step_href" });
@@ -59,7 +70,7 @@ export async function applyStepMemory(companyId: string, guide: StageGuide, prog
   try {
     const { data } = await db()
       .from("founder_stage_step_progress")
-      .select("step_href, first_visited_at, completed_at")
+      .select("step_href, first_visited_at, completed_at, updated_at")
       .eq("company_id", companyId)
       .in("step_href", guide.steps.map((s) => s.href));
     rows = (data ?? []) as MemoryRow[];
@@ -69,6 +80,7 @@ export async function applyStepMemory(companyId: string, guide: StageGuide, prog
   const byHref = new Map(rows.map((r) => [r.step_href, r]));
 
   const now = new Date().toISOString();
+  const weekStart = progress.week?.startIso;
   const stamps: { company_id: string; step_href: string; completed_at: string; updated_at: string; first_visited_at: string | null }[] = [];
 
   for (const s of guide.steps) {
@@ -76,7 +88,18 @@ export async function applyStepMemory(companyId: string, guide: StageGuide, prog
     let sp = steps[s.href];
     const measured = sp && sp.percent !== null;
     if (!measured && s.doneOnVisit) {
-      sp = mem?.first_visited_at ? { percent: 100, state: "done" } : { percent: null, state: "unknown" };
+      if (weekStart) {
+        // Weekly stage: opened this week counts as done for this week only. updated_at is
+        // the last time the founder opened it.
+        const visited = Boolean(mem?.first_visited_at);
+        const lastOpened = mem?.updated_at ?? mem?.first_visited_at ?? null;
+        const thisWeek = visited && isInWeek(lastOpened, weekStart);
+        sp = thisWeek
+          ? { percent: 100, state: "done", weekly: true, thisWeekAt: lastOpened }
+          : { percent: null, state: "unknown", weekly: true, lastDoneAt: visited ? lastOpened : null };
+      } else {
+        sp = mem?.first_visited_at ? { percent: 100, state: "done" } : { percent: null, state: "unknown" };
+      }
       steps[s.href] = sp;
     }
     if (sp?.state === "done") {
@@ -98,5 +121,5 @@ export async function applyStepMemory(companyId: string, guide: StageGuide, prog
 
   const measured = Object.values(steps).map((s) => s.percent).filter((p): p is number => p != null);
   const overall = measured.length ? Math.round(measured.reduce((a, b) => a + b, 0) / measured.length) : null;
-  return { steps, overall };
+  return { ...progress, steps, overall };
 }
