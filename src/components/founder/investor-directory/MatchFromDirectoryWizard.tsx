@@ -10,6 +10,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useVocabulary } from "@/lib/vocabulary/provider";
 import type { DirectoryTier, FounderDirectoryAccess } from "@/lib/investor-directory/types";
+import type { VocabularyOption } from "@/lib/vocabulary/lists";
+import { splitProfileCsv } from "@/lib/profile/options";
 
 type Row = {
   id: string; firm: string; contact_name: string | null; city: string | null; state: string | null;
@@ -22,6 +24,19 @@ type Payload = {
 type Picks = { type: string[]; stage: string[]; industry: string[]; hasEmail: boolean; investingNow: boolean };
 
 const STEPS = ["Criteria", "Matches", "Plan space", "Done"];
+
+/** Company profile values the Criteria step can start from (Import my matches). */
+export type DirectoryDefaults = { industry?: string | null; fundingStage?: string | null; investorTypes?: string | null };
+
+/** Profile answers are stored as a slug or a label; keep the ones this list knows. */
+function toSlugs(all: VocabularyOption[], values: string[]): string[] {
+  const out: string[] = [];
+  for (const v of values) {
+    const hit = all.find((o) => o.slug === v || o.label.toLowerCase() === v.toLowerCase());
+    if (hit && !out.includes(hit.slug)) out.push(hit.slug);
+  }
+  return out;
+}
 const n = (v: number) => v.toLocaleString("en-US");
 
 function Chips({ options, value, onChange }: Readonly<{ options: { slug: string; label: string }[]; value: string[]; onChange: (v: string[]) => void }>) {
@@ -45,13 +60,21 @@ function Chips({ options, value, onChange }: Readonly<{ options: { slug: string;
   );
 }
 
-export function MatchFromDirectoryWizard({ onClose, onImported }: Readonly<{ onClose: () => void; onImported: () => void }>) {
+export function MatchFromDirectoryWizard({ onClose, onImported, defaults }: Readonly<{ onClose: () => void; onImported: () => void; defaults?: DirectoryDefaults }>) {
   const types = useVocabulary("investor_type");
   const stages = useVocabulary("funding_stage");
   const industries = useVocabulary("industry");
 
   const [step, setStep] = useState(1);
-  const [picks, setPicks] = useState<Picks>({ type: [], stage: [], industry: [], hasEmail: true, investingNow: false });
+  const [picks, setPicks] = useState<Picks>(() => ({
+    type: toSlugs(types.all, splitProfileCsv(defaults?.investorTypes)),
+    stage: toSlugs(stages.all, defaults?.fundingStage ? [defaults.fundingStage] : []),
+    industry: toSlugs(industries.all, defaults?.industry ? [defaults.industry] : []),
+    hasEmail: true,
+    investingNow: false,
+  }));
+  // Only claim "from your profile" when something actually carried over.
+  const [fromProfile] = useState(() => picks.type.length + picks.stage.length + picks.industry.length > 0);
   const [data, setData] = useState<Payload | null>(null);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -205,6 +228,7 @@ export function MatchFromDirectoryWizard({ onClose, onImported }: Readonly<{ onC
           {step === 1 ? (
             <div className="space-y-4">
               <p className="text-slate-500">Choose who you want. Leave a group empty to include everyone in it.</p>
+              {fromProfile ? <p className="rounded-lg bg-[#E6F1FB] px-3 py-2 text-[12.5px] text-[#0C447C]">Pre-filled from your company profile. Change anything you like.</p> : null}
               <div><p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Investor type</p><Chips options={types.options} value={picks.type} onChange={(v) => setPicks((p) => ({ ...p, type: v }))} /></div>
               <div><p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Stage</p><Chips options={stages.options} value={picks.stage} onChange={(v) => setPicks((p) => ({ ...p, stage: v }))} /></div>
               <div><p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Industry</p><Chips options={industries.options} value={picks.industry} onChange={(v) => setPicks((p) => ({ ...p, industry: v }))} /></div>

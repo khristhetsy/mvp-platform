@@ -12,7 +12,7 @@
 
 import Link from "next/link";
 import { ContactImportDialog } from "@/components/founder/outreach/ContactImportDialog";
-import { MatchFromDirectoryWizard } from "@/components/founder/investor-directory/MatchFromDirectoryWizard";
+import { MatchFromDirectoryWizard, type DirectoryDefaults } from "@/components/founder/investor-directory/MatchFromDirectoryWizard";
 import type { HoldStatus } from "@/lib/investor-directory/limits";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -73,7 +73,9 @@ function Banner({ msg }: { msg: Msg }) {
   );
 }
 
-export function LaunchManualOutreach({ contacts }: { contacts: OutreachAudienceContact[] }) {
+export function LaunchManualOutreach({ contacts, directoryDefaults }: { contacts: OutreachAudienceContact[]; directoryDefaults?: DirectoryDefaults }) {
+  // "Import my matches" only shows when the company profile has something to match on.
+  const canMatch = !!(directoryDefaults?.industry || directoryDefaults?.fundingStage || directoryDefaults?.investorTypes);
   // ---- Campaign ----
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [subject, setSubject] = useState(DEFAULT_SUBJECT);
@@ -103,6 +105,7 @@ export function LaunchManualOutreach({ contacts }: { contacts: OutreachAudienceC
   const [menuOpen, setMenuOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [directoryOpen, setDirectoryOpen] = useState(false);
+  const [matchesOpen, setMatchesOpen] = useState(false);
   const [hold, setHold] = useState<HoldStatus | null>(null);
   const [form, setForm] = useState({ name: "", firm: "", email: "", type: "" });
   const [docsOpen, setDocsOpen] = useState(false);
@@ -509,6 +512,11 @@ export function LaunchManualOutreach({ contacts }: { contacts: OutreachAudienceC
             ))}
           </select>
         ) : null}
+        {canMatch ? (
+          <button type="button" className="rounded-lg border-2 border-[#1A6CE4] bg-white px-3.5 py-2 text-[13px] font-semibold text-[#1A6CE4] hover:bg-blue-50" onClick={() => setMatchesOpen(true)}>
+            Import my matches
+          </button>
+        ) : null}
         <div className="relative">
           <button type="button" className={btnPrimary} aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((v) => !v)}>
             + Add contacts <i className="ti ti-chevron-down" aria-hidden="true" />
@@ -599,6 +607,16 @@ export function LaunchManualOutreach({ contacts }: { contacts: OutreachAudienceC
           onImported={async (count) => {
             setImportOpen(false);
             await reloadAndSelectNew(`${count.toLocaleString()} contact${count === 1 ? "" : "s"} imported to My contacts and added to this wave.`);
+          }}
+        />
+      ) : null}
+      {matchesOpen ? (
+        <MatchFromDirectoryWizard
+          defaults={directoryDefaults}
+          onClose={() => setMatchesOpen(false)}
+          onImported={() => {
+            setMatchesOpen(false);
+            void reloadAndSelectNew("Matched investors imported to My contacts and added to this wave.");
           }}
         />
       ) : null}
