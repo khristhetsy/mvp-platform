@@ -31,15 +31,15 @@ export type OutreachAudienceContact = {
   detail?: string | null;
 };
 
-const DEFAULT_SUBJECT = "{{first_name}}, a quick intro to {{company}}";
-const DEFAULT_BODY =
+export const DEFAULT_SUBJECT = "{{first_name}}, a quick intro to {{company}}";
+export const DEFAULT_BODY =
   "Hi {{first_name}},\n\nBased on your focus in {{sector}}, {{company}} may be a fit. Our one pager is attached.\n\nOpen to a quick intro?";
-const DEFAULT_SEQUENCE: SeqStep[] = [
+export const DEFAULT_SEQUENCE: SeqStep[] = [
   { label: "Initial email", dayOffset: 0 },
   { label: "Follow up", dayOffset: 3 },
   { label: "Closing the loop", dayOffset: 7 },
 ];
-const SOURCE_ORDER = ["Imported", "Added by you", "Introduced", "From investor directory"];
+export const SOURCE_ORDER = ["Imported", "Added by you", "Introduced", "From investor directory"];
 const SOURCE_STYLE: Record<string, string> = {
   Introduced: "bg-emerald-50 text-emerald-700",
   Imported: "bg-indigo-50 text-indigo-700",
@@ -47,7 +47,7 @@ const SOURCE_STYLE: Record<string, string> = {
   "From investor directory": "bg-violet-50 text-violet-700",
 };
 
-function stageOf(r: RecipientStatus): { label: string; cls: string } {
+export function stageOf(r: RecipientStatus): { label: string; cls: string } {
   if (r.repliedAt) return { label: "Replied", cls: "bg-teal-50 text-teal-700" };
   if (r.clickedAt) return { label: "Clicked", cls: "bg-teal-50 text-teal-700" };
   if (r.openedAt) return { label: "Opened", cls: "bg-emerald-50 text-emerald-700" };
@@ -74,7 +74,7 @@ function downloadCsv(rows: OutreachContact[], name: string) {
   URL.revokeObjectURL(url);
 }
 
-function fromAudience(c: OutreachAudienceContact): OutreachContact {
+export function fromAudience(c: OutreachAudienceContact): OutreachContact {
   return { id: c.id, name: c.name, email: c.email, firm: null, investorType: null, sectors: null, source: "Added by you", detail: c.detail ?? null };
 }
 
@@ -97,7 +97,7 @@ function dotList(v: string | null | undefined): string[] {
   return (v ?? "").split(/[,;]/).map((x) => x.trim()).filter(Boolean);
 }
 
-async function fetchContacts(): Promise<OutreachContact[] | null> {
+export async function fetchContacts(): Promise<OutreachContact[] | null> {
   try {
     const res = await fetch("/api/founder/investor-contacts");
     if (!res.ok) return null;
@@ -121,7 +121,7 @@ async function fetchContacts(): Promise<OutreachContact[] | null> {
   }
 }
 
-async function fetchLists(): Promise<{ id: string; name: string; contactIds: string[] }[] | null> {
+export async function fetchLists(): Promise<{ id: string; name: string; contactIds: string[] }[] | null> {
   try {
     const res = await fetch("/api/founder/outreach/lists");
     if (!res.ok) return null;
