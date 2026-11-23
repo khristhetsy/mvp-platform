@@ -48,6 +48,14 @@ type Msg = { tone: "ok" | "error"; text: string } | null;
 type SavedList = { id: string; name: string; contactIds: string[] };
 
 const STEPS = ["Investors", "Message", "Attachments", "Follow ups", "Review and send"] as const;
+/** One line per wizard step, shown under the stepper. */
+const STEP_HELP = [
+  "Select the investors you want to reach, then press Next. A small, researched first wave works better than a blast. Contacts with no email are skipped.",
+  "Write your subject and message, or let the AI agent draft it. Check the preview on the right, then press Next.",
+  "Choose what to attach, such as your one pager, an agent link or data room PDFs. Attachments are optional. Press Next when ready.",
+  "Turn automatic follow ups on or off, and choose whether to stop when an investor replies. Press Next to continue.",
+  "Check the counts, tick the three confirmations, then press Start campaign. Only selected investors with an email address receive it.",
+] as const;
 const CHECKS = [
   "I have checked the message and merge fields in the preview",
   "I make no promise of returns and do not describe myself as an investment adviser",
@@ -513,6 +521,9 @@ export function LaunchManualOutreach({ contacts }: { contacts: OutreachAudienceC
             </div>
           ) : null}
         </div>
+        <button type="button" className={btnPrimary} disabled={!canNext()} onClick={() => setStep((s) => s + 1)}>
+          Next
+        </button>
       </div>
       {addOpen ? (
         <div className="mt-2 grid gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 sm:grid-cols-5">
@@ -775,6 +786,18 @@ export function LaunchManualOutreach({ contacts }: { contacts: OutreachAudienceC
     </div>
   );
 
+  const backButton = (
+    <button type="button" className={btn} disabled={step === 0} onClick={() => setStep((s) => Math.max(0, s - 1))}>Back</button>
+  );
+  const primaryButton =
+    step < 4 ? (
+      <button type="button" className={btnPrimary} disabled={!canNext()} onClick={() => setStep((s) => s + 1)}>Next</button>
+    ) : (
+      <button type="button" className={btnPrimary} disabled={saving || overCap || !checks.every(Boolean) || sendable.length === 0} onClick={() => void start()}>
+        {saving ? "Starting…" : "Start campaign"}
+      </button>
+    );
+
   const wizard = (
     <div>
       {!done ? (
@@ -793,20 +816,20 @@ export function LaunchManualOutreach({ contacts }: { contacts: OutreachAudienceC
           ))}
         </ol>
       ) : null}
+      {!done ? (
+        <p className="mb-4 rounded-lg bg-blue-50 px-3 py-2.5 text-[13px] leading-relaxed text-slate-800">
+          <b>Step {step + 1} of 5.</b> {STEP_HELP[step]}
+        </p>
+      ) : null}
+      {!done && step > 0 ? <div className="mb-4 flex items-center justify-between gap-2">{backButton}{primaryButton}</div> : null}
       {done ? doneView : [stepInvestors, stepMessage, stepAttachments, stepFollowUps, stepReview][step]}
       {!done ? <Banner msg={message} /> : null}
       {!done ? (
         <div className="mt-5 flex items-center justify-between gap-2 border-t border-slate-100 pt-4">
-          <button type="button" className={btn} disabled={step === 0} onClick={() => setStep((s) => Math.max(0, s - 1))}>Back</button>
+          {backButton}
           <div className="flex items-center gap-2">
             <button type="button" className={btn} disabled={saving} onClick={() => void persist("save")}>{saving ? "Saving…" : "Save draft"}</button>
-            {step < 4 ? (
-              <button type="button" className={btnPrimary} disabled={!canNext()} onClick={() => setStep((s) => s + 1)}>Next</button>
-            ) : (
-              <button type="button" className={btnPrimary} disabled={saving || overCap || !checks.every(Boolean) || sendable.length === 0} onClick={() => void start()}>
-                {saving ? "Starting…" : "Start campaign"}
-              </button>
-            )}
+            {primaryButton}
           </div>
         </div>
       ) : null}
