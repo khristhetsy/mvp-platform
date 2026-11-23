@@ -45,6 +45,8 @@ const TABS: Array<{ id: Tab; label: string }> = [
   { id: "conversations", label: "Conversations" },
 ];
 
+const WIZ_STEPS = ["Address and photo", "What it knows", "Teach answers", "Questions", "Booking", "Compliance", "Go live and share"];
+
 const input = "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#1A6CE4] focus:ring-2 focus:ring-[#1A6CE4]/20";
 const btnPrimary = "rounded-lg bg-[#1A6CE4] px-4 py-2 text-sm font-semibold text-white hover:bg-[#2E78F5] disabled:opacity-50";
 const btnQuiet = "rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50";
@@ -184,6 +186,8 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
   const acknowledged = admin || Boolean(a.compliance_acknowledged_at);
   // The admin only AI Agent Type card is step 1, so every later card shifts down by one.
   const step = (n: number) => (admin ? n + 1 : n);
+  const [wiz, setWiz] = useState(a.status === "live" ? 6 : 0);
+  const W = (n: number) => admin || wiz === n;
   const fileRef = useRef<HTMLInputElement>(null);
   const checkTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -266,8 +270,10 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
       await reload();
       setPreviewKey((k) => k + 1);
       toast({ title: "Saved", description: "Your agent is updated. The preview restarted.", variant: "success" });
+      return true;
     } catch (e) {
       toast({ title: "Not saved", description: e instanceof Error ? e.message : "Could not save.", variant: "error" });
+      return false;
     } finally {
       setSaving(false);
     }
@@ -278,7 +284,7 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
     if (status === "live" && !acknowledged) {
       if (!ackChecked) {
         toast({ title: "Confirm the compliance notice first", variant: "error" });
-        return;
+        return false;
       }
       body.compliance_acknowledged = true;
     }
@@ -286,10 +292,20 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
     const j = await readJson<{ agent: AgentRow; config: AgentPublicConfig }>(res);
     if (!res.ok) {
       toast({ title: "Could not change status", description: j.error, variant: "error" });
-      return;
+      return false;
     }
     onChange({ ...data, agent: j.agent, config: j.config });
     toast({ title: status === "live" ? "Your agent is live" : "Your agent is paused", variant: "success" });
+    return true;
+  };
+
+  const goNext = async () => {
+    if (dirty && !(await save())) return;
+    setWiz((w) => Math.min(WIZ_STEPS.length - 1, w + 1));
+  };
+  const goLive = async () => {
+    if (dirty && !(await save())) return;
+    if (await setStatus("live")) setWiz(6);
   };
 
   const upload = async (file: File) => {
@@ -377,7 +393,27 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
           </>
         ) : null}
 
+        {!admin ? (
+          <>
+            {a.status !== "live" ? (
+              <div className="rounded-xl border border-[#1A6CE4] bg-white px-5 py-4">
+                <p className="text-sm font-semibold text-slate-950">Your agent is not live yet.</p>
+                <p className="mt-0.5 text-sm text-slate-600">Seven short steps and it is answering investors. Click any step to go back and change it.</p>
+              </div>
+            ) : null}
+            <nav className="flex overflow-x-auto rounded-xl border border-slate-200 bg-slate-50 px-3 py-3" aria-label="Setup steps">
+              {WIZ_STEPS.map((label, k) => (
+                <button key={label} type="button" onClick={() => setWiz(k)} className={`min-w-[92px] flex-1 text-center text-[11px] ${k === wiz ? "font-semibold text-[#0A1A40]" : "text-slate-500"}`}>
+                  <span className={`mx-auto mb-1 flex h-[26px] w-[26px] items-center justify-center rounded-full text-xs font-bold ${k === wiz ? "bg-[#1A6CE4] text-white" : k < wiz ? "bg-emerald-500 text-white" : "bg-slate-200 text-slate-500"}`}>{k < wiz ? "✓" : k + 1}</span>
+                  {label}
+                </button>
+              ))}
+            </nav>
+          </>
+        ) : null}
+
         {/* Address and branding */}
+        {W(0) ? (<>
         <section className={card}>
           <h2 className="flex items-center gap-2 text-base font-semibold text-slate-950"><StepBadge n={step(1)} />Address and branding</h2>
           <div className="mt-4">
@@ -436,8 +472,10 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
             </div>
           </div>
         </section>
+        </>) : null}
 
         {/* Fact sheet */}
+        {W(1) ? (<>
         <section className={card}>
           <h2 className="flex items-center gap-2 text-base font-semibold text-slate-950"><StepBadge n={step(2)} />What the agent knows</h2>
           <p className="mt-1 text-sm text-slate-600">
@@ -446,8 +484,12 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
           </p>
           <textarea value={about} onChange={(e) => setAbout(e.target.value)} className={`${input} mt-3 min-h-[140px]`} maxLength={6000} placeholder="What the company does, who it serves, where it is based, who leads it, what the round is for (without figures)…" />
         </section>
+        </>) : null}
+
+        {!admin && wiz === 2 ? <TrainTab data={data} onChange={onChange} toast={toast} /> : null}
 
         {/* Questions */}
+        {W(3) ? (<>
         <section className={card}>
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -564,6 +606,7 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
             })}
           </ul>
         </section>
+        </>) : null}
 
         {/* Data wired from the company profile */}
         {admin && agentType !== "founder" && data.wired ? (
@@ -624,6 +667,7 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
         ) : null}
 
         {/* Booking */}
+        {W(4) ? (<>
         <section className={card}>
           <h2 className="flex items-center gap-2 text-base font-semibold text-slate-950"><StepBadge n={step(5)} />Booking</h2>
           {data.booking.ready ? (
@@ -638,8 +682,10 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
             </p>
           )}
         </section>
+        </>) : null}
 
         {/* Locked rules */}
+        {W(5) ? (<>
         <section className="rounded-xl border border-slate-200 bg-slate-50 p-5 text-xs text-slate-600">
           <p className="font-semibold text-slate-800">Always on, cannot be changed</p>
           <ul className="mt-2 list-disc space-y-1 pl-4">
@@ -649,9 +695,10 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
             <li>The address starts with {AGENT_HOST.replace("https://", "")}/{a.company_slug}/.</li>
           </ul>
         </section>
+        </>) : null}
 
         {/* Compliance notice: confirmed once before going live */}
-        {admin ? null : !acknowledged || noticeOpen ? (
+        {admin || wiz !== 5 ? null : !acknowledged || noticeOpen ? (
           <section className="rounded-xl border border-amber-300 bg-amber-50 p-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-base font-semibold text-slate-950">Compliance notice</h2>
@@ -693,6 +740,9 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
           </div>
         )}
 
+        {!admin && wiz === 6 ? <ShareTab data={data} toast={toast} /> : null}
+
+        {admin ? (
         <div className="sticky bottom-0 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white/95 p-3 backdrop-blur">
           <button type="button" onClick={() => void save()} disabled={saving || !dirty || (endingState ? !endingState.ok : false)} className={btnPrimary}>
             {saving ? "Saving…" : "Save changes"}
@@ -708,6 +758,28 @@ function BuildTab({ data, onChange, reload, toast }: { data: Loaded; onChange: (
           )}
           {!a.organization_id ? <span className="text-xs text-amber-800">Go live is off until a company in your account is linked. Search your contacts in Select company.</span> : dirty ? <span className="text-xs text-slate-500">Save before going live.</span> : !acknowledged && !ackChecked ? <span className="text-xs text-slate-500">Confirm the compliance notice to unlock Go live.</span> : null}
         </div>
+        ) : (
+          <div className="sticky bottom-0 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white/95 p-3 backdrop-blur">
+            <button type="button" onClick={() => setWiz((w) => Math.max(0, w - 1))} className={btnQuiet} style={{ visibility: wiz === 0 || wiz === 6 ? "hidden" : "visible" }}>
+              Back
+            </button>
+            <span className="text-xs text-slate-500">Step {wiz + 1} of {WIZ_STEPS.length}{dirty ? " · unsaved changes, saved when you continue" : ""}</span>
+            {wiz === 6 ? (
+              <button type="button" onClick={() => void setStatus("paused")} className={btnQuiet}>
+                Pause agent
+              </button>
+            ) : wiz === 5 && a.status !== "live" ? (
+              <button type="button" onClick={() => void goLive()} disabled={saving || !a.organization_id || (!acknowledged && !ackChecked)} className={btnPrimary}>
+                {a.status === "paused" ? "Resume agent" : "Go live"}
+              </button>
+            ) : (
+              <button type="button" onClick={() => void goNext()} disabled={saving || (wiz === 0 && endingState ? !endingState.ok : false)} className={btnPrimary}>
+                {saving ? "Saving…" : "Next"}
+              </button>
+            )}
+          </div>
+        )}
+        {!admin && wiz === 5 && a.status !== "live" && !a.organization_id ? <p className="text-xs text-amber-800">Go live is off until a company in your account is linked. Search your contacts in Select company.</p> : null}
       </div>
 
       <aside className="lg:sticky lg:top-4 lg:self-start">
