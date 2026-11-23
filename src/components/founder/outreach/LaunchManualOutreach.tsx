@@ -11,6 +11,9 @@
  */
 
 import Link from "next/link";
+import { ContactImportDialog } from "@/components/founder/outreach/ContactImportDialog";
+import { MatchFromDirectoryWizard } from "@/components/founder/investor-directory/MatchFromDirectoryWizard";
+import type { HoldStatus } from "@/lib/investor-directory/limits";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   DEFAULT_BODY,
@@ -89,6 +92,10 @@ export function LaunchManualOutreach({ contacts }: { contacts: OutreachAudienceC
   const [done, setDone] = useState(false);
   const [query, setQuery] = useState("");
   const [addOpen, setAddOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [directoryOpen, setDirectoryOpen] = useState(false);
+  const [hold, setHold] = useState<HoldStatus | null>(null);
   const [form, setForm] = useState({ name: "", firm: "", email: "", type: "" });
   const [docsOpen, setDocsOpen] = useState(false);
   const [previewId, setPreviewId] = useState<string | null>(null);
@@ -121,6 +128,17 @@ export function LaunchManualOutreach({ contacts }: { contacts: OutreachAudienceC
     }
   }, []);
 
+  const loadHold = useCallback(async () => {
+    try {
+      const res = await fetch("/api/founder/investor-contacts");
+      if (!res.ok) return;
+      const body = (await res.json()) as { hold?: HoldStatus | null };
+      setHold(body.hold ?? null);
+    } catch {
+      /* the import dialog works without the plan meter */
+    }
+  }, []);
+
   const applyCampaign = useCallback((data: CampaignPayload | null) => {
     if (!data) return;
     const c = data.campaign;
@@ -144,6 +162,10 @@ export function LaunchManualOutreach({ contacts }: { contacts: OutreachAudienceC
     let active = true;
     void fetchContacts().then((rows) => active && rows && setContactList(rows));
     void fetchLists().then((lists) => active && lists && setSavedLists(lists));
+    void fetch("/api/founder/investor-contacts")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { hold?: HoldStatus | null } | null) => active && d && setHold(d.hold ?? null))
+      .catch(() => {});
     void fetch("/api/founder/outreach/email-cap")
       .then((r) => (r.ok ? r.json() : null))
       .then((d: { cap?: number; used?: number; resetsLabel?: string } | null) => {
@@ -236,6 +258,18 @@ export function LaunchManualOutreach({ contacts }: { contacts: OutreachAudienceC
     });
   }
 
+  /** Reloads My contacts and ticks whatever just arrived, so new contacts land in this wave. */
+  async function reloadAndSelectNew(note: string) {
+    const before = new Set(contactList.map((c) => c.id));
+    const rows = await fetchContacts();
+    if (!rows) return;
+    setContactList(rows);
+    const fresh = rows.filter((c) => !before.has(c.id)).map((c) => c.id);
+    if (fresh.length > 0) setSelected((prev) => new Set([...prev, ...fresh]));
+    setMessage({ tone: "ok", text: note });
+    void loadHold();
+  }
+
   async function addContact() {
     if (!form.name.trim()) return setMessage({ tone: "error", text: "Enter the investor's name." });
     setBusy(true);
@@ -250,9 +284,7 @@ export function LaunchManualOutreach({ contacts }: { contacts: OutreachAudienceC
       if (!res.ok) return setMessage({ tone: "error", text: data?.error ?? "Couldn't add that investor. Check the email and try again." });
       setForm({ name: "", firm: "", email: "", type: "" });
       setAddOpen(false);
-      setMessage({ tone: "ok", text: "Investor added." });
-      const rows = await fetchContacts();
-      if (rows) setContactList(rows);
+      await reloadAndSelectNew("Investor added to My contacts and to this wave.");
     } finally {
       setBusy(false);
     }
@@ -451,9 +483,36 @@ export function LaunchManualOutreach({ contacts }: { contacts: OutreachAudienceC
             ))}
           </select>
         ) : null}
-        <button type="button" className={btn} onClick={() => setAddOpen((v) => !v)}>
-          + New investor
-        </button>
+        <div className="relative">
+          <button type="button" className={btnPrimary} aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((v) => !v)}>
+            + Add contacts <i className="ti ti-chevron-down" aria-hidden="true" />
+          </button>
+          {menuOpen ? (
+            <div role="menu" className="absolute right-0 z-20 mt-1 w-64 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg">
+              {(
+                [
+                  ["Add one contact", "Type in the details", () => setAddOpen(true)],
+                  ["Import a file", "CSV or Excel, map the columns", () => setImportOpen(true)],
+                  ["Import from Investor directory", "Find investors and add them here", () => setDirectoryOpen(true)],
+                ] as const
+              ).map(([label, hint, run]) => (
+                <button
+                  key={label}
+                  type="button"
+                  role="menuitem"
+                  className="block w-full rounded-lg px-2.5 py-2 text-left text-[13px] text-slate-900 hover:bg-slate-50"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    run();
+                  }}
+                >
+                  {label}
+                  <span className="block text-[11.5px] text-slate-500">{hint}</span>
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
       </div>
       {addOpen ? (
         <div className="mt-2 grid gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 sm:grid-cols-5">
@@ -503,6 +562,26 @@ export function LaunchManualOutreach({ contacts }: { contacts: OutreachAudienceC
         </div>
       ))}
       {noEmail > 0 ? <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-[12.5px] text-amber-800">{noEmail} selected without an email will be skipped.</p> : null}
+      {importOpen ? (
+        <ContactImportDialog
+          hold={hold}
+          existingEmails={contactList.map((c) => c.email ?? "").filter(Boolean)}
+          onClose={() => setImportOpen(false)}
+          onImported={async (count) => {
+            setImportOpen(false);
+            await reloadAndSelectNew(`${count.toLocaleString()} contact${count === 1 ? "" : "s"} imported to My contacts and added to this wave.`);
+          }}
+        />
+      ) : null}
+      {directoryOpen ? (
+        <MatchFromDirectoryWizard
+          onClose={() => setDirectoryOpen(false)}
+          onImported={() => {
+            setDirectoryOpen(false);
+            void reloadAndSelectNew("Investors imported to My contacts and added to this wave.");
+          }}
+        />
+      ) : null}
     </div>
   );
 
