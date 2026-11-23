@@ -96,6 +96,7 @@ const PIPE = "src/app/founder/investor-pipeline/InvestorPipelineClient.tsx";
 const INV_ONB = "src/components/InvestorOnboardingWizard.tsx";
 // Investor directory (public investor data outside the iCFO network): founder search filters and the admin record editor.
 const DIR = "src/components/founder/investor-directory/InvestorDirectoryClient.tsx";
+const WIZ = "src/components/founder/investor-directory/MatchFromDirectoryWizard.tsx";
 const DIR_ADMIN = "src/components/admin/investor-directory/RecordEditor.tsx";
 const INV_DEALS = "src/components/investor/InvestorDealsManager.tsx";
 // Founder My contacts: the contact page asks these as investor preferences.
@@ -117,7 +118,7 @@ export const FIELD_USAGE: FieldUsage[] = [
     read: ["investor-company-matching.ts · sector", "preference-match.ts · CRM scorer", "icfo-events/matching-rule.ts · networking pairing", "icfo-events/match-reason.ts · introduction reason"],
     optionList: ["vocabulary_options (list: industry)", "src/lib/icfo-events/sectors.ts (code fallback)"],
     codeRefs: [
-      ONB, SET, ADM_CONTACT, ADM_BASICS, PIPE, INV_ONB, DIR, DIR_ADMIN,
+      ONB, SET, ADM_CONTACT, ADM_BASICS, PIPE, INV_ONB, DIR, WIZ, DIR_ADMIN,
       "src/components/events/EventRegistrationForm.tsx",
       "src/components/events/NetworkingOptIn.tsx",
       "src/components/admin-events/EventsManager.tsx",
@@ -139,7 +140,7 @@ export const FIELD_USAGE: FieldUsage[] = [
     screens: ["/founder/onboarding step 7", "/founder/settings", "/admin/sales/contacts/[id]", "/investor/onboarding preferred stages", "/founder/investor-pipeline (filter)", "/investor/profile prior deals (stage)"],
     stored: ["companies.funding_stage", "investor_profiles.preferred_stages"],
     saved: [...ROUTES_COMPANY, "PATCH /api/investor/onboarding"], read: ["investor-company-matching.ts · stage", "contact-match.ts · stage"],
-    optionList: ["FUNDING_STAGE_OPTIONS in profile/options.ts", "funding_stage list on this page (investor onboarding)"], codeRefs: [ONB, SET, PIPE, INV_ONB, DIR, DIR_ADMIN, INV_DEALS],
+    optionList: ["FUNDING_STAGE_OPTIONS in profile/options.ts", "funding_stage list on this page (investor onboarding)"], codeRefs: [ONB, SET, PIPE, INV_ONB, DIR, WIZ, DIR_ADMIN, INV_DEALS],
   },
   {
     name: "Operating stage", list: "operating_stage", summary: "companies.operating_stage",
