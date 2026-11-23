@@ -40,14 +40,14 @@ describe("social routes refuse changes while staff act as the founder", () => {
     const source = fs.readFileSync(file, "utf8");
     for (const h of handlers(source)) {
       it(`${rel} ${h.method} starts with the acting guard`, () => {
-        expect(h.firstLines).toContain("await actingBlock()");
+        expect(h.firstLines).toMatch(/await actingBlock\(/);
       });
     }
   }
 
   it("the account connection start (GET) is guarded too", () => {
     const source = fs.readFileSync(path.join(ROOT, "src/app/api/founder/social/connect/route.ts"), "utf8");
-    expect(source).toContain("await actingBlock()");
+    expect(source).toMatch(/await actingBlock\(/);
   });
 });
 
@@ -61,13 +61,13 @@ describe("outreach, intro and connection routes", () => {
     it(`${rel} refuses while acting`, () => {
       const source = fs.readFileSync(path.join(ROOT, rel), "utf8");
       expect(handlers(source).length).toBeGreaterThan(0);
-      for (const h of handlers(source)) expect(h.firstLines).toContain("await actingBlock()");
+      for (const h of handlers(source)) expect(h.firstLines).toMatch(/await actingBlock\(/);
     });
   }
 
   it("manual outreach refuses to start while acting", () => {
     const source = fs.readFileSync(path.join(ROOT, "src/app/api/founder/outreach/manual/route.ts"), "utf8");
-    expect(source).toMatch(/body\.action === "start"\)\s*\{\s*const actingBlocked = await actingBlock\(\)/);
+    expect(source).toMatch(/body\.action === "start"\)\s*\{\s*const actingBlocked = await actingBlock\(/);
   });
 });
 
@@ -114,7 +114,7 @@ describe("connections, legal confirmations and statements to investors", () => {
     "src/app/api/notifications/[id]/route.ts",
   ]) {
     it(`${rel} refuses while acting`, () => {
-      expect(fs.readFileSync(path.join(ROOT, rel), "utf8")).toContain("await actingBlock()");
+      expect(fs.readFileSync(path.join(ROOT, rel), "utf8")).toMatch(/await actingBlock\(/);
     });
   }
 });

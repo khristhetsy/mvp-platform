@@ -6,6 +6,7 @@ import {
 } from "@/lib/subscriptions/get-subscription";
 import type { FeatureKey, SubscriptionRecord } from "@/lib/subscriptions/plans";
 import { requireRole } from "@/lib/supabase/auth";
+import { actingBypass } from "@/lib/admin/acting-central";
 
 export type FounderFeatureAccessContext = {
   profile: Awaited<ReturnType<typeof requireRole>>;
@@ -25,13 +26,15 @@ export async function getFounderFeatureAccess(featureKey: FeatureKey): Promise<F
 
   subscription = await refreshSubscriptionState(subscription);
   const access = requireFeatureAccess(subscription, featureKey);
+  // Staff acting as this founder whose department has the switch on open plan locked features.
+  const bypass = !access.allowed && (await actingBypass());
 
   return {
     profile,
     subscription,
     featureKey,
-    allowed: access.allowed,
-    reason: access.reason,
+    allowed: access.allowed || bypass,
+    reason: bypass ? null : access.reason,
   };
 }
 

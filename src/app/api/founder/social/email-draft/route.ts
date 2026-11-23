@@ -7,6 +7,7 @@ import { normalizeAttachments } from "@/lib/outreach/manual-attachments";
 import { FOUNDER_SOCIAL_DISCLAIMER } from "@/lib/social/templates";
 import { logFounderSocialEvent } from "@/lib/social/activity";
 import { actingBlock } from "@/lib/admin/acting-central";
+import { ACTING_SOCIAL_KEY } from "@/lib/departments/founder-access-core";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,7 @@ export const dynamic = "force-dynamic";
 // the email on/off switch) applies there when the founder starts it. This route only places
 // the post text there as a DRAFT with no recipients, and never overwrites a campaign in use.
 export async function POST(req: NextRequest): Promise<Response> {
-  const actingBlocked = await actingBlock();
+  const actingBlocked = await actingBlock(ACTING_SOCIAL_KEY);
   if (actingBlocked) return actingBlocked;
   const auth = await requireFounderSocial();
   if ("error" in auth) return auth.error;

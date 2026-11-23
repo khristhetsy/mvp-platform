@@ -35,3 +35,20 @@ export async function liveAgentForCompany(db: SupabaseClient, companyId: string)
     return null;
   }
 }
+
+/**
+ * The IR agent of a company's organization whatever its status (live or not), newest first,
+ * or null when it has none. Only for staff acting as the founder with the Open as founder
+ * access switch on: it lets them attach the Agent link before the agent goes live.
+ */
+export async function anyAgentForCompany(db: SupabaseClient, companyId: string): Promise<{ company_slug: string; ending: string } | null> {
+  try {
+    const { data: company } = await db.from("companies").select("org_id").eq("id", companyId).maybeSingle();
+    const orgId = (company as { org_id?: string | null } | null)?.org_id;
+    if (!orgId) return null;
+    const { data } = await db.from("ir_agents").select("company_slug, ending").eq("organization_id", orgId).order("created_at", { ascending: false }).limit(1);
+    return ((data ?? []) as Array<{ company_slug: string; ending: string }>)[0] ?? null;
+  } catch {
+    return null;
+  }
+}

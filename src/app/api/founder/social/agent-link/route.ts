@@ -3,7 +3,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireApiProfile } from "@/lib/api/auth";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { liveAgentForCompany } from "@/lib/ir-agent/links";
+import { anyAgentForCompany, liveAgentForCompany } from "@/lib/ir-agent/links";
+import { actingBypass } from "@/lib/admin/acting-central";
+import { ACTING_SOCIAL_KEY } from "@/lib/departments/founder-access-core";
 import { trackedUrl } from "@/lib/ir-agent/slug";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +20,8 @@ export async function GET() {
   const { company } = await getActiveCompanyForUser(auth.profile);
   if (!company) return NextResponse.json({ agent: null });
   const db = createServiceRoleClient() as unknown as SupabaseClient;
-  const a = await liveAgentForCompany(db, company.id);
+  // Staff acting as this founder with the switch on skip the "go live first" guard.
+  const a = (await liveAgentForCompany(db, company.id)) ?? ((await actingBypass(ACTING_SOCIAL_KEY)) ? await anyAgentForCompany(db, company.id) : null);
   if (!a) return NextResponse.json({ agent: null });
   return NextResponse.json({
     agent: {

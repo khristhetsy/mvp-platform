@@ -15,6 +15,7 @@ import { sendBudget } from "@/lib/investor-directory/allowance";
 import { FOUNDER_SOCIAL_DISCLAIMER } from "@/lib/social/templates";
 import { logFounderSocialEvent } from "@/lib/social/activity";
 import { actingBlock } from "@/lib/admin/acting-central";
+import { ACTING_SOCIAL_KEY } from "@/lib/departments/founder-access-core";
 
 export const dynamic = "force-dynamic";
 
@@ -47,7 +48,7 @@ export async function GET(): Promise<Response> {
  * monthly email limit and the email on/off switch. It never overwrites a campaign in use.
  */
 export async function POST(req: NextRequest): Promise<Response> {
-  const actingBlocked = await actingBlock();
+  const actingBlocked = await actingBlock(ACTING_SOCIAL_KEY);
   if (actingBlocked) return actingBlocked;
   const auth = await requireFounderSocial();
   if ("error" in auth) return auth.error;

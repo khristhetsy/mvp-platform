@@ -7,7 +7,7 @@ import { requireApiProfile } from "@/lib/api/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { writeAuditLog } from "@/lib/data/audit";
-import { isActingAsFounder } from "@/lib/admin/acting-central";
+import { actingBypass, isActingAsFounder } from "@/lib/admin/acting-central";
 import { MANAGED_ICFO_ROLE } from "@/lib/team/managed-icfo-core";
 
 export async function DELETE(
@@ -18,7 +18,7 @@ export async function DELETE(
   const auth = await requireApiProfile(["founder"]);
   if ("error" in auth) return auth.error;
 
-  if (await isActingAsFounder()) {
+  if ((await isActingAsFounder()) && !(await actingBypass())) {
     return NextResponse.json({ error: "Team changes are made by the account Owner." }, { status: 403 });
   }
 

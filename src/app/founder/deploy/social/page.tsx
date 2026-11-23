@@ -7,7 +7,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { getFounderSocialUsage } from "@/lib/social/founder-limits";
 import { FounderSocialClient } from "@/components/founder/social/FounderSocialClient";
 import { autoDraft } from "@/lib/social/templates";
-import { isActingAsFounder } from "@/lib/admin/acting-central";
+import { actingBypass, isActingAsFounder } from "@/lib/admin/acting-central";
+import { ACTING_CONNECTIONS_KEY } from "@/lib/departments/founder-access-core";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Social media" };
@@ -17,7 +18,7 @@ export default async function FounderSocialPage({ searchParams }: { searchParams
   const profile = await requireRole(["founder"]);
   const { company } = await getActiveCompanyForUser(profile);
   const usage = await getFounderSocialUsage(profile.id).catch(() => null);
-  const acting = await isActingAsFounder();
+  const acting = (await isActingAsFounder()) && !(await actingBypass(ACTING_CONNECTIONS_KEY));
   // The connect callbacks return with <network>=<status>. The wizard uses it to land on the right step.
   const network = (["linkedin", "facebook", "reddit"] as const).find((n) => sp[n]);
   const connectResult = network ? { network, status: sp[network] as string, message: sp.message ?? null } : null;

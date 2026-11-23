@@ -10,6 +10,8 @@ const state = vi.hoisted(() => ({
   ctx: { founderId: "founder-1", staffId: "staff-1" } as { founderId: string; staffId: string } | null,
   getActingContext: vi.fn(),
   sessions: 0,
+  mayUse: true,
+  mayUseKeys: [] as string[],
 }));
 
 vi.mock("next/headers", () => ({
@@ -21,6 +23,12 @@ vi.mock("next/headers", () => ({
     };
   },
   headers: async () => ({ get: (n: string) => (n === "x-icapos-zone" ? state.zone : n === "referer" ? state.referer : null) }),
+}));
+vi.mock("@/lib/departments/founder-access", () => ({
+  staffMayUseFounderItem: async (_staffId: string, key: string) => {
+    state.mayUseKeys.push(key);
+    return state.mayUse;
+  },
 }));
 vi.mock("@/lib/admin/act-on-behalf", () => ({
   ACT_COOKIE: "icapos_act_as",
@@ -59,6 +67,8 @@ beforeEach(() => {
   state.cookie = `act-cookie-${Math.random()}`;
   state.zone = "founder";
   state.referer = null;
+  state.mayUse = true;
+  state.mayUseKeys = [];
   state.noRequest = false;
   state.ctx = { founderId: "founder-1", staffId: "staff-1" };
   state.sessions = 0;
@@ -161,11 +171,40 @@ describe("isActingAsFounder, actingStaffId and actingBlock", () => {
     expect(await isActingAsFounder()).toBe(false);
   });
 
-  it("actingBlock refuses with a 403 only while acting", async () => {
+  it("actingBlock refuses with a 403 while acting and the department switch is off", async () => {
     const { actingBlock } = await load();
+    state.mayUse = false;
     const blocked = await actingBlock();
     expect(blocked?.status).toBe(403);
     state.ctx = null;
     expect(await actingBlock()).toBeNull();
+  });
+
+  it("actingBlock lets the request through while acting when the department switch is on", async () => {
+    const { actingBlock } = await load();
+    state.mayUse = true;
+    expect(await actingBlock("/founder/deploy/social")).toBeNull();
+    expect(state.mayUseKeys).toContain("/founder/deploy/social");
+  });
+});
+
+describe("actingBypass", () => {
+  it("is true only while acting with the switch on, and false for a founder on their own login", async () => {
+    const { actingBypass } = await load();
+    state.mayUse = true;
+    expect(await actingBypass()).toBe(true);
+    state.mayUse = false;
+    expect(await actingBypass()).toBe(false);
+    state.mayUse = true;
+    state.ctx = null;
+    expect(await actingBypass()).toBe(false);
+  });
+
+  it("checks the account key by default", async () => {
+    const { actingBypass } = await load();
+    state.mayUse = true;
+    state.mayUseKeys = [];
+    await actingBypass();
+    expect(state.mayUseKeys).toEqual(["acting:account"]);
   });
 });

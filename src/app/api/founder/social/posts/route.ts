@@ -4,7 +4,8 @@ import { requireFounderSocial, ownsAccounts, ownsCampaign, ownsPost, socialDb } 
 import { getFounderSocialUsage } from "@/lib/social/founder-limits";
 import { postsThatFit } from "@/lib/social/usage";
 import { logFounderSocialEvent } from "@/lib/social/activity";
-import { actingBlock } from "@/lib/admin/acting-central";
+import { actingBlock, actingBypass } from "@/lib/admin/acting-central";
+import { ACTING_SOCIAL_KEY } from "@/lib/departments/founder-access-core";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,7 @@ const schema = z.object({
 // Create a founder post. One post sent to several networks is one row here, so it counts once.
 // The founder choosing Schedule or Post now is the approval: no staff review step.
 export async function POST(req: NextRequest): Promise<Response> {
-  const actingBlocked = await actingBlock();
+  const actingBlocked = await actingBlock(ACTING_SOCIAL_KEY);
   if (actingBlocked) return actingBlocked;
   const auth = await requireFounderSocial();
   if ("error" in auth) return auth.error;
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest): Promise<Response> {
   // Server side limit check, fresh count. Drafts are never counted.
   const usage = await getFounderSocialUsage(auth.founderId);
   const counted = d.mode === "schedule" || d.mode === "now";
-  if (counted && postsThatFit(usage.limit, usage.used, 1) < 1) {
+  if (counted && postsThatFit(usage.limit, usage.used, 1) < 1 && !(await actingBypass(ACTING_SOCIAL_KEY))) {
     return NextResponse.json({ error: "Monthly post limit reached.", code: "limit_reached", usage }, { status: 403 });
   }
 
@@ -104,7 +105,7 @@ export async function POST(req: NextRequest): Promise<Response> {
 // Move a scheduled post to a new time (drag and drop on the Schedule tab). Only posts that
 // have not gone out yet. Moving a post does not change how many posts count this cycle.
 export async function PATCH(req: NextRequest): Promise<Response> {
-  const actingBlocked = await actingBlock();
+  const actingBlocked = await actingBlock(ACTING_SOCIAL_KEY);
   if (actingBlocked) return actingBlocked;
   const auth = await requireFounderSocial();
   if ("error" in auth) return auth.error;

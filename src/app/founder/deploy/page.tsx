@@ -3,7 +3,8 @@ import Link from "next/link";
 import { getFounderSocialUsage } from "@/lib/social/founder-limits";
 import { FounderSocialClient } from "@/components/founder/social/FounderSocialClient";
 import { autoDraft } from "@/lib/social/templates";
-import { isActingAsFounder } from "@/lib/admin/acting-central";
+import { actingBypass, isActingAsFounder } from "@/lib/admin/acting-central";
+import { ACTING_CONNECTIONS_KEY } from "@/lib/departments/founder-access-core";
 import { requireRole } from "@/lib/supabase/auth";
 import { getTranslations } from "next-intl/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -251,7 +252,7 @@ export default async function FounderDeployPage({
         founderName={profile.full_name ?? profile.email ?? "You"}
         initialDraft={autoDraft({ company: company?.company_name, description: company?.business_description, industry: company?.industry, raiseBand: company?.funding_amount_band })}
         initialTab={sp.tab ?? null}
-        acting={await isActingAsFounder()}
+        acting={(await isActingAsFounder()) && !(await actingBypass(ACTING_CONNECTIONS_KEY))}
       />
     ) : (
       <div className="rounded-xl border border-slate-200 bg-white px-5 py-6">

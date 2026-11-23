@@ -1,5 +1,6 @@
 import { getValidGoogleAccessToken } from "@/lib/integrations/google-access-token";
-import { isActingAsFounder } from "@/lib/admin/acting-central";
+import { actingBypass, isActingAsFounder } from "@/lib/admin/acting-central";
+import { ACTING_OUTREACH_KEY } from "@/lib/departments/founder-access-core";
 import { recipientHeader } from "@/lib/email/recipients";
 
 const GMAIL_SEND_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send";
@@ -114,7 +115,7 @@ export async function sendViaGmail(input: {
   attachments?: GmailAttachment[];
 }): Promise<GmailSendResult> {
   // Staff acting as a founder must not send mail that appears to come from the founder.
-  if (await isActingAsFounder()) {
+  if ((await isActingAsFounder()) && !(await actingBypass(ACTING_OUTREACH_KEY))) {
     return { error: new Error("Sending as the founder is blocked while you act on their behalf. Save a draft, or send from iCapOS.") };
   }
   const tokenResult = await getValidGoogleAccessToken(input.userId);

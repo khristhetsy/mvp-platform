@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { actingBypass } from "@/lib/admin/acting-central";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { loadFeatureFlags, isFeatureEnabled, type FeatureAudience, type FeatureKey } from "./index";
 
@@ -11,6 +12,8 @@ export async function assertFeatureEnabled(
   feature: FeatureKey,
   redirectTo: string,
 ): Promise<void> {
+  // Staff acting as a founder whose department has the switch on ignore the founder's own switches.
+  if (audience === "founder" && (await actingBypass())) return;
   const flags = await loadFeatureFlags(createServiceRoleClient());
   if (!isFeatureEnabled(flags, audience, feature)) {
     redirect(redirectTo);

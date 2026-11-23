@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requireApiProfile } from "@/lib/api/auth";
 import { nextNudgeState } from "@/lib/social/connect-nudge-rules";
 import { actingBlock } from "@/lib/admin/acting-central";
+import { ACTING_SOCIAL_KEY } from "@/lib/departments/founder-access-core";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,7 @@ const schema = z.object({ action: z.enum(["snooze", "dismiss"]) });
  * security limits it to their own row.
  */
 export async function POST(req: Request): Promise<Response> {
-  const actingBlocked = await actingBlock();
+  const actingBlocked = await actingBlock(ACTING_SOCIAL_KEY);
   if (actingBlocked) return actingBlocked;
   const auth = await requireApiProfile(["founder"]);
   if ("error" in auth) return auth.error ?? NextResponse.json({ error: "Unauthorized" }, { status: 401 });

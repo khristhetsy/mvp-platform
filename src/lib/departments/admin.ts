@@ -110,3 +110,41 @@ export async function listAudit(limit = 100, offset = 0): Promise<AuditRow[]> {
     createdAt: String(r.created_at),
   }));
 }
+
+// ── Open as founder access ─────────────────────────────────────────────────────
+// One switch per department and founder item. A missing row means ON (see founder-access-core).
+
+export interface FounderAccessData {
+  departments: Array<{ id: string; name: string; isAdmin: boolean }>;
+  /** Explicit switches only, `${departmentId}|${itemKey}` to enabled. Anything missing is on. */
+  grants: Record<string, boolean>;
+}
+
+export async function loadFounderAccess(): Promise<FounderAccessData> {
+  const [{ data: depts }, { data: rows }] = await Promise.all([
+    db().from("departments").select("id, name, is_admin").eq("is_active", true).order("is_admin", { ascending: false }).order("name"),
+    db().from("department_founder_access").select("department_id, item_key, enabled"),
+  ]);
+  const grants: Record<string, boolean> = {};
+  for (const r of (rows ?? []) as Array<{ department_id: string; item_key: string; enabled: boolean }>) {
+    grants[`${r.department_id}|${r.item_key}`] = r.enabled;
+  }
+  return {
+    departments: ((depts ?? []) as Array<{ id: string; name: string; is_admin: boolean }>).map((d) => ({ id: d.id, name: d.name, isAdmin: Boolean(d.is_admin) })),
+    grants,
+  };
+}
+
+export async function saveFounderAccess(changes: Array<{ departmentId: string; itemKey: string; enabled: boolean }>, actorId: string): Promise<void> {
+  if (changes.length === 0) return;
+  const now = new Date().toISOString();
+  const { error } = await db().from("department_founder_access").upsert(
+    changes.map((c) => ({ department_id: c.departmentId, item_key: c.itemKey, enabled: c.enabled, updated_by: actorId, updated_at: now })),
+    { onConflict: "department_id,item_key" },
+  );
+  if (error) throw new Error(error.message);
+  // Best effort audit, one line per switch, shown on the Audit Log tab.
+  await db().from("department_audit_log").insert(
+    changes.map((c) => ({ actor_id: actorId, action: c.enabled ? "founder_access_enabled" : "founder_access_disabled", department_id: c.departmentId, detail: { item_key: c.itemKey } })),
+  );
+}
