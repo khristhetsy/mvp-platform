@@ -18,20 +18,20 @@ import {
 } from "@/lib/outreach/manual-attachments";
 import type { AttachmentOptions, OutreachContact } from "./types";
 
-const MERGE_FIELDS = ["{{first_name}}", "{{company}}", "{{sector}}", "{{founder_preview}}", "{{ir_agent}}"];
-const TONE_PRESETS = ["Warm", "Direct", "Concise", "Formal", "Storytelling"] as const;
-const DISCLAIMER =
+export const MERGE_FIELDS = ["{{first_name}}", "{{company}}", "{{sector}}", "{{founder_preview}}", "{{ir_agent}}"];
+export const TONE_PRESETS = ["Warm", "Direct", "Concise", "Formal", "Storytelling"] as const;
+export const DISCLAIMER =
   "This message shares a company's Founder Preview based on stated fit. It is not investment advice, an offer, a solicitation, or a recommendation to buy or sell any security. iCapOS is not a broker-dealer or investment adviser.";
 
 export type SeqStep = { label: string; dayOffset: number };
 
-function kb(bytes: number | null | undefined): string {
+export function kb(bytes: number | null | undefined): string {
   if (!bytes) return "";
   return bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
 /** The next manual outreach send pass (07:00 and 19:00 UTC, set in vercel.json), shown in PT. */
-function nextSendWindow(now: Date = new Date()): string {
+export function nextSendWindow(now: Date = new Date()): string {
   const next = new Date(now);
   next.setUTCMinutes(0, 0, 0);
   const h = now.getUTCHours();
@@ -44,11 +44,11 @@ function nextSendWindow(now: Date = new Date()): string {
   return next.toLocaleString("en-US", { timeZone: "America/Los_Angeles", weekday: "short", hour: "numeric", minute: "2-digit", timeZoneName: "short" });
 }
 
-function firstNameOf(name: string | null | undefined): string {
+export function firstNameOf(name: string | null | undefined): string {
   return (name ?? "").trim().split(/\s+/)[0] || "there";
 }
 
-function Toggle({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) {
+export function Toggle({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) {
   return (
     <button
       type="button"

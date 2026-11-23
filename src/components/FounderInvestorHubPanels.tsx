@@ -9,7 +9,7 @@ import { FounderSocialDraftsPanel } from "@/components/FounderSocialDraftsPanel"
 import { InvestorOutreachCoach } from "@/components/founder/InvestorOutreachCoach";
 import type { OutreachCoachSnapshot } from "@/components/founder/InvestorOutreachCoach";
 import { FollowUpNudgesPanel } from "@/components/founder/FollowUpNudgesPanel";
-import { ManualOutreachBuilder } from "@/components/founder/ManualOutreachBuilder";
+import { LaunchManualOutreach } from "@/components/founder/outreach/LaunchManualOutreach";
 import type { EnrichedOutreachTarget } from "@/lib/founder-crm/outreach";
 import type { OutreachReadinessResult } from "@/lib/founder-crm/outreach-readiness";
 import type { SocialOutreachReadinessResult } from "@/lib/founder-crm/social-outreach-readiness";
@@ -515,7 +515,7 @@ export function FounderInvestorHubPanels({
         </div>
       </section>
 
-      <ManualOutreachBuilder
+      <LaunchManualOutreach
         contacts={contacts.map((c) => ({
           id: c.id,
           name: c.investor_name,

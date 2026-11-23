@@ -19,7 +19,7 @@ import { getDistributionPlan } from "@/lib/subscriptions/get-subscription";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import { evaluateFounderJourney } from "@/lib/founder-journey/evaluate";
 import { loadFounderInvestorHub } from "@/lib/founder-crm/load-founder-investor-hub";
-import { ManualOutreachBuilder } from "@/components/founder/ManualOutreachBuilder";
+import { LaunchManualOutreach } from "@/components/founder/outreach/LaunchManualOutreach";
 import { PublicProfileEditor } from "@/components/founder/PublicProfileEditor";
 import { ensureFounderAutomatedOutreach } from "@/lib/outreach/investor-outreach";
 import { getNextManualOutreachStep, getNextOutreachBatch } from "@/lib/outreach/outreach-next-batch";
@@ -348,7 +348,7 @@ export default async function FounderDeployPage({
     company && hub ? (
       <div className="space-y-4">
         {nextManualStep ? <NextManualStepStrip step={nextManualStep} /> : null}
-        <ManualOutreachBuilder
+        <LaunchManualOutreach
           contacts={hub.contacts.map((c) => ({
             id: c.id,
             name: c.investor_name,
