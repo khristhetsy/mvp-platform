@@ -508,8 +508,19 @@ export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
           { href: "/founder/stages/marketing", label: "Stage guide", minStage: "deploy" },
           { href: "/founder/contacts", label: "My contacts", minStage: "deploy" },
           { href: "/founder/matches", label: "Investor matches", minStage: "deploy" },
-          { href: "/founder/deploy", label: "Outreach", minStage: "deploy" },
-          { href: "/founder/deploy/social", label: "Social media", minStage: "deploy" },
+          {
+            href: "/founder/deploy",
+            label: "Outreach",
+            minStage: "deploy",
+            children: [
+              { href: "/founder/deploy", label: "Public Profile", minStage: "deploy" },
+              { href: "/founder/deploy?step=outreach&mode=automated", label: "Outreach: Automated", minStage: "deploy" },
+              { href: "/founder/deploy?step=outreach&mode=manual", label: "Outreach: Manual", minStage: "deploy" },
+              { href: "/founder/deploy/social", label: "Social media", minStage: "deploy" },
+              { href: "/founder/deploy?step=analytics", label: "Analytics", minStage: "deploy" },
+              { href: "/founder/deploy?step=settings", label: "Settings", minStage: "deploy" },
+            ],
+          },
           { href: "/founder/ir-agent", label: "My IR Agent", minStage: "deploy" },
           { href: "/founder/investor-directory", label: "Investor directory", minStage: "deploy" },
           { href: "/founder/investor-pipeline", label: "Investor CRM", minStage: "deploy" },
@@ -578,15 +589,29 @@ export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
 
 /** Founder stages and their menu items — for the admin stage-menu editor. */
 export type StageMenuGroup = { stage: string; items: { href: string; label: string }[] };
+
+/** Every page under a menu item. A group contributes its children, and a repeated href is listed once. */
+function stageLeaves(items: WorkspaceNavItem[]): { href: string; label: string }[] {
+  const out: { href: string; label: string }[] = [];
+  const seen = new Set<string>();
+  const walk = (list: WorkspaceNavItem[]) => {
+    for (const c of list) {
+      if (c.children?.length) walk(c.children);
+      else if (!seen.has(c.href)) {
+        seen.add(c.href);
+        out.push({ href: c.href, label: c.label });
+      }
+    }
+  };
+  walk(items);
+  return out;
+}
 export function getFounderStageMenuCatalog(): StageMenuGroup[] {
   const section = founderWorkspaceNavSectionsV2.find((s) => s.title === "Your raise");
   if (!section) return [];
   return section.items
     .filter((it) => it.children && it.children.length > 0)
-    .map((it) => ({
-      stage: it.label,
-      items: (it.children ?? []).map((c) => ({ href: c.href, label: c.label })),
-    }));
+    .map((it) => ({ stage: it.label, items: stageLeaves(it.children ?? []) }));
 }
 
 /** Build-time flag: serve the 4-step founder nav. Off by default → V1 unchanged.

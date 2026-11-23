@@ -1,9 +1,9 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronRight, ChevronLeft, Lock } from "lucide-react";
 import { useLocale } from "next-intl";
 import type { InternalPermission } from "@/lib/rbac/constants";
@@ -276,7 +276,7 @@ function useDepartmentAccess(workspace: WorkspaceId) {
   return access;
 }
 
-export function WorkspaceSidebar({
+function WorkspaceSidebarInner({
   workspace,
   planBadge,
   mobileOpen = false,
@@ -291,6 +291,7 @@ export function WorkspaceSidebar({
   compact?: boolean;
 }>) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [flyout, setFlyout] = useState<string | null>(null);
   // Compact rail: folded (icons, flyouts) or unfolded (labels, accordion groups). Remembered.
   const [unfolded, setUnfolded] = useState(!compact);
@@ -497,7 +498,22 @@ export function WorkspaceSidebar({
   );
 
   function isNavItemActive(href: string) {
-    return pathname === href || pathname.startsWith(`${href}/`);
+    const [path, query] = href.split("?");
+    if (!(pathname === path || pathname.startsWith(path + "/"))) return false;
+    // Links that carry a query (Outreach steps) match on the page and on every query value.
+    if (query) {
+      if (pathname !== path) return false;
+      for (const [key, value] of new URLSearchParams(query)) {
+        if (searchParams?.get(key) !== value) return false;
+      }
+      return true;
+    }
+    // The plain Outreach link is the Public Profile step: not active on another step or a sub page.
+    if (path === "/founder/deploy") {
+      const step = searchParams?.get("step");
+      return pathname === path && (!step || step === "profile") && !searchParams?.get("mode");
+    }
+    return true;
   }
 
   function isChildActive(item: WorkspaceNavItem): boolean {
@@ -855,5 +871,14 @@ export function WorkspaceSidebar({
         {nav}
       </aside>
     </>
+  );
+}
+
+/** useSearchParams needs a Suspense boundary on statically rendered pages. */
+export function WorkspaceSidebar(props: ComponentProps<typeof WorkspaceSidebarInner>) {
+  return (
+    <Suspense fallback={null}>
+      <WorkspaceSidebarInner {...props} />
+    </Suspense>
   );
 }

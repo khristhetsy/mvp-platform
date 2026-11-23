@@ -2,14 +2,12 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, BarChart3, Bot, IdCard, Mail, Send, Settings, Share2, type LucideIcon } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { ManualOutreachGuide } from "@/components/founder/ManualOutreachGuide";
 import { HowToByKey } from "@/components/founder/how-to/HowToByKey";
 import {
   EMPTY_OUTREACH_STATUS,
   OUTREACH_MODE_COOKIE,
-  automatedStatusLine,
-  manualStatusLine,
   type OutreachStatus,
 } from "@/lib/founder/outreach-status-lines";
 
@@ -54,14 +52,6 @@ function rememberOutreachMode(mode: OutreachTab) {
     /* cookies unavailable */
   }
 }
-
-const STEPS: { key: Step; Icon: LucideIcon; label: string }[] = [
-  { key: "profile", Icon: IdCard, label: "Public Profile" },
-  { key: "outreach", Icon: Send, label: "Outreach" },
-  { key: "social", Icon: Share2, label: "Social Media" },
-  { key: "analytics", Icon: BarChart3, label: "Analytics" },
-  { key: "settings", Icon: Settings, label: "Settings" },
-];
 
 const STEP_TIPS: Record<Step, string> = {
   profile:
@@ -343,16 +333,6 @@ function SettingsPanel() {
   );
 }
 
-type NavTab = {
-  id: string;
-  step: Step;
-  mode: OutreachTab | undefined;
-  Icon: LucideIcon;
-  label: string;
-  going: boolean | undefined;
-  title: string | undefined;
-};
-
 export function DeployWorkflow({
   companyName,
   investableScore,
@@ -391,69 +371,22 @@ export function DeployWorkflow({
   const manualStarted = outreachStatus.manual.started;
   // Deep links (?step=outreach&mode=manual) win. Otherwise Outreach opens on
   // Manual while it hasn't been started, then on the last mode used.
-  const [step, setStep] = useState<Step>(initialStep ?? (initialMode ? "outreach" : "profile"));
-  const [otab, setOtab] = useState<OutreachTab>(
-    initialMode ?? (!manualStarted ? "manual" : rememberedMode ?? "automated"),
-  );
+  // The sidebar links drive the page, so the step and mode follow the URL.
+  const step: Step = initialStep ?? (initialMode ? "outreach" : "profile");
+  const otab: OutreachTab = initialMode ?? (!manualStarted ? "manual" : rememberedMode ?? "automated");
   const [aiOpen, setAiOpen] = useState(false);
   const router = useRouter();
 
-  // Automated and Manual are two separate Outreach tabs, each opening its own page.
+  // Switch to Automated or Manual: remember the choice and open that Outreach page.
   const chooseMode = (mode: OutreachTab) => {
-    setOtab(mode);
-    setStep("outreach");
     rememberOutreachMode(mode);
+    router.push("/founder/deploy?step=outreach&mode=" + mode);
   };
-
-  const automatedLine = automatedStatusLine(outreachStatus, { requiredNote: true });
-  const manualLine = manualStatusLine(outreachStatus, { requiredNote: true });
-  const automatedGoing = outreachStatus.automated.state === "running";
 
   const scoreReady = investableScore >= outreachThreshold;
 
-  const tabs: NavTab[] = STEPS.flatMap((s): NavTab[] =>
-    s.key === "outreach"
-      ? [
-          { id: "outreach-automated", step: s.key, mode: "automated", Icon: Bot, label: "Outreach: Automated", going: automatedGoing, title: automatedLine },
-          { id: "outreach-manual", step: s.key, mode: "manual", Icon: Mail, label: "Outreach: Manual", going: manualStarted, title: manualLine },
-        ]
-      : [{ id: s.key, step: s.key, mode: undefined, Icon: s.Icon, label: s.label, going: undefined, title: undefined }],
-  );
-
   return (
     <div className="pb-24">
-      {/* Step menu */}
-      <div className="sticky top-0 z-10 -mx-2 mb-6 border-b border-slate-200 bg-white/90 px-2 backdrop-blur">
-        {/* No overflow scroller here: it showed a stray scrollbar beside the tabs. Tabs wrap on narrow screens. */}
-        <nav className="flex flex-wrap gap-x-1">
-          {tabs.map((t) => {
-            const active = t.step === step && (t.mode === undefined || t.mode === otab);
-            return (
-              <button
-                key={t.id}
-                type="button"
-                data-learning-id={t.id}
-                title={t.title}
-                onClick={() => {
-                  if (t.mode) chooseMode(t.mode);
-                  else if (t.step === "social" && !social) {
-                    setStep("social");
-                    router.push("/founder/deploy?step=social");
-                  } else setStep(t.step);
-                }}
-                className={`relative flex items-center gap-2 whitespace-nowrap px-3.5 py-3 text-sm font-semibold transition ${
-                  active ? "text-indigo-600" : "text-slate-500 hover:text-slate-800"
-                }`}
-              >
-                <t.Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden="true" />
-                {t.label}
-                {active ? <span className="absolute inset-x-2 bottom-0 h-0.5 rounded bg-indigo-600" /> : null}
-              </button>
-            );
-          })}
-        </nav>
-      </div>
-
       {/* ---------- STEP 1 · PUBLIC PROFILE ---------- */}
       {step === "profile" ? <div className="space-y-4">{publicProfile}</div> : null}
 
