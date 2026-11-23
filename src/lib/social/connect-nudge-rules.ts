@@ -8,6 +8,22 @@ export const SNOOZE_DAYS = 7;
 export const MAX_DISMISSALS = 2;
 export const CONNECT_PATH = "/founder/deploy/social?tab=settings";
 
+/** The next unfinished Launch my social media step the home banner points at. */
+export type LaunchNudgeStep = "connect" | "campaign" | "post";
+export const LAUNCH_NUDGE_COPY: Record<LaunchNudgeStep, { title: string; body: string; cta: string; path: string; percent: number; position: number }> = {
+  connect: { title: "Connect an account", body: "Link LinkedIn, Facebook, Instagram or Reddit so you can post from here.", cta: "Connect an account", path: "/founder/deploy/social?tab=settings", percent: 0, position: 1 },
+  campaign: { title: "Create a campaign", body: "A campaign groups your posts and rolls their results up to one goal.", cta: "Create a campaign", path: "/founder/deploy/social?tab=campaigns", percent: 25, position: 2 },
+  post: { title: "Write your first post", body: "Your draft is ready. Pick a topic, choose where it goes and schedule it.", cta: "Write a post", path: "/founder/deploy/social?tab=compose", percent: 50, position: 3 },
+};
+
+/** Next step from real data. Null once a post is scheduled or published, so the banner stops. */
+export function launchNudgeStep(d: { connected: boolean; campaigns: number; livePosts: number }): LaunchNudgeStep | null {
+  if (!d.connected) return "connect";
+  if (d.campaigns === 0) return "campaign";
+  if (d.livePosts === 0) return "post";
+  return null;
+}
+
 /** Paid founder plans. Free and trial founders are not nudged. */
 export const NUDGE_PLANS = ["founder_basic", "founder_professional", "founder_premium", "founder_managed_ir"] as const;
 
@@ -44,4 +60,10 @@ export function snoozeUntil(now: Date = new Date()): string {
 /** Preference values after one close or snooze. A close counts toward the limit; a snooze does not. */
 export function nextNudgeState(action: "snooze" | "dismiss", dismissals: number, now: Date = new Date()): { dismissals: number; snoozedUntil: string } {
   return { dismissals: action === "dismiss" ? dismissals + 1 : dismissals, snoozedUntil: snoozeUntil(now) };
+}
+
+/** Whether the Launch my social media banner is due. Same plan, switch and close rules as the connect nudge. */
+export function shouldShowLaunchNudge(f: ConnectNudgeFacts, step: LaunchNudgeStep | null, now: Date = new Date()): boolean {
+  if (step === null) return false;
+  return shouldShowConnectNudge({ ...f, connected: false }, now);
 }

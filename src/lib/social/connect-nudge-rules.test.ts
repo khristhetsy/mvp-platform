@@ -89,3 +89,29 @@ describe("socialConnectNudgeEmail", () => {
     expect(mail.text).not.toContain("Hi null");
   });
 });
+
+import { launchNudgeStep, shouldShowLaunchNudge } from "@/lib/social/connect-nudge-rules";
+
+describe("launchNudgeStep", () => {
+  it("walks connect, campaign, post, then stops", () => {
+    expect(launchNudgeStep({ connected: false, campaigns: 0, livePosts: 0 })).toBe("connect");
+    expect(launchNudgeStep({ connected: true, campaigns: 0, livePosts: 0 })).toBe("campaign");
+    expect(launchNudgeStep({ connected: true, campaigns: 1, livePosts: 0 })).toBe("post");
+    expect(launchNudgeStep({ connected: true, campaigns: 1, livePosts: 1 })).toBeNull();
+  });
+});
+
+describe("shouldShowLaunchNudge", () => {
+  it("shows for a connected founder who still has a step left", () => {
+    expect(shouldShowLaunchNudge({ ...due, connected: true }, "campaign", NOW)).toBe(true);
+  });
+  it("hides when no step is left", () => {
+    expect(shouldShowLaunchNudge(due, null, NOW)).toBe(false);
+  });
+  it("keeps the plan, switch and close rules", () => {
+    expect(shouldShowLaunchNudge({ ...due, flagOn: false }, "connect", NOW)).toBe(false);
+    expect(shouldShowLaunchNudge({ ...due, planType: "founder_free", status: "free" }, "connect", NOW)).toBe(false);
+    expect(shouldShowLaunchNudge({ ...due, dismissals: MAX_DISMISSALS }, "connect", NOW)).toBe(false);
+    expect(shouldShowLaunchNudge({ ...due, snoozedUntil: "2026-11-20T00:00:00Z" }, "connect", NOW)).toBe(false);
+  });
+});
