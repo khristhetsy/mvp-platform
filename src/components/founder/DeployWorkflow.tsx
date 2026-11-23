@@ -67,7 +67,7 @@ const STEP_TIPS: Record<Step, string> = {
   profile:
     "Investors see this one-pager before anything else. A complete, published profile is what unlocks every downstream step — keep the description tight and the raise amount current.",
   outreach:
-    "Automated outreach runs itself once your CRR clears the threshold. Manual outreach is for the investors you want to touch personally — use the tools to build sequences and updates.",
+    "Automated outreach runs itself once your CRR clears the threshold. Manual outreach is for the investors you want to touch personally. Launch it with the five step wizard: investors, message, attachments, follow ups, then review and send.",
   social:
     "Post to your own LinkedIn, Facebook, Instagram and Reddit accounts, schedule posts and see which post led to a meeting.",
   analytics:
@@ -461,21 +461,19 @@ export function DeployWorkflow({
       {step === "outreach" ? (
         <div className="space-y-5">
           {/* Manual not started: the Outreach step stays open until the first manual email. */}
-          {!manualStarted ? (
+          {!manualStarted && otab !== "manual" ? (
             <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
               <AlertCircle className="h-5 w-5 flex-none text-amber-600" aria-hidden="true" />
               <p className="flex-1 text-sm text-amber-900">
-                Manual outreach not started. Your Outreach step isn&apos;t complete until you send your first manual email.
+                Manual outreach not started. Use the wizard to launch your first wave. Your Outreach step isn&apos;t complete until your first manual email goes out.
               </p>
-              {otab !== "manual" ? (
-                <button
-                  type="button"
-                  onClick={() => chooseMode("manual")}
-                  className="flex-none text-sm font-semibold text-amber-900 hover:underline"
-                >
-                  Start
-                </button>
-              ) : null}
+              <button
+                type="button"
+                onClick={() => chooseMode("manual")}
+                className="flex-none rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+              >
+                Go to the wizard
+              </button>
             </div>
           ) : null}
 
