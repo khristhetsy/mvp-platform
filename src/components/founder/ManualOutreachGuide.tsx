@@ -6,17 +6,14 @@ import {
   CheckSquare,
   ChevronDown,
   ChevronUp,
-  Database,
   HelpCircle,
   Mail,
-  Search,
   Sparkles,
   Square,
-  X,
 } from "lucide-react";
 
 /**
- * "How manual outreach works": five steps, each with a mini screen showing where
+ * "How manual outreach works": six steps, each with a mini screen showing where
  * to tap (blue ring and dot) and what you'll see next. Open by default until the
  * founder sends their first manual email, then it collapses to a link.
  * Purely visual: nothing here sends or saves.
@@ -54,59 +51,28 @@ const PRIMARY = "inline-flex items-center gap-1 rounded-md bg-indigo-600 px-2 py
 
 const STEPS: { title: string; desc: string; screens: ReactNode }[] = [
   {
-    title: "Add investors you know",
-    desc: "Tap New and enter their name and email, or pull them from My contacts. It's the same address book.",
+    title: "Launch the wizard",
+    desc: "Tap Launch a new wave. The wizard takes you from investors to send in five short steps, and nothing goes out until you start the campaign.",
     screens: (
       <Screens
         tap={
           <Mini caption="Tap">
-            <div className="flex items-center gap-2">
-              <Tap>
-                <span className={PRIMARY}>New</span>
-              </Tap>
-              <span className="text-slate-500">2 investors</span>
-            </div>
+            <Tap>
+              <span className={PRIMARY}>Launch a new wave</span>
+            </Tap>
           </Mini>
         }
         then={
           <Mini caption="Then">
-            <div className="mb-1 rounded border border-slate-200 bg-white px-1.5 py-0.5 text-slate-400">Name</div>
-            <div className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-slate-400">Email</div>
+            <p className="text-slate-500">Investors, Message, Attachments, Follow ups, Review and send</p>
           </Mini>
         }
       />
     ),
   },
   {
-    title: "Search and filter",
-    desc: "Type a name, or open the arrow to filter by Source, tag, or status.",
-    screens: (
-      <Screens
-        tap={
-          <Mini caption="Tap">
-            <div className="flex items-center gap-1.5 rounded border border-slate-200 bg-white px-1.5 py-1">
-              <Search className="h-3 w-3" aria-hidden="true" />
-              <span className="flex-1" />
-              <Tap>
-                <ChevronDown className="h-3.5 w-3.5 text-indigo-600" aria-hidden="true" />
-              </Tap>
-            </div>
-          </Mini>
-        }
-        then={
-          <Mini caption="Then">
-            <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-amber-800">
-              <Database className="h-3 w-3" aria-hidden="true" /> Source <X className="h-3 w-3" aria-hidden="true" />
-            </span>
-            <p className="mt-1 text-slate-500">Not contacted</p>
-          </Mini>
-        }
-      />
-    ),
-  },
-  {
-    title: "Tick who to contact",
-    desc: "Check rows one by one, or use Select all.",
+    title: "Choose your investors",
+    desc: "Wizard step 1. Search your address book and tick who to contact. You can also add investors from the directory, a file, or by hand. A small, researched first wave works better than a blast.",
     screens: (
       <Screens
         tap={
@@ -135,28 +101,64 @@ const STEPS: { title: string; desc: string; screens: ReactNode }[] = [
     ),
   },
   {
-    title: "Send email",
-    desc: "Pick a template or use the AI agent. Review and edit, then send.",
+    title: "Write your message",
+    desc: "Wizard step 2. Pick a template or use the AI agent, then edit. One message goes to everyone, and merge fields fill in each investor's details.",
     screens: (
       <Screens
         tap={
           <Mini caption="Tap">
             <Tap>
-              <span className={PRIMARY}>
-                <Mail className="h-3 w-3" aria-hidden="true" /> Send email
+              <span className="inline-flex items-center gap-1 text-indigo-600">
+                <Sparkles className="h-3 w-3" aria-hidden="true" /> AI agent
               </span>
             </Tap>
           </Mini>
         }
         then={
           <Mini caption="Then">
-            <p className="text-slate-500">
-              Template <ChevronDown className="inline h-3 w-3" aria-hidden="true" />
-            </p>
-            <p className="flex items-center gap-1 text-indigo-600">
-              <Sparkles className="h-3 w-3" aria-hidden="true" /> AI agent
-            </p>
-            <span className={`${PRIMARY} mt-1`}>Send</span>
+            <div className="mb-1 rounded border border-slate-200 bg-white px-1.5 py-0.5 text-slate-400">Subject</div>
+            <div className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-slate-400">Message</div>
+          </Mini>
+        }
+      />
+    ),
+  },
+  {
+    title: "Add attachments and follow ups",
+    desc: "Wizard steps 3 and 4. Attachments are optional, and files over 10 MB in total are left off, so a link is often better. Most replies come after a follow up, and each one goes out after the day shown.",
+    screens: (
+      <Screens
+        tap={
+          <Mini caption="Set">
+            <p>Attachments (optional)</p>
+            <p>Follow ups</p>
+          </Mini>
+        }
+        then={
+          <Mini caption="Then">
+            <p className="text-slate-500">Each follow up goes out after its day</p>
+          </Mini>
+        }
+      />
+    ),
+  },
+  {
+    title: "Review and start",
+    desc: "Wizard step 5. Check the summary, tick the confirmations, then tap Start campaign. Use Save draft any time to come back later.",
+    screens: (
+      <Screens
+        tap={
+          <Mini caption="Tap">
+            <Tap>
+              <span className={PRIMARY}>
+                <Mail className="h-3 w-3" aria-hidden="true" /> Start campaign
+              </span>
+            </Tap>
+          </Mini>
+        }
+        then={
+          <Mini caption="Then">
+            <p className="text-emerald-700">Campaign queued</p>
           </Mini>
         }
       />

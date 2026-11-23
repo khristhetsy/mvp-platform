@@ -397,11 +397,28 @@ export function LaunchManualOutreach({ contacts }: { contacts: OutreachAudienceC
 
   const home = (
     <div>
+      {recipients.length === 0 ? (
+        <div className="flex flex-wrap items-center gap-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3.5">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-amber-900">Launch your manual outreach</p>
+            <p className="text-[13px] text-amber-800">
+              You have not sent your first email yet. The wizard takes you through five short steps: investors, message, attachments, follow ups, then review and send. Nothing goes out until you start the campaign.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={openWizard}
+            disabled={capReached}
+            title={capReached ? `Email limit reached. Sending resumes ${emailCap?.resetsLabel}.` : undefined}
+            className={btnPrimary}
+          >
+            Launch the wizard
+          </button>
+        </div>
+      ) : (
       <div className="flex flex-wrap items-center gap-3">
         <p className="text-sm text-slate-600">
-          {recipients.length > 0
-            ? `Your campaign is ${status === "queued" ? "running" : "saved"}. Next send window: ${nextSendWindow()}.`
-            : "You have not sent any manual outreach yet. Launch your first wave in five short steps."}
+          {`Your campaign is ${status === "queued" ? "running" : "saved"}. Next send window: ${nextSendWindow()}.`}
         </p>
         <button
           type="button"
@@ -413,6 +430,7 @@ export function LaunchManualOutreach({ contacts }: { contacts: OutreachAudienceC
           Launch a new wave
         </button>
       </div>
+      )}
       <Banner msg={message} />
       {recipients.length > 0 ? (
         <>
