@@ -141,6 +141,13 @@ function buildDeployInsights(input: {
 const DEPLOY_STEPS: DeployStep[] = ["profile", "outreach", "social", "analytics", "settings"];
 const asMode = (v: unknown): OutreachTab | null => (v === "automated" || v === "manual" ? v : null);
 
+/** Profile answers the directory match starts from. These columns are read untyped, as the matching engine does. */
+function directoryDefaultsFor(company: object) {
+  const c = company as Record<string, unknown>;
+  const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+  return { industry: str(c.industry), fundingStage: str(c.funding_stage), investorTypes: str(c.seeking_investor_types) };
+}
+
 export default async function FounderDeployPage({
   searchParams,
 }: {
@@ -350,6 +357,7 @@ export default async function FounderDeployPage({
       <div className="space-y-4">
         {nextManualStep ? <NextManualStepStrip step={nextManualStep} /> : null}
         <LaunchManualOutreach
+          directoryDefaults={directoryDefaultsFor(company)}
           contacts={hub.contacts.map((c) => ({
             id: c.id,
             name: c.investor_name,
