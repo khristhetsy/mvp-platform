@@ -12,7 +12,7 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
 import { getFounderSocialLimit } from "@/lib/social/founder-limits";
-import { NUDGE_FEATURE, shouldShowConnectNudge, type ConnectNudgeFacts } from "@/lib/social/connect-nudge-rules";
+import { NUDGE_FEATURE, launchNudgeStep, shouldShowConnectNudge, shouldShowLaunchNudge, type ConnectNudgeFacts, type LaunchNudgeStep } from "@/lib/social/connect-nudge-rules";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return createServiceRoleClient(); }
@@ -50,4 +50,22 @@ export async function loadConnectNudgeFacts(profileId: string, flagOn?: boolean)
 export async function loadShowConnectNudge(profileId: string): Promise<boolean> {
   const facts = await loadConnectNudgeFacts(profileId);
   return facts ? shouldShowConnectNudge(facts) : false;
+}
+
+/** The next Launch my social media step to show on the home banner, or null when it should stay hidden. */
+export async function loadLaunchNudgeStep(profileId: string): Promise<LaunchNudgeStep | null> {
+  try {
+    const facts = await loadConnectNudgeFacts(profileId);
+    if (!facts) return null;
+    const client = db();
+    const [campaigns, posts] = await Promise.all([
+      client.from("social_campaigns").select("id", { count: "exact", head: true }).eq("owner_profile_id", profileId).is("archived_at", null),
+      client.from("social_posts").select("id", { count: "exact", head: true }).eq("owner_profile_id", profileId).is("deleted_at", null).is("archived_at", null).is("held_until", null).in("status", ["scheduled", "published"]),
+    ]);
+    if (campaigns.error || posts.error) return null;
+    const step = launchNudgeStep({ connected: facts.connected, campaigns: campaigns.count ?? 0, livePosts: posts.count ?? 0 });
+    return shouldShowLaunchNudge(facts, step) ? step : null;
+  } catch {
+    return null;
+  }
 }
