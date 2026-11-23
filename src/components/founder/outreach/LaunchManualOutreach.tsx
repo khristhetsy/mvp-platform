@@ -10,11 +10,14 @@
  * attachments and per investor stop. Nothing about sending or caps changes.
  */
 
-import Link from "next/link";
+import { OdooSearchBar, EMPTY_SEARCH, type SearchState } from "@/components/admin/OdooSearchBar";
+import { ToolbarGear, type GearItem } from "@/components/admin/ToolbarGear";
+import { applySearch, groupRows } from "@/components/founder/FounderToolbar";
+import { Highlight } from "@/components/ui/SearchStatus";
 import { ContactImportDialog } from "@/components/founder/outreach/ContactImportDialog";
 import { MatchFromDirectoryWizard, type DirectoryDefaults } from "@/components/founder/investor-directory/MatchFromDirectoryWizard";
 import type { HoldStatus } from "@/lib/investor-directory/limits";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import {
   DEFAULT_BODY,
   DEFAULT_SEQUENCE,
@@ -37,6 +40,7 @@ import {
   type SeqStep,
 } from "@/components/founder/outreach/OutreachComposer";
 import type { AttachmentOptions, OutreachContact, RecipientStatus } from "@/components/founder/outreach/types";
+import { contactFit, fitCompany } from "@/lib/outreach/contact-fit";
 import {
   DEFAULT_ATTACHMENTS,
   MAX_ATTACHMENT_BYTES,
@@ -65,6 +69,30 @@ const CHECKS = [
 const btn = "rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50";
 const btnPrimary = "cap-btn-primary rounded-lg px-4 py-2 text-[13px] font-semibold disabled:cursor-not-allowed disabled:opacity-50";
 const input = "w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800";
+
+type ColKey = "contact" | "email" | "type" | "sectors" | "fit" | "status" | "source";
+/** The step 1 table columns. Contact is always shown. */
+const COLUMNS: { key: ColKey; label: string }[] = [
+  { key: "contact", label: "Contact" },
+  { key: "email", label: "Email" },
+  { key: "type", label: "Type" },
+  { key: "sectors", label: "Sectors" },
+  { key: "fit", label: "Fit" },
+  { key: "status", label: "Status" },
+  { key: "source", label: "Lead source" },
+];
+const COLUMNS_KEY = "founder.manualOutreach.columns";
+const STATUS_OPTIONS = ["Not contacted", "Queued", "Sent", "Opened", "Clicked", "Replied", "Stopped", "Skipped"];
+
+function fitBand(fit: number | null): string {
+  if (fit === null) return "Not scored";
+  if (fit >= 75) return "Strong fit (75 or more)";
+  if (fit >= 45) return "Good fit (45 to 74)";
+  return "Lower fit (under 45)";
+}
+function typeTokens(v: string | null): string[] {
+  return (v ?? "").split(/[,;]/).map((x) => x.trim()).filter(Boolean);
+}
 
 function Banner({ msg }: { msg: Msg }) {
   if (!msg) return null;
@@ -100,7 +128,9 @@ export function LaunchManualOutreach({ contacts, directoryDefaults }: { contacts
   const [view, setView] = useState<"home" | "wizard">("home");
   const [step, setStep] = useState(0);
   const [done, setDone] = useState(false);
-  const [query, setQuery] = useState("");
+  const [search, setSearch] = useState<SearchState>(EMPTY_SEARCH);
+  const [sort, setSort] = useState<{ key: ColKey | ""; dir: 1 | -1 }>({ key: "", dir: 1 });
+  const [shown, setShown] = useState<Record<ColKey, boolean>>({ contact: true, email: true, type: true, sectors: true, fit: true, status: true, source: true });
   const [addOpen, setAddOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -197,6 +227,34 @@ export function LaunchManualOutreach({ contacts, directoryDefaults }: { contacts
     };
   }, [applyCampaign, loadCampaign]);
 
+  // Remember which columns the founder turned off, in this browser.
+  useEffect(() => {
+    void Promise.resolve().then(() => {
+      try {
+        const raw = window.localStorage.getItem(COLUMNS_KEY);
+        if (!raw) return;
+        const saved = JSON.parse(raw) as Partial<Record<ColKey, boolean>>;
+        setShown((prev) => {
+          const next = { ...prev };
+          for (const c of COLUMNS) if (typeof saved[c.key] === "boolean") next[c.key] = saved[c.key] as boolean;
+          next.contact = true;
+          return next;
+        });
+      } catch {
+        /* storage blocked: all columns stay on */
+      }
+    });
+  }, []);
+
+  function saveShown(next: Record<ColKey, boolean>) {
+    setShown(next);
+    try {
+      window.localStorage.setItem(COLUMNS_KEY, JSON.stringify(next));
+    } catch {
+      /* not remembered, still works */
+    }
+  }
+
   // ---- Derived ----
   const statusByEmail = useMemo(() => {
     const m = new Map<string, RecipientStatus>();
@@ -226,16 +284,108 @@ export function LaunchManualOutreach({ contacts, directoryDefaults }: { contacts
     return r ? stageOf(r).label : "Not contacted";
   };
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return contactList;
-    return contactList.filter((c) => [c.name, c.firm ?? "", c.email ?? "", c.investorType ?? "", c.sectors ?? ""].join(" ").toLowerCase().includes(q));
-  }, [contactList, query]);
+  const fitCo = useMemo(() => fitCompany(directoryDefaults), [directoryDefaults]);
+  const fitById = useMemo(() => {
+    const m = new Map<string, number | null>();
+    for (const c of contactList) m.set(c.id, contactFit({ id: c.id, investorType: c.investorType, sectors: c.sectors, stages: c.stages, geography: c.geography }, fitCo));
+    return m;
+  }, [contactList, fitCo]);
+  const fitOf = useCallback((c: OutreachContact) => fitById.get(c.id) ?? null, [fitById]);
 
-  const grouped = useMemo(
-    () => SOURCE_ORDER.map((g) => ({ label: g, rows: filtered.filter((c) => c.source === g) })).filter((g) => g.rows.length > 0),
-    [filtered],
+  const filtered = useMemo(
+    () =>
+      applySearch(contactList, search, {
+        text: (c) => [c.name, c.firm ?? "", c.email ?? "", c.investorType ?? "", c.sectors ?? "", c.source].join(" "),
+        quick: {
+          has_email: (c) => !!c.email,
+          no_email: (c) => !c.email,
+          not_contacted: (c) => outreachLabel(c) === "Not contacted",
+          clicked: (c) => outreachLabel(c) === "Clicked",
+          strong: (c) => (fitOf(c) ?? -1) >= 75,
+        },
+        field: {
+          source: (c) => c.source,
+          outreach: (c) => outreachLabel(c),
+          type: (c) => typeTokens(c.investorType),
+        },
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [contactList, search, statusByEmail, fitOf],
   );
+
+  const ordered = useMemo(() => {
+    const byName = (a: OutreachContact, b: OutreachContact) => a.name.localeCompare(b.name);
+    const text = (v: string | null | undefined) => (v ?? "").trim().toLowerCase();
+    const rows = [...filtered];
+    if (!sort.key) {
+      // Default: your own contacts first, then the directory, best fit first inside each.
+      return rows.sort((a, b) => SOURCE_ORDER.indexOf(a.source) - SOURCE_ORDER.indexOf(b.source) || (fitOf(b) ?? -1) - (fitOf(a) ?? -1) || byName(a, b));
+    }
+    const pick = (c: OutreachContact): string | number | null => {
+      switch (sort.key) {
+        case "contact": return text(c.name);
+        case "email": return c.email ? text(c.email) : null;
+        case "type": return text(c.investorType) || null;
+        case "sectors": return text(c.sectors) || null;
+        case "fit": return fitOf(c);
+        case "status": return outreachLabel(c).toLowerCase();
+        default: return text(c.source);
+      }
+    };
+    return rows.sort((a, b) => {
+      const x = pick(a);
+      const y = pick(b);
+      // Empty values always sit at the bottom, whichever way it sorts.
+      if (x === null && y === null) return byName(a, b);
+      if (x === null) return 1;
+      if (y === null) return -1;
+      const d = typeof x === "number" && typeof y === "number" ? x - y : String(x).localeCompare(String(y));
+      return d * sort.dir || byName(a, b);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtered, sort, fitOf, statusByEmail]);
+
+  const grouped = useMemo(() => {
+    const g = groupRows(ordered, search.groupBy, "none", {
+      source: (c) => c.source,
+      outreach: (c) => outreachLabel(c),
+      fit: (c) => fitBand(fitOf(c)),
+    });
+    if (search.groupBy === "source") g.sort((a, b) => SOURCE_ORDER.indexOf(a.label) - SOURCE_ORDER.indexOf(b.label));
+    return g;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ordered, search.groupBy, fitOf, statusByEmail]);
+
+  const shownCols = COLUMNS.filter((c) => shown[c.key]);
+  const q = search.q.trim();
+  const gearItems: GearItem[] = [
+    { key: "dir", icon: "ti-world-search", label: "Import in the Investor directory", href: "/founder/investor-directory", section: "Actions" },
+    ...COLUMNS.map((c, i): GearItem => ({
+      key: `col-${c.key}`,
+      icon: "ti-columns",
+      label: c.label,
+      hint: c.key === "contact" ? "Always on" : undefined,
+      active: shown[c.key],
+      keepOpen: true,
+      section: i === 0 ? "Columns" : undefined,
+      sep: i === 0,
+      onClick: () => {
+        if (c.key !== "contact") saveShown({ ...shown, [c.key]: !shown[c.key] });
+      },
+    })),
+    {
+      key: "col-all",
+      icon: "ti-eye",
+      label: "Show all columns",
+      keepOpen: true,
+      sep: true,
+      onClick: () => saveShown({ contact: true, email: true, type: true, sectors: true, fit: true, status: true, source: true }),
+    },
+  ];
+
+  function sortBy(key: ColKey) {
+    setSort((s) => (s.key !== key ? { key, dir: 1 } : s.dir === 1 ? { key, dir: -1 } : { key: "", dir: 1 }));
+  }
 
   const preview = sendable.find((c) => c.id === previewId) ?? sendable[0] ?? null;
   const onePager = options?.onePager ?? null;
@@ -494,7 +644,40 @@ export function LaunchManualOutreach({ contacts, directoryDefaults }: { contacts
       <h3 className="text-base font-semibold text-slate-900">Who do you want to reach?</h3>
       <p className="mb-3 text-[13px] text-slate-500">Same address book as My contacts. A small, researched first wave works better than a blast.</p>
       <div className="flex flex-wrap items-center gap-2">
-        <input className={`${input} min-w-[160px] flex-1`} placeholder="Search name, firm, email, sector" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <ToolbarGear items={gearItems} />
+        <div className="min-w-[220px] flex-1">
+          <OdooSearchBar
+            scope="manual_outreach_investors"
+            state={search}
+            onChange={setSearch}
+            api="/api/founder/saved-views"
+            personalOnly
+            width="100%"
+            placeholder="Search name, firm, email, sector"
+            quick={[
+              { key: "has_email", label: "Has an email" },
+              { key: "no_email", label: "No email" },
+              { key: "not_contacted", label: "Not contacted yet" },
+              { key: "clicked", label: "Clicked" },
+              { key: "strong", label: "Fit 75 or more" },
+            ]}
+            fields={[
+              { key: "source", label: "Lead source", options: SOURCE_ORDER },
+              { key: "outreach", label: "Status", options: STATUS_OPTIONS },
+              { key: "type", label: "Type", options: [...new Set(contactList.flatMap((c) => typeTokens(c.investorType)))].sort() },
+            ]}
+            groups={[
+              { id: "none", label: "None" },
+              { id: "source", label: "Lead source" },
+              { id: "outreach", label: "Status" },
+              { id: "fit", label: "Fit band" },
+            ]}
+            noGroupId="none"
+          />
+        </div>
+        <span className="whitespace-nowrap text-xs text-slate-500" aria-live="polite">
+          {filtered.length} of {contactList.length} contacts
+        </span>
         {savedLists.length > 0 ? (
           <select
             className="rounded-md border border-slate-200 bg-white px-2 py-2 text-sm"
@@ -574,30 +757,85 @@ export function LaunchManualOutreach({ contacts, directoryDefaults }: { contacts
         <button type="button" className="hover:text-slate-700" onClick={() => setSelected(new Set())}>
           Clear
         </button>
-        <Link href="/founder/investor-directory" className="ml-auto text-[#1A6CE4] hover:underline">
-          Import in the Investor directory
-        </Link>
       </div>
       {contactList.length === 0 ? <p className="mt-4 text-sm text-slate-500">No investors yet. Add one above or import them in the Investor directory.</p> : null}
-      {grouped.map((g) => (
-        <div key={g.label}>
-          <p className="px-1 pb-1 pt-3 text-[11px] font-bold uppercase tracking-wide text-slate-400">{g.label}</p>
-          {g.rows.map((c) => (
-            <label key={c.id} className="flex cursor-pointer items-center gap-3 border-b border-slate-100 px-1 py-2 hover:bg-slate-50">
-              <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggle(c.id)} />
-              <span className="min-w-0 flex-1">
-                <span className="text-[13px] font-medium text-slate-900">{c.name}</span>
-                {c.firm ? <span className="text-[13px] text-slate-500"> at {c.firm}</span> : null}
-                <span className="block truncate text-[11.5px] text-slate-500">
-                  {[c.investorType, c.sectors].filter(Boolean).join(" · ")}
-                  {!c.email ? <span className="text-amber-700"> · no email, will be skipped</span> : null}
-                </span>
-              </span>
-              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">{outreachLabel(c)}</span>
-            </label>
-          ))}
+      {contactList.length > 0 && filtered.length === 0 ? <p className="mt-4 text-sm text-slate-500">No contacts match this search.</p> : null}
+      {filtered.length > 0 ? (
+        <div className="mt-2 overflow-x-auto">
+          <table className="w-full min-w-[760px] border-collapse text-left text-[13px]">
+            <thead>
+              <tr className="border-b border-slate-200 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                <th className="w-7 px-1 py-2" />
+                {shownCols.map((c) => {
+                  const on = sort.key === c.key;
+                  return (
+                    <th key={c.key} className="px-1.5 py-2" aria-sort={on ? (sort.dir === 1 ? "ascending" : "descending") : "none"}>
+                      <button type="button" onClick={() => sortBy(c.key)} className={`inline-flex items-center gap-1 font-bold uppercase tracking-wide hover:text-slate-900 ${on ? "text-[#1A6CE4]" : ""}`}>
+                        {c.label}
+                        <i className={`ti ${on ? (sort.dir === 1 ? "ti-arrow-up" : "ti-arrow-down") : "ti-arrows-sort"} text-[13px] ${on ? "" : "text-slate-300"}`} aria-hidden="true" />
+                      </button>
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
+            <tbody>
+              {grouped.map((g) => (
+                <Fragment key={g.label || "all"}>
+                  {g.label ? (
+                    <tr>
+                      <td colSpan={shownCols.length + 1} className="px-1 pb-1 pt-4 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                        {g.label}
+                      </td>
+                    </tr>
+                  ) : null}
+                  {g.rows.map((c) => {
+                    const fit = fitOf(c);
+                    return (
+                      <tr key={c.id} className="cursor-pointer border-b border-slate-100 align-top hover:bg-slate-50" onClick={() => toggle(c.id)}>
+                        <td className="px-1 py-2">
+                          <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggle(c.id)} onClick={(e) => e.stopPropagation()} aria-label={`Select ${c.name}`} />
+                        </td>
+                        {shown.contact ? (
+                          <td className="px-1.5 py-2">
+                            <span className="font-medium text-slate-900"><Highlight text={c.name} query={q} /></span>
+                            {c.firm ? <span className="text-slate-500"> at <Highlight text={c.firm} query={q} /></span> : null}
+                          </td>
+                        ) : null}
+                        {shown.email ? (
+                          <td className="px-1.5 py-2 text-[12px]">
+                            {c.email ? <span className="text-slate-600"><Highlight text={c.email} query={q} /></span> : <span className="text-amber-700">no email, will be skipped</span>}
+                          </td>
+                        ) : null}
+                        {shown.type ? <td className="px-1.5 py-2 text-[12px] text-slate-600">{c.investorType ? <Highlight text={c.investorType} query={q} /> : "none"}</td> : null}
+                        {shown.sectors ? <td className="px-1.5 py-2 text-[12px] text-slate-600">{c.sectors ? <Highlight text={c.sectors} query={q} /> : "none"}</td> : null}
+                        {shown.fit ? (
+                          <td className="whitespace-nowrap px-1.5 py-2">
+                            {fit === null ? (
+                              <span className="text-[12px] text-slate-500">Not scored</span>
+                            ) : (
+                              <>
+                                <span className={`font-bold ${fit >= 75 ? "text-emerald-600" : fit >= 45 ? "text-[#1A6CE4]" : "text-slate-500"}`}>{fit}</span>
+                                <span className="text-[12px] text-slate-500"> / 100</span>
+                              </>
+                            )}
+                          </td>
+                        ) : null}
+                        {shown.status ? (
+                          <td className="px-1.5 py-2">
+                            <span className="whitespace-nowrap rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">{outreachLabel(c)}</span>
+                          </td>
+                        ) : null}
+                        {shown.source ? <td className="px-1.5 py-2 text-[12px] text-slate-600"><Highlight text={c.source} query={q} /></td> : null}
+                      </tr>
+                    );
+                  })}
+                </Fragment>
+              ))}
+            </tbody>
+          </table>
         </div>
-      ))}
+      ) : null}
       {noEmail > 0 ? <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-[12.5px] text-amber-800">{noEmail} selected without an email will be skipped.</p> : null}
       {importOpen ? (
         <ContactImportDialog
