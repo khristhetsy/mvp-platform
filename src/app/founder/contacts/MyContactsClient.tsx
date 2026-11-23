@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { FounderToolbar, applySearch, groupRows } from "@/components/founder/FounderToolbar";
 import { EMPTY_SEARCH, type SearchState } from "@/components/admin/OdooSearchBar";
 import type { MyContactRow } from "@/lib/founder-crm/my-contacts";
+import { MatchFromDirectoryWizard } from "@/components/founder/investor-directory/MatchFromDirectoryWizard";
 import { contactSourceLabel, contactStatusLabel } from "@/lib/founder-crm/contact-labels";
 
 /**
@@ -31,6 +32,7 @@ export function MyContactsClient({ initialRows, initialQuick = [], initialNotice
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [panel, setPanel] = useState<"none" | "add">("none");
   const [form, setForm] = useState({ name: "", firm: "", email: "", type: "" });
+  const [wizard, setWizard] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(initialNotice ? { tone: "ok", text: initialNotice } : null);
 
@@ -173,6 +175,11 @@ export function MyContactsClient({ initialRows, initialQuick = [], initialNotice
           primary={
             <button type="button" onClick={() => setPanel(panel === "add" ? "none" : "add")} className="cap-btn-primary rounded-lg px-3 py-1.5 text-[12.5px] font-semibold">
               + New
+            </button>
+          }
+          right={
+            <button type="button" onClick={() => setWizard(true)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[12.5px] font-medium text-slate-700 hover:bg-slate-50">
+              <i className="ti ti-sparkles" aria-hidden="true" /> Match from directory
             </button>
           }
           quick={[
@@ -335,6 +342,8 @@ export function MyContactsClient({ initialRows, initialQuick = [], initialNotice
           </table>
         )}
       </div>
+
+      {wizard ? <MatchFromDirectoryWizard onClose={() => setWizard(false)} onImported={() => void reload()} /> : null}
 
       <p className="text-[11.5px] leading-relaxed text-slate-400">
         Only your own investors appear here. Investors in the iCapOS network stay private until iCFO introduces you. Contacts
