@@ -12,12 +12,15 @@ import { isActingAsFounder } from "@/lib/admin/acting-central";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Social media" };
 
-export default async function FounderSocialPage({ searchParams }: { searchParams?: Promise<{ tab?: string }> }) {
+export default async function FounderSocialPage({ searchParams }: { searchParams?: Promise<{ tab?: string; linkedin?: string; facebook?: string; reddit?: string; message?: string }> }) {
   const sp = (await searchParams) ?? {};
   const profile = await requireRole(["founder"]);
   const { company } = await getActiveCompanyForUser(profile);
   const usage = await getFounderSocialUsage(profile.id).catch(() => null);
   const acting = await isActingAsFounder();
+  // The connect callbacks return with <network>=<status>. The wizard uses it to land on the right step.
+  const network = (["linkedin", "facebook", "reddit"] as const).find((n) => sp[n]);
+  const connectResult = network ? { network, status: sp[network] as string, message: sp.message ?? null } : null;
 
   return (
     <FounderAppShell profileName={profile.full_name ?? profile.email ?? "Founder"} profileSubtitle={company?.company_name ?? "Your company"}>
@@ -33,6 +36,7 @@ export default async function FounderSocialPage({ searchParams }: { searchParams
             initialDraft={autoDraft({ company: company?.company_name, description: company?.business_description, industry: company?.industry, raiseBand: company?.funding_amount_band })}
             initialTab={sp.tab ?? null}
             acting={acting}
+            connectResult={connectResult}
           />
         ) : (
           <>
