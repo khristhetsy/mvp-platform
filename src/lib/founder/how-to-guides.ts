@@ -1283,39 +1283,39 @@ export const HOW_TO_GUIDES: HowToGuideData[] = [
     "steps": [
       {
         "title": "Connect your accounts",
-        "desc": "Open More, then Settings, and connect the social accounts you want to post from.",
+        "desc": "Tap Connect, pick a network, approve access, then check the account.",
         "tap": {
           "kind": "button",
-          "label": "More"
+          "label": "Connect"
         },
-        "then": "Connected accounts list"
+        "then": "Connect wizard opens"
       },
       {
         "title": "Write your post",
-        "desc": "Type your post, or jot notes and use the AI agent helpers.",
+        "desc": "Tap Write, pick a topic, edit the draft and choose where it goes.",
         "tap": {
           "kind": "button",
-          "label": "Compose"
+          "label": "Write"
         },
-        "then": "Post editor opens"
+        "then": "Post wizard opens"
       },
       {
         "title": "Choose how to publish",
-        "desc": "Save a draft, post now, or schedule it for later.",
+        "desc": "Post now, schedule it for later, or save a draft.",
         "tap": {
           "kind": "button",
-          "label": "Save draft"
+          "label": "Schedule post"
         },
-        "then": "Post joins your Library"
+        "then": "Post joins Your posts"
       },
       {
         "title": "Track what worked",
-        "desc": "Open More, then Attribution, to see which campaigns led to clicks and meetings.",
+        "desc": "Tap Review to see your funnel, your weakest step and which campaign led to meetings.",
         "tap": {
           "kind": "button",
-          "label": "More"
+          "label": "Review"
         },
-        "then": "Campaign results table"
+        "then": "Weekly review opens"
       }
     ]
   },

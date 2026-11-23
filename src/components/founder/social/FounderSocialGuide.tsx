@@ -1,13 +1,12 @@
 "use client";
 
 const STEPS: { title: string; body: string }[] = [
-  { title: "Open Social media", body: "Open Stage 3 Marketing, then Outreach, then the Social media tab." },
-  { title: "Connect an account", body: "Open More, then Settings, and tap Connect next to LinkedIn, Facebook, Instagram or Reddit." },
-  { title: "Approve access", body: "Sign in on the network, tap Allow, and you come back connected." },
-  { title: "Create a campaign", body: "Open More, then Campaigns and goals, tap New campaign, name it and save." },
-  { title: "Write with the AI agent", body: "Open Compose, jot a few notes, tap a template, then edit the draft in your own words." },
-  { title: "Schedule the post", body: "Pick a date and time in PT, choose the campaign, tap Schedule. The counter shows how many posts you have left." },
-  { title: "Check your results", body: "Overview shows your funnel. Under More, Attribution shows which post led to a click and a meeting." },
+  { title: "Open Social media", body: "Open Stage 3 Marketing, then Outreach, then Social media. You land on Launch my social media." },
+  { title: "Connect an account", body: "Tap Connect, pick LinkedIn, Facebook, Instagram or Reddit, tap Approve, then check the account." },
+  { title: "Create a campaign", body: "Tap Create, name the campaign, set optional monthly goals and alerts, then review." },
+  { title: "Write a post", body: "Tap Write. Pick a topic, edit the draft, choose networks, pick a time in PT, then review and schedule." },
+  { title: "View your post", body: "Under Your posts, tap View post. Once it is published, View on the network opens the real post." },
+  { title: "Do the weekly review", body: "Tap Review to see your funnel, your weakest step and what worked, then write the next post." },
 ];
 
 export function FounderSocialGuide({ onClose }: { onClose: () => void }) {
@@ -17,7 +16,7 @@ export function FounderSocialGuide({ onClose }: { onClose: () => void }) {
         <div className="flex items-start justify-between">
           <div>
             <h2 className="text-lg font-semibold text-slate-900">How to use Social media</h2>
-            <p className="text-xs text-slate-500">Seven steps, about 5 minutes.</p>
+            <p className="text-xs text-slate-500">Six steps, about 5 minutes.</p>
           </div>
           <button type="button" aria-label="Close" className="text-slate-400 hover:text-slate-700" onClick={onClose}>✕</button>
         </div>
