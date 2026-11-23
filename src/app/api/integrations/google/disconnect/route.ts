@@ -4,9 +4,10 @@ import { isGoogleOAuthConfigured } from "@/lib/integrations/google-oauth";
 import { notifyGoogleAccountDisconnected } from "@/lib/notifications/google-events";
 import { requireRole } from "@/lib/supabase/auth";
 import { actingBlock } from "@/lib/admin/acting-central";
+import { ACTING_CONNECTIONS_KEY } from "@/lib/departments/founder-access-core";
 
 export async function POST() {
-  const actingBlocked = await actingBlock();
+  const actingBlocked = await actingBlock(ACTING_CONNECTIONS_KEY);
   if (actingBlocked) return actingBlocked;
   if (!isGoogleOAuthConfigured()) {
     return NextResponse.json({ error: "Google OAuth is not configured." }, { status: 503 });

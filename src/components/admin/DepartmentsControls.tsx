@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FeatureControlsClient } from "@/components/admin/FeatureControlsClient";
+import { OpenAsFounderCard } from "@/components/admin/OpenAsFounderCard";
 
 type Dept = { id: string; key: string; name: string; hubKey: string; isAdmin: boolean; contactsSeeAll: boolean };
 type Feature = { id: string; key: string; label: string; hubKey: string; path: string; sortOrder: number };
@@ -23,7 +24,7 @@ export function DepartmentsControls() {
         ))}
       </div>
       {tab === "global" && <FeatureControlsClient />}
-      {tab === "departments" && <DepartmentMatrix />}
+      {tab === "departments" && <><DepartmentMatrix /><OpenAsFounderCard /></>}
       {tab === "members" && <MembersTab />}
       {tab === "audit" && <AuditTab />}
     </div>

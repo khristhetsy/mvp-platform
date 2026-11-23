@@ -9,11 +9,12 @@ import { outreachCampaignQueueSchema } from "@/lib/validation";
 import { getDistributionPlan } from "@/lib/subscriptions/get-subscription";
 import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import { actingBlock } from "@/lib/admin/acting-central";
+import { ACTING_OUTREACH_KEY } from "@/lib/departments/founder-access-core";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, context: RouteContext) {
-  const actingBlocked = await actingBlock();
+  const actingBlocked = await actingBlock(ACTING_OUTREACH_KEY);
   if (actingBlocked) return actingBlocked;
   const auth = await requireFounderInvestorCrmApi();
   if ("error" in auth) {

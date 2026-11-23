@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { roleCanManageBilling } from "@/lib/billing/billing-access-core";
-import { isActingAsFounder } from "@/lib/admin/acting-central";
+import { actingBypass, isActingAsFounder } from "@/lib/admin/acting-central";
+import { ACTING_PAYMENTS_KEY } from "@/lib/departments/founder-access-core";
 import type { Profile } from "@/lib/supabase/types";
 
 export const BILLING_OWNER_ONLY_MESSAGE = "Billing is managed by the account Owner.";
@@ -19,7 +20,7 @@ export async function canManageBilling(profileId: string): Promise<boolean> {
     // Billing routes already limit plan changes to founder accounts; staff are not company members.
     if (String(profile.role).toLowerCase() !== "founder") return true;
     // Staff acting as this founder never get billing, even though they run as the Owner.
-    if (await isActingAsFounder()) return false;
+    if ((await isActingAsFounder()) && !(await actingBypass(ACTING_PAYMENTS_KEY))) return false;
 
     const { company } = await getActiveCompanyForUser(profile as unknown as Profile);
     if (!company) return true;

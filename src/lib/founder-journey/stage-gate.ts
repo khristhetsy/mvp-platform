@@ -6,6 +6,7 @@ import { JOURNEY_STAGES } from './types';
 import type { JourneyStage, StageGateResult, FounderJourneyState } from './types';
 import { evaluateFounderJourney } from './evaluate';
 import { autoAdvanceStage } from './advance';
+import { actingBypass } from '@/lib/admin/acting-central';
 
 /**
  * Evaluate the founder's journey AND apply any auto-advance, returning the fresh
@@ -35,6 +36,11 @@ export async function checkFounderStageAccess(minStage: JourneyStage): Promise<S
   const minIndex = JOURNEY_STAGES.indexOf(minStage);
 
   if (resultingIndex >= minIndex) {
+    return { allowed: true };
+  }
+
+  // Staff acting as this founder whose department has the switch on open every stage.
+  if (await actingBypass()) {
     return { allowed: true };
   }
 

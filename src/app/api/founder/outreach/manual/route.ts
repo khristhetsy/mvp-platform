@@ -17,6 +17,7 @@ import {
   type ManualSequenceStep,
 } from "@/lib/outreach/manual-outreach";
 import { actingBlock } from "@/lib/admin/acting-central";
+import { ACTING_OUTREACH_KEY } from "@/lib/departments/founder-access-core";
 
 export const dynamic = "force-dynamic";
 
@@ -60,7 +61,7 @@ export async function POST(request: Request) {
   }
 
   if (body.action === "start") {
-    const actingBlocked = await actingBlock();
+    const actingBlocked = await actingBlock(ACTING_OUTREACH_KEY);
     if (actingBlocked) return actingBlocked;
   }
 

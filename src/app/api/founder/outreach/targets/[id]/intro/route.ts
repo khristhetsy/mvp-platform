@@ -10,11 +10,12 @@ import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import { capReached, loadIntroQuota } from "@/lib/matching/intro-quota";
 import { PLATFORM_TZ } from "@/lib/time/platform-tz";
 import { actingBlock } from "@/lib/admin/acting-central";
+import { ACTING_OUTREACH_KEY } from "@/lib/departments/founder-access-core";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function POST(request: Request, context: RouteContext) {
-  const actingBlocked = await actingBlock();
+  const actingBlocked = await actingBlock(ACTING_OUTREACH_KEY);
   if (actingBlocked) return actingBlocked;
   const auth = await requireFounderInvestorCrmApi();
   if ("error" in auth) {

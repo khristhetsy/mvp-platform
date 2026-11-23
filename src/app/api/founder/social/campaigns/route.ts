@@ -5,6 +5,7 @@ import { createCampaign, listCampaigns, setCampaignArchived, updateCampaign } fr
 import { campaignFunnels, periodStart, nextPeriodStart } from "@/lib/social/funnel";
 import { founderIntroBreakdown } from "@/lib/social/founder-intros";
 import { actingBlock } from "@/lib/admin/acting-central";
+import { ACTING_SOCIAL_KEY } from "@/lib/departments/founder-access-core";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,7 @@ export async function GET(): Promise<Response> {
 }
 
 export async function POST(req: NextRequest): Promise<Response> {
-  const actingBlocked = await actingBlock();
+  const actingBlocked = await actingBlock(ACTING_SOCIAL_KEY);
   if (actingBlocked) return actingBlocked;
   const auth = await requireFounderSocial();
   if ("error" in auth) return auth.error;
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest): Promise<Response> {
 }
 
 export async function PATCH(req: NextRequest): Promise<Response> {
-  const actingBlocked = await actingBlock();
+  const actingBlocked = await actingBlock(ACTING_SOCIAL_KEY);
   if (actingBlocked) return actingBlocked;
   const auth = await requireFounderSocial();
   if ("error" in auth) return auth.error;

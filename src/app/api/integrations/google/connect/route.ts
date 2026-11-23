@@ -9,6 +9,7 @@ import {
 } from "@/lib/integrations/google-oauth-state";
 import { requireRole } from "@/lib/supabase/auth";
 import { actingBlock } from "@/lib/admin/acting-central";
+import { ACTING_CONNECTIONS_KEY } from "@/lib/departments/founder-access-core";
 
 const ALLOWED_RETURN_PATHS = new Set([
   "/founder/settings",
@@ -27,7 +28,7 @@ const ALLOWED_RETURN_PATHS = new Set([
 ]);
 
 export async function GET(request: Request) {
-  const actingBlocked = await actingBlock();
+  const actingBlocked = await actingBlock(ACTING_CONNECTIONS_KEY);
   if (actingBlocked) return actingBlocked;
   if (!isGoogleOAuthConfigured()) {
     return NextResponse.json({ error: "Google OAuth is not configured." }, { status: 503 });

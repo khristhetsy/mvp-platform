@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireFounderSocial, ownsCampaign, socialDb } from "@/lib/social/founder-auth";
 import { listAlertRules, createAlertRule, updateAlertRule, deleteAlertRule } from "@/lib/social/goals-io";
 import { actingBlock } from "@/lib/admin/acting-central";
+import { ACTING_SOCIAL_KEY } from "@/lib/departments/founder-access-core";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +30,7 @@ export async function GET(): Promise<Response> {
 }
 
 export async function POST(req: NextRequest): Promise<Response> {
-  const actingBlocked = await actingBlock();
+  const actingBlocked = await actingBlock(ACTING_SOCIAL_KEY);
   if (actingBlocked) return actingBlocked;
   const auth = await requireFounderSocial();
   if ("error" in auth) return auth.error;
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest): Promise<Response> {
 }
 
 export async function PATCH(req: NextRequest): Promise<Response> {
-  const actingBlocked = await actingBlock();
+  const actingBlocked = await actingBlock(ACTING_SOCIAL_KEY);
   if (actingBlocked) return actingBlocked;
   const auth = await requireFounderSocial();
   if ("error" in auth) return auth.error;
@@ -58,7 +59,7 @@ export async function PATCH(req: NextRequest): Promise<Response> {
 }
 
 export async function DELETE(req: NextRequest): Promise<Response> {
-  const actingBlocked = await actingBlock();
+  const actingBlocked = await actingBlock(ACTING_SOCIAL_KEY);
   if (actingBlocked) return actingBlocked;
   const auth = await requireFounderSocial();
   if ("error" in auth) return auth.error;

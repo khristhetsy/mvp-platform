@@ -7,6 +7,8 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getSupabaseBrowserEnv } from "@/lib/supabase/env";
 import { createTokenClient } from "@/lib/supabase/token-client";
 import { ACT_COOKIE, getActingContext } from "@/lib/admin/act-on-behalf";
+import { staffMayUseFounderItem } from "@/lib/departments/founder-access";
+import { ACTING_ACCOUNT_KEY } from "@/lib/departments/founder-access-core";
 import { VERDICT_TTL_MS, ZONE_HEADER, centralActingApplies, effectiveZone, isCentralActingEnabled, sessionExpiryMs } from "@/lib/admin/acting-central-core";
 
 /**
@@ -130,13 +132,27 @@ export async function isActingAsFounder(): Promise<boolean> {
 }
 
 /**
- * A 403 for actions that stay with the founder while staff act on their behalf: outreach
- * and social campaigns, posting, intro requests and account connections. Null otherwise.
+ * True when staff are acting as this founder AND their department has the Open as founder
+ * access switch on for this item (the founder menu href, or an acting: key). A switch that
+ * is on overrides the founder's own switches, stage and plan locks, quotas and guards.
+ * False when nobody is acting, so a founder on their own login is never affected.
  */
-export async function actingBlock(): Promise<NextResponse | null> {
+export async function actingBypass(itemKey: string = ACTING_ACCOUNT_KEY): Promise<boolean> {
+  const staffId = await actingStaffId();
+  if (!staffId) return false;
+  return staffMayUseFounderItem(staffId, itemKey);
+}
+
+/**
+ * A 403 for an action staff may not take while they act on the founder's behalf, because
+ * their department has the Open as founder access switch off for it. Null when nobody is
+ * acting, or when the switch is on. Switches live on Feature Controls, Departments.
+ */
+export async function actingBlock(itemKey: string = ACTING_ACCOUNT_KEY): Promise<NextResponse | null> {
   if (!(await isActingAsFounder())) return null;
+  if (await actingBypass(itemKey)) return null;
   return NextResponse.json(
-    { error: "Not available while you act on the founder's behalf. Outreach, social posting and connections stay with the founder." },
+    { error: "Your department does not have access to this while you act on the founder's behalf. An admin can switch it on in Feature Controls, Departments, Open as founder access." },
     { status: 403 },
   );
 }

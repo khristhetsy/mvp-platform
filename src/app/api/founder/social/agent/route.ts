@@ -4,6 +4,7 @@ import { requireFounderSocial } from "@/lib/social/founder-auth";
 import { NETWORKS, NETWORK_LIMITS, TEMPLATE_KEYS, addHashtags, draftFromTemplate, nextPostTip, shorten, variantsPerNetwork, type Network } from "@/lib/social/templates";
 import { campaignFunnels, aggregateFunnels } from "@/lib/social/funnel";
 import { actingBlock } from "@/lib/admin/acting-central";
+import { ACTING_SOCIAL_KEY } from "@/lib/departments/founder-access-core";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,7 @@ const schema = z.discriminatedUnion("action", [
 ]);
 
 export async function POST(req: NextRequest): Promise<Response> {
-  const actingBlocked = await actingBlock();
+  const actingBlocked = await actingBlock(ACTING_SOCIAL_KEY);
   if (actingBlocked) return actingBlocked;
   const auth = await requireFounderSocial();
   if ("error" in auth) return auth.error;
