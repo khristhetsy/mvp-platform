@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
-import { linkedInCommentary, linkedInCommentsEnabled, linkedInAdapter } from "./linkedin-adapter";
+import { linkedInCommentary, linkedInCommentsEnabled, linkedInAdapter, escapeLinkedInLittleText } from "./linkedin-adapter";
 
 const ORIG = process.env.LINKEDIN_COMMENTS_ENABLED;
 afterEach(() => { process.env.LINKEDIN_COMMENTS_ENABLED = ORIG; });
@@ -21,6 +21,19 @@ describe("linkedInCommentary", () => {
   });
   it("no comment and no link: body only", () => {
     expect(linkedInCommentary({ body: "Body", commentText: null, linkUrl: null }, false)).toBe("Body");
+  });
+});
+
+describe("escapeLinkedInLittleText", () => {
+  it("puts a backslash before each of the 15 reserved characters", () => {
+    expect(escapeLinkedInLittleText("|{}@[]()<>#\\*_~")).toBe("\\|\\{\\}\\@\\[\\]\\(\\)\\<\\>\\#\\\\\\*\\_\\~");
+  });
+  it("keeps the whole company line, parentheses included", () => {
+    expect(escapeLinkedInLittleText("Meet First Person Solutions LLC (CelWel).")).toBe("Meet First Person Solutions LLC \\(CelWel\\).");
+  });
+  it("leaves ordinary text, ampersands and newlines alone", () => {
+    const plain = "We are meeting Health & Wellness investors. Curious? Message me.\n\nLyme disease, long Covid.";
+    expect(escapeLinkedInLittleText(plain)).toBe(plain);
   });
 });
 
@@ -65,6 +78,11 @@ describe("linkedInAdapter.publish with an image", () => {
     const post = JSON.parse(String(calls[3].body));
     expect(post.content).toEqual({ media: { id: "urn:li:image:IMG1" } });
     expect(post.commentary).toBe("Hello");
+  });
+
+  it("escapes reserved characters in the commentary sent to LinkedIn", async () => {
+    await linkedInAdapter.publish({ ...variant, imageUrl: null, body: "Meet Acme (CelWel).\n\nUse utm_source." }, account);
+    expect(JSON.parse(String(calls[0].body)).commentary).toBe("Meet Acme \\(CelWel\\).\n\nUse utm\\_source.");
   });
 
   it("posts text only when there is no image", async () => {

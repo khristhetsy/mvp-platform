@@ -41,6 +41,16 @@ export function linkedInCommentary(v: Pick<Variant, "body" | "commentText" | "li
   return parts.filter(Boolean).join("\n\n");
 }
 
+/**
+ * The Posts API reads `commentary` as LinkedIn's "little text" format, where
+ * | { } @ [ ] ( ) < > # \ * _ ~ are markup. An unescaped one cuts the post off at that
+ * point (e.g. "Meet Acme (CelWel)." publishes as "Meet Acme"). A backslash before each
+ * reserved character makes LinkedIn treat it as plain text, so the post shows as written.
+ */
+export function escapeLinkedInLittleText(text: string): string {
+  return text.replace(/[\\|{}@[\]()<>#*_~]/g, (c) => `\\${c}`);
+}
+
 function requireConfigured(): void {
   if (!configured()) throw new AdapterNotConfiguredError("linkedin");
 }
@@ -86,7 +96,7 @@ export const linkedInAdapter: SocialAdapter = {
     // The tagged link goes in the post body. LinkedIn's first-comment API
     // (socialActions) is partner-gated (403 without Community Management access),
     // so the body is the only reliable place to deliver the link self-serve.
-    const commentary = linkedInCommentary(v, linkedInCommentsEnabled());
+    const commentary = escapeLinkedInLittleText(linkedInCommentary(v, linkedInCommentsEnabled()));
     // LinkedIn's Posts API requires commentary, so an image needs some text with it.
     if (v.imageUrl && !commentary.trim()) throw new Error("LinkedIn needs some text with the image. Add a line to the post.");
     const imageUrn = v.imageUrl ? await uploadImage(v.imageUrl, a.externalMemberId, a.accessToken) : null;
