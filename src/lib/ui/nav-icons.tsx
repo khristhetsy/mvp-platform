@@ -120,6 +120,7 @@ import {
   ScrollText,
   Send,
   Settings,
+  Settings2,
   Share2,
   Shield,
   ShieldCheck,
@@ -235,6 +236,10 @@ export const workspaceNavIconByHref: Record<string, LucideIcon> = {
   "/founder/stages/closing": Route,
   "/founder/deploy": Megaphone, // Outreach
   "/founder/deploy/social": Share2, // Social media
+  "/founder/deploy?step=outreach&mode=automated": Bot, // Outreach: Automated
+  "/founder/deploy?step=outreach&mode=manual": Send, // Outreach: Manual
+  "/founder/deploy?step=analytics": BarChart3, // Outreach: Analytics
+  "/founder/deploy?step=settings": Settings2, // Outreach: Settings
   "/founder/ir-agent": BotMessageSquare, // My IR Agent
   "/founder/investor-pipeline": SquareKanban, // Investor CRM
   "/founder/events/present": Projector, // Present at event
