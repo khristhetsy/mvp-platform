@@ -5,7 +5,7 @@ import Link from "next/link";
 
 /** Odoo-style ⚙ menu beside the New button: imports, exports, page-level settings. */
 export type GearItem =
-  | { key: string; icon: string; label: string; onClick: () => void; hint?: string; sep?: boolean; active?: boolean; section?: string }
+  | { key: string; icon: string; label: string; onClick: () => void; hint?: string; sep?: boolean; active?: boolean; section?: string; /** Keep the menu open after the click, for toggles. */ keepOpen?: boolean }
   | { key: string; icon: string; label: string; href: string; hint?: string; sep?: boolean; active?: boolean; section?: string };
 
 /**
@@ -46,7 +46,7 @@ export function ToolbarGear({ items, heading, top, after, align = "left" }: { it
                   {it.section && <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".05em", color: "var(--muted-foreground)", padding: "6px 13px 4px" }}>{it.section}</div>}
                   {"href" in it
                     ? <Link href={it.href} onClick={() => setOpen(false)} style={style}>{inner}</Link>
-                    : <button type="button" onClick={() => { setOpen(false); it.onClick(); }} style={style}>{inner}</button>}
+                    : <button type="button" onClick={() => { if (!it.keepOpen) setOpen(false); it.onClick(); }} style={style}>{inner}</button>}
                 </div>
               );
             })}
