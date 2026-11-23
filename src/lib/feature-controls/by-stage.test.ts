@@ -34,7 +34,8 @@ describe("feature controls by stage", () => {
 
   it("marks shared switches and pages no switch governs", () => {
     const founder = buildFounderCards();
-    expect(find(founder, "/founder/spvs")).toMatchObject({ switchLabel: "Fundraising suite", kind: "switch", shared: true });
+    expect(find(founder, "/founder/deal-room")).toMatchObject({ switchLabel: "Fundraising suite", kind: "switch", shared: true });
+    expect(find(founder, "/founder/spvs")).toMatchObject({ switchLabel: "SPVs & closings", kind: "switch", shared: false });
     expect(find(founder, "/founder/cap-table")).toMatchObject({ switchLabel: "Cap table", kind: "switch", shared: false });
     expect(find(founder, "/founder/stages/closing")).toMatchObject({ kind: "none", switchKey: null });
     expect(find(founder, "/founder/settings")).toMatchObject({ kind: "always" });

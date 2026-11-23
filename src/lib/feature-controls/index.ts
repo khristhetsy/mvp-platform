@@ -46,7 +46,11 @@ export const FEATURES: FeatureDef[] = [
     admin: ["/private-market", "/admin/private-market/weekly-emailer"],
   } },
   { key: "fundraising", label: "Fundraising suite", group: "Fundraising & market", hrefs: {
-    founder: ["/founder/investors", "/founder/matching", "/founder/investors/outreach", "/founder/investors/matches", "/founder/deal-room", "/founder/capital-raise", "/founder/spvs"],
+    founder: ["/founder/investors", "/founder/matching", "/founder/investors/outreach", "/founder/investors/matches", "/founder/deal-room", "/founder/capital-raise"],
+  } },
+  // Own switch so SPVs & closings can be turned off while Deal Room and Capital Raise stay on.
+  { key: "founder_spvs", label: "SPVs & closings", group: "Fundraising & market", hrefs: {
+    founder: ["/founder/spvs"],
   } },
   { key: "investor_crm", label: "Investor CRM", group: "Fundraising & market", hrefs: {
     founder: ["/founder/investor-pipeline"],
