@@ -12,6 +12,7 @@ import { listFounderSpvSummary } from "@/lib/spv/spv-workflow";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
+import { assertFeatureEnabled } from "@/lib/feature-controls/server";
 import type { Company } from "@/lib/supabase/types";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +20,8 @@ export const dynamic = "force-dynamic";
 export default async function FounderSpvsPage() {
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
+  // Admin switch off: send the founder away so the page cannot be reached by URL.
+  await assertFeatureEnabled("founder", "founder_spvs", "/founder/dashboard");
 
   let company: Company | null = null;
   let companyError: string | null = null;
