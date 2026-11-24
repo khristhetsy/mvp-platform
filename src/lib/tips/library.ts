@@ -73,7 +73,7 @@ const FOUNDER_MENU_TIPS: Tip[] = [
   menuTip("investors", "/founder/investors", "Investors", "Use Investors to see everyone you are working with in one place.", "deploy"),
   menuTip("investor-directory", "/founder/investor-directory", "Investor directory", "Browse the investor directory to find investors whose focus fits your sector and stage.", "deploy"),
   menuTip("ir-agent", "/founder/ir-agent", "My IR Agent", "Use My IR Agent for help with investor relations work during your raise.", "deploy"),
-  menuTip("social", "/founder/deploy/social", "Social media", "Use Social media under Outreach to support your raise beyond email.", "deploy"),
+  menuTip("social", "/founder/deploy/social", "Outreach: Social media", "Use Outreach: Social media to support your raise beyond email.", "deploy"),
   menuTip("outreach-automated", "/founder/deploy?step=outreach&mode=automated", "Outreach: Automated", "Check Outreach: Automated to see whether automated outreach is open for your rating, and review what is queued before anything sends.", "deploy"),
   menuTip("outreach-manual", "/founder/deploy?step=outreach&mode=manual", "Outreach: Manual", "Use Outreach: Manual to launch a wave to the investors you want to reach personally. The wizard takes you from investors to review and send.", "deploy"),
   menuTip("outreach-analytics", "/founder/deploy?step=analytics", "Outreach analytics", "Open Analytics to compare automated and manual outreach. Reply rate and unanswered opens are usually the fastest wins.", "deploy"),
