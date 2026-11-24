@@ -42,6 +42,7 @@ import {
 import { loadOutreachStatus } from "@/lib/founder/outreach-status";
 import { OUTREACH_MODE_COOKIE } from "@/lib/founder/outreach-status-lines";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { OutreachTopMenu } from "@/components/founder/OutreachTopMenu";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 export const dynamic = "force-dynamic";
@@ -390,6 +391,8 @@ export default async function FounderDeployPage({
               ← Founder journey
             </Link>
           </div>
+
+          <OutreachTopMenu />
 
           <PageHeader
             eyebrow={t("stage_3_deploy")}

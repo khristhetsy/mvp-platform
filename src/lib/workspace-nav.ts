@@ -19,6 +19,8 @@ export type WorkspaceNavItem = {
   drillTitle?: string;
   /** Top menu layout: the dropdown this page sits in when its app has more than 7 menu items. Ignored by the sidebar. */
   menuGroup?: string;
+  /** Sidebar: a nested group renders as a collapsible row (closed unless it holds the current page) instead of a fixed heading. */
+  collapsible?: boolean;
   children?: WorkspaceNavItem[];
 };
 
@@ -512,6 +514,7 @@ export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
             href: "/founder/deploy",
             label: "Outreach",
             minStage: "deploy",
+            collapsible: true,
             children: [
               { href: "/founder/deploy", label: "Public Profile", minStage: "deploy" },
               { href: "/founder/deploy?step=outreach&mode=automated", label: "Outreach: Automated", minStage: "deploy" },

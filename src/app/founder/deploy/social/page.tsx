@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { OutreachTopMenu } from "@/components/founder/OutreachTopMenu";
 import { requireRole } from "@/lib/supabase/auth";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { FounderAppShell } from "@/components/FounderAppShell";
@@ -26,6 +27,7 @@ export default async function FounderSocialPage({ searchParams }: { searchParams
   return (
     <FounderAppShell profileName={profile.full_name ?? profile.email ?? "Founder"} profileSubtitle={company?.company_name ?? "Your company"}>
       <FounderJourneyGate minStage="deploy">
+        <OutreachTopMenu />
         <div className="mb-4">
           <Link href="/founder/deploy" className="text-xs font-medium text-slate-500 transition-colors hover:text-slate-700">← Outreach</Link>
         </div>
