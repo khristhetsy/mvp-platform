@@ -44,9 +44,11 @@
   .ma-filters > select { flex: 1 1 40%; min-width: 0; max-width: 100%; }
   .ma-filters .ma-export { margin-left: auto; }
   .ma-reg tr {
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas: "a t" "b d" "e e";
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "x a t" "x b d" "x e r";
   }
+  .ma-reg .ma-x { grid-area: x; }
+  .ma-reg .ma-r { grid-area: r; justify-self: end; }
   .ma-reg .ma-a { grid-area: a; }
   .ma-reg .ma-t { grid-area: t; align-self: start; }
   .ma-reg .ma-b { grid-area: b; font-size: 10.4px; color: var(--text-muted); }
