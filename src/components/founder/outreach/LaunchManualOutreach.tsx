@@ -146,7 +146,6 @@ export function LaunchManualOutreach({ contacts, directoryDefaults }: { contacts
   const [sort, setSort] = useState<{ key: ColKey | ""; dir: 1 | -1 }>({ key: "", dir: 1 });
   const [shown, setShown] = useState<Record<ColKey, boolean>>({ contact: true, email: true, type: true, sectors: true, fit: true, status: true, source: true });
   const [addOpen, setAddOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [directoryOpen, setDirectoryOpen] = useState(false);
   const [matchesOpen, setMatchesOpen] = useState(false);
@@ -373,7 +372,10 @@ export function LaunchManualOutreach({ contacts, directoryDefaults }: { contacts
   const shownCols = COLUMNS.filter((c) => shown[c.key]);
   const q = search.q.trim();
   const gearItems: GearItem[] = [
-    { key: "dir", icon: "ti-world-search", label: "Import in the Investor directory", href: "/founder/investor-directory", section: "Actions" },
+    { key: "add-one", icon: "ti-user-plus", label: "Add one contact", section: "Actions", onClick: () => setAddOpen(true) },
+    { key: "add-file", icon: "ti-file-import", label: "Import a file", onClick: () => setImportOpen(true) },
+    { key: "add-dir", icon: "ti-users-plus", label: "Import from Investor directory", onClick: () => setDirectoryOpen(true) },
+    { key: "dir", icon: "ti-world-search", label: "Import in the Investor directory", href: "/founder/investor-directory" },
     ...COLUMNS.map((c, i): GearItem => ({
       key: `col-${c.key}`,
       icon: "ti-columns",
@@ -731,36 +733,6 @@ export function LaunchManualOutreach({ contacts, directoryDefaults }: { contacts
             Import my matches
           </button>
         ) : null}
-        <div className="relative">
-          <button type="button" className={btnPrimary} aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((v) => !v)}>
-            + Add contacts <i className="ti ti-chevron-down" aria-hidden="true" />
-          </button>
-          {menuOpen ? (
-            <div role="menu" className="absolute right-0 z-20 mt-1 w-64 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg">
-              {(
-                [
-                  ["Add one contact", "Type in the details", () => setAddOpen(true)],
-                  ["Import a file", "CSV or Excel, map the columns", () => setImportOpen(true)],
-                  ["Import from Investor directory", "Find investors and add them here", () => setDirectoryOpen(true)],
-                ] as const
-              ).map(([label, hint, run]) => (
-                <button
-                  key={label}
-                  type="button"
-                  role="menuitem"
-                  className="block w-full rounded-lg px-2.5 py-2 text-left text-[13px] text-slate-900 hover:bg-slate-50"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    run();
-                  }}
-                >
-                  {label}
-                  <span className="block text-[11.5px] text-slate-500">{hint}</span>
-                </button>
-              ))}
-            </div>
-          ) : null}
-        </div>
         <button type="button" className={btnPrimary} disabled={!canNext()} onClick={() => setStep((s) => s + 1)}>
           Next
         </button>
