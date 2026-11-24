@@ -1,7 +1,9 @@
 /**
  * Address rules for founder IR agent pages: icapos.com/[company]/[ending]
- * The company part is generated from the company name and locked. The founder
- * may only change the ending. Pure functions, shared by the page, the API and tests.
+ * The company part is generated from the company name, without Inc, LLC, Ltd or
+ * Corp, and locked. Only the ending may change; it starts as "agent". These are
+ * defaults for new agents: saved addresses are stored and keep working. Pure
+ * functions, shared by the page, the API and tests.
  */
 
 /**
@@ -29,19 +31,27 @@ export const COMPANY_SLUG_MIN = 3;
 export const COMPANY_SLUG_MAX = 40;
 export const ENDING_MIN = 2;
 export const ENDING_MAX = 30;
-export const DEFAULT_ENDING = "invest";
+export const DEFAULT_ENDING = "agent";
 export const AGENT_HOST = "https://icapos.com";
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
+/** Legal suffixes left out of the company part, matched as whole words. */
+const LEGAL_WORDS: ReadonlySet<string> = new Set(["inc", "llc", "ltd", "corp"]);
+
 export function slugifyCompany(name: string): string {
-  return name
+  const words = name
     .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/&/g, " and ")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
+    .replace(/\bl\.\s?l\.\s?c\b/g, "llc")
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+  const kept = words.filter((w) => !LEGAL_WORDS.has(w));
+  // A name made only of legal words keeps them, so the address is never empty.
+  return (kept.length ? kept : words)
+    .join("-")
     .slice(0, COMPANY_SLUG_MAX)
     .replace(/-+$/g, "");
 }
