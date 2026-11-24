@@ -1,6 +1,6 @@
 # Founder IR Agent ("Build your agent")
 
-Each founder organization gets one investor relations agent, modeled on the Johnny IR agent (`/johnny`), served at `icapos.com/[company-slug]/[ending]`. The company slug is generated from the company name and locked. The founder edits the ending only (default `invest`).
+Each founder organization gets one investor relations agent, modeled on the Johnny IR agent (`/johnny`), served at `icapos.com/[company-slug]/[ending]`. The company slug is generated from the company name (lowercase, dashes, without Inc, LLC, Ltd or Corp) and locked. The founder edits the ending only (default `agent`). Agents created before this rule keep their saved address.
 
 ## What ships
 
