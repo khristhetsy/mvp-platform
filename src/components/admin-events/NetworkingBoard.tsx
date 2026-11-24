@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Check, X } from "lucide-react";
 import type { MatchPair, NetworkingBoard as Board } from "@/lib/icfo-events/networking-board";
 import { formatEmailedAt, type FounderPanelRow } from "@/lib/icfo-events/founder-status";
 
@@ -53,6 +54,108 @@ function Who({ side }: Readonly<{ side: MatchPair["a"] }>) {
   );
 }
 
+type SentInfo = {
+  created: number;
+  sent: number;
+  held: number;
+  /** Still to send, so the selection stays and the page is not reloaded. */
+  left: number;
+  /** The pairs just introduced. Empty when "all matches" was used: their keys never reached the browser. */
+  pairs: MatchPair[];
+};
+
+const SHOWN_IN_POPUP = 4;
+
+/**
+ * Shown after an introduction send. The email goes to the investor, about the
+ * founder; the founder is told when an investor accepts. So the popup states
+ * what was actually sent, from the server's own counts, rather than a
+ * "both notified" it cannot know.
+ */
+function IntroductionSentDialog({ info, eventTitle, eventId, onClose }: Readonly<{
+  info: SentInfo;
+  eventTitle: string;
+  eventId: string;
+  onClose: () => void;
+}>) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const shownPairs = info.pairs.slice(0, SHOWN_IN_POPUP);
+  const more = info.pairs.length - shownPairs.length;
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/55 px-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="intro-sent-title"
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start gap-3.5">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800">
+            <Check className="h-6 w-6" aria-hidden />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p id="intro-sent-title" className="text-xl font-bold text-[var(--navy)]">
+              {info.created === 1 ? "Introduction sent" : `${info.created} introductions sent`}
+            </p>
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">
+              {info.sent} email{info.sent === 1 ? "" : "s"} sent to the investor{info.sent === 1 ? "" : "s"}, about the founder
+              {info.pairs.length === 1 ? "" : "s"}. {eventTitle}.
+            </p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close"
+            className="-mr-1 -mt-1 flex h-10 w-10 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100">
+            <X className="h-[18px] w-[18px]" aria-hidden />
+          </button>
+        </div>
+
+        {shownPairs.length > 0 ? (
+          <ul className="mt-5 space-y-2.5">
+            {shownPairs.map((p) => (
+              <li key={p.key} className="flex items-center gap-3 rounded-xl border border-[var(--border-subtle)] p-3.5">
+                <div className="min-w-0 flex-1 text-sm"><Who side={p.a} /></div>
+                <span className="text-slate-400" aria-hidden>⇄</span>
+                <div className="min-w-0 flex-1 text-sm"><Who side={p.b} /></div>
+              </li>
+            ))}
+            {more > 0 ? <li className="text-xs text-[var(--text-muted)]">and {more} more</li> : null}
+          </ul>
+        ) : null}
+
+        <div className="mt-5 space-y-1.5 rounded-xl border border-[var(--border-subtle)] bg-slate-50 p-4 text-[13px] text-[var(--text-secondary)]">
+          <p><b className="text-[var(--navy)]">Investor:</b> emailed the introduction, with an accept button for each founder.</p>
+          <p><b className="text-[var(--navy)]">Founder:</b> not emailed yet. They hear from iCapOS when an investor accepts and no time is set.</p>
+          {info.sent === 0 ? (
+            <p className="text-amber-800"><b>No email went out.</b> The introductions were created, but nothing was sent, for example when no email is on file for those investors.</p>
+          ) : null}
+          {info.held > 0 ? <p><b className="text-[var(--navy)]">Held back:</b> {info.held} stay unsent and are picked up next time.</p> : null}
+          {info.left > 0 ? <p><b className="text-[var(--navy)]">Still to send:</b> {info.left}. Press Introduce again.</p> : null}
+        </div>
+
+        <div className="mt-5 flex justify-end gap-2.5">
+          <a href={`/admin/events/networking?eventId=${eventId}&tab=messages`}
+            className="inline-flex h-11 items-center rounded-lg border border-slate-300 bg-white px-5 text-sm font-semibold text-[var(--navy)] hover:bg-slate-50">
+            View messages
+          </a>
+          <button type="button" autoFocus onClick={onClose}
+            className="h-11 rounded-lg bg-[var(--navy)] px-7 text-sm font-semibold text-white hover:opacity-90">
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Who matched with whom at one event.
  *
@@ -82,6 +185,8 @@ export function NetworkingBoard({ board, events, eventId, gmail, founders = [] }
   const [founderReady, setFounderReady] = useState(false);
   // Shown in the panel straight after a send, until the page is next loaded.
   const [justEmailed, setJustEmailed] = useState<string | null>(null);
+  // The popup after a send. Closing it reloads the page once the job is finished.
+  const [sentInfo, setSentInfo] = useState<SentInfo | null>(null);
 
   // Only a pair with nobody introduced yet can be introduced.
   const selectable = (p: MatchPair) => p.status === "none";
@@ -186,6 +291,23 @@ export function NetworkingBoard({ board, events, eventId, gmail, founders = [] }
       );
       // Only clear the selection when the job is finished; otherwise the next
       // press has nothing to continue with.
+      const created = Number(json.created ?? 0);
+      if (created > 0) {
+        // Names for the popup come from the picked pairs, read before the
+        // selection is cleared. The reload waits for the popup to close.
+        setSentInfo({
+          created,
+          sent: Number(json.sent ?? 0),
+          held: Number(json.held ?? 0),
+          left,
+          pairs: allMatches ? [] : board.pairs.filter((p) => picked.has(p.key)),
+        });
+        if (!left) {
+          setPicked(new Set());
+          setAllMatches(false);
+        }
+        return;
+      }
       if (!left) {
         setPicked(new Set());
         setAllMatches(false);
@@ -505,6 +627,20 @@ export function NetworkingBoard({ board, events, eventId, gmail, founders = [] }
           </table>
         )}
       </div>
+
+      {sentInfo ? (
+        <IntroductionSentDialog
+          info={sentInfo}
+          eventTitle={events.find((e) => e.id === eventId)?.title ?? "this event"}
+          eventId={eventId}
+          onClose={() => {
+            const finished = sentInfo.left === 0;
+            setSentInfo(null);
+            // Finished: reload so the table shows the new statuses.
+            if (finished) window.location.reload();
+          }}
+        />
+      ) : null}
 
       {msg ? (
         <p className="rounded-lg border border-sky-200 bg-sky-50/60 px-3.5 py-2.5 text-[12px] text-sky-900">{msg}</p>
