@@ -94,3 +94,33 @@ export async function sessionImpact(sessionId: string): Promise<SessionImpact> {
   ]);
   return { queued, billed, recorded: await sessionRecorded(sessionId) };
 }
+
+export type RegistrationImpact = {
+  /** Introductions sent to, or about, any of these people. They are deleted with the registration. */
+  introductions: number | null;
+  /** Of those, the ones an investor accepted. */
+  accepted: number | null;
+  /** Of those, accepted and with a meeting time already set. */
+  scheduled: number | null;
+  /** Invitation and attendee emails already sent to them. The record goes; nothing is unsent. */
+  emailRecords: number | null;
+};
+
+/** What deleting these registrations would take with it. */
+export async function registrationImpact(ids: string[]): Promise<RegistrationImpact> {
+  if (ids.length === 0) return { introductions: 0, accepted: 0, scheduled: 0, emailRecords: 0 };
+  const list = ids.join(",");
+  // Either side of an introduction can be one of these registrations.
+  const either = `investor_reg_id.in.(${list}),founder_reg_id.in.(${list})`;
+  const [introductions, accepted, scheduled, emailRecords] = await Promise.all([
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    countOf("event_introductions", (q: any) => q.or(either)),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    countOf("event_introductions", (q: any) => q.or(either).eq("status", "accepted")),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    countOf("event_introductions", (q: any) => q.or(either).eq("status", "accepted").not("scheduled_at", "is", null)),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    countOf("event_invitation_sends", (q: any) => q.in("registration_id", ids)),
+  ]);
+  return { introductions, accepted, scheduled, emailRecords };
+}

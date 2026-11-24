@@ -247,6 +247,23 @@ export async function deleteRegistration(
   if (error) throw new Error(error.message);
 }
 
+/** Remove several registrations (staff), in chunks so a long list fits one query.
+ *  Introductions and invitation sends that point at them go with them, by the
+ *  tables' own cascade. Returns how many rows were removed. */
+export async function deleteRegistrations(
+  supabase: SupabaseClient<Database>,
+  registrationIds: string[],
+): Promise<number> {
+  let removed = 0;
+  for (let i = 0; i < registrationIds.length; i += 100) {
+    const chunk = registrationIds.slice(i, i + 100);
+    const { data, error } = await raw(supabase).from("registrations").delete().in("id", chunk).select("id");
+    if (error) throw new Error(error.message);
+    removed += (data ?? []).length;
+  }
+  return removed;
+}
+
 /** Aggregate count only (the opt-in trust model forbids raw lists). */
 export async function countRegistrations(
   supabase: SupabaseClient<Database>,
