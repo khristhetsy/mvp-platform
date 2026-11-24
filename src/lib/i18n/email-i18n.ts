@@ -5,10 +5,9 @@
 
 import type { AppLocale } from "@/lib/i18n/locale";
 import en from "../../../messages/en.json";
-import es from "../../../messages/es.json";
 
 type Dict = Record<string, unknown>;
-const CATALOGS: Record<AppLocale, Dict> = { en: en as Dict, es: es as Dict };
+const CATALOGS: Record<AppLocale, Dict> = { en: en as Dict };
 
 function deepGet(obj: Dict, path: string): string | undefined {
   const v = path.split(".").reduce<unknown>((acc, k) => (acc && typeof acc === "object" ? (acc as Dict)[k] : undefined), obj);

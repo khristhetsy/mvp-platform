@@ -14,7 +14,7 @@ import { RefreshCw, X } from "lucide-react";
 const KEY = "icapos:investor-directory:update-note-hidden";
 const CHANGED = "icapos:investor-directory:update-note-changed";
 
-type Locale = "en" | "es";
+type Locale = "en";
 
 const COPY: Record<Locale, { title: string; body: string; hide: string; show: string }> = {
   en: {
@@ -22,12 +22,6 @@ const COPY: Record<Locale, { title: string; body: string; hide: string; show: st
     body: "New investors and firms are added and existing details are refreshed all the time. Check back often for new investors.",
     hide: "Hide",
     show: "Show update note",
-  },
-  es: {
-    title: "Este directorio se actualiza constantemente",
-    body: "Se agregan nuevos inversionistas y empresas y se actualizan los datos todo el tiempo. Vuelva a revisar con frecuencia para ver nuevos inversionistas.",
-    hide: "Ocultar",
-    show: "Mostrar aviso de actualización",
   },
 };
 

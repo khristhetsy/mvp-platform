@@ -23,7 +23,7 @@ export interface ClaudeOptions {
    * Output language. When omitted, the current request locale is detected
    * automatically; pass "en" explicitly to force English regardless of locale.
    */
-  locale?: "en" | "es";
+  locale?: "en";
   /**
    * Which AI budget category and tool this call bills to. A request-scoped
    * withAiUsage(...) wrapper overrides it; untagged calls bill to Internal hubs.

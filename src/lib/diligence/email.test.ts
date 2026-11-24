@@ -17,13 +17,6 @@ describe("buildDiligenceEmail", () => {
     expect(m.html).toContain("not a broker-dealer");
   });
 
-  it("builds the founder email in Spanish", () => {
-    const m = buildDiligenceEmail("documentsRequested", emailTranslator("es"), "Northstar Robotics", URL);
-    expect(m.subject).toBe("Documentos solicitados: diligencia de Northstar Robotics");
-    expect(m.html).toContain("Subir documentos");
-    expect(m.html).toContain("no es un broker-dealer");
-  });
-
   it("sends the investor release on the investor layout", () => {
     const m = buildDiligenceEmail("released", emailTranslator("en"), "Northstar Robotics", "https://icapos.com/investor/deals/e1");
     expect(m.subject).toBe("Deal available: Northstar Robotics diligence package");
@@ -39,7 +32,7 @@ describe("buildDiligenceEmail", () => {
 
   it("has no dashes in subjects", () => {
     for (const k of ["founderReady", "documentsRequested", "released"] as const) {
-      for (const loc of ["en", "es"] as const) {
+      for (const loc of ["en"] as const) {
         expect(buildDiligenceEmail(k, emailTranslator(loc), "X", URL).subject).not.toMatch(/[—–]/);
       }
     }
