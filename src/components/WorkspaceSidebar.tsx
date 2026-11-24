@@ -408,19 +408,6 @@ function WorkspaceSidebarInner({
     return () => { active = false; };
   }, [workspace]);
 
-  // Outreach: Manual shows an amber dot until the first manual email goes out. Unknown counts as
-  // no dot. Only asked while the dot could still show, so it stops once outreach has started.
-  const [manualStarted, setManualStarted] = useState<boolean | null>(null);
-  useEffect(() => {
-    if (workspace !== "founder" || manualStarted === true) return;
-    let active = true;
-    void fetch("/api/founder/manual-outreach-started")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: { started?: boolean } | null) => { if (active && typeof d?.started === "boolean") setManualStarted(d.started); })
-      .catch(() => { /* silent: no dot */ });
-    return () => { active = false; };
-  }, [workspace, pathname, manualStarted]);
-
   const canShowNavItem = useMemo(() => {
     return (item: WorkspaceNavItem) => {
       // Founder: Reg-CF-only items stay hidden unless the founder is Reg CF
@@ -603,12 +590,6 @@ function WorkspaceSidebarInner({
           <span className="ml-auto inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#2E78F5] px-1.5 text-[11px] font-semibold text-white">
             {unreadEmail > 99 ? "99+" : unreadEmail}
           </span>
-        ) : workspace === "founder" && manualStarted === false && item.href === "/founder/deploy?step=outreach&mode=manual" ? (
-          <span
-            className="ml-auto h-2 w-2 shrink-0 rounded-full bg-amber-500"
-            title="Manual outreach not started"
-            aria-label="Manual outreach not started"
-          />
         ) : item.href === "/credits" && points.balance > 0 ? (
           <span className="ml-auto inline-flex h-5 items-center justify-center rounded-full bg-[#0c2340] px-2 text-[11px] font-semibold text-white">
             {points.balance > 9999 ? "9999+" : points.balance.toLocaleString()}
