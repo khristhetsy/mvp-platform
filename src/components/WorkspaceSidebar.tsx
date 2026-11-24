@@ -601,7 +601,25 @@ function WorkspaceSidebarInner({
 
   // A group's children, one level deep — nested groups render as a heading + their pages.
   function renderChildren(children: WorkspaceNavItem[]) {
-    return children.map((child) => child.children?.length ? (
+    return children.map((child) => child.children?.length && child.collapsible ? (
+      <div key={`${child.href}|${child.label}`} className="pt-0.5">
+        {(() => {
+          const groupKey = `group:${child.label}`;
+          const groupActive = isChildActive(child);
+          const groupOpen = accordion[groupKey] ?? groupActive;
+          return (
+            <>
+              <button type="button" aria-expanded={groupOpen} onClick={() => setAccordion((a) => ({ ...a, [groupKey]: !groupOpen }))}
+                className={`flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] transition-colors ${groupActive ? "text-[var(--blue-hover)]" : "text-slate-500 hover:bg-slate-100 hover:text-slate-950"}`}>
+                <span className="truncate">{tLabel(child.label)}</span>
+                <ChevronRight className={`ml-auto h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform ${groupOpen ? "rotate-90" : ""}`} strokeWidth={2} aria-hidden />
+              </button>
+              {groupOpen && <div className="ml-2 border-l border-slate-200/80 pl-1">{child.children.map((g) => renderLeafLink(g, isLocked(g)))}</div>}
+            </>
+          );
+        })()}
+      </div>
+    ) : child.children?.length ? (
       <div key={`${child.href}|${child.label}`} className="pt-1">
         <p className="px-3 pb-0.5 pt-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">{tLabel(child.label)}</p>
         <div className="ml-2 border-l border-slate-200/80 pl-1">{child.children.map((g) => renderLeafLink(g, isLocked(g)))}</div>
