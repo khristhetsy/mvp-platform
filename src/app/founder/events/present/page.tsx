@@ -15,7 +15,7 @@ import {
 import { PLAN_LABELS } from "@/lib/subscriptions/plans";
 import { listPublicEvents } from "@/lib/icfo-events/queries";
 import { bannerPublicUrl } from "@/lib/icfo-events/banner";
-import { presentTierForPlan } from "@/lib/icfo-events/present-tiers";
+import { canSpotlight, presentTierForPlan } from "@/lib/icfo-events/present-tiers";
 import { getMaterials, listInvitesForProfile, stageLink } from "@/lib/icfo-events/invites";
 import { INVITE_ROLES } from "@/lib/icfo-events/invite-rules";
 import { FounderEventInvitations, type FounderInvite } from "@/components/founder/FounderEventInvitations";
@@ -148,6 +148,7 @@ export default async function PresentAtEventPage() {
           <PresentAtEventClient
             tier={tier}
             planLabel={PLAN_LABELS[sub.plan_type]}
+            spotlightAllowed={canSpotlight(sub.plan_type)}
             events={eventOptions}
             existing={existing}
           />

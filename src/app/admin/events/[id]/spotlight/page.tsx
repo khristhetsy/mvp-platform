@@ -6,6 +6,9 @@ import { getEventById } from "@/lib/icfo-events/queries";
 import { sectorLabel } from "@/lib/icfo-events/sectors";
 import { listSpotlightApplications, spotlightVideoUrl } from "@/lib/icfo-events/spotlight/service";
 import { SpotlightStudio, type StudioSession } from "@/components/admin-events/SpotlightStudio";
+import { StudioRulesCard } from "@/components/admin-events/StudioRulesCard";
+import { loadStudioRules } from "@/lib/icfo-events/studio-rules";
+import { StudioTabs } from "@/components/admin-events/StudioTabs";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Spotlight studio" };
@@ -19,6 +22,7 @@ export default async function SpotlightStudioPage({ params }: { params: Promise<
   const event = await getEventById(admin, id).catch(() => null);
   if (!event) notFound();
 
+  const rules = await loadStudioRules(admin, id);
   const applications = await listSpotlightApplications(id).catch(() => []);
   const videoUrls: Record<string, string> = {};
   await Promise.all(
@@ -39,6 +43,10 @@ export default async function SpotlightStudioPage({ params }: { params: Promise<
       profileName={profile.full_name ?? profile.email ?? "Admin"}
       profileSubtitle="Spotlight studio"
     >
+      <div className="mb-6"><StudioTabs current="spotlight" eventId={event.id} /></div>
+      <div className="mb-6">
+        <StudioRulesCard eventId={event.id} rules={rules} keys={["spotlightBreakSeconds"]} canEdit={canEdit} title="Playout rules" />
+      </div>
       <SpotlightStudio
         event={{ id: event.id, title: event.title, slug: event.slug, timezone: event.timezone ?? "America/Los_Angeles", startsAt: event.startsAt, endsAt: event.endsAt }}
         sessions={sessions}

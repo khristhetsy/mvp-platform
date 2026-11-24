@@ -5,7 +5,7 @@ import Link from "next/link";
 import { CheckCircle2, Lock, Sparkles, Users, Video } from "lucide-react";
 import { SPOTLIGHT, type PresentTier } from "@/lib/icfo-events/present-tiers";
 import { PITCH_OUTLINE } from "@/lib/icfo-events/spotlight/rules";
-import { SpotlightVideoUpload, type UploadedSpotlightVideo } from "@/components/events/SpotlightVideoUpload";
+import { PresentationVideoUpload, type UploadedPresentationVideo } from "@/components/events/PresentationVideoUpload";
 import { IcfoDisclaimer } from "@/components/events/IcfoDisclaimer";
 
 export type PresentEventOption = {
@@ -77,31 +77,34 @@ function statusLabel(status: string): string {
 export function PresentAtEventClient({
   tier,
   planLabel,
+  spotlightAllowed,
   events,
   existing,
 }: {
   tier: PresentTier | null;
   planLabel: string;
+  /** Founder Spotlight is open to the Basic plan only. */
+  spotlightAllowed: boolean;
   events: PresentEventOption[];
   existing: ExistingApplication[];
 }) {
   const [eventId, setEventId] = useState("");
   const [topic, setTopic] = useState("");
   const [bio, setBio] = useState("");
-  const [videoUrl, setVideoUrl] = useState("");
+  const [youtubeUrl, setYoutubeUrl] = useState("");
   const [extraLink, setExtraLink] = useState("");
   const [optional, setOptional] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
-  // Spotlight: an uploaded 3 minute pitch. Every presenting plan can use it;
-  // Professional can also choose the full presentation.
-  const [mode, setMode] = useState<"spotlight" | "full">("spotlight");
+  // Spotlight: a 1 minute pitch from a YouTube link, Basic plan only. Professional
+  // gets the full presentation with an uploaded video.
+  const [mode, setMode] = useState<"spotlight" | "full">(spotlightAllowed ? "spotlight" : "full");
   const [sectorSlug, setSectorSlug] = useState("");
   const [companySummary, setCompanySummary] = useState("");
   const [wantsBooth, setWantsBooth] = useState(true);
   const [disclaimer, setDisclaimer] = useState(false);
-  const [video, setVideo] = useState<UploadedSpotlightVideo | null>(null);
+  const [video, setVideo] = useState<UploadedPresentationVideo | null>(null);
 
   const includedFeatureIds = useMemo(
     () => (tier ? tier.features.filter((f) => !f.optional).map((f) => f.id) : []),
@@ -117,7 +120,7 @@ export function PresentAtEventClient({
         <h3 className="mt-4 text-lg font-semibold text-[var(--text-primary)]">Presenting is a paid feature</h3>
         <p className="mx-auto mt-2 max-w-md text-sm text-[var(--text-muted)]">
           You&rsquo;re on the <span className="font-medium text-[var(--text-primary)]">{planLabel}</span> plan. Upgrade to
-          Basic for a <span className="font-medium">Spotlight</span> slot, or Professional for a{" "}
+          Basic for a <span className="font-medium">Founder Spotlight</span> slot, or Professional for a{" "}
           <span className="font-medium">Full presentation</span> on stage.
         </p>
         <Link
@@ -149,7 +152,7 @@ export function PresentAtEventClient({
             setEventId("");
             setTopic("");
             setBio("");
-            setVideoUrl("");
+            setYoutubeUrl("");
             setExtraLink("");
             setOptional(new Set());
             setVideo(null);
@@ -175,7 +178,7 @@ export function PresentAtEventClient({
     if (!eventId) return setError("Choose an event.");
     if (!topic.trim()) return setError("Enter a talk title.");
     if (spotlightMode) return submitSpotlight();
-    if (tier!.requiresVideo && !videoUrl.trim()) return setError("A video presentation link is required.");
+    if (!video) return setError("Upload your presentation video.");
 
     setSubmitting(true);
     try {
@@ -186,7 +189,9 @@ export function PresentAtEventClient({
           eventId,
           topic: topic.trim(),
           bio: bio.trim() || undefined,
-          videoUrl: videoUrl.trim() || undefined,
+          videoPath: video.path,
+          videoType: video.type,
+          videoBytes: video.bytes,
           links: extraLink.trim() ? [extraLink.trim()] : [],
           features: [...includedFeatureIds, ...optional],
         }),
@@ -205,7 +210,7 @@ export function PresentAtEventClient({
   }
 
   async function submitSpotlight() {
-    if (!video) return setError("Upload your pitch video.");
+    if (!youtubeUrl.trim()) return setError("Paste the YouTube link to your pitch.");
     if (!disclaimer) return setError("Confirm you have read the disclaimer.");
     setSubmitting(true);
     try {
@@ -220,12 +225,7 @@ export function PresentAtEventClient({
           companySummary: companySummary.trim() || undefined,
           wantsBooth,
           disclaimerAccepted: true,
-          videoPath: video.path,
-          videoType: video.type,
-          videoBytes: video.bytes,
-          videoSeconds: video.seconds,
-          videoWidth: video.width,
-          videoHeight: video.height,
+          youtubeUrl: youtubeUrl.trim(),
         }),
       });
       const json = await res.json().catch(() => ({}));
@@ -251,7 +251,7 @@ export function PresentAtEventClient({
             {shownTier.label}, included with {planLabel}
           </span>
         </div>
-        {tier.key === "full" ? (
+        {tier.key === "full" && spotlightAllowed ? (
           <div className="mb-5 inline-flex rounded-lg border border-[var(--border-subtle)] p-0.5 text-sm" role="tablist">
             {(["spotlight", "full"] as const).map((m) => (
               <button
@@ -262,7 +262,7 @@ export function PresentAtEventClient({
                 onClick={() => { setMode(m); setEventId(""); setError(null); }}
                 className={`rounded-md px-3 py-1.5 ${mode === m ? "bg-[var(--brand-indigo,#2E78F5)] text-white" : "text-[var(--text-secondary)]"}`}
               >
-                {m === "spotlight" ? "Founder Spotlight video" : "Full presentation"}
+                {m === "spotlight" ? "Founder Spotlight" : "Full presentation"}
               </button>
             ))}
           </div>
@@ -362,31 +362,33 @@ export function PresentAtEventClient({
               placeholder="e.g. AP automation for mid market finance teams"
               className="mt-1.5 w-full rounded-lg border border-[var(--border-subtle)] px-3 py-2 text-sm text-[var(--text-primary)]"
             />
-            <p className="mt-1 text-xs text-[var(--text-muted)]">Used for the short introduction played before your pitch.</p>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">Shown with your pitch in the lineup.</p>
 
             <div className="mt-5 rounded-xl bg-[var(--surface-muted,#f8fafc)] p-4">
-              <p className="text-sm font-semibold text-[var(--text-primary)]">What to cover in your 3 minutes</p>
+              <p className="text-sm font-semibold text-[var(--text-primary)]">What to cover in your 1 minute</p>
               <ol className="mt-2 grid gap-1 text-xs text-[var(--text-secondary)] sm:grid-cols-2">
                 {PITCH_OUTLINE.map((p, i) => (
                   <li key={p.id}>{i + 1}. {p.label}</li>
                 ))}
               </ol>
               <p className="mt-2 text-xs text-[var(--text-muted)]">
-                Use real numbers only and end with the amount you are raising. Before you record, run your deck through the{" "}
+                Use real numbers only. Do not state an amount you are raising. Before you record, run your deck through the{" "}
                 <Link href="/founder/pitch-deck-analyzer" className="font-medium text-[var(--brand-indigo,#2E78F5)] hover:underline">Pitch Deck Analyzer</Link>{" "}
                 and rehearse in{" "}
                 <Link href="/founder/pitch-practice" className="font-medium text-[var(--brand-indigo,#2E78F5)] hover:underline">Pitch Practice</Link>.
               </p>
             </div>
 
-            <p className="mt-5 block text-sm font-medium text-[var(--text-primary)]">Pitch video <span className="text-red-500">*</span></p>
-            <div className="mt-1.5">
-              {eventId ? (
-                <SpotlightVideoUpload key={eventId} eventId={eventId} onUploaded={setVideo} />
-              ) : (
-                <p className="text-xs text-[var(--text-muted)]">Choose an event first.</p>
-              )}
-            </div>
+            <label className="mt-5 block text-sm font-medium text-[var(--text-primary)]">YouTube link to your pitch <span className="text-red-500">*</span></label>
+            <input
+              value={youtubeUrl}
+              onChange={(e) => setYoutubeUrl(e.target.value)}
+              placeholder="https://www.youtube.com/watch?v=…"
+              className="mt-1.5 w-full rounded-lg border border-[var(--border-subtle)] px-3 py-2 text-sm text-[var(--text-primary)]"
+            />
+            <p className="mt-1 text-xs text-[var(--text-muted)]">
+              Your video must be 60 seconds or shorter. iCFO does not edit it: it plays exactly as posted and stops at 60 seconds. You cannot change the link after it is approved.
+            </p>
 
             <label className="mt-5 flex items-start gap-2.5 text-sm text-[var(--text-primary)]">
               <input type="checkbox" checked={wantsBooth} onChange={(e) => setWantsBooth(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[var(--brand-indigo,#2E78F5)]" />
@@ -400,18 +402,14 @@ export function PresentAtEventClient({
           </>
         ) : (
           <>
-        <label className="mt-5 block text-sm font-medium text-[var(--text-primary)]">
-          Video presentation link {tier.requiresVideo ? <span className="text-red-500">*</span> : <span className="text-[var(--text-muted)]">(optional)</span>}
-        </label>
-        <input
-          value={videoUrl}
-          onChange={(e) => setVideoUrl(e.target.value)}
-          placeholder="Loom, YouTube, or Vimeo URL"
-          className="mt-1.5 w-full rounded-lg border border-[var(--border-subtle)] px-3 py-2 text-sm text-[var(--text-primary)]"
-        />
-        <p className="mt-1 text-xs text-[var(--text-muted)]">
-          Paste a link to your {tier.requiresVideo ? "full presentation" : "60-second pitch"} video.
-        </p>
+        <p className="mt-5 block text-sm font-medium text-[var(--text-primary)]">Presentation video <span className="text-red-500">*</span></p>
+        <div className="mt-1.5">
+          {eventId ? (
+            <PresentationVideoUpload key={eventId} eventId={eventId} onUploaded={setVideo} />
+          ) : (
+            <p className="text-xs text-[var(--text-muted)]">Choose an event first.</p>
+          )}
+        </div>
 
         <label className="mt-5 block text-sm font-medium text-[var(--text-primary)]">Abstract</label>
         <textarea
@@ -521,7 +519,7 @@ export function PresentAtEventClient({
                     </span>
                   </div>
                   {a.kind === "founder_showcase" && a.status === "under_review" && a.decisionNote && a.id ? (
-                    <SpotlightResubmit applicationId={a.id} eventId={a.eventId} note={a.decisionNote} />
+                    <SpotlightResubmit applicationId={a.id} note={a.decisionNote} />
                   ) : null}
                   {a.kind === "founder_showcase" && a.status === "approved" && a.boothSponsorId ? (
                     <Link href={`/sponsor/${a.boothSponsorId}`} className="mt-1 inline-block text-xs font-semibold text-[var(--brand-indigo,#2E78F5)] hover:underline">
@@ -538,51 +536,47 @@ export function PresentAtEventClient({
   );
 }
 
-/** After staff ask for a change: show their note and take a new video. */
-function SpotlightResubmit({ applicationId, eventId, note }: { applicationId: string; eventId: string; note: string }) {
-  const [video, setVideo] = useState<UploadedSpotlightVideo | null>(null);
+/** After staff ask for a change: show their note and take a new YouTube link. */
+function SpotlightResubmit({ applicationId, note }: { applicationId: string; note: string }) {
+  const [youtubeUrl, setYoutubeUrl] = useState("");
   const [state, setState] = useState<"idle" | "saving" | "done">("idle");
   const [error, setError] = useState<string | null>(null);
 
   async function save() {
-    if (!video) return;
+    if (!youtubeUrl.trim()) return;
     setState("saving");
     setError(null);
     const res = await fetch(`/api/founder/events/spotlight/${applicationId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        videoPath: video.path,
-        videoType: video.type,
-        videoBytes: video.bytes,
-        videoSeconds: video.seconds,
-        videoWidth: video.width,
-        videoHeight: video.height,
-      }),
+      body: JSON.stringify({ youtubeUrl: youtubeUrl.trim() }),
     }).catch(() => null);
     if (!res || !res.ok) {
       const json = res ? await res.json().catch(() => ({})) : {};
-      setError((json as { error?: string }).error ?? "Could not send the new video.");
+      setError((json as { error?: string }).error ?? "Could not send the new link.");
       setState("idle");
       return;
     }
     setState("done");
   }
 
-  if (state === "done") return <p className="mt-2 text-xs text-emerald-700">New video sent for review.</p>;
+  if (state === "done") return <p className="mt-2 text-xs text-emerald-700">New link sent for review.</p>;
   return (
     <div className="mt-2 rounded-lg bg-amber-50 p-3">
       <p className="text-xs text-amber-800">{note}</p>
-      <div className="mt-2">
-        <SpotlightVideoUpload eventId={eventId} onUploaded={setVideo} />
-      </div>
+      <input
+        value={youtubeUrl}
+        onChange={(e) => setYoutubeUrl(e.target.value)}
+        placeholder="https://www.youtube.com/watch?v=…"
+        className="mt-2 w-full rounded-md border border-[var(--border-subtle)] bg-white px-3 py-1.5 text-xs text-[var(--text-primary)]"
+      />
       <button
         type="button"
         onClick={save}
-        disabled={!video || state === "saving"}
+        disabled={!youtubeUrl.trim() || state === "saving"}
         className="mt-2 rounded-md bg-[var(--brand-indigo,#2E78F5)] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
       >
-        {state === "saving" ? "Sending…" : "Send new video"}
+        {state === "saving" ? "Sending…" : "Send new link"}
       </button>
       {error ? <p className="mt-1 text-xs text-red-700">{error}</p> : null}
     </div>

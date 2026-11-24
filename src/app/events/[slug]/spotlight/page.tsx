@@ -14,6 +14,7 @@ import { EventPresenceProvider } from "@/components/events/EventPresenceProvider
 import { EventVenueHeader } from "@/components/events/EventVenueHeader";
 import { EventInfoDesk } from "@/components/events/EventInfoDesk";
 import { IcfoDisclaimer } from "@/components/events/IcfoDisclaimer";
+import { loadStudioRules } from "@/lib/icfo-events/studio-rules";
 import { SpotlightPlayer } from "@/components/events/SpotlightPlayer";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +34,7 @@ export default async function SpotlightPage({ params }: { params: Promise<{ slug
   if (profile && (await isBanned(supabase, event.id, profile.id))) notFound();
   const me = profile ? { id: profile.id, name: profile.full_name ?? profile.email ?? "Attendee" } : null;
 
+  const rules = await loadStudioRules(supabase, event.id).catch(() => null);
   const [playlist, navFlags] = await Promise.all([
     loadSpotlightPlaylist(event.id).catch(() => []),
     getVenueNavFlags(supabase, event),
@@ -50,7 +52,7 @@ export default async function SpotlightPage({ params }: { params: Promise<{ slug
         <EventPresenceProvider eventId={event.id} slug={slug} room="Main Stage" me={me}>
           <div className="mt-4 overflow-hidden rounded-2xl border border-[var(--border-subtle)] shadow-[var(--shadow-card)]">
             <EventVenueHeader slug={slug} current="spotlight" flags={navFlags} />
-            <SpotlightPlayer items={playlist} sectorLabels={labels} />
+            <SpotlightPlayer items={playlist} sectorLabels={labels} breakSeconds={rules?.spotlightBreakSeconds ?? undefined} />
           </div>
           <IcfoDisclaimer className="mt-4" />
           <EventInfoDesk slug={slug} />

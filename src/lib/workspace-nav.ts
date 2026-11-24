@@ -128,6 +128,16 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/events/gamification", label: "Gamification", menuGroup: "Reporting" },
         ],
       },
+      // Studio: run the three live rooms of an event. Names match the public event tabs.
+      {
+        href: "/admin/studio",
+        label: "Studio",
+        requiredPermission: "view_events",
+        children: [
+          { href: "/admin/studio/spotlight",   label: "Spotlight Studio"   },
+          { href: "/admin/studio/talk-show",   label: "Talk Show Studio"   },
+        ],
+      },
       {
         href: "/admin/voice",
         label: "Voice",

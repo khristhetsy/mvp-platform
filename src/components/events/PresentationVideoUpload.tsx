@@ -3,49 +3,27 @@
 import { useRef, useState } from "react";
 import { CheckCircle2, Upload, XCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { checkSpotlightFile, type FileCheck } from "@/lib/icfo-events/spotlight/rules";
+import { checkPresentationFile, type FileCheck } from "@/lib/icfo-events/spotlight/rules";
 
-export type UploadedSpotlightVideo = {
+export type UploadedPresentationVideo = {
   path: string;
   type: string;
   bytes: number;
-  seconds: number;
-  width: number;
-  height: number;
   name: string;
 };
 
-/** Reads length and size from the file on the founder's device (free, no upload). */
-function probe(file: File): Promise<{ seconds: number | null; width: number | null; height: number | null }> {
-  return new Promise((resolve) => {
-    const url = URL.createObjectURL(file);
-    const v = document.createElement("video");
-    v.preload = "metadata";
-    const finish = (r: { seconds: number | null; width: number | null; height: number | null }) => {
-      URL.revokeObjectURL(url);
-      resolve(r);
-    };
-    v.onloadedmetadata = () =>
-      finish({
-        seconds: Number.isFinite(v.duration) ? v.duration : null,
-        width: v.videoWidth || null,
-        height: v.videoHeight || null,
-      });
-    v.onerror = () => finish({ seconds: null, width: null, height: null });
-    v.src = url;
-  });
-}
-
-export function SpotlightVideoUpload({
+/** Full presentation video upload: checks type and size on the founder's
+ *  device, then sends the file straight to the private bucket. */
+export function PresentationVideoUpload({
   eventId,
   onUploaded,
 }: {
   eventId: string;
-  onUploaded: (v: UploadedSpotlightVideo | null) => void;
+  onUploaded: (v: UploadedPresentationVideo | null) => void;
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [checks, setChecks] = useState<FileCheck[] | null>(null);
-  const [state, setState] = useState<"idle" | "checking" | "uploading" | "done" | "error">("idle");
+  const [state, setState] = useState<"idle" | "uploading" | "done" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
   const [name, setName] = useState<string | null>(null);
 
@@ -53,9 +31,7 @@ export function SpotlightVideoUpload({
     onUploaded(null);
     setName(file.name);
     setMessage(null);
-    setState("checking");
-    const meta = await probe(file);
-    const result = checkSpotlightFile({ type: file.type, bytes: file.size, ...meta });
+    const result = checkPresentationFile({ type: file.type, bytes: file.size });
     setChecks(result);
     if (result.some((c) => !c.ok)) {
       setState("error");
@@ -74,15 +50,7 @@ export function SpotlightVideoUpload({
       const { error } = await createClient().storage.from(sign.bucket).uploadToSignedUrl(sign.path, sign.token, file, { contentType: file.type });
       if (error) throw new Error("The upload didn't finish. Check your connection and try again.");
       setState("done");
-      onUploaded({
-        path: sign.path,
-        type: file.type,
-        bytes: file.size,
-        seconds: Math.round(meta.seconds ?? 0),
-        width: meta.width ?? 0,
-        height: meta.height ?? 0,
-        name: file.name,
-      });
+      onUploaded({ path: sign.path, type: file.type, bytes: file.size, name: file.name });
     } catch (e) {
       setState("error");
       setMessage(e instanceof Error ? e.message : "Upload failed.");
@@ -94,14 +62,14 @@ export function SpotlightVideoUpload({
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        disabled={state === "checking" || state === "uploading"}
+        disabled={state === "uploading"}
         className="flex w-full flex-col items-center gap-1 rounded-lg border border-dashed border-slate-300 px-4 py-5 text-center hover:bg-slate-50 disabled:opacity-60"
       >
         <Upload className="h-5 w-5 text-[#1A6CE4]" />
         <span className="text-sm font-medium text-[var(--text-primary)]">
-          {state === "uploading" ? "Uploading…" : state === "checking" ? "Checking…" : name ? "Choose a different video" : "Upload pitch video"}
+          {state === "uploading" ? "Uploading…" : name ? "Choose a different video" : "Upload presentation video"}
         </span>
-        <span className="text-xs text-[var(--text-muted)]">MP4, MOV or WebM · landscape · 3:00 max · 500 MB max</span>
+        <span className="text-xs text-[var(--text-muted)]">MP4, MOV or WebM · 500 MB max</span>
       </button>
       <input
         ref={inputRef}
@@ -120,7 +88,7 @@ export function SpotlightVideoUpload({
             <li key={c.id} className="flex items-center gap-1.5">
               {c.ok ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> : <XCircle className="h-3.5 w-3.5 text-rose-600" />}
               <span className="text-[var(--text-primary)]">{c.label}</span>
-              <span className="text-[var(--text-muted)]">{c.id === "length" && c.ok ? c.detail : c.ok ? "" : c.detail}</span>
+              {c.ok ? null : <span className="text-[var(--text-muted)]">{c.detail}</span>}
             </li>
           ))}
         </ul>

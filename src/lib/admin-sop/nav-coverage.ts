@@ -60,6 +60,8 @@ export const ADMIN_NAV_SOP_COVERAGE: Record<string, number[]> = {
   "/admin/events/networking": [78],
   "/admin/events/brochure": [78],
   "/admin/events/gamification": [78],
+  "/admin/studio/spotlight": [76],
+  "/admin/studio/talk-show": [76],
   "/admin/voice": [79],
   "/admin/voice/campaigns": [79],
   "/admin/voice/performance": [79],

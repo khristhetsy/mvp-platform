@@ -6,10 +6,10 @@ import {
   refreshSubscriptionState,
 } from "@/lib/subscriptions/get-subscription";
 import { createApplication } from "@/lib/icfo-events/applications";
-import { presentTierForPlan } from "@/lib/icfo-events/present-tiers";
+import { canSpotlight, presentTierForPlan } from "@/lib/icfo-events/present-tiers";
 import type { SpeakerApplicationInput } from "@/lib/icfo-events/schemas";
-import { checkSpotlightFile } from "@/lib/icfo-events/spotlight/rules";
-import { db, isOwnSpotlightPath } from "@/lib/icfo-events/spotlight/service";
+import { checkPresentationFile, parseYouTubeId } from "@/lib/icfo-events/spotlight/rules";
+import { db, isOwnPresentationPath } from "@/lib/icfo-events/spotlight/service";
 import { registerForEvent } from "@/lib/icfo-events/registrations";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
@@ -28,17 +28,16 @@ type Body = {
   eventId?: string;
   topic?: string;
   bio?: string;
-  videoUrl?: string;
   links?: string[];
   features?: string[];
-  /** "spotlight" = a 3 minute uploaded pitch for the Founder Spotlight. */
+  /** "spotlight" = a 1 minute pitch from a YouTube link for the Founder Spotlight. */
   mode?: "spotlight";
+  /** Spotlight: the YouTube link (or 11 character id). */
+  youtubeUrl?: string;
+  /** Full presentation: the uploaded video in the private bucket. */
   videoPath?: string;
   videoType?: string;
   videoBytes?: number;
-  videoSeconds?: number;
-  videoWidth?: number;
-  videoHeight?: number;
   sectorSlug?: string;
   companySummary?: string;
   wantsBooth?: boolean;
@@ -46,7 +45,7 @@ type Body = {
 };
 
 // POST /api/founder/events/present — submit an application to present at an
-// iCFO event. Plan-gated: Basic → Spotlight, Professional → Full presentation.
+// iCFO event. Plan-gated: Basic → Founder Spotlight, Professional → Full presentation.
 // Writes a speaker_applications row (RLS: applicant inserts their own), which
 // lands in the existing staff review queue at /admin/events/applications.
 export async function POST(request: Request) {
@@ -72,18 +71,26 @@ export async function POST(request: Request) {
   }
   const topic = body.topic.trim().slice(0, 200);
 
-  if (body.mode === "spotlight") return submitSpotlight(profile.id, profile.role, body, topic);
-
-  const videoUrl = body.videoUrl?.trim();
-  if (tier.requiresVideo && !videoUrl) {
-    return NextResponse.json({ error: "A video presentation link is required for a full presentation." }, { status: 400 });
+  if (body.mode === "spotlight") {
+    if (!canSpotlight(sub.plan_type)) {
+      return NextResponse.json({ error: "The Founder Spotlight is included with the Basic plan.", upgrade: true }, { status: 403 });
+    }
+    return submitSpotlight(profile.id, profile.role, body, topic);
   }
-  if (videoUrl && !isHttpUrl(videoUrl)) {
-    return NextResponse.json({ error: "Enter a valid video URL (https://…)." }, { status: 400 });
+  if (tier.key !== "full") {
+    return NextResponse.json({ error: "A full presentation is included with the Professional plan.", upgrade: true }, { status: 403 });
   }
 
-  const extraLinks = (body.links ?? []).map((l) => l.trim()).filter((l) => l && isHttpUrl(l));
-  const links = [videoUrl, ...extraLinks].filter((v): v is string => Boolean(v)).slice(0, 6);
+  const eventId = body.eventId;
+  if (!body.videoPath || !isOwnPresentationPath(body.videoPath, eventId, profile.id)) {
+    return NextResponse.json({ error: "Upload your presentation video first." }, { status: 400 });
+  }
+  const failedChecks = checkPresentationFile({ type: body.videoType ?? "", bytes: Number(body.videoBytes ?? 0) }).filter((c) => !c.ok);
+  if (failedChecks.length) {
+    return NextResponse.json({ error: `Fix the video: ${failedChecks.map((c) => c.label.toLowerCase()).join(", ")}.` }, { status: 400 });
+  }
+
+  const links = (body.links ?? []).map((l) => l.trim()).filter((l) => l && isHttpUrl(l)).slice(0, 6);
 
   const chosenIds = new Set(body.features ?? []);
   const featureLabels = tier.features.filter((f) => chosenIds.has(f.id)).map((f) => f.label);
@@ -91,7 +98,7 @@ export async function POST(request: Request) {
   const bio = [
     body.bio?.trim() || null,
     `Presentation tier: ${tier.label}.`,
-    videoUrl ? `Video: ${videoUrl}` : null,
+    "Video: uploaded.",
     featureLabels.length ? `Requested features: ${featureLabels.join(", ")}.` : null,
   ]
     .filter(Boolean)
@@ -109,6 +116,12 @@ export async function POST(request: Request) {
 
   try {
     const application = await createApplication(supabase, profile.id, profile.role, input);
+    // The uploaded file lives in the private bucket; staff watch it from the review queue.
+    const { error: videoError } = await db()
+      .from("speaker_applications")
+      .update({ video_path: body.videoPath, video_type: body.videoType, video_bytes: Math.round(Number(body.videoBytes)) })
+      .eq("id", application.id);
+    if (videoError) return NextResponse.json({ error: "Could not save your video." }, { status: 500 });
     return NextResponse.json({ ok: true, applicationId: application.id, tier: tier.key });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Could not submit your application.";
@@ -119,26 +132,17 @@ export async function POST(request: Request) {
   }
 }
 
-// Founder Spotlight: every presenting plan can submit an uploaded 3 minute
-// pitch. The video already sits in the founder's own folder of the private
-// bucket (signed upload); this records the application for the studio queue.
+// Founder Spotlight: a 1 minute pitch from the founder's own YouTube link. No
+// upload and no editing: the video plays as posted and stops at 60 seconds. One
+// application row is one slot, created here and shown in the studio queue.
 async function submitSpotlight(profileId: string, role: string, body: Body, topic: string) {
   const eventId = body.eventId as string;
   if (!body.disclaimerAccepted) {
     return NextResponse.json({ error: "Confirm you have read the iCFO disclaimer." }, { status: 400 });
   }
-  if (!body.videoPath || !isOwnSpotlightPath(body.videoPath, eventId, profileId)) {
-    return NextResponse.json({ error: "Upload your pitch video first." }, { status: 400 });
-  }
-  const failed = checkSpotlightFile({
-    type: body.videoType ?? "",
-    bytes: Number(body.videoBytes ?? 0),
-    seconds: body.videoSeconds ?? null,
-    width: body.videoWidth ?? null,
-    height: body.videoHeight ?? null,
-  }).filter((c) => !c.ok);
-  if (failed.length) {
-    return NextResponse.json({ error: `Fix the video: ${failed.map((c) => c.label.toLowerCase()).join(", ")}.` }, { status: 400 });
+  const youtubeId = body.youtubeUrl ? parseYouTubeId(body.youtubeUrl) : null;
+  if (!youtubeId) {
+    return NextResponse.json({ error: "Paste a YouTube link to your 1 minute pitch." }, { status: 400 });
   }
 
   const { data, error } = await db()
@@ -149,18 +153,13 @@ async function submitSpotlight(profileId: string, role: string, body: Body, topi
       applicant_role: role,
       kind: "founder_showcase",
       topic,
-      bio: "Presentation tier: Founder Spotlight (3 minute video).",
+      bio: "Presentation tier: Founder Spotlight (1 minute YouTube pitch).",
       sector_slug: body.sectorSlug?.trim() || null,
       links: [],
       company_summary: body.companySummary?.trim().slice(0, 200) || null,
       wants_booth: Boolean(body.wantsBooth),
       disclaimer_accepted_at: new Date().toISOString(),
-      video_path: body.videoPath,
-      video_type: body.videoType,
-      video_bytes: Math.round(Number(body.videoBytes)),
-      video_seconds: Math.round(Number(body.videoSeconds)),
-      video_width: Math.round(Number(body.videoWidth)),
-      video_height: Math.round(Number(body.videoHeight)),
+      youtube_video_id: youtubeId,
     })
     .select("id")
     .single();
