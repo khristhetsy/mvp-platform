@@ -121,8 +121,8 @@ export const OUTREACH_PLAYBOOK: Course = {
             }),
             step({
               title: "Send from Outreach",
-              instruction: "Open Outreach: Manual from the Outreach menu and send your first messages. The AI drafts, you review and send.",
-              menuPath: [STAGE3, "Outreach", "Outreach: Manual"],
+              instruction: "Open Outreach: Manual from the menu and send your first messages. The AI drafts, you review and send.",
+              menuPath: [STAGE3, "Outreach: Manual"],
               href: "/founder/deploy?step=outreach&mode=manual",
               control: "Outreach: Manual",
               learningId: "outreach-manual",
@@ -149,14 +149,14 @@ export const OUTREACH_PLAYBOOK: Course = {
             step({
               title: "Open Social media",
               instruction: "Connect an account and review your plan's monthly post limit.",
-              menuPath: [STAGE3, "Social media"],
+              menuPath: [STAGE3, "Outreach: Social media"],
               href: "/founder/deploy/social",
               minutes: 5,
             }),
             step({
               title: "Schedule this week's post",
               instruction: "Write one post about a real milestone and schedule it.",
-              menuPath: [STAGE3, "Social media"],
+              menuPath: [STAGE3, "Outreach: Social media"],
               href: "/founder/deploy/social",
               minutes: 8,
               commonMistake: "Promising returns or a raise outcome. Keep it factual about your company.",
@@ -173,7 +173,7 @@ export const OUTREACH_PLAYBOOK: Course = {
             step({
               title: "Check your gate status",
               instruction: "Open Outreach: Automated and read whether automated outreach is open or paused for your rating.",
-              menuPath: [STAGE3, "Outreach", "Outreach: Automated"],
+              menuPath: [STAGE3, "Outreach: Automated"],
               href: "/founder/deploy?step=outreach&mode=automated",
               control: "Outreach: Automated",
               learningId: "outreach-automated",
@@ -182,7 +182,7 @@ export const OUTREACH_PLAYBOOK: Course = {
             step({
               title: "Review the ranked list",
               instruction: "If it is open, review the ranked contacts and approve only the ones you would write to yourself.",
-              menuPath: [STAGE3, "Outreach", "Outreach: Automated"],
+              menuPath: [STAGE3, "Outreach: Automated"],
               href: "/founder/deploy?step=outreach&mode=automated",
               minutes: 8,
             }),
