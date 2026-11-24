@@ -9,7 +9,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { EVENT_SESSION_VIDEO_BUCKET } from "@/lib/icfo-events/video/storage";
-import type { SpotlightReview } from "./review";
 
 type Row = Record<string, unknown>;
 
@@ -42,10 +41,6 @@ export type SpotlightApplication = {
   videoWidth: number | null;
   videoHeight: number | null;
   youtubeVideoId: string | null;
-  transcript: string | null;
-  aiReview: SpotlightReview | null;
-  aiReviewedAt: string | null;
-  aiIntro: string | null;
   wantsBooth: boolean;
   boothSponsorId: string | null;
   createdAt: string;
@@ -57,7 +52,7 @@ export type SpotlightApplication = {
 };
 
 const APP_COLUMNS =
-  "id, event_id, applicant_id, topic, sector_slug, company_summary, status, decision_note, video_path, video_type, video_bytes, video_seconds, video_width, video_height, youtube_video_id, transcript, ai_review, ai_reviewed_at, ai_intro, wants_booth, booth_sponsor_id, created_at, profiles:applicant_id(full_name,email)";
+  "id, event_id, applicant_id, topic, sector_slug, company_summary, status, decision_note, video_path, video_type, video_bytes, video_seconds, video_width, video_height, youtube_video_id, wants_booth, booth_sponsor_id, created_at, profiles:applicant_id(full_name,email)";
 
 function mapApp(r: Row): Omit<SpotlightApplication, "company" | "presenterId" | "sessionId" | "position"> {
   const p = r.profiles as { full_name?: string | null; email?: string | null } | null;
@@ -80,10 +75,6 @@ function mapApp(r: Row): Omit<SpotlightApplication, "company" | "presenterId" | 
     videoWidth: n(r.video_width),
     videoHeight: n(r.video_height),
     youtubeVideoId: (r.youtube_video_id as string | null) ?? null,
-    transcript: (r.transcript as string | null) ?? null,
-    aiReview: (r.ai_review as SpotlightReview | null) ?? null,
-    aiReviewedAt: (r.ai_reviewed_at as string | null) ?? null,
-    aiIntro: (r.ai_intro as string | null) ?? null,
     wantsBooth: Boolean(r.wants_booth),
     boothSponsorId: (r.booth_sponsor_id as string | null) ?? null,
     createdAt: String(r.created_at),
@@ -170,10 +161,6 @@ export async function patchSpotlightApplication(
   id: string,
   patch: Partial<{
     youtube_video_id: string | null;
-    transcript: string | null;
-    ai_review: SpotlightReview | null;
-    ai_reviewed_at: string | null;
-    ai_intro: string | null;
     status: SpotlightApplication["status"];
     decision_note: string | null;
     reviewer_id: string;
@@ -184,33 +171,34 @@ export async function patchSpotlightApplication(
   if (error) throw new Error(error.message);
 }
 
-/** Short lived link so staff can watch the uploaded master file. */
+/** Short lived link so staff can watch a legacy uploaded file (new Spotlight
+ *  applications are a YouTube link only). */
 export async function spotlightVideoUrl(path: string | null, expiresIn = 3600): Promise<string | null> {
   if (!path) return null;
   const { data, error } = await db().storage.from(EVENT_SESSION_VIDEO_BUCKET).createSignedUrl(path, expiresIn);
   return error ? null : (data?.signedUrl ?? null);
 }
 
-/** Uploads go to spotlight/<eventId>/<founderId>/<timestamp>-<name>. */
-export function buildSpotlightVideoPath(eventId: string, founderId: string, fileName: string): string {
+/** Full presentation uploads go to presentation/<eventId>/<founderId>/<timestamp>-<name>. */
+export function buildPresentationVideoPath(eventId: string, founderId: string, fileName: string): string {
   const safe = fileName.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-80);
-  return `spotlight/${eventId}/${founderId}/${Date.now()}-${safe}`;
+  return `presentation/${eventId}/${founderId}/${Date.now()}-${safe}`;
 }
 
 /** A path is only accepted back from the browser when it sits in the
  *  founder's own folder for that event. */
-export function isOwnSpotlightPath(path: string, eventId: string, founderId: string): boolean {
-  return path.startsWith(`spotlight/${eventId}/${founderId}/`) && !path.includes("..");
+export function isOwnPresentationPath(path: string, eventId: string, founderId: string): boolean {
+  return path.startsWith(`presentation/${eventId}/${founderId}/`) && !path.includes("..");
 }
 
-export async function createSpotlightUploadUrl(path: string): Promise<{ path: string; token: string } | null> {
+export async function createPresentationUploadUrl(path: string): Promise<{ path: string; token: string } | null> {
   const { data, error } = await db().storage.from(EVENT_SESSION_VIDEO_BUCKET).createSignedUploadUrl(path);
   if (error || !data) return null;
   return { path: data.path, token: data.token };
 }
 
-/** Deletes the master file once YouTube holds the approved version, so storage
- *  does not grow. Best effort. */
+/** Deletes a legacy master file once YouTube holds the approved version, so
+ *  storage does not grow. Best effort. */
 export async function removeSpotlightVideo(path: string | null): Promise<void> {
   if (!path) return;
   await db().storage.from(EVENT_SESSION_VIDEO_BUCKET).remove([path]).then(
@@ -296,7 +284,6 @@ export type SpotlightPlaylistItem = {
   displayName: string;
   companyName: string | null;
   sectorSlug: string | null;
-  intro: string | null;
   headline: string | null;
   boothSponsorId: string | null;
   meetingUrl: string | null;
@@ -310,7 +297,7 @@ export async function loadSpotlightPlaylist(eventId: string): Promise<SpotlightP
   const { data } = await client
     .from("event_presenters")
     .select(
-      "id, display_name, headline, company_summary, youtube_video_id, ai_intro, booth_sponsor_id, meeting_url, session_id, position, speaker_applications:application_id(kind, sector_slug, applicant_id)",
+      "id, display_name, headline, company_summary, youtube_video_id, booth_sponsor_id, meeting_url, session_id, position, speaker_applications:application_id(kind, sector_slug, applicant_id)",
     )
     .eq("event_id", eventId)
     .not("youtube_video_id", "is", null)
@@ -330,7 +317,6 @@ export async function loadSpotlightPlaylist(eventId: string): Promise<SpotlightP
       displayName: String(r.display_name),
       companyName: companies.get(String(a.applicant_id ?? ""))?.name ?? null,
       sectorSlug: a.sector_slug ?? null,
-      intro: (r.ai_intro as string | null) ?? null,
       headline: (r.headline as string | null) ?? (r.company_summary as string | null) ?? null,
       boothSponsorId: (r.booth_sponsor_id as string | null) ?? null,
       meetingUrl: (r.meeting_url as string | null) ?? null,

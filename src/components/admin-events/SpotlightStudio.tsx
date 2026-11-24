@@ -2,19 +2,10 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowDown, ArrowLeft, ArrowUp, CheckCircle2, ExternalLink, Sparkles, TriangleAlert, XCircle } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, ExternalLink } from "lucide-react";
 import { MetricCard } from "@/components/MetricCard";
-import {
-  PITCH_OUTLINE,
-  SPOTLIGHT_SLOT_SECONDS,
-  checkSpotlightFile,
-  cleanCaptions,
-  formatClock,
-  minutesBetween,
-  spotlightCapacity,
-} from "@/lib/icfo-events/spotlight/rules";
+import { SPOTLIGHT_SLOT_SECONDS, formatClock, minutesBetween, spotlightCapacity } from "@/lib/icfo-events/spotlight/rules";
 import type { SpotlightApplication } from "@/lib/icfo-events/spotlight/service";
-import type { SpotlightReview } from "@/lib/icfo-events/spotlight/review";
 
 export type StudioSession = { id: string; title: string; type: string; startsAt: string | null; endsAt: string | null };
 type StudioEvent = { id: string; title: string; slug: string; timezone: string; startsAt: string | null; endsAt: string | null };
@@ -110,7 +101,7 @@ export function SpotlightStudio({
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="text-sm font-semibold text-[var(--text-primary)]">Run of show</h2>
           <span className="text-xs text-[var(--text-muted)]">
-            {fmtTime(event.startsAt)} to {fmtTime(event.endsAt)} · one slot is {formatClock(SPOTLIGHT_SLOT_SECONDS)} (12s intro plus up to 3:00 pitch)
+            {fmtTime(event.startsAt)} to {fmtTime(event.endsAt)} · one slot is {formatClock(SPOTLIGHT_SLOT_SECONDS)} (up to 1:00 pitch plus a 5s break)
           </span>
         </div>
         <ul className="mt-3 divide-y divide-slate-100">
@@ -192,8 +183,7 @@ export function SpotlightStudio({
                 >
                   <p className="text-sm font-medium text-[var(--text-primary)]">{a.company?.name ?? a.applicantName ?? "Founder"}</p>
                   <p className="text-xs text-[var(--text-muted)]">
-                    {sectorName(a.sectorSlug)} · {a.videoSeconds ? formatClock(a.videoSeconds) : "no video"}
-                    {a.aiReview ? ` · AI: ${a.aiReview.recommendation.replace("_", " ")}` : ""}
+                    {sectorName(a.sectorSlug)} · {a.youtubeVideoId ? "YouTube link sent" : "no link"}
                   </p>
                 </button>
               </li>
@@ -216,7 +206,7 @@ export function SpotlightStudio({
           />
         ) : (
           <div className="rounded-xl border border-dashed border-[var(--border-subtle)] p-10 text-center text-sm text-[var(--text-muted)]">
-            Spotlight applications land here when founders submit their 3 minute pitch.
+            Spotlight applications land here when founders send their 1 minute YouTube pitch.
           </div>
         )}
       </section>
@@ -269,22 +259,13 @@ function ReviewPanel({
   onChange: (a: SpotlightApplication) => void;
 }) {
   const [youtube, setYoutube] = useState(app.youtubeVideoId ?? "");
-  const [transcript, setTranscript] = useState(app.transcript ?? "");
-  const [intro, setIntro] = useState(app.aiIntro ?? "");
-  const [note, setNote] = useState(app.aiReview?.changeRequest ?? "");
+  const [note, setNote] = useState("");
   const [sessionId, setSessionId] = useState(app.sessionId ?? showcase[0]?.id ?? "");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const decided = app.status === "approved" || app.status === "declined";
-  const fileChecks = checkSpotlightFile({
-    type: app.videoType ?? "",
-    bytes: app.videoBytes ?? 0,
-    seconds: app.videoSeconds,
-    width: app.videoWidth,
-    height: app.videoHeight,
-  });
 
   async function run(label: string, fn: () => Promise<void>) {
     setBusy(label);
@@ -298,10 +279,6 @@ function ReviewPanel({
       setBusy(null);
     }
   }
-
-  const review = app.aiReview;
-  const recTone =
-    review?.recommendation === "approve" ? "bg-emerald-50 text-emerald-800" : review?.recommendation === "decline" ? "bg-rose-50 text-rose-800" : "bg-amber-50 text-amber-800";
 
   return (
     <div className="space-y-4 rounded-xl border border-[var(--border-subtle)] bg-white p-5">
@@ -331,18 +308,9 @@ function ReviewPanel({
       ) : videoUrl ? (
         <video src={videoUrl} controls preload="metadata" className="aspect-video w-full rounded-lg bg-[#0A1A40]" />
       ) : (
-        <div className="flex aspect-video items-center justify-center rounded-lg bg-slate-100 text-sm text-[var(--text-muted)]">No video uploaded</div>
+        <div className="flex aspect-video items-center justify-center rounded-lg bg-slate-100 text-sm text-[var(--text-muted)]">No YouTube link yet</div>
       )}
-
-      <ul className="grid gap-1 text-sm sm:grid-cols-2">
-        {fileChecks.map((c) => (
-          <li key={c.id} className="flex items-center gap-2">
-            {c.ok ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <XCircle className="h-4 w-4 text-rose-600" />}
-            <span>{c.label}</span>
-            <span className="text-xs text-[var(--text-muted)]">{c.detail}</span>
-          </li>
-        ))}
-      </ul>
+      <p className="text-xs text-[var(--text-muted)]">Plays as posted and stops at 1:00. The studio never edits a pitch.</p>
 
       {app.decisionNote && app.status === "under_review" ? (
         <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800">Change requested: {app.decisionNote}</p>
@@ -350,9 +318,9 @@ function ReviewPanel({
 
       {canEdit && !decided ? (
         <>
-          <Step n={1} title="Upload to YouTube as Private and paste the link" done={Boolean(app.youtubeVideoId)}>
+          <Step n={1} title="Check the YouTube link" done={Boolean(app.youtubeVideoId)}>
             <p className="text-xs text-[var(--text-muted)]">
-              Download the video above, upload it in YouTube Studio as Private (trim, music, blur and end screens are in the free Studio editor). YouTube makes automatic captions for step 2. Switch it to Unlisted when approved.
+              The founder sent this link. Watch it above: it must be 1:00 or shorter and must not state an amount being raised. If the link is wrong, request a change below.
             </p>
             <div className="mt-2 flex gap-2">
               <input value={youtube} onChange={(e) => setYoutube(e.target.value)} placeholder="https://youtu.be/…" className="min-w-0 flex-1 rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-sm" />
@@ -374,113 +342,7 @@ function ReviewPanel({
             </div>
           </Step>
 
-          <Step n={2} title="Paste the captions transcript" done={Boolean(app.transcript)}>
-            <p className="text-xs text-[var(--text-muted)]">YouTube Studio › Subtitles › the video › Download the automatic captions, then paste the file here. Timestamps are removed for you.</p>
-            <textarea value={transcript} onChange={(e) => setTranscript(e.target.value)} rows={4} className="mt-2 w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-xs" />
-            <button
-              type="button"
-              disabled={busy !== null || !transcript.trim()}
-              onClick={() =>
-                run("transcript", async () => {
-                  const clean = cleanCaptions(transcript);
-                  await post(eventId, app.id, { action: "transcript", transcript: clean });
-                  setTranscript(clean);
-                  onChange({ ...app, transcript: clean });
-                })
-              }
-              className="mt-2 rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-sm hover:bg-slate-50 disabled:opacity-50"
-            >
-              {busy === "transcript" ? "Saving…" : "Save transcript"}
-            </button>
-          </Step>
-
-          <Step n={3} title="AI review against the iCFO standard" done={Boolean(review)}>
-            <button
-              type="button"
-              disabled={busy !== null || !app.transcript}
-              onClick={() =>
-                run("review", async () => {
-                  const json = await post(eventId, app.id, { action: "review" });
-                  const r = json.review as SpotlightReview;
-                  setNote(r.changeRequest ?? "");
-                  onChange({ ...app, aiReview: r, aiReviewedAt: String(json.reviewedAt), status: app.status === "submitted" ? "under_review" : app.status });
-                })
-              }
-              className="inline-flex items-center gap-1 rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-sm hover:bg-slate-50 disabled:opacity-50"
-            >
-              <Sparkles className="h-4 w-4" /> {busy === "review" ? "Reviewing…" : review ? "Run again" : "Run AI review"}
-            </button>
-            {!app.transcript ? <p className="mt-1 text-xs text-[var(--text-muted)]">Needs the transcript from step 2.</p> : null}
-            {review ? (
-              <div className="mt-3 space-y-2 text-sm">
-                <ul className="grid gap-1 sm:grid-cols-2">
-                  {PITCH_OUTLINE.map((p) => (
-                    <li key={p.id} className="flex items-center gap-2">
-                      {review.outline[p.id] ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <TriangleAlert className="h-4 w-4 text-amber-600" />}
-                      {p.label}
-                    </li>
-                  ))}
-                  <li className="flex items-center gap-2">
-                    {review.endsWithAsk ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <TriangleAlert className="h-4 w-4 text-amber-600" />}
-                    Ends with the ask
-                  </li>
-                </ul>
-                {review.compliance.length ? (
-                  <ul className="space-y-1">
-                    {review.compliance.map((c, i) => (
-                      <li key={i} className="rounded-md bg-rose-50 px-3 py-2 text-xs text-rose-800">
-                        Compliance: &ldquo;{c.quote}&rdquo; · {c.why}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-xs text-emerald-700">No compliance language flagged.</p>
-                )}
-                <p className={`rounded-md px-3 py-2 text-xs ${recTone}`}>
-                  AI recommends: {review.recommendation.replace("_", " ")}. {review.summary}
-                </p>
-                <p className="text-[11px] text-[var(--text-muted)]">
-                  Read from the transcript only{app.aiReviewedAt ? `, ${new Date(app.aiReviewedAt).toLocaleString()}` : ""}. You decide below.
-                </p>
-              </div>
-            ) : null}
-          </Step>
-
-          <Step n={4} title="Intro read before the pitch" done={Boolean(app.aiIntro)}>
-            <textarea value={intro} onChange={(e) => setIntro(e.target.value)} rows={2} maxLength={400} placeholder="Two sentences: founder, company, sector, stage, what it does." className="w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm" />
-            <div className="mt-2 flex gap-2">
-              <button
-                type="button"
-                disabled={busy !== null}
-                onClick={() =>
-                  run("intro_draft", async () => {
-                    const json = await post(eventId, app.id, { action: "intro_draft" });
-                    setIntro(String(json.intro ?? ""));
-                    setNotice("Draft ready. Edit it, then Save.");
-                  })
-                }
-                className="inline-flex items-center gap-1 rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-sm hover:bg-slate-50 disabled:opacity-50"
-              >
-                <Sparkles className="h-4 w-4" /> {busy === "intro_draft" ? "Drafting…" : "Draft with AI"}
-              </button>
-              <button
-                type="button"
-                disabled={busy !== null || !intro.trim()}
-                onClick={() =>
-                  run("intro", async () => {
-                    const json = await post(eventId, app.id, { action: "intro", intro });
-                    onChange({ ...app, aiIntro: (json.intro as string | null) ?? null });
-                    setNotice("Intro saved.");
-                  })
-                }
-                className="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-sm hover:bg-slate-50 disabled:opacity-50"
-              >
-                {busy === "intro" ? "Saving…" : "Save"}
-              </button>
-            </div>
-          </Step>
-
-          <Step n={5} title="Decide">
+          <Step n={2} title="Decide">
             <label className="block text-xs text-[var(--text-muted)]">
               Showcase block
               <select value={sessionId} onChange={(e) => setSessionId(e.target.value)} className="mt-1 w-full rounded-md border border-[var(--border-subtle)] px-2 py-1.5 text-sm text-[var(--text-primary)]">
@@ -524,7 +386,7 @@ function ReviewPanel({
               <button
                 type="button"
                 disabled={busy !== null || !app.youtubeVideoId}
-                title={app.youtubeVideoId ? undefined : "Add the YouTube link in step 1 first"}
+                title={app.youtubeVideoId ? undefined : "A YouTube link is needed first"}
                 onClick={() =>
                   run("approve", async () => {
                     const json = await post(eventId, app.id, { action: "approve", sessionId: sessionId || null });
@@ -545,7 +407,7 @@ function ReviewPanel({
                 {busy === "approve" ? "Approving…" : "Approve"}
               </button>
             </div>
-            {!app.youtubeVideoId ? <p className="mt-2 text-xs text-[var(--text-muted)]">Approve needs the YouTube link from step 1. Approving deletes the uploaded file; YouTube keeps the copy.</p> : null}
+            {!app.youtubeVideoId ? <p className="mt-2 text-xs text-[var(--text-muted)]">Approve needs the founder&rsquo;s YouTube link from step 1.</p> : null}
           </Step>
         </>
       ) : null}
@@ -553,9 +415,8 @@ function ReviewPanel({
       {decided ? (
         <div className="rounded-md bg-slate-50 px-3 py-2 text-sm text-[var(--text-secondary)]">
           {app.status === "approved"
-            ? `Approved${app.boothSponsorId ? " · booth created for the founder to finish" : ""}. Set the video to Unlisted in YouTube Studio.`
+            ? `Approved${app.boothSponsorId ? " · booth created for the founder to finish" : ""}. The pitch joins the lineup below.`
             : `Declined. ${app.decisionNote ?? ""}`}
-          {app.status === "approved" && app.aiIntro ? <p className="mt-1 text-xs text-[var(--text-muted)]">Intro: {app.aiIntro}</p> : null}
         </div>
       ) : null}
 

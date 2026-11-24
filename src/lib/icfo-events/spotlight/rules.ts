@@ -1,16 +1,17 @@
-// Founder Spotlight rules: slot math, capacity, free file checks and YouTube
+// Founder Spotlight rules: slot math, capacity, upload checks and YouTube
 // id parsing. Pure functions, no I/O, so they run in the browser (pre-upload
 // checks) and on the server (studio capacity) alike.
 
-/** Longest pitch video a founder may submit. */
-export const SPOTLIGHT_MAX_VIDEO_SECONDS = 180;
-/** The AI intro card shown before each pitch. */
-export const SPOTLIGHT_INTRO_SECONDS = 12;
-/** One company's slot in the run of show: intro card plus the longest pitch. */
-export const SPOTLIGHT_SLOT_SECONDS = SPOTLIGHT_MAX_VIDEO_SECONDS + SPOTLIGHT_INTRO_SECONDS;
+/** Longest pitch video a founder may submit. Playback stops here, hard. */
+export const SPOTLIGHT_MAX_VIDEO_SECONDS = 60;
+/** Pause between one pitch ending and the next starting. */
+export const SPOTLIGHT_BREAK_SECONDS = 5;
+/** One company's slot in the run of show: the longest pitch plus the break. */
+export const SPOTLIGHT_SLOT_SECONDS = SPOTLIGHT_MAX_VIDEO_SECONDS + SPOTLIGHT_BREAK_SECONDS;
 
-export const SPOTLIGHT_VIDEO_MAX_BYTES = 500 * 1024 * 1024; // matches the session video bucket cap
-export const SPOTLIGHT_VIDEO_MIME = ["video/mp4", "video/quicktime", "video/webm"];
+/** Full presentation uploads (Professional): private bucket, 500 MB cap. */
+export const PRESENTATION_VIDEO_MAX_BYTES = 500 * 1024 * 1024; // matches the session video bucket cap
+export const PRESENTATION_VIDEO_MIME = ["video/mp4", "video/quicktime", "video/webm"];
 
 /** How many companies fit back to back in a number of minutes. */
 export function spotlightCapacity(minutes: number): number {
@@ -26,42 +27,23 @@ export function minutesBetween(startsAt: string | null, endsAt: string | null): 
   return Math.round(ms / 60000);
 }
 
-export type FileCheck = { id: "type" | "size" | "length" | "landscape"; label: string; ok: boolean; detail: string };
+export type FileCheck = { id: "type" | "size"; label: string; ok: boolean; detail: string };
 
-/** The free checks run on the founder's device before upload, and shown again
- *  to staff. Nothing here calls a paid service. */
-export function checkSpotlightFile(input: {
-  type: string;
-  bytes: number;
-  seconds: number | null;
-  width: number | null;
-  height: number | null;
-}): FileCheck[] {
-  const secs = input.seconds == null ? null : Math.round(input.seconds);
+/** The free checks run on the founder's device before a full presentation
+ *  upload, and again on the server. Nothing here calls a paid service. */
+export function checkPresentationFile(input: { type: string; bytes: number }): FileCheck[] {
   return [
     {
       id: "type",
       label: "MP4, MOV or WebM",
-      ok: SPOTLIGHT_VIDEO_MIME.includes(input.type),
+      ok: PRESENTATION_VIDEO_MIME.includes(input.type),
       detail: input.type || "unknown type",
     },
     {
       id: "size",
       label: "500 MB or less",
-      ok: input.bytes > 0 && input.bytes <= SPOTLIGHT_VIDEO_MAX_BYTES,
+      ok: input.bytes > 0 && input.bytes <= PRESENTATION_VIDEO_MAX_BYTES,
       detail: `${Math.round(input.bytes / (1024 * 1024))} MB`,
-    },
-    {
-      id: "length",
-      label: "3:00 or less",
-      ok: secs != null && secs > 0 && secs <= SPOTLIGHT_MAX_VIDEO_SECONDS,
-      detail: secs == null ? "length unreadable" : formatClock(secs),
-    },
-    {
-      id: "landscape",
-      label: "Landscape (horizontal)",
-      ok: input.width != null && input.height != null && input.width > input.height,
-      detail: input.width && input.height ? `${input.width}×${input.height}` : "size unreadable",
     },
   ];
 }
@@ -96,36 +78,13 @@ export function parseYouTubeId(input: string): string | null {
   return null;
 }
 
-/** The six parts every pitch should cover, in order (shown to founders and
- *  used by the AI review). */
+/** The five parts every pitch should cover, in order (shown to founders). A
+ *  pitch never states an amount being raised. */
 export const PITCH_OUTLINE = [
   { id: "hook", label: "Hook and problem" },
   { id: "solution", label: "Solution" },
   { id: "traction", label: "Traction" },
   { id: "market", label: "Market and model" },
   { id: "team", label: "Team" },
-  { id: "ask", label: "The ask" },
 ] as const;
 export type PitchPartId = (typeof PITCH_OUTLINE)[number]["id"];
-
-/** Turns a pasted YouTube captions file (.srt, .vtt or .sbv) or plain text
- *  into one block of spoken words for the AI review. */
-export function cleanCaptions(raw: string): string {
-  return raw
-    .replace(/\r/g, "")
-    .split("\n")
-    .map((l) => l.trim())
-    .filter(
-      (l) =>
-        l &&
-        l !== "WEBVTT" &&
-        !/^\d+$/.test(l) &&
-        !/^\d{1,2}:\d{2}(:\d{2})?[.,]\d{3}\s*(-->|,)\s*\d{1,2}:\d{2}(:\d{2})?[.,]\d{3}/.test(l) &&
-        !/^(Kind|Language|NOTE)\b/.test(l),
-    )
-    .map((l) => l.replace(/<[^>]+>/g, ""))
-    .join(" ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 20000);
-}

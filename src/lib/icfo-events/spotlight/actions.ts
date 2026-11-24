@@ -67,7 +67,6 @@ export async function approveSpotlight(input: { applicationId: string; staffId: 
       session_id: input.sessionId,
       position,
       youtube_video_id: app.youtubeVideoId,
-      ai_intro: app.aiIntro,
       booth_sponsor_id: boothId,
     })
     .eq("id", presenterId);
@@ -120,7 +119,7 @@ export async function requestSpotlightChange(input: { applicationId: string; sta
     actorUserId: input.staffId,
     type: "event_speaker_decision",
     title: "A change is needed on your Spotlight pitch",
-    message: `${input.note.slice(0, 300)} Upload a new video from Present at an event.`,
+    message: `${input.note.slice(0, 300)} Send a new YouTube link from Present at an event.`,
     entityType: "speaker_application",
     entityId: app.id,
     deepLink: FOUNDER_LINK,

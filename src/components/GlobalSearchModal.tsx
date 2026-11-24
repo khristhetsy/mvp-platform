@@ -177,6 +177,8 @@ const PAGES: PageShortcut[] = [
   { id: "ad-ev-reg",   title: "Event registration",   subtitle: "Events",                 href: "/admin/events/registrations",    keywords: ["events", "registration", "registrations", "attendees"], workspace: "admin" },
   { id: "ad-ev-net",   title: "Networking matching",  subtitle: "Events",                 href: "/admin/events/networking",       keywords: ["events", "networking", "matching"],        workspace: "admin" },
   { id: "ad-ev-bro",   title: "Event brochure",       subtitle: "Events",                 href: "/admin/events/brochure",         keywords: ["events", "brochure"],                      workspace: "admin" },
+  { id: "ad-studio-spot", title: "Spotlight Studio",      subtitle: "Studio",                 href: "/admin/studio/spotlight",        keywords: ["studio", "spotlight", "founder", "pitch"], workspace: "admin" },
+  { id: "ad-studio-talk", title: "Talk Show Studio",      subtitle: "Studio",                 href: "/admin/studio/talk-show",        keywords: ["studio", "talk show", "live"],             workspace: "admin" },
   { id: "ad-ev-ana",   title: "Event analytics",      subtitle: "Events",                 href: "/admin/events/analytics",        keywords: ["events", "analytics"],                     workspace: "admin" },
   { id: "ad-ev-gam",   title: "Gamification",         subtitle: "Events",                 href: "/admin/events/gamification",     keywords: ["events", "gamification", "points"],        workspace: "admin" },
   { id: "ad-voice",    title: "Voice command center", subtitle: "Voice",                  href: "/admin/voice",                   keywords: ["voice", "calling", "command", "center"],   workspace: "admin" },

@@ -3,11 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { CalendarClock, SkipForward, Store } from "lucide-react";
-import { SPOTLIGHT_INTRO_SECONDS } from "@/lib/icfo-events/spotlight/rules";
+import { SPOTLIGHT_BREAK_SECONDS, SPOTLIGHT_MAX_VIDEO_SECONDS } from "@/lib/icfo-events/spotlight/rules";
 import type { SpotlightPlaylistItem } from "@/lib/icfo-events/spotlight/service";
 
 // Minimal typing for the YouTube IFrame Player API (loaded from youtube.com).
-type YTPlayer = { loadVideoById: (id: string) => void; playVideo: () => void; destroy: () => void };
+type YTPlayer = { loadVideoById: (opts: { videoId: string; endSeconds?: number }) => void; playVideo: () => void; destroy: () => void };
 type YTNamespace = {
   Player: new (
     el: HTMLElement,
@@ -46,7 +46,8 @@ function loadYouTubeApi(): Promise<YTNamespace> {
 
 const LOWER_THIRD_MS = 8000;
 
-export function SpotlightPlayer({ items, sectorLabels }: { items: SpotlightPlaylistItem[]; sectorLabels: Record<string, string> }) {
+export function SpotlightPlayer({ items, sectorLabels, breakSeconds }: { items: SpotlightPlaylistItem[]; sectorLabels: Record<string, string>; breakSeconds?: number }) {
+  const BREAK_SECONDS = breakSeconds ?? SPOTLIGHT_BREAK_SECONDS;
   const [track, setTrack] = useState<string>("all");
   const list = useMemo(() => (track === "all" ? items : items.filter((i) => i.sectorSlug === track)), [items, track]);
   const [index, setIndex] = useState(0);
@@ -80,7 +81,7 @@ export function SpotlightPlayer({ items, sectorLabels }: { items: SpotlightPlayl
     nextRef.current = next;
   }, [next]);
 
-  // Intro card: tick the clock, then hand over to the video.
+  // Break card between pitches: tick the clock, then hand over to the video.
   useEffect(() => {
     if (phase !== "intro") return;
     const tick = setInterval(() => setNow(Date.now()), 250);
@@ -89,12 +90,12 @@ export function SpotlightPlayer({ items, sectorLabels }: { items: SpotlightPlayl
       setVideoStartedAt(t);
       setNow(t);
       setPhase("video");
-    }, Math.max(0, introStartedAt + SPOTLIGHT_INTRO_SECONDS * 1000 - Date.now()));
+    }, Math.max(0, introStartedAt + BREAK_SECONDS * 1000 - Date.now()));
     return () => {
       clearInterval(tick);
       clearTimeout(done);
     };
-  }, [phase, introStartedAt]);
+  }, [phase, introStartedAt, BREAK_SECONDS]);
 
   // Keep the clock moving while the lower third is up.
   useEffect(() => {
@@ -108,7 +109,7 @@ export function SpotlightPlayer({ items, sectorLabels }: { items: SpotlightPlayl
   }, [phase, videoStartedAt]);
 
   const elapsedIntro = Math.max(0, now - introStartedAt);
-  const countdown = Math.max(0, Math.ceil((SPOTLIGHT_INTRO_SECONDS * 1000 - elapsedIntro) / 1000));
+  const countdown = Math.max(0, Math.ceil((BREAK_SECONDS * 1000 - elapsedIntro) / 1000));
   const showLowerThird = phase === "video" && now - videoStartedAt < LOWER_THIRD_MS;
 
   // Create the player once, then load each video in turn.
@@ -117,7 +118,8 @@ export function SpotlightPlayer({ items, sectorLabels }: { items: SpotlightPlayl
     let cancelled = false;
     (async () => {
       if (playerRef.current) {
-        playerRef.current.loadVideoById(current.youtubeVideoId);
+        // endSeconds is the hard cutoff: the player reports ENDED at 60 seconds.
+        playerRef.current.loadVideoById({ videoId: current.youtubeVideoId, endSeconds: SPOTLIGHT_MAX_VIDEO_SECONDS });
         return;
       }
       const YT = await loadYouTubeApi();
@@ -125,7 +127,7 @@ export function SpotlightPlayer({ items, sectorLabels }: { items: SpotlightPlayl
       playerRef.current = new YT.Player(hostRef.current, {
         videoId: current.youtubeVideoId,
         host: "https://www.youtube-nocookie.com",
-        playerVars: { autoplay: 1, rel: 0, modestbranding: 1, playsinline: 1 },
+        playerVars: { autoplay: 1, rel: 0, modestbranding: 1, playsinline: 1, end: SPOTLIGHT_MAX_VIDEO_SECONDS },
         events: {
           onReady: () => playerRef.current?.playVideo(),
           onStateChange: (e) => {
@@ -182,7 +184,7 @@ export function SpotlightPlayer({ items, sectorLabels }: { items: SpotlightPlayl
         {phase === "ready" && current ? (
           <button type="button" onClick={() => goTo(0)} className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-white">
             <span className="rounded-full bg-[#1A6CE4] px-5 py-2.5 text-sm font-semibold">Start the Spotlight</span>
-            <span className="text-xs text-[#B5D4F4]">{list.length} founder pitches, about 3 minutes each</span>
+            <span className="text-xs text-[#B5D4F4]">{list.length} founder pitches, 1 minute each, one after another</span>
           </button>
         ) : null}
 
@@ -194,9 +196,9 @@ export function SpotlightPlayer({ items, sectorLabels }: { items: SpotlightPlayl
               {current.displayName}
               {current.sectorSlug ? ` · ${sectorLabels[current.sectorSlug] ?? current.sectorSlug}` : ""}
             </p>
-            {current.intro ? <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/90">{current.intro}</p> : null}
+            {current.headline ? <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/90">{current.headline}</p> : null}
             <div className="mt-4 h-1 w-full overflow-hidden rounded bg-[#185FA5]">
-              <div className="h-1 bg-white transition-all duration-1000" style={{ width: `${((SPOTLIGHT_INTRO_SECONDS - countdown) / SPOTLIGHT_INTRO_SECONDS) * 100}%` }} />
+              <div className="h-1 bg-white transition-all duration-1000" style={{ width: `${((BREAK_SECONDS - countdown) / BREAK_SECONDS) * 100}%` }} />
             </div>
           </div>
         ) : null}

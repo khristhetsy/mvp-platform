@@ -1,6 +1,6 @@
 // Plan-gated "Present at event" tiers.
-// Basic        → Spotlight (event spotlight — a curated showcase slot)
-// Professional → Full presentation (monthly live stage slot + full video)
+// Basic        → Founder Spotlight (a 1 minute pitch from a YouTube link)
+// Professional → Full presentation (live stage slot, uploaded video)
 // Managed IR   → Full presentation (done-for-you)
 // Free         → no presenting (must upgrade).
 import type { PlanType } from "@/lib/subscriptions/plans";
@@ -22,11 +22,10 @@ export const SPOTLIGHT: PresentTier = {
   label: "Founder Spotlight",
   kind: "founder_showcase",
   requiresVideo: false,
-  blurb: "Your 3 minute pitch video plays in the Founder Spotlight, with a short intro, a place in the lineup and your own booth.",
+  blurb: "Your 1 minute pitch plays from your YouTube link in the Founder Spotlight, with a place in the lineup and your own booth.",
   features: [
     { id: "lineup", label: "Place in the Founder Spotlight lineup" },
-    { id: "video3", label: "3 minute pitch video, reviewed by iCFO" },
-    { id: "intro", label: "Short introduction before your pitch" },
+    { id: "video1", label: "1 minute pitch from a YouTube link, played as submitted" },
     { id: "booth", label: "Your own virtual booth" },
     { id: "networking", label: "Investor networking opt-in", optional: true },
   ],
@@ -37,10 +36,10 @@ const FULL: PresentTier = {
   label: "Full presentation",
   kind: "presenter",
   requiresVideo: true,
-  blurb: "A live stage slot with a full video presentation, Q&A, and featured placement.",
+  blurb: "A live Main Stage slot with your uploaded video presentation, Q&A, and featured placement.",
   features: [
     { id: "stage", label: "Live stage presentation slot" },
-    { id: "video_full", label: "Full video presentation" },
+    { id: "video_full", label: "Uploaded video presentation" },
     { id: "qa", label: "Live Q&A / panel" },
     { id: "featured", label: "Featured placement in the lineup" },
     { id: "analytics", label: "Presentation engagement analytics", optional: true },
@@ -53,4 +52,9 @@ export function presentTierForPlan(plan: PlanType): PresentTier | null {
   if (plan === "founder_basic") return SPOTLIGHT;
   if (plan === "founder_professional" || plan === "founder_premium" || plan === "founder_managed_ir" || plan === "admin_internal") return FULL;
   return null;
+}
+
+/** Founder Spotlight is open to the Basic plan only (admin_internal for staff testing). */
+export function canSpotlight(plan: PlanType): boolean {
+  return plan === "founder_basic" || plan === "admin_internal";
 }

@@ -64,6 +64,7 @@ describe("toApps: admin", () => {
       "LinkedIn",
       "AI Agent",
       "Events",
+      "Studio",
       "Voice",
       "Communication",
       "Operational Tools",

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  SPOTLIGHT_BREAK_SECONDS,
+  SPOTLIGHT_MAX_VIDEO_SECONDS,
   SPOTLIGHT_SLOT_SECONDS,
-  checkSpotlightFile,
+  checkPresentationFile,
   formatClock,
   minutesBetween,
   parseYouTubeId,
@@ -9,13 +11,14 @@ import {
 } from "./rules";
 
 describe("spotlight capacity", () => {
-  it("uses a 3:12 slot", () => {
-    expect(SPOTLIGHT_SLOT_SECONDS).toBe(192);
+  it("uses a 1:05 slot: a 60 second pitch plus a 5 second break", () => {
+    expect(SPOTLIGHT_MAX_VIDEO_SECONDS).toBe(60);
+    expect(SPOTLIGHT_BREAK_SECONDS).toBe(5);
+    expect(SPOTLIGHT_SLOT_SECONDS).toBe(65);
   });
-  it("fits 46 companies in 150 minutes and 75 in four hours", () => {
-    expect(spotlightCapacity(150)).toBe(46);
-    expect(spotlightCapacity(240)).toBe(75);
-    expect(spotlightCapacity(60)).toBe(18);
+  it("fits 55 companies in an hour and 138 in 150 minutes", () => {
+    expect(spotlightCapacity(60)).toBe(55);
+    expect(spotlightCapacity(150)).toBe(138);
   });
   it("returns 0 for no time", () => {
     expect(spotlightCapacity(0)).toBe(0);
@@ -27,15 +30,14 @@ describe("spotlight capacity", () => {
   });
 });
 
-describe("file checks", () => {
-  it("passes a landscape 2:54 mp4", () => {
-    const r = checkSpotlightFile({ type: "video/mp4", bytes: 120 * 1024 * 1024, seconds: 174, width: 1920, height: 1080 });
-    expect(r.every((c) => c.ok)).toBe(true);
+describe("presentation file checks", () => {
+  it("passes an mp4 under 500 MB", () => {
+    expect(checkPresentationFile({ type: "video/mp4", bytes: 120 * 1024 * 1024 }).every((c) => c.ok)).toBe(true);
   });
-  it("fails a long portrait clip", () => {
-    const r = checkSpotlightFile({ type: "video/mp4", bytes: 10, seconds: 200, width: 1080, height: 1920 });
-    expect(r.find((c) => c.id === "length")?.ok).toBe(false);
-    expect(r.find((c) => c.id === "landscape")?.ok).toBe(false);
+  it("fails a wrong type and an oversized file", () => {
+    const r = checkPresentationFile({ type: "video/avi", bytes: 600 * 1024 * 1024 });
+    expect(r.find((c) => c.id === "type")?.ok).toBe(false);
+    expect(r.find((c) => c.id === "size")?.ok).toBe(false);
   });
   it("formats a clock", () => {
     expect(formatClock(174)).toBe("2:54");
@@ -54,19 +56,5 @@ describe("parseYouTubeId", () => {
   it("rejects anything else", () => {
     expect(parseYouTubeId("https://vimeo.com/123")).toBeNull();
     expect(parseYouTubeId("short")).toBeNull();
-  });
-});
-
-import { cleanCaptions } from "./rules";
-
-describe("cleanCaptions", () => {
-  it("strips srt numbering and timestamps", () => {
-    const srt = "1\n00:00:00,000 --> 00:00:02,500\nHi, I'm Maria.\n\n2\n00:00:02,500 --> 00:00:05,000\nWe automate payables.\n";
-    expect(cleanCaptions(srt)).toBe("Hi, I'm Maria. We automate payables.");
-  });
-  it("strips vtt headers, tags and sbv times", () => {
-    const vtt = "WEBVTT\nKind: captions\nLanguage: en\n\n00:00.000 --> 00:02.000\n<c>Hello</c> investors\n";
-    expect(cleanCaptions(vtt)).toBe("Hello investors");
-    expect(cleanCaptions("0:00:00.000,0:00:02.000\nPlain words")).toBe("Plain words");
   });
 });
