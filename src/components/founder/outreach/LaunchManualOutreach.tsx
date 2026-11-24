@@ -82,6 +82,8 @@ const COLUMNS: { key: ColKey; label: string }[] = [
   { key: "source", label: "Lead source" },
 ];
 const COLUMNS_KEY = "founder.manualOutreach.columns";
+const NUDGE_SNOOZE_KEY = "founder.manualOutreach.nudgeSnoozeUntil";
+const NUDGE_SNOOZE_MS = 3 * 24 * 60 * 60 * 1000;
 const STATUS_OPTIONS = ["Not contacted", "Queued", "Sent", "Opened", "Clicked", "Replied", "Stopped", "Skipped"];
 
 function fitBand(fit: number | null): string {
@@ -123,6 +125,18 @@ export function LaunchManualOutreach({ contacts, directoryDefaults }: { contacts
   const [options, setOptions] = useState<AttachmentOptions | null>(null);
   const [emailCap, setEmailCap] = useState<{ cap: number; used: number; resetsLabel: string } | null>(null);
   const [loaded, setLoaded] = useState(false);
+  // Remind me later on the launch nudge. Read after mount so the first render matches the server.
+  const [nudgeSnoozed, setNudgeSnoozed] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try { setNudgeSnoozed(Number(localStorage.getItem(NUDGE_SNOOZE_KEY)) > Date.now()); } catch { /* storage unavailable */ }
+    }, 0);
+    return () => clearTimeout(t);
+  }, []);
+  const snoozeNudge = () => {
+    try { localStorage.setItem(NUDGE_SNOOZE_KEY, String(Date.now() + NUDGE_SNOOZE_MS)); } catch { /* storage unavailable */ }
+    setNudgeSnoozed(true);
+  };
 
   // ---- UI ----
   const [view, setView] = useState<"home" | "wizard">("home");
@@ -558,7 +572,21 @@ export function LaunchManualOutreach({ contacts, directoryDefaults }: { contacts
 
   const home = (
     <div>
-      {recipients.length === 0 ? (
+      {recipients.length === 0 && nudgeSnoozed ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
+          <p className="text-sm text-slate-600">Your campaign has not started. The reminder returns in 3 days.</p>
+          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">Snoozed 3 days</span>
+          <button
+            type="button"
+            onClick={openWizard}
+            disabled={capReached}
+            title={capReached ? `Email limit reached. Sending resumes ${emailCap?.resetsLabel}.` : undefined}
+            className={`${btnPrimary} ml-auto`}
+          >
+            Launch the wizard
+          </button>
+        </div>
+      ) : recipients.length === 0 ? (
         <div className="flex flex-wrap items-center gap-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3.5">
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-amber-900">Launch your manual outreach</p>
@@ -566,6 +594,9 @@ export function LaunchManualOutreach({ contacts, directoryDefaults }: { contacts
               You have not sent your first email yet. The wizard takes you through five short steps: investors, message, attachments, follow ups, then review and send. Nothing goes out until you start the campaign.
             </p>
           </div>
+          <button type="button" onClick={snoozeNudge} className="text-xs text-amber-800 underline">
+            Remind me later
+          </button>
           <button
             type="button"
             onClick={openWizard}
