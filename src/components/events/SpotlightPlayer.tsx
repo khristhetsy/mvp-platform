@@ -5,44 +5,7 @@ import Link from "next/link";
 import { CalendarClock, SkipForward, Store } from "lucide-react";
 import { SPOTLIGHT_BREAK_SECONDS, SPOTLIGHT_MAX_VIDEO_SECONDS } from "@/lib/icfo-events/spotlight/rules";
 import type { SpotlightPlaylistItem } from "@/lib/icfo-events/spotlight/service";
-
-// Minimal typing for the YouTube IFrame Player API (loaded from youtube.com).
-type YTPlayer = { loadVideoById: (opts: { videoId: string; endSeconds?: number }) => void; playVideo: () => void; destroy: () => void };
-type YTNamespace = {
-  Player: new (
-    el: HTMLElement,
-    opts: {
-      videoId?: string;
-      host?: string;
-      playerVars?: Record<string, number | string>;
-      events?: { onReady?: () => void; onStateChange?: (e: { data: number }) => void };
-    },
-  ) => YTPlayer;
-  PlayerState: { ENDED: number; PLAYING: number };
-};
-declare global {
-  interface Window {
-    YT?: YTNamespace;
-    onYouTubeIframeAPIReady?: () => void;
-  }
-}
-
-function loadYouTubeApi(): Promise<YTNamespace> {
-  return new Promise((resolve) => {
-    if (window.YT?.Player) return resolve(window.YT);
-    const prev = window.onYouTubeIframeAPIReady;
-    window.onYouTubeIframeAPIReady = () => {
-      prev?.();
-      if (window.YT) resolve(window.YT);
-    };
-    if (!document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
-      const s = document.createElement("script");
-      s.src = "https://www.youtube.com/iframe_api";
-      s.async = true;
-      document.head.appendChild(s);
-    }
-  });
-}
+import { loadYouTubeApi, type YTPlayer } from "@/lib/icfo-events/youtube-api";
 
 const LOWER_THIRD_MS = 8000;
 

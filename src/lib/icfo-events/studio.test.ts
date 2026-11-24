@@ -59,3 +59,17 @@ describe("studio rules", () => {
     expect(clockFromSeconds(-3)).toBe("0:00");
   });
 });
+
+import { lineupRuntimeSeconds, nextLineupIndex } from "./studio";
+
+describe("lineup playout", () => {
+  it("wraps to the start and handles an empty lineup", () => {
+    expect(nextLineupIndex(0, 3)).toBe(1);
+    expect(nextLineupIndex(2, 3)).toBe(0);
+    expect(nextLineupIndex(0, 0)).toBe(-1);
+  });
+  it("adds a break after every pitch", () => {
+    expect(lineupRuntimeSeconds(6, 60, 5)).toBe(390);
+    expect(lineupRuntimeSeconds(0, 60, 5)).toBe(0);
+  });
+});

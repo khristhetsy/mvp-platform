@@ -62,3 +62,16 @@ export function clockFromSeconds(total: number): string {
   const s = Math.max(0, Math.floor(total));
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
+
+// ── Spotlight lineup playout ─────────────────────────────────────────────────
+
+/** Index of the next video in a lineup of `count`, wrapping to the start. */
+export function nextLineupIndex(current: number, count: number): number {
+  if (count <= 0) return -1;
+  return current + 1 < count ? current + 1 : 0;
+}
+
+/** Total runtime of a lineup: each pitch up to `maxSeconds`, plus a break after each. */
+export function lineupRuntimeSeconds(count: number, maxSeconds: number, breakSeconds: number): number {
+  return Math.max(0, count) * (maxSeconds + breakSeconds);
+}
