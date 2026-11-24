@@ -8,7 +8,7 @@ type Key = keyof StudioRules;
 const UNIT: Record<Key, string> = { spotlightBreakSeconds: "seconds" };
 
 /** Playout rules for one event. Blank means not set: nothing assumes a length. */
-export function StudioRulesCard({ eventId, rules, keys, canEdit, title }: { eventId: string; rules: StudioRules; keys: Key[]; canEdit: boolean; title: string }) {
+export function StudioRulesCard({ eventId, rules, keys, canEdit, title, onSaved, footer }: { eventId: string; rules: StudioRules; keys: Key[]; canEdit: boolean; title: string; onSaved?: (r: StudioRules) => void; footer?: React.ReactNode }) {
   const [saved, setSaved] = useState(rules);
   const [draft, setDraft] = useState<Record<Key, string>>(() => Object.fromEntries(keys.map((k) => [k, rules[k] == null ? "" : String(rules[k])])) as Record<Key, string>);
   const [busy, setBusy] = useState(false);
@@ -24,6 +24,7 @@ export function StudioRulesCard({ eventId, rules, keys, canEdit, title }: { even
       const json = (await res.json().catch(() => ({}))) as { error?: string; rules?: StudioRules };
       if (!res.ok || !json.rules) throw new Error(json.error ?? "Couldn't save.");
       setSaved(json.rules);
+      onSaved?.(json.rules);
       setMsg({ ok: true, text: "Saved." });
     } catch (e) {
       setMsg({ ok: false, text: e instanceof Error ? e.message : "Couldn't save." });
@@ -60,6 +61,7 @@ export function StudioRulesCard({ eventId, rules, keys, canEdit, title }: { even
         ))}
       </div>
       {msg ? <p className={`mt-3 text-sm ${msg.ok ? "text-emerald-700" : "text-rose-700"}`}>{msg.text}</p> : null}
+      {footer}
     </section>
   );
 }

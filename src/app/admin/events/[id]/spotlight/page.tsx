@@ -2,11 +2,10 @@ import { notFound } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { requirePermissionPage } from "@/lib/api/permissions";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { getEventById } from "@/lib/icfo-events/queries";
+import { getEventById, listAllEvents } from "@/lib/icfo-events/queries";
 import { sectorLabel } from "@/lib/icfo-events/sectors";
 import { listSpotlightApplications, spotlightVideoUrl } from "@/lib/icfo-events/spotlight/service";
 import { SpotlightStudio, type StudioSession } from "@/components/admin-events/SpotlightStudio";
-import { StudioRulesCard } from "@/components/admin-events/StudioRulesCard";
 import { loadStudioRules } from "@/lib/icfo-events/studio-rules";
 import { StudioTabs } from "@/components/admin-events/StudioTabs";
 
@@ -23,6 +22,7 @@ export default async function SpotlightStudioPage({ params }: { params: Promise<
   if (!event) notFound();
 
   const rules = await loadStudioRules(admin, id);
+  const allEvents = await listAllEvents(admin).catch(() => []);
   const applications = await listSpotlightApplications(id).catch(() => []);
   const videoUrls: Record<string, string> = {};
   await Promise.all(
@@ -44,15 +44,14 @@ export default async function SpotlightStudioPage({ params }: { params: Promise<
       profileSubtitle="Spotlight studio"
     >
       <div className="mb-6"><StudioTabs current="spotlight" eventId={event.id} /></div>
-      <div className="mb-6">
-        <StudioRulesCard eventId={event.id} rules={rules} keys={["spotlightBreakSeconds"]} canEdit={canEdit} title="Playout rules" />
-      </div>
       <SpotlightStudio
         event={{ id: event.id, title: event.title, slug: event.slug, timezone: event.timezone ?? "America/Los_Angeles", startsAt: event.startsAt, endsAt: event.endsAt }}
+        events={allEvents.map((e) => ({ id: e.id, title: e.title }))}
         sessions={sessions}
         sectors={(event.sectors ?? []).map((s) => ({ slug: s.sectorSlug, label: s.label || sectorLabel(s.sectorSlug) }))}
         initialApplications={applications}
         videoUrls={videoUrls}
+        rules={rules}
         canEdit={canEdit}
       />
     </AppShell>

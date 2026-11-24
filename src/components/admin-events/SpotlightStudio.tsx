@@ -1,23 +1,17 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
-import { ArrowDown, ArrowLeft, ArrowUp, ExternalLink } from "lucide-react";
+import { ArrowDown, ArrowUp } from "lucide-react";
 import { MetricCard } from "@/components/MetricCard";
-import { SPOTLIGHT_SLOT_SECONDS, formatClock, minutesBetween, spotlightCapacity } from "@/lib/icfo-events/spotlight/rules";
+import { SPOTLIGHT_BREAK_SECONDS, SPOTLIGHT_MAX_VIDEO_SECONDS, SPOTLIGHT_SLOT_SECONDS, formatClock, minutesBetween, spotlightCapacity } from "@/lib/icfo-events/spotlight/rules";
+import { lineupRuntimeSeconds, nextLineupIndex, type StudioRules } from "@/lib/icfo-events/studio";
+import { StudioRulesCard } from "@/components/admin-events/StudioRulesCard";
+import { SpotlightMonitors, type MonitorState } from "@/components/admin-events/SpotlightMonitors";
 import type { SpotlightApplication } from "@/lib/icfo-events/spotlight/service";
 
 export type StudioSession = { id: string; title: string; type: string; startsAt: string | null; endsAt: string | null };
 type StudioEvent = { id: string; title: string; slug: string; timezone: string; startsAt: string | null; endsAt: string | null };
 type Filter = "open" | "change" | "approved" | "declined";
-
-const TYPE_LABEL: Record<string, string> = {
-  keynote: "Keynote",
-  panel: "Panel",
-  talk_show: "Talk show",
-  founder_showcase: "Founder showcase",
-  workshop: "Workshop",
-};
 
 function stateOf(a: SpotlightApplication): Filter {
   if (a.status === "approved") return "approved";
@@ -35,26 +29,33 @@ const STATE_LABEL: Record<Filter, string> = {
 
 export function SpotlightStudio({
   event,
+  events,
   sessions,
   sectors,
   initialApplications,
   videoUrls,
+  rules: initialRules,
   canEdit,
 }: {
   event: StudioEvent;
+  events: { id: string; title: string }[];
   sessions: StudioSession[];
   sectors: { slug: string; label: string }[];
   initialApplications: SpotlightApplication[];
   videoUrls: Record<string, string>;
+  rules: StudioRules;
   canEdit: boolean;
 }) {
   const [apps, setApps] = useState(initialApplications);
   const [filter, setFilter] = useState<Filter>("open");
-  const [selectedId, setSelectedId] = useState<string | null>(
-    initialApplications.find((a) => stateOf(a) === "open")?.id ?? initialApplications[0]?.id ?? null,
-  );
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [whatIf, setWhatIf] = useState(150);
+  const [rules, setRules] = useState(initialRules);
+  const [monitor, setMonitor] = useState<MonitorState>({ index: -1, phase: "idle" });
+  const [approving, setApproving] = useState<string | null>(null);
+  const [rowError, setRowError] = useState<string | null>(null);
 
+  const breakSeconds = rules.spotlightBreakSeconds ?? SPOTLIGHT_BREAK_SECONDS;
   const tz = event.timezone;
   const fmtTime = (iso: string | null) =>
     iso ? new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: tz }) : "time not set";
@@ -70,148 +71,198 @@ export function SpotlightStudio({
     return c;
   }, [apps]);
 
-  const visible = apps.filter((a) => stateOf(a) === filter);
+  // The playout order: approved pitches with a YouTube link, in lineup order.
+  const playout = useMemo(
+    () =>
+      apps
+        .filter((a) => a.status === "approved" && a.presenterId && a.youtubeVideoId)
+        .sort((x, y) => (x.position ?? 0) - (y.position ?? 0))
+        .map((a) => ({ id: a.id, name: a.applicantName ?? "Founder", company: a.company?.name ?? null, youtubeVideoId: a.youtubeVideoId as string })),
+    [apps],
+  );
+  const onAirId = monitor.phase !== "idle" ? (playout[monitor.index]?.id ?? null) : null;
+  const nextId = playout[nextLineupIndex(monitor.index, playout.length)]?.id ?? null;
+
+  const waiting = apps.filter((a) => stateOf(a) === filter);
   const selected = apps.find((a) => a.id === selectedId) ?? null;
+  const runtime = lineupRuntimeSeconds(playout.length, SPOTLIGHT_MAX_VIDEO_SECONDS, breakSeconds);
 
   function replace(next: SpotlightApplication) {
     setApps((prev) => prev.map((a) => (a.id === next.id ? next : a)));
   }
 
+  async function quickApprove(a: SpotlightApplication) {
+    setApproving(a.id);
+    setRowError(null);
+    try {
+      const blockId = showcase[0]?.id ?? null;
+      const json = await post(event.id, a.id, { action: "approve", sessionId: blockId });
+      replace({ ...a, status: "approved", decisionNote: null, videoPath: null, presenterId: String(json.presenterId), boothSponsorId: (json.boothId as string | null) ?? null, sessionId: blockId, position: 9999 });
+    } catch (e) {
+      setRowError(e instanceof Error ? e.message : "That didn't work.");
+    } finally {
+      setApproving(null);
+    }
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div>
-        <Link href={`/admin/events/${event.id}`} className="inline-flex items-center gap-1 text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)]">
-          <ArrowLeft className="h-4 w-4" /> {event.title}
-        </Link>
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-xl font-semibold text-[var(--text-primary)]">Spotlight studio</h1>
-          <div className="flex items-center gap-2">
-            <a href="https://studio.youtube.com" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-sm text-[var(--text-secondary)] hover:bg-slate-50">
-              YouTube Studio <ExternalLink className="h-3.5 w-3.5" />
-            </a>
-            <Link href={`/events/${event.slug}/spotlight`} target="_blank" className="cap-btn-primary inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium">
-              Preview player <ExternalLink className="h-3.5 w-3.5" />
-            </Link>
+        <p className="text-xs text-[var(--text-muted)]">Admin Workspace / Studio / Spotlight Studio</p>
+        <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-xl font-semibold text-[var(--text-primary)]">Founder Spotlight Studio</h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <form method="get" action="/admin/studio/spotlight" className="flex items-center gap-2">
+              <select name="event" defaultValue={event.id} aria-label="Event" className="rounded-md border border-[var(--border-subtle)] bg-white px-3 py-1.5 text-sm">
+                {events.map((e) => (
+                  <option key={e.id} value={e.id}>{e.title}</option>
+                ))}
+              </select>
+              <button type="submit" className="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-sm hover:bg-slate-50">Open</button>
+            </form>
+            <span className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-bold tracking-wider text-white ${playout.length > 0 ? "bg-emerald-600" : "bg-slate-500"}`}>
+              <span className="h-1.5 w-1.5 rounded-full bg-white" />
+              {playout.length > 0 ? "LINEUP PUBLISHED" : "NO LINEUP YET"}
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Run of show */}
-      <section className="rounded-xl border border-[var(--border-subtle)] bg-white p-5">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-sm font-semibold text-[var(--text-primary)]">Run of show</h2>
-          <span className="text-xs text-[var(--text-muted)]">
-            {fmtTime(event.startsAt)} to {fmtTime(event.endsAt)} · one slot is {formatClock(SPOTLIGHT_SLOT_SECONDS)} (up to 1:00 pitch plus a 5s break)
-          </span>
-        </div>
-        <ul className="mt-3 divide-y divide-slate-100">
-          {sessions.map((s) => {
-            const mins = minutesBetween(s.startsAt, s.endsAt);
-            const isShow = s.type === "founder_showcase";
-            return (
-              <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
-                <span className="flex items-center gap-2">
-                  <span className={`rounded px-1.5 py-0.5 text-[11px] ${isShow ? "bg-blue-50 text-[#185FA5]" : "bg-slate-100 text-slate-600"}`}>{TYPE_LABEL[s.type] ?? s.type}</span>
-                  <span className="text-[var(--text-primary)]">{s.title}</span>
-                </span>
-                <span className="text-xs text-[var(--text-muted)]">
-                  {s.startsAt ? `${fmtTime(s.startsAt)} to ${fmtTime(s.endsAt)}` : "Set start and end on the event page"}
-                  {mins != null ? ` · ${mins} min` : ""}
-                  {isShow && mins != null ? ` · ${spotlightCapacity(mins)} slots` : ""}
-                </span>
-              </li>
-            );
-          })}
-          {sessions.length === 0 ? <li className="py-2 text-sm text-[var(--text-muted)]">No sessions yet. Add a Founder showcase session on the event page.</li> : null}
-        </ul>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <MetricCard label="Slots created" value={String(apps.length)} detail="one slot per submission" ring={{ percent: null, pending: true }} audience="admin" />
+        <MetricCard
+          label="Approved"
+          value={String(counts.approved)}
+          unit={capacity == null ? undefined : `of ${capacity}`}
+          detail="approved pitches in the lineup"
+          ring={capacity ? { percent: Math.min(100, Math.round((counts.approved / capacity) * 100)) } : { percent: null, pending: true }}
+          flag={capacity != null && counts.approved > capacity ? { text: `${counts.approved - capacity} over: extras play on demand in booths`, tone: "warn" } : null}
+          audience="admin"
+        />
+        <MetricCard label="Waiting for review" value={String(counts.open + counts.change)} detail={`${counts.change} waiting on a founder change`} ring={{ percent: null, pending: true }} audience="admin" />
+        <MetricCard label="Total runtime" value={formatClock(runtime)} detail={`${playout.length} ${playout.length === 1 ? "video" : "videos"} plus breaks`} ring={{ percent: null, pending: true }} audience="admin" />
+      </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          <MetricCard
-            label="Live slots"
-            value={capacity == null ? "Not measured" : String(capacity)}
-            detail={capacity == null ? "Showcase sessions need start and end times" : `across ${showcase.length} showcase ${showcase.length === 1 ? "block" : "blocks"}`}
-            ring={capacity == null ? { percent: null, pending: true } : undefined}
-            audience="admin"
-          />
-          <MetricCard
-            label="Approved"
-            value={String(counts.approved)}
-            unit={capacity == null ? undefined : `of ${capacity}`}
-            detail="approved pitches in the lineup"
-            ring={capacity ? { percent: Math.min(100, Math.round((counts.approved / capacity) * 100)) } : { percent: null, pending: true }}
-            flag={capacity != null && counts.approved > capacity ? { text: `${counts.approved - capacity} over: extras play on demand in booths`, tone: "warn" } : null}
-            audience="admin"
-          />
-          <MetricCard
-            label="To review"
-            value={String(counts.open)}
-            detail={`${counts.change} waiting on a founder change`}
-            ring={{ percent: null, pending: true }}
-            audience="admin"
-          />
-        </div>
-        <label className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
-          Planning: if the Spotlight runs
-          <input type="number" min={0} max={600} step={5} value={whatIf} onChange={(e) => setWhatIf(Number(e.target.value))} className="w-20 rounded border border-[var(--border-subtle)] px-2 py-1 text-xs" />
-          minutes, it fits <span className="font-semibold text-[var(--text-primary)]">{spotlightCapacity(whatIf)}</span> companies.
-        </label>
-      </section>
+      <div className="grid gap-4 lg:grid-cols-[1.55fr_1fr]">
+        <div className="space-y-4">
+          <section className="rounded-xl border border-[var(--border-subtle)] bg-white p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-sm font-semibold text-[var(--text-primary)]">Monitors</h2>
+              <span className="text-xs text-[var(--text-muted)]">Staff preview. Viewers play the lineup on their own screens. Videos are never edited.</span>
+            </div>
+            <SpotlightMonitors items={playout} maxSeconds={SPOTLIGHT_MAX_VIDEO_SECONDS} breakSeconds={breakSeconds} onState={setMonitor} />
+            <p className="mt-3 rounded-lg border border-blue-100 bg-blue-50/60 px-3 py-2 text-xs text-[#27406f]">
+              Each video stops at {formatClock(SPOTLIGHT_MAX_VIDEO_SECONDS)}, then a {breakSeconds} second break, then the next video starts by itself. The buttons are overrides.
+            </p>
+          </section>
 
-      {/* Review queue */}
-      <section className="grid gap-4 lg:grid-cols-[320px_1fr]">
-        <div className="rounded-xl border border-[var(--border-subtle)] bg-white p-3">
-          <div className="flex flex-wrap gap-1">
-            {(Object.keys(STATE_LABEL) as Filter[]).map((f) => (
-              <button
-                key={f}
-                type="button"
-                onClick={() => setFilter(f)}
-                className={`rounded-full px-2.5 py-1 text-xs ${filter === f ? "bg-[#1A6CE4] text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
-              >
-                {STATE_LABEL[f]} {counts[f]}
-              </button>
-            ))}
-          </div>
-          <p className="mt-2 text-[11px] text-[var(--text-muted)]">{visible.length} of {apps.length} applications</p>
-          <ul className="mt-1 divide-y divide-slate-100">
-            {visible.map((a) => (
-              <li key={a.id}>
-                <button
-                  type="button"
-                  onClick={() => setSelectedId(a.id)}
-                  className={`w-full px-2 py-2 text-left ${selectedId === a.id ? "bg-blue-50" : "hover:bg-slate-50"}`}
-                >
-                  <p className="text-sm font-medium text-[var(--text-primary)]">{a.company?.name ?? a.applicantName ?? "Founder"}</p>
-                  <p className="text-xs text-[var(--text-muted)]">
-                    {sectorName(a.sectorSlug)} · {a.youtubeVideoId ? "YouTube link sent" : "no link"}
-                  </p>
-                </button>
-              </li>
-            ))}
-            {visible.length === 0 ? <li className="px-2 py-6 text-center text-xs text-[var(--text-muted)]">Nothing here.</li> : null}
-          </ul>
-        </div>
-
-        {selected ? (
-          <ReviewPanel
-            key={selected.id}
-            app={selected}
+          <StudioRulesCard
             eventId={event.id}
-            videoUrl={videoUrls[selected.id] ?? null}
-            showcase={showcase}
-            fmtTime={fmtTime}
-            sectorName={sectorName}
+            rules={rules}
+            keys={["spotlightBreakSeconds"]}
             canEdit={canEdit}
-            onChange={replace}
+            title="Playout rules"
+            onSaved={setRules}
+            footer={
+              <>
+                <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                  <Fact label="Hard cutoff" value={`${SPOTLIGHT_MAX_VIDEO_SECONDS} seconds`} />
+                  <Fact label="Auto advance" value="On" />
+                  <Fact label="Loop lineup" value="On" />
+                </div>
+                <p className="mt-3 text-xs text-[var(--text-muted)]">
+                  Slots are created per submission from Basic plan clients. Staff cannot trim, edit or replace a video.
+                </p>
+                <label className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
+                  Planning: if the Spotlight runs
+                  <input type="number" min={0} max={600} step={5} value={whatIf} onChange={(e) => setWhatIf(Number(e.target.value))} className="w-20 rounded border border-[var(--border-subtle)] px-2 py-1 text-xs" />
+                  minutes, it fits <span className="font-semibold text-[var(--text-primary)]">{spotlightCapacity(whatIf)}</span> companies.
+                </label>
+              </>
+            }
           />
-        ) : (
-          <div className="rounded-xl border border-dashed border-[var(--border-subtle)] p-10 text-center text-sm text-[var(--text-muted)]">
-            Spotlight applications land here when founders send their 1 minute YouTube pitch.
-          </div>
-        )}
-      </section>
 
-      <Lineup eventId={event.id} apps={apps} showcase={showcase} fmtTime={fmtTime} canEdit={canEdit} onReordered={setApps} />
+          <section className="rounded-xl border border-[var(--border-subtle)] bg-white p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-sm font-semibold text-[var(--text-primary)]">
+                {filter === "open" ? "Waiting for review" : STATE_LABEL[filter]} ({waiting.length})
+              </h2>
+              <div className="flex flex-wrap gap-1">
+                {(Object.keys(STATE_LABEL) as Filter[]).map((f) => (
+                  <button key={f} type="button" onClick={() => setFilter(f)} className={`rounded-full px-2.5 py-1 text-xs ${filter === f ? "bg-[#1A6CE4] text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
+                    {STATE_LABEL[f]} {counts[f]}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <table className="mt-3 w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-[var(--border-subtle)] text-xs text-[var(--text-muted)]">
+                  <th className="py-2 pr-2 font-medium">Founder</th>
+                  <th className="py-2 pr-2 font-medium">Company</th>
+                  <th className="py-2 pr-2 font-medium">Track</th>
+                  <th className="py-2 pr-2 font-medium">YouTube link</th>
+                  <th className="py-2" />
+                </tr>
+              </thead>
+              <tbody>
+                {waiting.map((a) => (
+                  <tr key={a.id} className={`border-b border-slate-100 ${selectedId === a.id ? "bg-blue-50/50" : ""}`}>
+                    <td className="py-2 pr-2">{a.applicantName ?? "Founder"}</td>
+                    <td className="py-2 pr-2">{a.company?.name ?? "No company"}</td>
+                    <td className="py-2 pr-2 text-xs text-[var(--text-muted)]">{sectorName(a.sectorSlug)}</td>
+                    <td className="py-2 pr-2 text-xs">{a.youtubeVideoId ? <span className="font-semibold text-emerald-700">Sent</span> : <span className="text-amber-700">Missing</span>}</td>
+                    <td className="py-2 text-right">
+                      <button type="button" onClick={() => setSelectedId(a.id)} className="rounded-md border border-[var(--border-subtle)] px-2.5 py-1 text-xs hover:bg-slate-50">Review</button>
+                      {canEdit && (filter === "open" || filter === "change") ? (
+                        <button
+                          type="button"
+                          disabled={approving !== null || !a.youtubeVideoId}
+                          title={a.youtubeVideoId ? undefined : "A YouTube link is needed first"}
+                          onClick={() => quickApprove(a)}
+                          className="cap-btn-primary ml-1.5 rounded-md px-2.5 py-1 text-xs font-medium disabled:opacity-50"
+                        >
+                          {approving === a.id ? "Approving…" : "Approve"}
+                        </button>
+                      ) : null}
+                    </td>
+                  </tr>
+                ))}
+                {waiting.length === 0 ? (
+                  <tr><td colSpan={5} className="py-6 text-center text-xs text-[var(--text-muted)]">Spotlight applications land here when founders send their 1 minute YouTube pitch.</td></tr>
+                ) : null}
+              </tbody>
+            </table>
+            <p className="mt-2 text-[11px] text-[var(--text-muted)]">To decline or ask for a change, open Review: a note to the founder is needed.</p>
+            {rowError ? <p className="mt-2 text-sm text-rose-700">{rowError}</p> : null}
+          </section>
+
+          {selected ? (
+            <ReviewPanel
+              key={selected.id}
+              app={selected}
+              eventId={event.id}
+              videoUrl={videoUrls[selected.id] ?? null}
+              showcase={showcase}
+              fmtTime={fmtTime}
+              sectorName={sectorName}
+              canEdit={canEdit}
+              onChange={replace}
+            />
+          ) : null}
+        </div>
+
+        <Lineup eventId={event.id} apps={apps} showcase={showcase} fmtTime={fmtTime} canEdit={canEdit} onReordered={setApps} onAirId={onAirId} nextId={nextId} />
+      </div>
+    </div>
+  );
+}
+
+function Fact({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="text-xs text-[var(--text-muted)]">
+      {label}
+      <div className="mt-1 rounded-md border border-[var(--border-subtle)] bg-slate-50 px-3 py-1.5 text-sm text-[var(--text-primary)]">{value}</div>
     </div>
   );
 }
@@ -433,6 +484,8 @@ function Lineup({
   fmtTime,
   canEdit,
   onReordered,
+  onAirId,
+  nextId,
 }: {
   eventId: string;
   apps: SpotlightApplication[];
@@ -440,6 +493,8 @@ function Lineup({
   fmtTime: (iso: string | null) => string;
   canEdit: boolean;
   onReordered: (next: SpotlightApplication[]) => void;
+  onAirId: string | null;
+  nextId: string | null;
 }) {
   const [saving, setSaving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -477,7 +532,10 @@ function Lineup({
 
   return (
     <section className="rounded-xl border border-[var(--border-subtle)] bg-white p-5">
-      <h2 className="text-sm font-semibold text-[var(--text-primary)]">Lineup</h2>
+      <div className="flex items-baseline justify-between gap-2">
+        <h2 className="text-sm font-semibold text-[var(--text-primary)]">Rundown</h2>
+        <span className="text-xs text-[var(--text-muted)]">Use the arrows to reorder</span>
+      </div>
       <p className="text-xs text-[var(--text-muted)]">Plays top to bottom in each block, every {formatClock(SPOTLIGHT_SLOT_SECONDS)}.</p>
       <div className="mt-3 space-y-4">
         {blocks.map((b) => {
@@ -491,11 +549,25 @@ function Lineup({
               </p>
               <ol className="mt-1 divide-y divide-slate-100 rounded-lg border border-[var(--border-subtle)]">
                 {items.map((a, i) => (
-                  <li key={a.id} className="flex items-center gap-3 px-3 py-2 text-sm">
-                    <span className="w-16 text-xs text-[var(--text-muted)]">
-                      {b.startsAt ? fmtTime(new Date(Date.parse(b.startsAt) + i * SPOTLIGHT_SLOT_SECONDS * 1000).toISOString()) : `#${i + 1}`}
+                  <li key={a.id} className={`flex items-center gap-3 px-3 py-2 text-sm ${a.id === onAirId ? "bg-rose-50" : a.id === nextId ? "bg-emerald-50" : ""}`}>
+                    <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-slate-100 text-[11px] font-bold">{i + 1}</span>
+                    <span
+                      className="h-9 w-16 flex-none rounded bg-[#27324a] bg-cover bg-center"
+                      style={a.youtubeVideoId ? { backgroundImage: `url(https://i.ytimg.com/vi/${a.youtubeVideoId}/default.jpg)` } : undefined}
+                    />
+                    <span className="min-w-0 flex-1">
+                      <b className="block truncate text-[var(--text-primary)]">{a.applicantName ?? "Founder"}</b>
+                      <small className="block truncate text-xs text-[var(--text-muted)]">
+                        {a.company?.name ?? ""}{b.startsAt ? ` · ${fmtTime(new Date(Date.parse(b.startsAt) + i * SPOTLIGHT_SLOT_SECONDS * 1000).toISOString())}` : ""}
+                      </small>
                     </span>
-                    <span className="flex-1 text-[var(--text-primary)]">{a.company?.name ?? a.applicantName}</span>
+                    <span className="text-right text-xs text-[var(--text-muted)]">
+                      {formatClock(SPOTLIGHT_MAX_VIDEO_SECONDS)}
+                      <br />
+                      <span className={`rounded px-1.5 py-0.5 text-[10.5px] font-bold ${a.id === onAirId ? "bg-rose-500 text-white" : a.id === nextId ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600"}`}>
+                        {a.id === onAirId ? "On air" : a.id === nextId ? "Next" : "Queued"}
+                      </span>
+                    </span>
                     {canEdit ? (
                       <span className="flex gap-1">
                         <button type="button" aria-label="Move up" onClick={() => move(b.id, i, -1)} disabled={i === 0} className="rounded p-1 hover:bg-slate-100 disabled:opacity-30"><ArrowUp className="h-4 w-4" /></button>
