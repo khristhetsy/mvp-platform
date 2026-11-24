@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronRight, ChevronLeft, Lock } from "lucide-react";
-import { useLocale } from "next-intl";
 import type { InternalPermission } from "@/lib/rbac/constants";
 import { INVESTOR_STAGES, INVESTOR_STAGE_META, type InvestorStageKey } from "@/lib/investor-journey/stages";
 import { JOURNEY_STAGES, type JourneyStage } from "@/lib/founder-journey/types";
@@ -14,156 +13,6 @@ import { getAdminWorkspaceNavSections, getFounderWorkspaceNavSections, getInvest
 import { getWorkspaceNavIcon } from "@/lib/ui/nav-icons";
 import { useToast } from "@/components/ui/ToastProvider";
 import { IcapOSLogo } from "@/components/IcapOSLogo";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-
-// Complete English → Spanish dictionary for every sidebar nav label + section
-// title. Applied directly when locale === "es" (see tLabel below).
-export const NAV_ES: Record<string, string> = {
-  // Labels
-  "AI diligence report": "Informe de diligencia con IA",
-  "AI match center": "Centro de coincidencias IA",
-  "Action Center": "Centro de acciones",
-  "Actions": "Acciones",
-  "Activation funnels": "Embudos de activación",
-  "Activity": "Actividad",
-  "All events": "Todos los eventos",
-  "Analytics": "Análisis",
-  "Applications": "Solicitudes",
-  "Audit": "Auditoría",
-  "Automation": "Automatización",
-  "Beta Operations": "Operaciones beta",
-  "Billing & subscription": "Facturación y suscripción",
-  "Billing": "Facturación",
-  "Board meeting prep": "Preparación de junta",
-  "Browse courses": "Explorar cursos",
-  "Business plan": "Plan de negocio",
-  "CRM": "CRM",
-  "Calendar": "Calendario",
-  "Campaigns": "Campañas",
-  "Cap table": "Tabla de capitalización",
-  "Capital Raise": "Ronda de capital",
-  "Checklist": "Lista de verificación",
-  "Command Center": "Centro de control",
-  "Communications": "Comunicaciones",
-  "Companies": "Empresas",
-  "Company profile": "Perfil de empresa",
-  "Compliance": "Cumplimiento",
-  "Contacts": "Contactos",
-  "Courses": "Cursos",
-  "Dashboard": "Panel",
-  "Data room": "Sala de datos",
-  "Deal Flow": "Flujo de operaciones",
-  "Deal Room": "Sala de operaciones",
-  "Deal Rooms": "Salas de operaciones",
-  "Diligence & review": "Diligencia y revisión",
-  "Diligence Tracker": "Seguimiento de diligencia",
-  "Diligence": "Diligencia",
-  "Document checklist": "Lista de documentos",
-  "Documents": "Documentos",
-  "Due diligence checklist": "Lista de debida diligencia",
-  "E-Signatures": "Firmas electrónicas",
-  "Email sequences": "Secuencias de correo",
-  "Events": "Eventos",
-  "Feature Controls": "Controles de funciones",
-  "Feedback": "Comentarios",
-  "Financial model": "Modelo financiero",
-  "Founder roster": "Lista de fundadores",
-  "Funding timeline": "Cronograma de financiación",
-  "Fundraising": "Recaudación de fondos",
-  "Gamification": "Gamificación",
-  "Investor Relations CRM": "CRM de inversores",
-  "Identity & accreditation": "Identidad y acreditación",
-  "Import / Export": "Importar / Exportar",
-  "Inbox": "Bandeja de entrada",
-  "Insights": "Perspectivas",
-  "Integrations": "Integraciones",
-  "Interest Pipeline": "Flujo de interés",
-  "Intro Requests": "Solicitudes de presentación",
-  "Investor Updates": "Actualizaciones para inversores",
-  "Investor update builder": "Generador de actualizaciones",
-  "Investors": "Inversores",
-  "KPI glossary": "Glosario de KPI",
-  "Learning": "Aprendizaje",
-  "Lists": "Listas",
-  "Matches": "Coincidencias",
-  "Matching": "Emparejamiento",
-  "Meet": "Reunión",
-  "Messages": "Mensajes",
-  "Milestones": "Hitos",
-  "Missing documents": "Documentos faltantes",
-  "My Progress": "Mi progreso",
-  "My Profile": "Mi perfil",
-  "My Schedule": "Mi agenda",
-  "My learning plan": "Mi plan de aprendizaje",
-  "My progress": "Mi progreso",
-  "Notifications": "Notificaciones",
-  "Operations Manual": "Manual de operaciones",
-  "Operations": "Operaciones",
-  "Opportunities": "Oportunidades",
-  "Outreach & CRM": "Difusión y CRM",
-  "Outreach (CRM)": "Difusión (CRM)",
-  "Outreach": "Difusión",
-  "Overview": "Resumen",
-  "Page Builder": "Constructor de páginas",
-  "Partner Score": "Puntuación de socio",
-  "Partner Scores": "Puntuaciones de socio",
-  "Pipeline": "Flujo",
-  "Pitch deck analyzer": "Analizador de pitch deck",
-  "Pitch practice": "Práctica de pitch",
-  "Plans": "Planes",
-  "Platform matches": "Coincidencias de la plataforma",
-  "Portfolio & Deals": "Portafolio y operaciones",
-  "Portfolio": "Portafolio",
-  "Private Market": "Mercado privado",
-  "Profile": "Perfil",
-  "Queues": "Colas",
-  "Raise Toolkit": "Kit de recaudación",
-  "Readiness Scores": "Puntuaciones de preparación",
-  "Readiness": "Preparación",
-  "Recent Activity": "Actividad reciente",
-  "Reg CF materials": "Materiales Reg CF",
-  "Reports": "Informes",
-  "SPVs & closings": "SPVs y cierres",
-  "SPVs": "SPVs",
-  "Scheduling": "Programación",
-  "Score wizard": "Asistente de puntuación",
-  "Sequences": "Secuencias",
-  "Settings": "Configuración",
-  "Stage guide": "Guía de la etapa",
-  "Help & guides": "Ayuda y guías",
-  "Sponsors": "Patrocinadores",
-  "Stage 0 — Foundation": "Etapa 0 — Fundación",
-  "Stage 1 — Seed Round": "Etapa 1 — Ronda semilla",
-  "Stage 2 — Series A": "Etapa 2 — Serie A",
-  "Stage 3 — Exit": "Etapa 3 — Salida",
-  "Suppressions": "Supresiones",
-  "System Health": "Estado del sistema",
-  "System": "Sistema",
-  "Tasks": "Tareas",
-  "Team": "Equipo",
-  "Templates": "Plantillas",
-  "Term sheet explainer": "Explicación del term sheet",
-  "User Management": "Gestión de usuarios",
-  "User Permissions": "Permisos de usuario",
-  "Watchlist": "Lista de seguimiento",
-  // Section titles
-  "Account": "Cuenta",
-  "Admin": "Administración",
-  "Grow": "Crecer",
-  "Inbox & calendar": "Bandeja y calendario",
-  "Investor Relations": "Relación con inversores",
-  "Marketing": "Marketing",
-  "My raise": "Mi ronda",
-  "Operation": "Operación",
-  "Stage 1 · Onboarding": "Etapa 1 · Incorporación",
-  "Stage 2 · Verification": "Etapa 2 · Verificación",
-  "Stage 3 · Deals access": "Etapa 3 · Acceso a operaciones",
-  "Stage 4 · Manage deals": "Etapa 4 · Gestionar operaciones",
-  "Workspace": "Espacio de trabajo",
-  "Help": "Ayuda",
-  "Investor events": "Eventos para inversores",
-  "Onboarding": "Incorporación",
-};
 
 const STAGE_LABELS: Record<string, string> = {
   initialize: "Stage 1 — Initialize",
@@ -304,7 +153,6 @@ function WorkspaceSidebarInner({
   }
   // eslint-disable-next-line react-hooks/set-state-in-effect -- close the flyout after navigating
   useEffect(() => { setFlyout(null); }, [pathname]);
-  const locale = useLocale();
   const adminNav = useAdminNavPermissions(workspace);
   const deptAccess = useDepartmentAccess(workspace);
   const founderStage = useFounderStage(workspace);
@@ -370,8 +218,7 @@ function WorkspaceSidebarInner({
   }, []);
 
   function tLabel(label: string): string {
-    if (locale !== "es") return label;
-    return NAV_ES[label] ?? label;
+    return label;
   }
   // Admin-controlled feature visibility — hrefs to hide for this user's role.
   // Same fetch carries the runtime 4-step-nav toggle (founderNavV2); the build
@@ -728,7 +575,6 @@ function WorkspaceSidebarInner({
       </div>
       <div className="space-y-2 border-t border-slate-200/80 bg-[var(--surface-sidebar)] p-3">
         {planBadge ? <div>{planBadge}</div> : null}
-        <LanguageSwitcher />
       </div>
     </>
   );
@@ -846,8 +692,7 @@ function WorkspaceSidebarInner({
         <div className="min-h-0 flex-1">{wide}</div>
         <div className="space-y-2 border-t border-slate-200/80 bg-[var(--surface-sidebar)] p-3">
           {planBadge ? <div>{planBadge}</div> : null}
-          <LanguageSwitcher />
-        </div>
+          </div>
       </>
     );
     return (

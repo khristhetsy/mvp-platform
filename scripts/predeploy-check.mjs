@@ -52,7 +52,6 @@ function walk(dir, exts, out = []) {
 // ── 1. Source i18n completeness ────────────────────────────────────────────
 function checkI18nSource() {
   const en = JSON.parse(readFileSync(join(ROOT, "messages/en.json"), "utf8"));
-  const es = JSON.parse(readFileSync(join(ROOT, "messages/es.json"), "utf8"));
   const files = walk(join(ROOT, "src"), [".ts", ".tsx"]);
   let checked = 0;
   for (const f of files) {
@@ -65,13 +64,9 @@ function checkI18nSource() {
     const keys = [...s.matchAll(/\b(?:t|tI18n)\("([^".]+)"\)/g)].map((m) => m[1]);
     for (const ns of new Set(namespaces)) {
       const enPool = en[ns];
-      const esPool = es[ns];
       if (!enPool || Object.keys(enPool).length === 0) {
         fail(`i18n: namespace "${ns}" missing/empty in messages/en.json (used in ${f})`);
         continue;
-      }
-      if (!esPool || Object.keys(esPool).length === 0) {
-        fail(`i18n: namespace "${ns}" missing/empty in messages/es.json (used in ${f})`);
       }
       for (const k of keys) {
         // a file may use several namespaces; the key only needs to exist in one
@@ -81,15 +76,7 @@ function checkI18nSource() {
     }
     checked++;
   }
-  // parity
-  const flat = (o, p = "") => Object.entries(o).flatMap(([k, v]) =>
-    v && typeof v === "object" ? flat(v, `${p}${k}.`) : [`${p}${k}`]);
-  const ek = new Set(flat(en)), sk = new Set(flat(es));
-  const miss = [...ek].filter((k) => !sk.has(k));
-  const extra = [...sk].filter((k) => !ek.has(k));
-  if (miss.length) fail(`i18n: ${miss.length} keys in en.json missing from es.json (e.g. ${miss.slice(0, 3).join(", ")})`);
-  if (extra.length) fail(`i18n: ${extra.length} keys in es.json missing from en.json (e.g. ${extra.slice(0, 3).join(", ")})`);
-  console.log(`  i18n source: checked ${checked} translated files, parity ${miss.length + extra.length === 0 ? "OK" : "MISMATCH"}`);
+  console.log(`  i18n source: checked ${checked} translated files`);
 }
 
 // ── 2/3. Source scan for deprecated hexes + old brand ───────────────────────

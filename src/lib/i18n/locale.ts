@@ -1,26 +1,15 @@
-import { getLocale } from "next-intl/server";
+export type AppLocale = "en";
 
-export type AppLocale = "en" | "es";
-
-/** Current request locale on the server (cookie-driven). Falls back to "en"
- *  outside a request scope (e.g. cron, scripts) where there's no cookie. */
+/** The app is English only. Kept async so existing callers keep working. */
 export async function getServerLocale(): Promise<AppLocale> {
-  try {
-    const locale = await getLocale();
-    return locale === "es" ? "es" : "en";
-  } catch {
-    return "en";
-  }
+  return "en";
 }
 
-export function languageName(locale: string): string {
-  return locale === "es" ? "Spanish (español)" : "English";
+export function languageName(_locale: string): string {
+  return "English";
 }
 
-/** Instruction appended to AI system prompts so output matches the user's language. */
-export function aiLanguageInstruction(locale: AppLocale): string {
-  if (locale === "es") {
-    return "\n\nIMPORTANT: Write your entire response in natural, professional Spanish (español). Do not include any English.";
-  }
+/** No extra language instruction is needed for AI prompts (English only). */
+export function aiLanguageInstruction(_locale: AppLocale): string {
   return "";
 }

@@ -8,7 +8,6 @@
  * and founder stage locks (shown, not hidden).
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useLocale } from "next-intl";
 import type { InternalPermission } from "@/lib/rbac/constants";
 import { JOURNEY_STAGES, type JourneyStage } from "@/lib/founder-journey/types";
 import {
@@ -20,7 +19,6 @@ import {
   type WorkspaceNavItem,
   type WorkspaceNavSection,
 } from "@/lib/workspace-nav";
-import { NAV_ES } from "@/components/WorkspaceSidebar";
 
 const STAGE_LABELS: Record<string, string> = {
   initialize: "Stage 1 — Initialize",
@@ -52,7 +50,6 @@ export type GatedNav = {
 };
 
 export function useGatedNav(workspace: WorkspaceId): GatedNav {
-  const locale = useLocale();
   const isAdmin = workspace === "admin";
   const isFounder = workspace === "founder";
 
@@ -117,7 +114,7 @@ export function useGatedNav(workspace: WorkspaceId): GatedNav {
     [stageIndex],
   );
   const lockHint = useCallback((minStage?: string) => (minStage ? `Unlocks at ${STAGE_LABELS[minStage] ?? minStage}` : undefined), []);
-  const tLabel = useCallback((label: string) => (locale === "es" ? NAV_ES[label] ?? label : label), [locale]);
+  const tLabel = useCallback((label: string) => label, []);
 
   return { sections, isLocked, lockHint, tLabel };
 }

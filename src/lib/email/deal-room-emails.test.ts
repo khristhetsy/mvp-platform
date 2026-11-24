@@ -40,18 +40,4 @@ describe("deal room emails", () => {
   it("no longer carries the unsourced response-time claim", () => {
     expect(question("A").html).not.toContain("significantly more likely");
   });
-
-  it("uses the Spanish footer for Spanish founders", () => {
-    const es = emailTranslator("es");
-    const m = buildDealRoomEmail(es, {
-      subject: es("dealRoom.viewed.subject", { room: "R" }),
-      eyebrow: es("dealRoom.eyebrowActivity"),
-      heading: es("dealRoom.viewed.heading"),
-      bodyKey: "dealRoom.viewed.body",
-      vars: { investor: "A", room: "R" },
-      cta: es("dealRoom.viewed.cta"),
-      url: "https://icapos.com/x",
-    });
-    expect(m.html).toContain("no es un broker-dealer");
-  });
 });
