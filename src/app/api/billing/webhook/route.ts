@@ -5,24 +5,30 @@ import { isFirstActivation, LEMON_SQUEEZY_PRICES, mapStatus, variantToPlan } fro
 import { isNewPastDue, keepGraceWindow } from "@/lib/billing/past-due";
 import { notifyPastDue } from "@/lib/billing/past-due-alerts";
 import { PLAN_PRICES } from "@/lib/subscriptions/plans";
-import { reportServerFailure } from "@/lib/monitoring/operational-events";
+import { recordOperationalEvent, reportServerFailure } from "@/lib/monitoring/operational-events";
 import { recordFunnelEvent } from "@/lib/analytics/funnel";
 import { alertStaffNewCustomer } from "@/lib/notifications/new-customer-alerts";
 import { activateConvertedOrg } from "@/lib/organizations/convert-to-paid";
-import { sendFounderWelcomeLetter } from "@/lib/notifications/founder-welcome-letter";
-import { assignAccountManagerForPremium } from "@/lib/team/account-manager";
-import { recordGuestPayment } from "@/lib/billing/paid-signup";
 
-// Map a LemonSqueezy event to a funnel step (§8). New paid subscription →
-// checkout_complete; a recurring payment → renewal. Others aren't funnel steps.
-function funnelStepFor(eventName: string): "checkout_complete" | "renewal" | null {
-  if (eventName === "subscription_created" || eventName === "order_created") return "checkout_complete";
+// Map a LemonSqueezy event to a funnel step (§8). A recurring payment is a
+// renewal. A new subscription is no longer a step here: it starts on Stripe.
+function funnelStepFor(eventName: string): "renewal" | null {
   if (eventName === "subscription_payment_success" || eventName === "subscription_payment_recovered") return "renewal";
   return null;
 }
 
+// Events that announce a new purchase. They are never processed, even when the id
+// happens to match a row (an order id and a subscription id are different things).
+const NEW_SUBSCRIPTION_EVENTS = new Set<string>(["subscription_created", "order_created"]);
+
 /**
  * LemonSqueezy subscription webhook.
+ *
+ * It only updates a subscription Lemon Squeezy already bills, found by
+ * `subscriptions.ls_subscription_id`. It never creates a row and never grants
+ * access: every new payment starts on Stripe. An event for an id we do not hold
+ * is answered 200 (so Lemon Squeezy does not retry) and logged as
+ * `billing.lemon.ignored_new_subscription`.
  *
  * Every database write is checked and a failure returns 500 so LemonSqueezy
  * retries. Previously the writes were unchecked and the handler always returned
@@ -46,22 +52,36 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const { event_name, custom_data } = payload.meta;
   const { id: lsSubId, attributes } = payload.data;
-  const profileId = custom_data?.profile_id;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const admin = createServiceRoleClient() as any;
 
-  let query = admin.from("subscriptions").select("id, profile_id, pending_plan_type, plan_type, subscription_status, grace_period_ends_at, cancel_at_period_end");
-  if (lsSubId) {
-    query = query.eq("ls_subscription_id", lsSubId);
-  } else if (profileId) {
-    query = query.eq("profile_id", profileId);
-  } else {
-    console.warn(`[billing/webhook] ${event_name}: no subscription id or profile_id — ignoring.`);
-    return NextResponse.json({ received: true, ignored: "no identifier" });
-  }
+  const ignoreNewSubscription = async (reason: string): Promise<NextResponse> => {
+    await recordOperationalEvent(admin, {
+      action: "billing.lemon.ignored_new_subscription",
+      entityType: "subscription",
+      level: "warning",
+      metadata: {
+        ls_subscription_id: lsSubId ?? null,
+        event_name,
+        reason,
+        profile_id: custom_data?.profile_id ?? null,
+        signup_id: custom_data?.signup_id ?? null,
+      },
+    });
+    return NextResponse.json({ received: true, ignored: "new subscription" });
+  };
 
-  const { data: existing, error: lookupError } = (await query.maybeSingle()) as {
+  if (NEW_SUBSCRIPTION_EVENTS.has(event_name)) return ignoreNewSubscription("new subscription event");
+  // The Lemon Squeezy id is the only key. A profile id alone could match a Stripe
+  // row or a signup that has not paid, and writing there would grant access.
+  if (!lsSubId) return ignoreNewSubscription("no subscription id");
+
+  const { data: existing, error: lookupError } = (await admin
+    .from("subscriptions")
+    .select("id, profile_id, pending_plan_type, plan_type, subscription_status, grace_period_ends_at, cancel_at_period_end")
+    .eq("ls_subscription_id", lsSubId)
+    .maybeSingle()) as {
     data: {
       id: string;
       profile_id: string;
@@ -77,22 +97,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     await reportServerFailure("billing.webhook.lookup_failed", new Error(lookupError.message), {
       event_name,
       ls_subscription_id: lsSubId,
-      profile_id: profileId,
     });
     return NextResponse.json({ error: "Lookup failed" }, { status: 500 });
   }
 
-  // The founder has moved to Stripe. This is a late event for the Lemon Squeezy
-  // subscription that was replaced, and must not rewrite the Stripe row.
-  if (!existing && profileId) {
-    const { data: moved } = await admin
-      .from("subscriptions")
-      .select("id")
-      .eq("profile_id", profileId)
-      .not("stripe_subscription_id", "is", null)
-      .maybeSingle();
-    if (moved) return NextResponse.json({ received: true, ignored: "moved to Stripe" });
-  }
+  if (!existing) return ignoreNewSubscription("unknown subscription id");
 
   const { plan, source } = variantToPlan(attributes.variant_id, attributes.variant_name, attributes.product_name);
 
@@ -100,7 +109,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // events (cancelled, expired). Those events are for the old Basic or Professional
   // product, and must not rewrite the Premium row. Events for the Premium product
   // itself are a card Premium and are processed like any other card plan.
-  if (existing?.plan_type === "founder_premium" && plan !== "founder_premium") {
+  if (existing.plan_type === "founder_premium" && plan !== "founder_premium") {
     return NextResponse.json({ received: true, ignored: "premium paid by wire" });
   }
   const mapped = mapStatus(attributes.status, new Date(), attributes.ends_at);
@@ -125,8 +134,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // Repeated past_due events for one failed payment must not restart the
   // countdown, so keep the date from the first failure.
   const graceInput = {
-    existingEndsAt: existing?.grace_period_ends_at ?? null,
-    existingCancelAtPeriodEnd: Boolean(existing?.cancel_at_period_end),
+    existingEndsAt: existing.grace_period_ends_at ?? null,
+    existingCancelAtPeriodEnd: Boolean(existing.cancel_at_period_end),
     mappedEndsAt: mapped.gracePeriodEndsAt,
     mappedCancelAtPeriodEnd: mapped.cancelAtPeriodEnd,
   };
@@ -151,7 +160,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // The cancel reason only means something while a cancellation is pending.
   if (!mapped.cancelAtPeriodEnd) patch.cancel_reason = null;
 
-  const pendingPlan = existing?.pending_plan_type ?? null;
+  const pendingPlan = existing.pending_plan_type ?? null;
   if (mapped.status === "canceled" && pendingPlan === "founder_free") {
     // A scheduled downgrade to Free: the paid period is over, so land on the
     // free plan instead of an inactive subscription.
@@ -167,133 +176,35 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     patch.monthly_price_cents = LEMON_SQUEEZY_PRICES[plan] ?? PLAN_PRICES[plan];
   }
 
-  if (existing) {
-    const { error } = await admin.from("subscriptions").update(patch).eq("id", existing.id);
-    if (error) {
-      await reportServerFailure("billing.webhook.update_failed", new Error(error.message), {
-        event_name,
-        subscription_id: existing.id,
-        profile_id: existing.profile_id,
-        plan,
-      });
-      return NextResponse.json({ error: "Update failed" }, { status: 500 });
-    }
-    // A demo account converted to paid by card: the first payment makes it a normal paying account.
-    if (mapped.status === "active") await activateConvertedOrg(admin, existing.profile_id);
-    // First failed renewal payment: tell the founder (and staff, for Premium).
-    if (graceEndsAt && isNewPastDue(graceInput)) {
-      await notifyPastDue({
-        profileId: existing.profile_id,
-        subscriptionId: existing.id,
-        plan: plan ?? existing.plan_type,
-        endsAt: graceEndsAt,
-      });
-    }
-    const step = funnelStepFor(event_name);
-    if (step && mapped.status === "active") {
-      await recordFunnelEvent({ sessionId: `webhook_${existing.profile_id}`, eventName: step, properties: { plan, event: event_name } });
-      if (step === "checkout_complete") {
-        // Welcome letter first, so the staff alert can say it went out.
-        await sendFounderWelcomeLetter({ founderId: existing.profile_id, plan });
-        await alertStaffNewCustomer({ event: "payment", founderId: existing.profile_id, plan });
-        if (plan === "founder_premium") await assignAccountManagerForPremium({ founderId: existing.profile_id });
-      }
-    }
-    // The first payment can arrive on an event other than subscription_created
-    // when the row already exists from signup (pending_payment to active). Alert
-    // staff on that move too. Deduped per company, so the branch above plus this
-    // one never double alert.
-    if (funnelStepFor(event_name) !== "checkout_complete" && isFirstActivation(existing.subscription_status, mapped.status)) {
-      await alertStaffNewCustomer({ event: "payment", founderId: existing.profile_id, plan });
-    }
-    return NextResponse.json({ received: true, updated: existing.id });
-  }
-
-  if (profileId) {
-    if (!plan) {
-      // Creating a subscription with no plan but a hardcoded price is how a
-      // $1,000 customer got recorded at $499. Refuse and retry instead.
-      await reportServerFailure(
-        "billing.webhook.unmapped_variant",
-        new Error(`Variant ${attributes.variant_id} does not map to a known plan`),
-        {
-          event_name,
-          profile_id: profileId,
-          variant_id: attributes.variant_id,
-          product_name: attributes.product_name,
-          variant_name: attributes.variant_name,
-        },
-      );
-      return NextResponse.json({ error: "Unmapped plan variant" }, { status: 500 });
-    }
-
-    const { error } = await admin.from("subscriptions").upsert(
-      {
-        ...patch,
-        profile_id: profileId,
-        role: "founder",
-        // Single source of truth — this used to be two hardcoded literals that
-        // could drift from the pricing table.
-        monthly_price_cents: LEMON_SQUEEZY_PRICES[plan] ?? PLAN_PRICES[plan],
-        currency: "USD",
-      },
-      { onConflict: "profile_id" },
-    );
-    if (error) {
-      await reportServerFailure("billing.webhook.create_failed", new Error(error.message), {
-        event_name,
-        profile_id: profileId,
-        plan,
-      });
-      return NextResponse.json({ error: "Create failed" }, { status: 500 });
-    }
-    // First payment for a converted demo account (its comped row had no Lemon Squeezy id yet).
-    if (mapped.status === "active") await activateConvertedOrg(admin, profileId);
-    const step = funnelStepFor(event_name);
-    if (step && mapped.status === "active") {
-      await recordFunnelEvent({ sessionId: `webhook_${profileId}`, eventName: step, properties: { plan, event: event_name } });
-      if (step === "checkout_complete") {
-        // Welcome letter first, so the staff alert can say it went out.
-        await sendFounderWelcomeLetter({ founderId: profileId, plan });
-        await alertStaffNewCustomer({ event: "payment", founderId: profileId, plan });
-        if (plan === "founder_premium") await assignAccountManagerForPremium({ founderId: profileId });
-      }
-    }
-    return NextResponse.json({ received: true, created: profileId });
-  }
-
-  // A payment made before any login existed (pay first, account after). The order
-  // carries the paid signup id; keep what the payment says until the founder
-  // creates their login on /start/paid.
-  const signupId = custom_data?.signup_id;
-  if (signupId) {
-    if (!plan) {
-      await reportServerFailure("billing.webhook.unmapped_variant", new Error(`Variant ${attributes.variant_id} does not map to a known plan`), {
-        event_name,
-        signup_id: signupId,
-        variant_id: attributes.variant_id,
-      });
-      return NextResponse.json({ error: "Unmapped plan variant" }, { status: 500 });
-    }
-    const recorded = await recordGuestPayment({
-      signupId,
-      lsSubscriptionId: lsSubId ?? null,
-      lsCustomerId: String(attributes.customer_id),
-      lsVariantId: String(attributes.variant_id),
-      userEmail: attributes.user_email,
+  const { error } = await admin.from("subscriptions").update(patch).eq("id", existing.id);
+  if (error) {
+    await reportServerFailure("billing.webhook.update_failed", new Error(error.message), {
+      event_name,
+      subscription_id: existing.id,
+      profile_id: existing.profile_id,
       plan,
-      status: mapped.status,
-      currentPeriodEnd: attributes.renews_at ?? attributes.ends_at ?? null,
-      graceEndsAt,
-      cancelAtPeriodEnd: mapped.cancelAtPeriodEnd,
     });
-    if (recorded.error) {
-      await reportServerFailure("billing.webhook.guest_payment_failed", new Error(recorded.error), { event_name, signup_id: signupId });
-      return NextResponse.json({ error: "Could not save the payment" }, { status: 500 });
-    }
-    return NextResponse.json({ received: true, ...(recorded.found ? { guest: signupId } : { ignored: "unknown signup" }) });
+    return NextResponse.json({ error: "Update failed" }, { status: 500 });
   }
-
-  console.warn(`[billing/webhook] ${event_name}: no existing subscription and no profile_id — nothing written.`);
-  return NextResponse.json({ received: true, ignored: "no target" });
+  // A demo account converted to paid by card: the first payment makes it a normal paying account.
+  if (mapped.status === "active") await activateConvertedOrg(admin, existing.profile_id);
+  // First failed renewal payment: tell the founder (and staff, for Premium).
+  if (graceEndsAt && isNewPastDue(graceInput)) {
+    await notifyPastDue({
+      profileId: existing.profile_id,
+      subscriptionId: existing.id,
+      plan: plan ?? existing.plan_type,
+      endsAt: graceEndsAt,
+    });
+  }
+  const step = funnelStepFor(event_name);
+  if (step && mapped.status === "active") {
+    await recordFunnelEvent({ sessionId: `webhook_${existing.profile_id}`, eventName: step, properties: { plan, event: event_name } });
+  }
+  // A row that already holds this Lemon Squeezy id can move back to paying
+  // (resumed, or a recovered payment). Alert staff on that move. Deduped per company.
+  if (isFirstActivation(existing.subscription_status, mapped.status)) {
+    await alertStaffNewCustomer({ event: "payment", founderId: existing.profile_id, plan });
+  }
+  return NextResponse.json({ received: true, updated: existing.id });
 }
