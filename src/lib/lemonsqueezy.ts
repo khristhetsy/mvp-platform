@@ -2,12 +2,12 @@
  * LemonSqueezy API client.
  * Docs: https://docs.lemonsqueezy.com/api
  *
- * Required env vars:
+ * For the subscriptions Lemon Squeezy already bills. It cannot create a checkout:
+ * every new payment starts on Stripe (src/lib/stripe.ts).
+ *
+ * Env vars read here:
  *   LEMONSQUEEZY_API_KEY
- *   LEMONSQUEEZY_STORE_ID
  *   LEMONSQUEEZY_WEBHOOK_SECRET
- *   LEMONSQUEEZY_VARIANT_ID_BASIC
- *   LEMONSQUEEZY_VARIANT_ID_PROFESSIONAL
  */
 
 import crypto from "crypto";
@@ -20,73 +20,6 @@ function headers() {
     "Content-Type": "application/vnd.api+json",
     Authorization: `Bearer ${process.env.LEMONSQUEEZY_API_KEY}`,
   };
-}
-
-/**
- * Resolve the store id. Prefers LEMONSQUEEZY_STORE_ID if set; otherwise looks it
- * up from the API key's own store (always the correct store for the key's mode),
- * so operators don't have to find/set it manually.
- */
-async function resolveStoreId(): Promise<string | null> {
-  const fromEnv = process.env.LEMONSQUEEZY_STORE_ID?.trim();
-  if (fromEnv) return fromEnv;
-  const res = await fetch(`${LS_API}/stores`, { headers: headers() });
-  if (!res.ok) return null;
-  const json = (await res.json()) as { data?: Array<{ id: string }> };
-  return json.data?.[0]?.id ?? null;
-}
-
-// ─── Checkout ─────────────────────────────────────────────────────────────────
-
-export async function createCheckoutUrl({
-  variantId,
-  email,
-  profileId,
-  successUrl,
-  name,
-}: {
-  variantId: string;
-  email: string;
-  profileId: string;
-  successUrl: string;
-  /** Pre-fills the name on the checkout page. Optional. */
-  name?: string;
-}): Promise<string> {
-  const storeId = await resolveStoreId();
-  if (!storeId) throw new Error("Could not resolve a Lemon Squeezy store for this API key (check the key / mode).");
-
-  const res = await fetch(`${LS_API}/checkouts`, {
-    method: "POST",
-    headers: headers(),
-    body: JSON.stringify({
-      data: {
-        type: "checkouts",
-        attributes: {
-          checkout_options: { embed: false, media: false, logo: true },
-          checkout_data: {
-            email,
-            ...(name ? { name } : {}),
-            custom: { profile_id: profileId },
-          },
-          product_options: {
-            redirect_url: successUrl,
-          },
-        },
-        relationships: {
-          store:   { data: { type: "stores",   id: String(storeId) } },
-          variant: { data: { type: "variants", id: String(variantId) } },
-        },
-      },
-    }),
-  });
-
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`LemonSqueezy checkout error ${res.status}: ${body}`);
-  }
-
-  const json = await res.json() as { data: { attributes: { url: string } } };
-  return json.data.attributes.url;
 }
 
 // ─── Customer portal ──────────────────────────────────────────────────────────

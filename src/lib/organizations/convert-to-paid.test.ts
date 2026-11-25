@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { activateConvertedOrg, isConvertPlan, loadConversions, tierForPlan, variantIdForPlan } from "./convert-to-paid";
+import { activateConvertedOrg, isConvertPlan, loadConversions, tierForPlan } from "./convert-to-paid";
 
 // A tiny stand-in for the Supabase query builder: every chain method returns the same
 // object, and awaiting it yields the result registered for the table and operation.
@@ -47,13 +47,6 @@ describe("convert plan helpers", () => {
     expect(tierForPlan("founder_basic")).toBe("basic");
     expect(tierForPlan("founder_professional")).toBe("professional");
     expect(tierForPlan("founder_premium")).toBeNull();
-  });
-
-  it("reads the Lemon Squeezy variant for each plan from the environment", () => {
-    vi.stubEnv("LEMONSQUEEZY_VARIANT_ID_BASIC", "111");
-    vi.stubEnv("LEMONSQUEEZY_VARIANT_ID_PROFESSIONAL", "222");
-    expect(variantIdForPlan("founder_basic")).toBe("111");
-    expect(variantIdForPlan("founder_professional")).toBe("222");
   });
 });
 

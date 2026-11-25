@@ -5,13 +5,6 @@ import {
   addCompanyLabel, centsFor, isPriced, priceLabel, priceSublabel, type PricingCatalog,
 } from "@/lib/subscriptions/pricing-catalog";
 
-/** LemonSqueezy variant IDs — set in env. */
-export const LS_VARIANT_IDS = {
-  founder_basic:        process.env.LEMONSQUEEZY_VARIANT_ID_BASIC        ?? "",
-  founder_professional: process.env.LEMONSQUEEZY_VARIANT_ID_PROFESSIONAL ?? "",
-  founder_premium:      process.env.LEMONSQUEEZY_VARIANT_ID_PREMIUM      ?? "",
-} as const;
-
 export type PricingPlanCard = {
   planType: PlanType;
   title: string;
