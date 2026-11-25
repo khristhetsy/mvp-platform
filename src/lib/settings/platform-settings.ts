@@ -3,6 +3,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { DEFAULT_WEIGHTS, type MatchWeights } from "@/lib/investors/preference-match";
 import { DEFAULT_ENGINE_WEIGHTS, type EngineWeights } from "@/lib/matching/investor-company-matching";
 import { FIT_V2_ROLLOUT_KEY, FIT_V2_DEFAULT_PCT } from "@/lib/fit/variant";
+import { emptyReachGoals, normalizeReachGoals, type ReachGoals } from "@/lib/admin/reach-goals";
 
 /**
  * Small key-value store for platform-level settings that admins toggle at
@@ -487,5 +488,33 @@ export async function setSiteDefaultView(view: SiteDefaultView, updatedBy: strin
     return !error;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Reach goals (admin Feature Controls): weekly and monthly goals for emails sent
+ * and opened, for Introductions and for Automated outreach. Read by goal vs
+ * actual on the admin AI Agent page. No row, or an empty field, means no goal.
+ */
+const REACH_GOALS_KEY = "reach_goals";
+
+export async function getReachGoals(): Promise<ReachGoals> {
+  try {
+    const { data } = await db().from("platform_settings").select("value").eq("key", REACH_GOALS_KEY).maybeSingle();
+    return normalizeReachGoals((data as { value?: unknown } | null)?.value);
+  } catch {
+    return emptyReachGoals();
+  }
+}
+
+export async function setReachGoals(goals: ReachGoals, updatedBy: string | null): Promise<ReachGoals | null> {
+  const clean = normalizeReachGoals(goals);
+  try {
+    const { error } = await db()
+      .from("platform_settings")
+      .upsert({ key: REACH_GOALS_KEY, value: clean, updated_by: updatedBy, updated_at: new Date().toISOString() }, { onConflict: "key" });
+    return error ? null : clean;
+  } catch {
+    return null;
   }
 }
