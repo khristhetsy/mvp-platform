@@ -6,14 +6,14 @@ import { SalesViewGear } from "./SalesViewGear";
 import { useAdminChrome } from "@/lib/ui/admin-chrome";
 import { AutomationToast } from "@/components/sales/AutomationToast";
 
-// Sales pages scoped by ?viewAs= that have no toolbar gear of their own; they get a
-// gear holding only the View section. Other pages carry View in their own gear.
-const VIEW_GEAR_ONLY = new Set(["/admin/sales", "/admin/sales/forecast"]);
+// Sales pages whose own toolbar carries the gear (View section, hub menu and page items).
+// Every other Sales page gets the gear here, so the hub menu is always one click away.
+const OWN_GEAR = new Set(["/admin/sales/contacts", "/admin/sales/opportunities", "/admin/sales/pipeline", "/admin/sales/tasks", "/admin/sales/bookings"]);
 
 export function SalesHubHeader() {
   const chrome = useAdminChrome();
   const pathname = usePathname();
-  const viewGear = VIEW_GEAR_ONLY.has(pathname) ? (
+  const viewGear = !OWN_GEAR.has(pathname) ? (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
       <SalesViewGear />
     </div>

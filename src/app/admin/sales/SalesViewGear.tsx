@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { ToolbarGear, type GearItem } from "@/components/admin/ToolbarGear";
+import { SALES_GEAR_MENU } from "./SalesHubTabs";
 
 type Member = { id: string; name: string };
 
@@ -92,6 +94,44 @@ function ViewSection({ view, close }: { view: SalesView; close: () => void }) {
   );
 }
 
+/** The Sales pages that are not in the tab row: AI queue, Automation, Forecast, Settings and the rest. */
+function HubMenuSection({ viewAs, close }: { viewAs: string | null; close: () => void }) {
+  const pathname = usePathname();
+  const suffix = viewAs && viewAs !== "team" ? `?viewAs=${encodeURIComponent(viewAs)}` : "";
+  return (
+    <div>
+      {SALES_GEAR_MENU.map((m) => {
+        const on = pathname.startsWith(m.href);
+        const href = m.href === "/admin/sales/settings" ? m.href : `${m.href}${suffix}`;
+        return (
+          <div key={m.href}>
+            {m.sep && <div style={{ borderTop: "0.5px solid #eef1f5", margin: "4px 0" }} />}
+            <Link href={href} onClick={close} aria-current={on ? "page" : undefined} style={{ ...row(on), textDecoration: "none" }}>
+              <i className={`ti ${m.icon}`} style={{ fontSize: 15 }} aria-hidden="true" /><span style={{ flex: 1 }}>{m.label}</span>
+              {on && <i className="ti ti-check" aria-hidden="true" />}
+            </Link>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** The gear's top block: the View section (when allowed), then the hub menu. */
+function GearTop({ view, close }: { view: SalesView; close: () => void }) {
+  return (
+    <>
+      {view.canViewTeam && (
+        <>
+          <ViewSection view={view} close={close} />
+          <div style={{ borderTop: "0.5px solid #eef1f5", margin: "4px 0" }} />
+        </>
+      )}
+      <HubMenuSection viewAs={view.viewAs} close={close} />
+    </>
+  );
+}
+
 function ViewChip({ label }: { label: string }) {
   return (
     <span title="Whose data is in view. Change it in the gear menu." style={{ fontSize: 11.5, fontWeight: 600, padding: "3px 10px", borderRadius: 7, background: "#EEF2FF", color: "#4338CA", whiteSpace: "nowrap", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -100,16 +140,14 @@ function ViewChip({ label }: { label: string }) {
   );
 }
 
-/** A Sales page's gear: the View section first, then the page's own items. */
+/** A Sales page's gear: the View section first, then the Sales hub menu, then the page's own items. */
 export function SalesGear({ items, heading }: { items: GearItem[]; heading?: string }) {
   const view = useSalesView();
-  if (!view.canViewTeam) return <ToolbarGear items={items} heading={heading} />;
-  return <ToolbarGear items={items} heading={heading} top={(close) => <ViewSection view={view} close={close} />} after={<ViewChip label={view.label} />} />;
+  return <ToolbarGear items={items} heading={heading} top={(close) => <GearTop view={view} close={close} />} after={view.canViewTeam ? <ViewChip label={view.label} /> : undefined} />;
 }
 
-/** A gear holding only the View section, for Sales pages with no toolbar gear of their own. */
+/** A gear holding the View section and the Sales hub menu, for Sales pages with no toolbar gear of their own. */
 export function SalesViewGear() {
   const view = useSalesView();
-  if (!view.canViewTeam) return null;
-  return <ToolbarGear items={[]} top={(close) => <ViewSection view={view} close={close} />} after={<ViewChip label={view.label} />} />;
+  return <ToolbarGear items={[]} top={(close) => <GearTop view={view} close={close} />} after={view.canViewTeam ? <ViewChip label={view.label} /> : undefined} />;
 }
