@@ -51,6 +51,7 @@ export const ADMIN_NAV_SOP_COVERAGE: Record<string, number[]> = {
   "/admin/linkedin": [83],
   "/admin/ai-agent": [84],
   "/admin/events": [76],
+  "/admin/events/dashboard": [76],
   "/admin/events/applications": [76],
   "/admin/events/sponsors": [76],
   "/admin/events/analytics": [76],

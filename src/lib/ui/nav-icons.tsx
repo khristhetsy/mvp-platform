@@ -67,6 +67,7 @@ import {
   FolderOpen,
   Forward,
   Gamepad2,
+  ChartNoAxesCombined,
   Gauge,
   GitCompare,
   GraduationCap,
@@ -328,6 +329,7 @@ export const workspaceNavIconByHref: Record<string, LucideIcon> = {
   "/admin/partner-scores": Award,
   "/admin/marketing": Megaphone, // Marketing
   "/admin/events": PartyPopper, // Events
+  "/admin/events/dashboard": ChartNoAxesCombined, // Events dashboard
   "/admin/studio": Clapperboard, // Studio
   "/admin/studio/spotlight": Radio, // Spotlight Studio
   "/admin/studio/talk-show": Podcast, // Talk Show Studio

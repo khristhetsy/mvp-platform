@@ -69,7 +69,7 @@ export const FEATURES: FeatureDef[] = [
   { key: "ir_agent", label: "Founder IR Agent (Build Your Agent)", group: "Fundraising & market", hrefs: {
     founder: ["/founder/ir-agent"],
   } },
-  { key: "events", label: "Events", group: "Fundraising & market", hrefs: { founder: ["/events", "/founder/events"], investor: ["/events"], admin: ["/admin/events", "/admin/events/applications", "/admin/events/sponsors", "/admin/events/analytics", "/admin/events/gamification", "/admin/events/email", "/admin/events/invitations", "/admin/events/registrations", "/admin/events/networking", "/admin/events/brochure", "/admin/studio", "/admin/studio/spotlight", "/admin/studio/talk-show"] } },
+  { key: "events", label: "Events", group: "Fundraising & market", hrefs: { founder: ["/events", "/founder/events"], investor: ["/events"], admin: ["/admin/events", "/admin/events/dashboard", "/admin/events/applications", "/admin/events/sponsors", "/admin/events/analytics", "/admin/events/gamification", "/admin/events/email", "/admin/events/invitations", "/admin/events/registrations", "/admin/events/networking", "/admin/events/brochure", "/admin/studio", "/admin/studio/spotlight", "/admin/studio/talk-show"] } },
   { key: "partner_score", label: "Partner Score", group: "Fundraising & market", hrefs: { investor: ["/investor/partner-score"] } },
   { key: "my_contacts", label: "My contacts", group: "Fundraising & market", hrefs: { founder: ["/founder/contacts"] } },
   { key: "investor_matches", label: "Investor matches", group: "Fundraising & market", hrefs: { founder: ["/founder/matches"] } },
