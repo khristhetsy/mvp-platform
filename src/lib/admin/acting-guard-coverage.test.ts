@@ -74,7 +74,8 @@ describe("outreach, intro and connection routes", () => {
 describe("billing routes are owner only", () => {
   // Public or staff only routes are listed on purpose.
   // guest-checkout is public on purpose: it is the payment step for someone who has no account yet.
-  const EXEMPT = new Set(["webhook", "repair", "debug", "guest-checkout"]);
+  // link-stripe is staff (admin) only, like repair: it is guarded by requireStaffApi.
+  const EXEMPT = new Set(["webhook", "repair", "debug", "guest-checkout", "link-stripe"]);
   const dir = path.join(ROOT, "src/app/api/billing");
   // Public on purpose, for someone who has no account yet. premium-agreement/link is opened with
   // a signed token from an admin sent link, and guest-agreement-preview only renders a PDF of what
