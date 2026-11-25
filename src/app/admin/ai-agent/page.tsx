@@ -1,5 +1,7 @@
+import { Suspense } from "react";
 import { AppShell } from "@/components/AppShell";
 import { AdminIrAgentBuilder, type AgentCompany, type StandaloneAgent } from "@/components/admin/AdminIrAgentBuilder";
+import { ReachGoalVsActual, ReachGoalVsActualLoading } from "@/components/admin/reach-goals/ReachGoalVsActual";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { requirePermissionPage } from "@/lib/api/permissions";
 import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
@@ -34,6 +36,9 @@ export default async function AdminAiAgentPage({ searchParams }: { searchParams:
         title="AI Agent"
         description="Build an AI agent for any company in your account, SPVs included. The agent is wired to the company profile and field data of the company you pick."
       />
+      <Suspense fallback={<ReachGoalVsActualLoading />}>
+        <ReachGoalVsActual />
+      </Suspense>
       <AdminIrAgentBuilder companies={companies} standalone={standalone} initialOrgId={org ?? null} initialAgentId={agent ?? null} />
     </AppShell>
   );
