@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useToast } from "@/components/ui/ToastProvider";
-import { AGENT_TYPE_SPECS, isAdminOnlyType, isAgentType, type AgentType } from "@/lib/ir-agent/agent-types";
+import { AGENT_TYPES, AGENT_TYPE_SPECS, isAdminOnlyType, isAgentType, type AgentType } from "@/lib/ir-agent/agent-types";
 import type { AgentListItem } from "@/app/api/admin/ir-agent/agents/route";
 
 type Filter = "active" | "archived" | "all";
@@ -42,6 +42,7 @@ export function AdminAgentsList({ onNew, onEdit, onRemoved }: { onNew: () => voi
   const [agents, setAgents] = useState<AgentListItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("active");
+  const [purpose, setPurpose] = useState<"all" | AgentType>("all");
   const [viewing, setViewing] = useState<string | null>(null);
   const [confirmDel, setConfirmDel] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -95,8 +96,10 @@ export function AdminAgentsList({ onNew, onEdit, onRemoved }: { onNew: () => voi
   if (!agents) return <div className="py-8 text-sm text-slate-500">Loading agents…</div>;
 
   const counts = { active: agents.filter((a) => !a.archived).length, archived: agents.filter((a) => a.archived).length, all: agents.length };
-  const list = agents.filter((a) => (filter === "all" ? true : filter === "archived" ? a.archived : !a.archived));
   const typeOf = (a: AgentListItem): AgentType => (isAgentType(a.agentType) ? a.agentType : "founder");
+  const byStatus = agents.filter((a) => (filter === "all" ? true : filter === "archived" ? a.archived : !a.archived));
+  const list = byStatus.filter((a) => purpose === "all" || typeOf(a) === purpose);
+  
 
   return (
     <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-5">
@@ -114,6 +117,14 @@ export function AdminAgentsList({ onNew, onEdit, onRemoved }: { onNew: () => voi
         {(["active", "archived", "all"] as Filter[]).map((f) => (
           <button key={f} type="button" onClick={() => { setFilter(f); setConfirmDel(null); }} className={`px-4 py-2 text-sm font-semibold ${filter === f ? "bg-[#E8EFFD] text-[#1b3f99]" : "bg-white text-slate-600 hover:bg-slate-50"}`}>
             {f === "active" ? "Active" : f === "archived" ? "Archived" : "All"} ({counts[f]})
+          </button>
+        ))}
+      </div>
+
+      <div className="inline-flex flex-wrap overflow-hidden rounded-lg border border-slate-300" role="group" aria-label="Filter by purpose">
+        {(["all", ...AGENT_TYPES] as const).map((p) => (
+          <button key={p} type="button" onClick={() => { setPurpose(p); setConfirmDel(null); }} className={`px-4 py-2 text-sm font-semibold ${purpose === p ? "bg-[#E8EFFD] text-[#1b3f99]" : "bg-white text-slate-600"}`}>
+            {p === "all" ? "All purposes" : AGENT_TYPE_SPECS[p].label} ({p === "all" ? byStatus.length : byStatus.filter((a) => typeOf(a) === p).length})
           </button>
         ))}
       </div>
