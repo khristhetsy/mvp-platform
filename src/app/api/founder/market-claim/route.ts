@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { founderPlanApiBlock } from "@/lib/subscriptions/founder-access";
 import { requireApiProfile } from "@/lib/api/auth";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -46,6 +47,8 @@ const MAX_UPLOAD_BYTES = 25 * 1024 * 1024; // 25 MB, matches the client hint
 export async function POST(req: Request) {
   const auth = await requireApiProfile(["founder"]);
   if ("error" in auth) return auth.error;
+  const planBlock = await founderPlanApiBlock(auth.profile.id);
+  if (planBlock) return planBlock;
 
   const { company } = await getActiveCompanyForUser(auth.profile);
   if (!company) return NextResponse.json({ error: "No company linked." }, { status: 400 });

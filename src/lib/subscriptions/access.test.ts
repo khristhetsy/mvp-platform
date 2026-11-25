@@ -96,3 +96,34 @@ describe("isSubscriptionActive with grace period", () => {
     expect(isSubscriptionActive(sub({ plan_type: "admin_internal", subscription_status: "canceled" }), NOW)).toBe(true);
   });
 });
+
+describe("ended paid plans fall back to Free features", () => {
+  const plans = ["founder_basic", "founder_professional", "founder_premium", "founder_managed_ir"] as const;
+
+  for (const plan_type of plans) {
+    for (const subscription_status of ["canceled", "expired"] as const) {
+      it(`${plan_type} ${subscription_status}: keeps due diligence, loses the paid tools`, () => {
+        const s = sub({ plan_type, subscription_status, is_grandfathered: false });
+        expect(canAccessFeature(s, "readiness").allowed).toBe(true);
+        expect(canAccessFeature(s, "documents").allowed).toBe(true);
+        for (const key of ["investor_access", "capital_raise", "elearning", "analytics", "premium_tools"] as const) {
+          const r = canAccessFeature(s, key);
+          expect(r.allowed).toBe(false);
+          expect(r.reason ?? "").toMatch(/inactive/i);
+        }
+      });
+    }
+  }
+
+  it("an active paid plan keeps every tool", () => {
+    const s = sub({ plan_type: "founder_basic", subscription_status: "active" });
+    expect(canAccessFeature(s, "premium_tools").allowed).toBe(true);
+  });
+
+  it("pending payment still reaches only the dashboard and settings", () => {
+    const s = sub({ plan_type: "founder_basic", subscription_status: "pending_payment" });
+    expect(canAccessFeature(s, "dashboard").allowed).toBe(true);
+    expect(canAccessFeature(s, "readiness").allowed).toBe(false);
+    expect(canAccessFeature(s, "premium_tools").allowed).toBe(false);
+  });
+});

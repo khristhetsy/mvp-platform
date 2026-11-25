@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/supabase/auth";
+import { founderToolLock } from "@/components/founder/founderToolLock";
 import { getTranslations } from "next-intl/server";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderJourneyGate } from "@/components/founder/FounderJourneyGate";
@@ -23,6 +24,8 @@ export default async function FounderBusinessPlanPage() {
   const supabase = await createServerSupabaseClient();
   const flags = await loadFeatureFlags(supabase);
   if (!isFeatureEnabled(flags, "founder", "business_plan")) notFound();
+  const planLock = !acting ? await founderToolLock(profile.full_name ?? profile.email ?? "Founder", "Business plan") : null;
+  if (planLock) return planLock;
 
   const company = acting ? acting.company : (await getActiveCompanyForUser(profile)).company;
   if (!company) {

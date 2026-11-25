@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
+import { founderPlanApiBlock } from "@/lib/subscriptions/founder-access";
 import { requireApiProfile } from "@/lib/api/auth";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { getRoundStructure, saveRoundStructure } from "@/lib/term-sheet/store";
@@ -11,6 +12,8 @@ export const dynamic = "force-dynamic";
 export async function GET(): Promise<Response> {
   const auth = await requireApiProfile(["founder"]);
   if ("error" in auth) return auth.error ?? NextResponse.json({ error: "Authentication required." }, { status: 401 });
+  const planBlock = await founderPlanApiBlock(auth.profile.id);
+  if (planBlock) return planBlock;
   try {
     const { company } = await getActiveCompanyForUser(auth.profile);
     if (!company) return NextResponse.json({ roundStructure: null });
@@ -26,6 +29,8 @@ export async function GET(): Promise<Response> {
 export async function PUT(request: Request): Promise<Response> {
   const auth = await requireApiProfile(["founder"]);
   if ("error" in auth) return auth.error ?? NextResponse.json({ error: "Authentication required." }, { status: 401 });
+  const planBlock = await founderPlanApiBlock(auth.profile.id);
+  if (planBlock) return planBlock;
   try {
     const body = (await request.json().catch(() => ({}))) as { inputs?: unknown };
     const inputs = cleanRoundStructure(body.inputs);

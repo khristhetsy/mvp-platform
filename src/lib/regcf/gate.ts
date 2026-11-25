@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { founderPlanApiBlock } from "@/lib/subscriptions/founder-access";
 import { requireApiProfile } from "@/lib/api/auth";
 import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
 import { checkFounderStageAccess } from "@/lib/founder-journey/stage-gate";
@@ -19,6 +20,8 @@ export async function gateRegCfFounderApi() {
   if (!isFeatureEnabled(flags, "founder", "regcf")) {
     return { error: NextResponse.json({ error: "This feature is not available." }, { status: 403 }) } as const;
   }
+  const planBlock = await founderPlanApiBlock(auth.profile.id);
+  if (planBlock) return { error: planBlock } as const;
   // Available from the Deploy stage (defense-in-depth beyond the page gate).
   const stageGate = await checkFounderStageAccess("deploy");
   if (!stageGate.allowed) {

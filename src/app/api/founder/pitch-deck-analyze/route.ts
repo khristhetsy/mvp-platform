@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { founderPlanApiBlock } from "@/lib/subscriptions/founder-access";
 import { requireApiProfile } from "@/lib/api/auth";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -126,6 +127,8 @@ function parseAnalysis(raw: string): PitchDeckAnalysis | null {
 export async function POST() {
   const auth = await requireApiProfile(["founder"]);
   if ("error" in auth) return auth.error;
+  const planBlock = await founderPlanApiBlock(auth.profile.id);
+  if (planBlock) return planBlock;
 
   const supabase = await createServerSupabaseClient();
   const { company } = await getActiveCompanyForUser(auth.profile);

@@ -42,7 +42,7 @@ export default async function EmailSequencePage() {
       profileName={profile.full_name ?? profile.email ?? "Founder"}
       profileSubtitle={t("email_sequence_builder")}
     >
-      <FounderFeatureGate featureKey="dashboard">
+      <FounderFeatureGate featureKey="premium_tools">
         <div className="mx-auto max-w-3xl space-y-6">
           <PageHeader
             eyebrow={t("investor_outreach")}

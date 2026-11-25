@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { founderPlanApiBlock } from "@/lib/subscriptions/founder-access";
 import { requireApiProfile } from "@/lib/api/auth";
 import { gateAiRun } from "@/lib/ai-usage/gate";
 import { claudeComplete, isClaudeConfigured, CLAUDE_SONNET } from "@/lib/claude";
@@ -41,6 +42,8 @@ Rules:
 export async function POST(request: Request) {
   const auth = await requireApiProfile(["founder"]);
   if ("error" in auth) return auth.error;
+  const planBlock = await founderPlanApiBlock(auth.profile.id);
+  if (planBlock) return planBlock;
 
   const parsed = inputsSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid round inputs." }, { status: 400 });
