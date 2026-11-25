@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
+import { founderPlanApiBlock } from "@/lib/subscriptions/founder-access";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
+
+/** Tool keys that belong to the paid toolset. due-diligence and kpi-glossary stay open on the Free plan. */
+const PAID_TOOL_KEYS = new Set(["term-sheet", "pitch-practice", "email-sequence", "investor-update", "funding-timeline", "board-prep"]);
 
 const VALID_TOOL_KEYS = new Set([
   "term-sheet",
@@ -28,6 +32,10 @@ export async function GET(
   const { toolKey } = await params;
   if (!VALID_TOOL_KEYS.has(toolKey)) {
     return NextResponse.json({ error: "Unknown tool" }, { status: 404 });
+  }
+  if (PAID_TOOL_KEYS.has(toolKey)) {
+    const planBlock = await founderPlanApiBlock(profile.id);
+    if (planBlock) return planBlock;
   }
 
   const admin = createServiceRoleClient();
@@ -60,6 +68,10 @@ export async function POST(
   const { toolKey } = await params;
   if (!VALID_TOOL_KEYS.has(toolKey)) {
     return NextResponse.json({ error: "Unknown tool" }, { status: 404 });
+  }
+  if (PAID_TOOL_KEYS.has(toolKey)) {
+    const planBlock = await founderPlanApiBlock(profile.id);
+    if (planBlock) return planBlock;
   }
 
   const body = await request.json().catch(() => null) as { data: unknown } | null;
