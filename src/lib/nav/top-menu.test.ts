@@ -106,7 +106,7 @@ describe("toApps: admin", () => {
   });
 
   it("groups Events", () => {
-    expect(entryLabels(byLabel(apps, "Events"))).toEqual(["All events", "Sales", "Content", "Networking Matching", "Reporting", "Studio"]);
+    expect(entryLabels(byLabel(apps, "Events"))).toEqual(["Dashboard", "All events", "Sales", "Content", "Networking Matching", "Reporting", "Studio"]);
   });
 
   it("uses a hub's own tabs when an override is given", () => {
