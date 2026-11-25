@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { groupContactProfile } from "@/lib/sales/contact-profile-sections";
 import { INVESTOR_PROFILE_LABEL, INVESTOR_PROFILE_OPTIONS, isInvestorProfileLabel } from "@/lib/sales/investor-profile";
 import { parseMoneyBand } from "@/lib/investors/preference-match";
+import { REVENUE_LABEL } from "@/lib/fit/options";
 import { CompanyLinkedRecordEditor } from "./CompanyLinkedRecordEditor";
 import { NoteLogEntries } from "./NoteLogEntries";
 import { TaskEditRow } from "@/components/sales/TaskEditRow";
@@ -1063,6 +1064,13 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
               // "Investor profile" (profile.investorTypes) — an editable pick from Odoo's option
               // list; the same value the Group-by "Investor profile" dimension reads.
               const investorProfileKey = profile.sections.flatMap((s) => s.fields).find((f) => isInvestorProfileLabel(f.label))?.saveKey ?? INVESTOR_PROFILE_LABEL;
+              // Annual EBITDA range picks from the same band list as Annual revenue range, ordered
+              // lowest to highest. Sorted here only, so the revenue picker keeps its own order.
+              const revenueKey = profile.sections.flatMap((s) => s.fields).find((f) => f.label === "Annual revenue range")?.saveKey ?? REVENUE_LABEL;
+              const bandFloor = (o: string) => parseMoneyBand(o)?.min ?? Number.POSITIVE_INFINITY;
+              const bandCeiling = (o: string) => parseMoneyBand(o)?.max ?? Number.POSITIVE_INFINITY;
+              const ebitdaOptions = [...(fieldOptions[revenueKey] ?? fieldOptions[REVENUE_LABEL] ?? [])]
+                .sort((x, y) => bandFloor(x) - bandFloor(y) || bandCeiling(x) - bandCeiling(y));
               const formdBlock = formdFirm ? (
                 <div style={{ marginTop: 14 }}>
                   <p style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "#4338CA", margin: "0 0 5px", paddingBottom: 4, borderBottom: "0.5px solid #eef1f5" }}>SEC Form D</p>
@@ -1153,7 +1161,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                               freeText={FREE_TEXT_FIELD_LABELS.has(f.label)}
                               single={SINGLE_SELECT_FIELD_LABELS.has(f.label)}
                               derivedFrom={f.derivedFrom}
-                              options={FREE_TEXT_FIELD_LABELS.has(f.label) || PLAIN_TEXT_FIELD_LABELS.has(f.label) ? [] : (fieldOptions[f.saveKey] ?? [])}
+                              options={FREE_TEXT_FIELD_LABELS.has(f.label) || PLAIN_TEXT_FIELD_LABELS.has(f.label) ? [] : f.label === "Annual EBITDA range" ? ebitdaOptions : (fieldOptions[f.saveKey] ?? [])}
                               value={prefEdits[f.saveKey] ?? ""}
                               changed={(prefEdits[f.saveKey] ?? "") !== (prefOrig[f.saveKey] ?? "")}
                               editing={editingKey === f.saveKey}
