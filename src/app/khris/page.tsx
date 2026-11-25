@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { sourceTagFromQuery } from "@/lib/attribution/source";
 import { JESSICA_HOST_PROFILE_ID } from "@/lib/jessica/config";
 import { KhrisChat } from "./KhrisChat";
+import { StaffViewBeacon } from "@/components/staff/StaffViewBeacon";
 
 export const metadata: Metadata = {
   title: "Talk to Khris Thetsy",
@@ -25,6 +26,7 @@ export default async function KhrisPage({ searchParams }: Props) {
 
   return (
     <main className="flex min-h-screen justify-center bg-white px-4 py-6">
+      <StaffViewBeacon page="khris" sourceTag={sourceTag} />
       <KhrisChat hostId={JESSICA_HOST_PROFILE_ID} sourceTag={sourceTag} />
     </main>
   );

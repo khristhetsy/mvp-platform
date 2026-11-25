@@ -1,3 +1,4 @@
+import { recordStaffConversation, replyToText, sourceFromReferer } from "@/lib/ir-agent/staff-agents";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { KHRIS_REWRITE_PROMPT, KHRIS_SYSTEM_PROMPT } from "@/lib/khris/config";
@@ -138,5 +139,11 @@ export async function POST(req: Request): Promise<Response> {
   if (mode !== "CLOSE") reply.bridge = "";
   if (mode !== "QUALIFY" && mode !== "BREATHE") reply.question = "";
 
+  await recordStaffConversation("khris", {
+    sessionId: input.sessionId,
+    source: sourceFromReferer(req),
+    turns,
+    replyText: replyToText(reply),
+  });
   return NextResponse.json({ ok: true, ...reply });
 }
