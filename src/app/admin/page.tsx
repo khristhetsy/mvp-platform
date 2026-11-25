@@ -28,6 +28,9 @@ import { getEffectivePermissions } from "@/lib/rbac/effective-permissions";
 import { canSeeCard, canActOnCard } from "@/lib/rbac/dashboard-cards";
 import { getPersonalDashboard } from "@/lib/dashboard/personal";
 import { PersonalDashboard } from "@/components/admin/PersonalDashboard";
+import { AdminDepartmentDashboard } from "@/components/admin/dashboard/AdminDepartmentDashboard";
+import { loadDepartmentMetrics } from "@/lib/dashboard/department-metrics";
+import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
 import { WorkspaceSection } from "@/components/admin/company-workspace/WorkspaceSection";
 import { MetricSkeletonRow } from "@/components/ui/Skeleton";
 import { PanelSkeleton } from "@/components/route-boundaries/RouteSegmentLoading";
@@ -52,6 +55,11 @@ function loadSharedCore(supabase: ServiceClient) {
   ]);
 }
 type SharedCore = Awaited<ReturnType<typeof loadSharedCore>>;
+
+async function DepartmentDashboardSection({ loadedAt }: Readonly<{ loadedAt: string }>) {
+  const metrics = await loadDepartmentMetrics(serviceRoleClientUntyped(), new Date(loadedAt));
+  return <AdminDepartmentDashboard metrics={metrics} loadedAt={loadedAt} />;
+}
 
 export default async function AdminDashboardPage() {
   const profile = await requireRole(["admin", "analyst"]);
@@ -105,6 +113,15 @@ export default async function AdminDashboardPage() {
           loadedAt={loadedAt}
         />
       </Suspense>
+      {showCard("department_dashboard") ? (
+        <div className="mb-6 px-1">
+          <WorkspaceSection icon="ti-layout-dashboard" tone="blue" title="Departments" subtitle="Sales, Marketing, Customer Support and Administration, compared with the prior period">
+            <Suspense fallback={<PanelSkeleton />}>
+              <DepartmentDashboardSection loadedAt={loadedAt} />
+            </Suspense>
+          </WorkspaceSection>
+        </div>
+      ) : null}
       {showCard("platform_health") ? (
         <div className="mb-6 px-1">
           <WorkspaceSection icon="ti-heartbeat" tone="teal" title="Platform health" subtitle="Reviews, intros, compliance & approvals at a glance">
