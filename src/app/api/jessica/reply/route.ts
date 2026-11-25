@@ -1,3 +1,4 @@
+import { recordStaffConversation, replyToText, sourceFromReferer } from "@/lib/ir-agent/staff-agents";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { JESSICA_SYSTEM_PROMPT } from "@/lib/jessica/config";
@@ -115,5 +116,11 @@ export async function POST(req: Request): Promise<Response> {
   if (mode !== "CLOSE") reply.bridge = "";
   if (mode !== "QUALIFY") reply.question = "";
 
+  await recordStaffConversation("jessica", {
+    sessionId,
+    source: sourceFromReferer(req),
+    turns,
+    replyText: replyToText(reply),
+  });
   return NextResponse.json({ ok: true, ...reply });
 }

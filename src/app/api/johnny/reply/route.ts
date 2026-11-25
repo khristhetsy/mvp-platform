@@ -1,3 +1,4 @@
+import { recordStaffConversation, replyToText, sourceFromReferer } from "@/lib/ir-agent/staff-agents";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { JOHNNY_SYSTEM_PROMPT } from "@/lib/johnny/config";
@@ -123,5 +124,11 @@ export async function POST(req: Request): Promise<Response> {
   const everything = reply.lines.join(" ");
   if (violatesGuardrails(everything) || PERCENT.test(everything)) return NextResponse.json({ ok: false, error: "Guardrail." }, { status: 502 });
 
+  await recordStaffConversation("johnny", {
+    sessionId,
+    source: sourceFromReferer(req),
+    turns,
+    replyText: replyToText(reply),
+  });
   return NextResponse.json({ ok: true, ...reply });
 }
