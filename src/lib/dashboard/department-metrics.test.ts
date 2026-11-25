@@ -177,3 +177,52 @@ describe("shareOf", () => {
     expect(shareOf([{ label: "a", value: 0 }])[0]!.percent).toBeNull();
   });
 });
+
+import { monthlyChanges, valueChange } from "./department-metrics";
+
+describe("valueChange", () => {
+  it("sums values in the current and prior window", () => {
+    const rows = [{ t: ago(1), v: 10 }, { t: ago(3), v: 5 }, { t: ago(10), v: 6 }];
+    expect(valueChange(rows, NOW, "week", "sum")).toMatchObject({ current: 15, prior: 6, direction: "up", percent: 150 });
+  });
+  it("averages and rounds to one decimal", () => {
+    const rows = [{ t: ago(1), v: 3 }, { t: ago(2), v: 4 }, { t: ago(3), v: 4 }];
+    expect(valueChange(rows, NOW, "week", "avg").current).toBe(3.7);
+  });
+  it("reports zero rather than inventing a figure when a window is empty", () => {
+    expect(valueChange([], NOW, "week", "avg")).toMatchObject({ current: 0, prior: 0, percent: null, direction: "flat" });
+  });
+});
+
+describe("monthlyChanges", () => {
+  it("compares the latest month with the one before, and 12 months with the 12 before", () => {
+    const months = Array.from({ length: 24 }, (_, i) => ({ month: `${2024 + Math.floor((i + 11) / 12)}-${String(((i + 11) % 12) + 1).padStart(2, "0")}`, v: i < 12 ? 10 : 20 }));
+    const c = monthlyChanges(months);
+    expect(c.year).toMatchObject({ current: 240, prior: 120, percent: 100 });
+    expect(c.month).toBeDefined();
+  });
+  it("has no month comparison with a single month and never a week", () => {
+    const c = monthlyChanges([{ month: "2026-10", v: 5 }]);
+    expect(c.month).toBeUndefined();
+    expect(c.week).toBeUndefined();
+    expect(c.year).toMatchObject({ current: 5, prior: 0, percent: null });
+  });
+});
+
+import { pillFor } from "./department-metrics";
+
+describe("pillFor", () => {
+  const metric = (over: Partial<DepartmentMetric> = {}): DepartmentMetric => ({
+    id: "m", department: "sales", label: "x", value: 1, detail: "", flowLabel: "new", weekly: null,
+    changes: { week: computeChange(12, 10), month: computeChange(0, 0), year: computeChange(3, 0) }, ...over,
+  });
+  it("shows arrow and percent", () => expect(pillFor(metric(), "week")).toEqual({ text: "▲ 20%", tone: "good" }));
+  it("reads up as bad when higher is worse", () => expect(pillFor(metric({ higherIsWorse: true }), "week").tone).toBe("bad"));
+  it("shows no activity when both periods are empty", () => expect(pillFor(metric(), "month")).toEqual({ text: "no activity", tone: "none" }));
+  it("never prints a percent when the prior period had none", () => expect(pillFor(metric(), "year")).toEqual({ text: "▲ new, none prior", tone: "good" }));
+  it("says so when no comparison exists", () => {
+    expect(pillFor(metric({ changes: null }), "week").text).toBe("no comparison");
+    expect(pillFor(metric({ note: "Not available", changes: null }), "week").text).toBe("not available");
+    expect(pillFor(metric({ changes: { month: computeChange(1, 1) } }), "week").text).toBe("not measurable");
+  });
+});
