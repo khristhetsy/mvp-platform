@@ -59,6 +59,7 @@ type Rule = { test: (t: string) => boolean; label: string; color: string };
 
 // First match wins; order goes from specific to general.
 const RULES: Rule[] = [
+  { test: (t) => t === "social_post_published", label: "Social media", color: BLUE },
   { test: (t) => t === "journey_digest" || t.includes("stage") || t.includes("approval") || t.includes("_nudge"), label: "Journey", color: NAVY },
   { test: (t) => t === "sms_reply" || t.startsWith("founder_outreach") || t.startsWith("outreach"), label: "Outreach", color: NAVY },
   { test: (t) => t.startsWith("deal_room"), label: "Deal room", color: BLUE },

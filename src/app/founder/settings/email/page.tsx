@@ -6,17 +6,21 @@ import { loadBudgetConfig } from "@/lib/notifications/founder-email-budget/confi
 import { loadFounderPrefs } from "@/lib/notifications/founder-email-budget/prefs";
 import { cohortFor } from "@/lib/notifications/founder-email-budget/rules";
 import { SettingsSidebarNav } from "../SettingsSidebarNav";
+import { loadNotificationPrefs } from "@/lib/notifications/preferences";
 import { FounderEmailSettings } from "./FounderEmailSettings";
+import { SocialPostAlerts } from "./SocialPostAlerts";
 
 export const dynamic = "force-dynamic";
 
 export default async function FounderSettingsEmailPage() {
   const profile = await requireRole(["founder"]);
-  const [{ company }, cfg, prefs] = await Promise.all([
+  const [{ company }, cfg, prefs, notifPrefs] = await Promise.all([
     getActiveCompanyForUser(profile),
     loadBudgetConfig(),
     loadFounderPrefs(profile.id),
+    loadNotificationPrefs(profile.id),
   ]);
+  const postLive = notifPrefs.events.social_post_published ?? { in_app: true, email: true, digest: false };
   const active = cohortFor(profile.id, cfg) === "rollout";
 
   return (
@@ -43,6 +47,10 @@ export default async function FounderSettingsEmailPage() {
           </p>
         </section>
       )}
+
+      <div className="mt-6">
+        <SocialPostAlerts initial={{ inApp: postLive.in_app, email: postLive.email }} />
+      </div>
     </FounderAppShell>
   );
 }
