@@ -6,7 +6,7 @@
  * assistant). The token {{PLANS}} is replaced at answer time with the live plan
  * list and prices from Admin Pricing, so prices are never typed into the text.
  */
-import { premiumCheckoutReady } from "@/lib/billing/buy-links";
+import { premiumCheckoutReady } from "@/lib/billing/pricing-guard";
 import { priceLabel, type PricingCatalog } from "@/lib/subscriptions/pricing-catalog";
 
 /** The model's signal that a person should answer. Never shown to the founder. */

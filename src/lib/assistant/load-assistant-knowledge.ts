@@ -25,7 +25,7 @@ import { loadPricing } from "@/lib/subscriptions/pricing-server";
 import { formatShortDay } from "@/lib/outreach/outreach-schedule";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import type { Database, Profile } from "@/lib/supabase/types";
-import { premiumCheckoutReady } from "@/lib/billing/buy-links";
+import { premiumCheckoutReady } from "@/lib/billing/pricing-guard";
 import {
   getAdminWorkspaceNavSections,
   getFounderWorkspaceNavSections,
@@ -69,7 +69,7 @@ function capText(cap: number | null): string {
 async function founderPlanKnowledge(profileId: string, companyId: string | null): Promise<string> {
   const lines: string[] = [];
   const catalog = await loadPricing();
-  // Premium is only on sale once its Lemon Squeezy checkout is set up.
+  // Premium is always on sale: it is paid by bank wire (see premiumCheckoutReady).
   const SELF_SERVE: PlanType[] = premiumCheckoutReady() ? [...SELF_SERVE_BASE, "founder_premium"] : SELF_SERVE_BASE;
   const offered = [...SELF_SERVE, "founder_managed_ir" as PlanType]
     .map((p) => `${PLAN_LABELS[p]} ${planPrice(catalog, p)}`)

@@ -20,12 +20,6 @@ export function isConvertPlan(value: unknown): value is ConvertPlan {
   return value === "founder_basic" || value === "founder_professional" || value === "founder_premium";
 }
 
-export function variantIdForPlan(plan: ConvertPlan): string | undefined {
-  if (plan === "founder_basic") return process.env.LEMONSQUEEZY_VARIANT_ID_BASIC;
-  if (plan === "founder_premium") return undefined; // Premium is Stripe only
-  return process.env.LEMONSQUEEZY_VARIANT_ID_PROFESSIONAL;
-}
-
 /** The organization tier that goes with a plan. */
 export function tierForPlan(plan: ConvertPlan | PlanType): "basic" | "professional" | null {
   if (plan === "founder_basic") return "basic";

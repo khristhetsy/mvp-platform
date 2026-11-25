@@ -1,6 +1,5 @@
 import "server-only";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { BUY_LINKS } from "@/lib/billing/buy-links";
 import {
   claimWindowOpen,
   isGuestCheckoutPlan,
@@ -94,18 +93,6 @@ export async function createPaidSignup(input: {
     .single();
   if (error || !data) throw new Error(`Could not start checkout: ${error?.message ?? "no row"}`);
   return (data as { id: string }).id;
-}
-
-/** The Lemon Squeezy checkout link for a guest. The signup id travels with the order so the webhook can find the row. Null when the plan has no buy link. */
-export function guestCheckoutUrl(input: { plan: PlanType; email: string; name?: string | null; signupId: string }): string | null {
-  if (!isGuestCheckoutPlan(input.plan)) return null;
-  const buyUrl = BUY_LINKS[input.plan];
-  if (!buyUrl) return null;
-  const url = new URL(buyUrl);
-  url.searchParams.set("checkout[email]", input.email);
-  if (input.name?.trim()) url.searchParams.set("checkout[name]", input.name.trim());
-  url.searchParams.set("checkout[custom][signup_id]", input.signupId);
-  return url.toString();
 }
 
 /**

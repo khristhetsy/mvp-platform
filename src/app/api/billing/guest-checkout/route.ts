@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { checkFormRateLimit } from "@/lib/ai-site/ratelimit";
 import { isPaymentsEnabled } from "@/lib/billing/pricing-guard";
-import { createPaidSignup, emailHasAccount, guestCheckoutUrl } from "@/lib/billing/paid-signup";
+import { createPaidSignup, emailHasAccount } from "@/lib/billing/paid-signup";
 import { createStripeCheckoutUrl, stripeConfigured } from "@/lib/stripe";
 import { managedPaymentsFor, stripePriceId } from "@/lib/billing/stripe-mapping";
 import { PAID_SIGNUP_CLAIM_DAYS, PAID_SIGNUP_COOKIE, makePaidSignupToken } from "@/lib/billing/paid-signup-core";
@@ -26,13 +26,15 @@ const schema = z.object({
 
 /**
  * Checkout for someone who has no login yet (pay first, account after). Records the
- * billing terms they accepted, then returns the Stripe Checkout link (Lemon Squeezy
- * only when Stripe is not configured). The order carries the paid signup id, which
+ * billing terms they accepted, then returns the Stripe Checkout link. Stripe is the only
+ * way a new payment can start: with no Stripe key or no Stripe price for the plan this
+ * refuses, and never falls back to Lemon Squeezy. The order carries the paid signup id, which
  * the payment webhook uses to find the row. A guest has never paid, so they always
  * pay the current price, never a legacy one.
  */
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  if (!isPaymentsEnabled()) {
+  if (!stripeConfigured() || !isPaymentsEnabled()) {
+    console.error(`[billing/guest-checkout] refused: ${stripeConfigured() ? "no Stripe price is configured for Basic or Professional" : "Stripe is not configured"}`);
     return NextResponse.json({ error: "Online checkout is not available yet. Please contact us to start your plan." }, { status: 503 });
   }
   const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown";
@@ -46,6 +48,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Please accept the billing terms to continue." }, { status: 400 });
   }
   const input = parsed.data;
+
+  // Checked before anything is saved, so a plan that cannot be charged never leaves a
+  // paid signup row behind.
+  const priceId = stripePriceId(input.planType, "current");
+  if (!priceId) {
+    console.error(`[billing/guest-checkout] refused: Stripe current price for ${input.planType} is not configured`);
+    return NextResponse.json({ error: "Online checkout is not available for this plan yet. Please contact us." }, { status: 503 });
+  }
 
   // Premium carries the iCFO Services Agreement. It is checked here, before any payment,
   // and kept on the signup so it is recorded against the account when the login is created.
@@ -74,33 +84,19 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       userAgent: req.headers.get("user-agent"),
       premiumAgreement,
     });
-    let url: string | null;
-    if (stripeConfigured()) {
-      const priceId = stripePriceId(input.planType, "current");
-      if (!priceId) {
-        console.error(`[billing/guest-checkout] Stripe current price for ${input.planType} is not configured`);
-        url = null;
-      } else {
-        const origin = req.headers.get("origin") ?? process.env.NEXT_PUBLIC_SITE_URL ?? "https://icapos.com";
-        url = await createStripeCheckoutUrl({
-          priceId,
-          profileId: null,
-          signupId,
-          planType: input.planType,
-          email: input.email.trim().toLowerCase(),
-          customerId: null,
-          successUrl: `${origin}/start/paid`,
-          cancelUrl: `${origin}/start/pay?email=${encodeURIComponent(input.email)}&plan=${input.planType}`,
-          managedPayments: managedPaymentsFor(input.planType),
-          replacesLsSubscriptionId: null,
-        });
-      }
-    } else {
-      url = guestCheckoutUrl({ plan: input.planType, email: input.email, name: input.name, signupId });
-    }
-    if (!url) {
-      return NextResponse.json({ error: "Online checkout is not available for this plan yet. Please contact us." }, { status: 503 });
-    }
+    const origin = req.headers.get("origin") ?? process.env.NEXT_PUBLIC_SITE_URL ?? "https://icapos.com";
+    const url = await createStripeCheckoutUrl({
+      priceId,
+      profileId: null,
+      signupId,
+      planType: input.planType,
+      email: input.email.trim().toLowerCase(),
+      customerId: null,
+      successUrl: `${origin}/start/paid`,
+      cancelUrl: `${origin}/start/pay?email=${encodeURIComponent(input.email)}&plan=${input.planType}`,
+      managedPayments: managedPaymentsFor(input.planType),
+      replacesLsSubscriptionId: null,
+    });
     await recordFunnelEvent({ sessionId: `guest_checkout_${signupId}`, eventName: "checkout_start", properties: { plan: input.planType, guest: true } });
 
     const res = NextResponse.json({ url });

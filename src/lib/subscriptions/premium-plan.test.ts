@@ -3,7 +3,7 @@ import { founderEntitlements } from "@/lib/subscriptions/entitlements";
 import { PRICED_PLANS, CODE_DEFAULT_PRICING, pricingFromRow } from "@/lib/subscriptions/pricing-catalog";
 import { parseRequestedPlan, PLAN_PRICES } from "@/lib/subscriptions/plans";
 import { variantToPlan } from "@/lib/billing/webhook-mapping";
-import { BUY_LINKS, premiumCheckoutReady } from "@/lib/billing/buy-links";
+import { premiumCheckoutReady } from "@/lib/billing/pricing-guard";
 import { founderPricingPlans } from "@/lib/billing/pricing";
 import { pricingFor } from "@/content/pricing";
 
@@ -40,7 +40,6 @@ describe("Premium founder plan", () => {
 
   it("is paid by bank wire only and always listed (Oct 9, 2026)", () => {
     expect(premiumCheckoutReady()).toBe(true);
-    expect(BUY_LINKS.founder_premium).toBeUndefined();
     expect(founderPricingPlans(CODE_DEFAULT_PRICING).map((p) => p.planType)).toContain("founder_premium");
   });
 

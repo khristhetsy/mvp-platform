@@ -17,15 +17,8 @@ const schema = z.object({
   send: z.boolean().optional(),
 });
 
-function variantFor(plan: string): string | undefined {
-  if (plan === "founder_basic") return process.env.LEMONSQUEEZY_VARIANT_ID_BASIC;
-  if (plan === "founder_professional") return process.env.LEMONSQUEEZY_VARIANT_ID_PROFESSIONAL;
-  if (plan === "founder_premium") return process.env.LEMONSQUEEZY_VARIANT_ID_PREMIUM;
-  return undefined;
-}
-
 // POST /api/admin/billing/customers/[id]/checkout — generate a card checkout link
-// (Stripe, or Lemon Squeezy until Stripe is configured) for this customer. The customer enters their own card.
+// (Stripe only, never Lemon Squeezy) for this customer. The customer enters their own card.
 // Optionally email it to them. Never charges a card from the app.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   try {
@@ -34,8 +27,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const parsed = schema.safeParse(await req.json().catch(() => ({})));
     if (!parsed.success) return NextResponse.json({ error: "Invalid request." }, { status: 400 });
 
-    const variantId = variantFor(parsed.data.plan);
-    if (!stripeConfigured() && !variantId) return NextResponse.json({ error: `No Lemon Squeezy variant configured for ${parsed.data.plan}.` }, { status: 400 });
+    if (!stripeConfigured()) {
+      console.error(`[admin/billing/checkout] refused ${parsed.data.plan} checkout: Stripe is not configured`);
+      return NextResponse.json({ error: "Card checkout is not available: Stripe is not configured." }, { status: 503 });
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = serviceRoleClientUntyped() as any;
@@ -51,7 +46,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       .maybeSingle();
     const subscription = (subRaw ?? null) as AdminCheckoutInput["subscription"];
     const move = describeMove(subscription, parsed.data.plan);
-    const url = await createAdminCheckoutUrl({ plan: parsed.data.plan, variantId, email, profileId, successUrl: `${appUrl}/admin/billing`, subscription });
+    const url = await createAdminCheckoutUrl({ plan: parsed.data.plan, email, profileId, successUrl: `${appUrl}/admin/billing`, subscription });
 
     let emailed = false;
     if (parsed.data.send) {
