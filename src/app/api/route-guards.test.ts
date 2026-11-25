@@ -67,6 +67,7 @@ const PUBLIC_ROUTES: Record<string, string> = {
   "fit/event/route.ts": "public form, rate limited",
   "funnel/route.ts": "public form, rate limited",
   "ir-agent/[agentId]/conversation/route.ts": "public IR agent page, rate limited",
+  "ir-agent/[agentId]/view/route.ts": "public IR agent page view counter, rate limited, writes only a session id and link tag",
   "jessica/reply/route.ts": "public assistant, rate limited and AI budget capped",
   "jessica2/reply/route.ts": "public assistant, rate limited and AI budget capped",
   "lead/route.ts": "public form, rate limited",
