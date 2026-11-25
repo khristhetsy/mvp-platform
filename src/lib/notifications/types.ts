@@ -37,6 +37,7 @@ export type NotificationType =
   | "founder_social_draft_generated"
   | "founder_social_draft_flagged"
   | "founder_social_draft_copied"
+  | "social_post_published"
   | "founder_outreach_target_selected"
   | "founder_outreach_target_pipelined"
   | "founder_pipeline_intro_requested"

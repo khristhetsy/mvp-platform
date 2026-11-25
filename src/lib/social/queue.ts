@@ -19,6 +19,7 @@ import { openToken } from "@/lib/social/token-cipher";
 import { reportDbError } from "@/lib/supabase/report";
 import { logFounderSocialEvent } from "@/lib/social/activity";
 import { notifyStaffIfNotRecent } from "@/lib/notifications/notifications";
+import { notifyFounderPostLive } from "@/lib/notifications/social-post-live";
 
 const ADAPTERS: Record<string, SocialAdapter> = { linkedin: linkedInAdapter, facebook: facebookAdapter, instagram: instagramAdapter, reddit: redditAdapter };
 
@@ -224,6 +225,11 @@ export async function runSocialQueue(limit = 20): Promise<QueueRunResult> {
         await logFounderSocialEvent({
           type: "founder.social_post_published", founderId: pm.owner_profile_id,
           description: postLabel(pm), metadata: { postId: row.post_id, title: postLabel(pm), network: (account as AccountRow).platform, url },
+        });
+        // Tell the founder it is live (bell and email). Only published posts: a failure stays a staff alert.
+        await notifyFounderPostLive({
+          founderId: pm.owner_profile_id, variantId: row.id, postId: row.post_id,
+          platform: (account as AccountRow).platform, title: postLabel(pm), url,
         });
       }
     } catch (err) {

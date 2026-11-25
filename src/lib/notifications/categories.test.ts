@@ -9,6 +9,7 @@ describe("notificationCategory", () => {
     expect(notificationCategory("spv_target_amount_reached")).toMatchObject({ label: "SPV", color: "#0E7C66" });
     expect(notificationCategory("trial_ending_soon")).toMatchObject({ label: "Billing", color: "#B45309", needsAction: true });
     expect(notificationCategory("sms_reply")).toMatchObject({ label: "Outreach", needsAction: true });
+    expect(notificationCategory("social_post_published")).toMatchObject({ label: "Social media", color: "#1A6CE4", needsAction: false });
   });
 
   it("marks requests as needing action and plain updates as not", () => {
