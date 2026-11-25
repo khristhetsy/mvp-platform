@@ -4,7 +4,15 @@ import { useState } from "react";
 import Link from "next/link";
 import { MetricChart, type MetricChartData } from "@/components/ui/MetricChart";
 
-export type MetricBreakdownRow = { label: string; value: string; tone?: "good" | "warn" | "bad" };
+export type MetricBreakdownRow = {
+  label: string;
+  value: string;
+  tone?: "good" | "warn" | "bad";
+  /** A second, smaller line under the label (who, when, status). */
+  sub?: string;
+  /** Makes the row a link to the record it stands for. */
+  href?: string;
+};
 
 export type MetricDetail = {
   /** Rows that make up the number — the breakdown the tile can't fit. */
@@ -121,21 +129,32 @@ export function MetricDetailDrawer({
 
         {extra?.breakdown?.length ? (
           <div className="mt-4 overflow-hidden rounded-lg border border-slate-200">
-            {extra.breakdown.map((r) => (
-              <div
-                key={r.label}
-                className="flex items-center justify-between gap-3 border-b border-slate-100 px-3 py-2 text-[12.5px] last:border-b-0"
-              >
-                <span className="text-slate-600">{r.label}</span>
-                <span
-                  className={`font-semibold tabular-nums ${
-                    r.tone === "bad" ? "text-red-700" : r.tone === "good" ? "text-emerald-700" : r.tone === "warn" ? "text-amber-700" : "text-slate-900"
-                  }`}
-                >
-                  {r.value}
-                </span>
-              </div>
-            ))}
+            {extra.breakdown.map((r, i) => {
+              const inner = (
+                <>
+                  <span className="min-w-0 text-slate-600">
+                    <span className="block truncate">{r.label}</span>
+                    {r.sub ? <span className="block truncate text-[11px] text-slate-400">{r.sub}</span> : null}
+                  </span>
+                  <span
+                    className={`flex-none font-semibold tabular-nums ${
+                      r.tone === "bad" ? "text-red-700" : r.tone === "good" ? "text-emerald-700" : r.tone === "warn" ? "text-amber-700" : "text-slate-900"
+                    }`}
+                  >
+                    {r.value}
+                    {r.href ? <span className="ml-2 text-indigo-600">→</span> : null}
+                  </span>
+                </>
+              );
+              const cls = "flex items-center justify-between gap-3 border-b border-slate-100 px-3 py-2 text-[12.5px] last:border-b-0";
+              return r.href ? (
+                <Link key={`${r.label}-${i}`} href={r.href} onClick={onClose} className={`${cls} hover:bg-slate-50`}>
+                  {inner}
+                </Link>
+              ) : (
+                <div key={`${r.label}-${i}`} className={cls}>{inner}</div>
+              );
+            })}
           </div>
         ) : null}
 

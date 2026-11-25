@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildEventsDashboard } from "./dashboard";
 
 const now = new Date("2026-11-25T12:00:00Z");
-const base = { registrations: [], applications: [], sponsorEventIds: [], campaigns: [], invitations: [], now };
+const base = { registrations: [], applications: [], sponsors: [], campaigns: [], invitations: [], now };
 
 describe("buildEventsDashboard", () => {
   it("flags drafts whose date has passed and finds the next live event", () => {
@@ -54,5 +54,31 @@ describe("buildEventsDashboard", () => {
     const d = buildEventsDashboard({ ...base, events: [] });
     expect(d.nextEvent).toBeNull();
     expect(d.attention).toEqual([]);
+  });
+
+  it("lists the records behind each number, capped, with links to their pages", () => {
+    const regs = Array.from({ length: 12 }, (_, i) => ({
+      event_id: "a",
+      status: i < 2 ? "attended" : "registered",
+      attendee_id: `p${i}`,
+      created_at: `2026-11-${String(10 + i).padStart(2, "0")}T10:00:00Z`,
+    }));
+    const d = buildEventsDashboard({
+      ...base,
+      events: [{ id: "a", title: "Paris", status: "ended", startsAt: "2026-11-01T09:00:00Z" }],
+      registrations: regs,
+      names: { p11: "Newest Person" },
+      sponsors: [{ event_id: "a", sponsor_id: "s1" }],
+      sponsorNames: { s1: "Acme" },
+      campaigns: [{ id: "c1", name: "Founders", status: "sending", event_ids: ["a"] }],
+      invitations: [{ campaign_id: "c1" }],
+    });
+    expect(d.records.registrations.a.total).toBe(12);
+    expect(d.records.registrations.a.records).toHaveLength(8);
+    expect(d.records.registrations.a.records[0]).toMatchObject({ label: "Newest Person", href: "/admin/events/a/registrations" });
+    expect(d.records.attended.a.total).toBe(2);
+    expect(d.records.sponsors.records[0]).toMatchObject({ label: "Acme", href: "/admin/events/sponsors" });
+    expect(d.records.campaigns["event:a"].records[0]).toMatchObject({ label: "Founders", sub: "1 invited" });
+    expect(d.records.events.records[0].href).toBe("/admin/events/a");
   });
 });
