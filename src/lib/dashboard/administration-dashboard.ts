@@ -76,7 +76,7 @@ const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
 const val = (n: number | null) => (n === null ? NA : String(n));
 
 /** Records plus the "N more" line, or the empty and failed states. */
-function recordsFor(list: MetricRecord[] | null | undefined, total: number | null, where: string, emptyText: string): Pick<MetricDetail, "records" | "recordsMore" | "recordsEmpty"> {
+export function recordsFor(list: MetricRecord[] | null | undefined, total: number | null, where: string, emptyText: string): Pick<MetricDetail, "records" | "recordsMore" | "recordsEmpty"> {
   if (!list) return { recordsEmpty: "The records could not be read." };
   if (list.length === 0) return { recordsEmpty: total === 0 || total === null ? emptyText : "The records could not be read." };
   const more = total !== null && total > list.length ? `${total - list.length} more in ${where}` : undefined;

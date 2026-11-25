@@ -128,6 +128,7 @@ export const ADMIN_NAV_SOP_COVERAGE: Record<string, number[]> = {
   "/admin/profile": [99],
   "/admin/profile-fields": [92],
   "/admin/feature-controls": [92],
+  "/admin/system": [39],
   "/admin/integrations": [40],
   "/admin/queues": [93],
   "/admin/automation": [93],

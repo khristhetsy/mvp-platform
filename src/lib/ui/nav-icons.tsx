@@ -1,5 +1,6 @@
 import {
   LayoutPanelTop,
+  ServerCog,
   Radio,
   Podcast,
   Clapperboard,
@@ -374,6 +375,7 @@ export const workspaceNavIconByHref: Record<string, LucideIcon> = {
   "/admin/billing": CreditCard,
   "/admin/accounts": Landmark,
   "/admin/profile": UserCog,
+  "/admin/system": ServerCog, // System dashboard
   "/admin/integrations": Settings, // System
   "/admin/queues": Layers,
   "/admin/automation": Zap,

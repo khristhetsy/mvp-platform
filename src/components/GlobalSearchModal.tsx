@@ -438,7 +438,7 @@ function catOf(href: string): CatKey {
   if (starts("/admin/companies", "/admin/investors", "/admin/support", "/admin/founders-stuck", "/admin/prospect-intros", "/admin/ai-usage")) return "support";
   if (starts("/admin/learning")) return "learning";
   if (starts("/admin/users", "/admin/billing", "/admin/pricing", "/admin/accounts", "/admin/profile", "/admin/profile-fields", "/admin/feature-controls", "/admin/crm/connectors")) return "admin";
-  if (starts("/admin/integrations", "/admin/queues", "/admin/automation", "/admin/scheduled-jobs", "/admin/page-builder-lab", "/admin/system-health", "/admin/imports", "/admin/beta-operations")) return "system";
+  if (starts("/admin/system", "/admin/integrations", "/admin/queues", "/admin/automation", "/admin/scheduled-jobs", "/admin/page-builder-lab", "/admin/system-health", "/admin/imports", "/admin/beta-operations")) return "system";
   if (starts("/admin/analytics", "/admin/funnels", "/admin/reports", "/admin/message-activity", "/admin/insights", "/admin/compliance", "/admin/audit", "/admin/report-compare")) return "analytics";
   if (starts("/admin/ir", "/admin/ir-funnel", "/admin/crm", "/admin/fit", "/admin/spvs", "/admin/matching", "/admin/outreach-qualification", "/admin/portfolio", "/admin/readiness", "/admin/marketplace", "/admin/partner-scores", "/admin/deal-rooms", "/admin/data-room", "/admin/diligence")) return "ir";
   return "dashboard";

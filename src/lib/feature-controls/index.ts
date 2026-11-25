@@ -138,7 +138,7 @@ export const FEATURES: FeatureDef[] = [
   { key: "diligence", label: "Diligence", group: "Admin · operations", hrefs: { admin: ["/admin/diligence", "/admin/data-room"] } },
   { key: "billing", label: "Billing", group: "Admin · operations", hrefs: { admin: ["/admin/billing", "/admin/pricing"] } },
   { key: "user_management", label: "User management", group: "Admin · operations", hrefs: { admin: ["/admin/users/manage", "/admin/users/permissions", "/admin/accounts"] } },
-  { key: "system_integrations", label: "System & integrations", group: "Admin · operations", hrefs: { admin: ["/admin/integrations", "/admin/queues", "/admin/automation", "/admin/page-builder-lab", "/admin/system-health", "/admin/imports", "/admin/beta-operations", "/admin/scheduled-jobs"] } },
+  { key: "system_integrations", label: "System & integrations", group: "Admin · operations", hrefs: { admin: ["/admin/system", "/admin/integrations", "/admin/queues", "/admin/automation", "/admin/page-builder-lab", "/admin/system-health", "/admin/imports", "/admin/beta-operations", "/admin/scheduled-jobs"] } },
   { key: "accounting", label: "Accounting", group: "Admin · operations", hrefs: { admin: ["/admin/accounting", "/admin/accounting/customers", "/admin/accounting/invoices", "/admin/accounting/payments", "/admin/accounting/bank", "/admin/accounting/reports", "/admin/accounting/settings"] } },
   { key: "social_media", label: "Social Media", group: "Admin · operations", hrefs: { admin: ["/admin/social"] } },
   { key: "linkedin", label: "LinkedIn", group: "Admin · operations", hrefs: { admin: ["/admin/linkedin"] } },
