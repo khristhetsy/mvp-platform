@@ -107,10 +107,17 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/accounting/settings",  label: "Settings"  },
         ],
       },
-      { href: "/admin/social", label: "Social Media", requiredPermission: "view_admin_dashboard" },
-      // LinkedIn outreach (admin pilot): invites, follow ups and the hand off to the AI chat agents.
-      { href: "/admin/linkedin", label: "LinkedIn", requiredPermission: "view_admin_dashboard" },
-      { href: "/admin/ai-agent", label: "AI Agent", requiredPermission: "manage_settings" },
+      // Social Media group: social posting, LinkedIn outreach (admin pilot: invites, follow ups and the hand off to the AI chat agents) and the AI Agent.
+      {
+        href: "/admin/social",
+        label: "Social Media",
+        requiredPermission: "view_admin_dashboard",
+        children: [
+          { href: "/admin/social",   label: "Social Media", requiredPermission: "view_admin_dashboard" },
+          { href: "/admin/linkedin", label: "LinkedIn",     requiredPermission: "view_admin_dashboard" },
+          { href: "/admin/ai-agent", label: "AI Agent",     requiredPermission: "manage_settings" },
+        ],
+      },
       {
         href: "/admin/events",
         label: "Events",
@@ -126,16 +133,16 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/events/brochure",     label: "Event Brochure", menuGroup: "Content" },
           { href: "/admin/events/analytics",    label: "Analytics", menuGroup: "Reporting"    },
           { href: "/admin/events/gamification", label: "Gamification", menuGroup: "Reporting" },
-        ],
-      },
-      // Studio: run the three live rooms of an event. Names match the public event tabs.
-      {
-        href: "/admin/studio",
-        label: "Studio",
-        requiredPermission: "view_events",
-        children: [
-          { href: "/admin/studio/spotlight",   label: "Spotlight Studio"   },
-          { href: "/admin/studio/talk-show",   label: "Talk Show Studio"   },
+          // Studio: run the three live rooms of an event. Names match the public event tabs.
+          {
+            href: "/admin/studio",
+            label: "Studio",
+            requiredPermission: "view_events",
+            children: [
+              { href: "/admin/studio/spotlight",   label: "Spotlight Studio"   },
+              { href: "/admin/studio/talk-show",   label: "Talk Show Studio"   },
+            ],
+          },
         ],
       },
       {

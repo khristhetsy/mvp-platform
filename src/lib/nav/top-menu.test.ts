@@ -61,10 +61,7 @@ describe("toApps: admin", () => {
       "Investor Directory",
       "Accounting",
       "Social Media",
-      "LinkedIn",
-      "AI Agent",
       "Events",
-      "Studio",
       "Voice",
       "Communication",
       "Operational Tools",
@@ -109,7 +106,7 @@ describe("toApps: admin", () => {
   });
 
   it("groups Events", () => {
-    expect(entryLabels(byLabel(apps, "Events"))).toEqual(["All events", "Sales", "Content", "Networking Matching", "Reporting"]);
+    expect(entryLabels(byLabel(apps, "Events"))).toEqual(["All events", "Sales", "Content", "Networking Matching", "Reporting", "Studio"]);
   });
 
   it("uses a hub's own tabs when an override is given", () => {
