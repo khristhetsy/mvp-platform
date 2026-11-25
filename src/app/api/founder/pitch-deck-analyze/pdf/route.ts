@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { founderPlanApiBlock } from "@/lib/subscriptions/founder-access";
 import { requireApiProfile } from "@/lib/api/auth";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -11,6 +12,8 @@ export const dynamic = "force-dynamic";
 export async function POST(): Promise<Response> {
   const auth = await requireApiProfile(["founder"]);
   if ("error" in auth) return auth.error ?? NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const planBlock = await founderPlanApiBlock(auth.profile.id);
+  if (planBlock) return planBlock;
 
   const { company } = await getActiveCompanyForUser(auth.profile);
   if (!company) return NextResponse.json({ error: "No company linked." }, { status: 400 });

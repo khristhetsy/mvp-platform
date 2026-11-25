@@ -48,7 +48,7 @@ export default async function MarketClaimPage() {
 
   return (
     <FounderAppShell profileName={profile.full_name ?? profile.email ?? "Founder"} profileSubtitle={company.company_name ?? "Your company"}>
-      <FounderFeatureGate featureKey="ai_diligence">
+      <FounderFeatureGate featureKey="premium_tools">
         <WorkspacePageContainer>
           <PageHeader
             eyebrow="Stage 2 · Preparation"

@@ -65,7 +65,7 @@ export default async function PitchDeckAnalyzerPage() {
       profileName={profile.full_name ?? profile.email ?? "Founder"}
       profileSubtitle={company?.company_name ?? "Your company"}
     >
-      <FounderFeatureGate featureKey="ai_diligence">
+      <FounderFeatureGate featureKey="premium_tools">
         <WorkspacePageContainer>
           <PageHeader
             eyebrow={t("raise_toolkit_2")}

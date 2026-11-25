@@ -42,7 +42,7 @@ export default async function BoardPrepPage() {
       profileName={profile.full_name ?? profile.email ?? "Founder"}
       profileSubtitle={t("board_meeting_prep")}
     >
-      <FounderFeatureGate featureKey="dashboard">
+      <FounderFeatureGate featureKey="premium_tools">
         <div className="mx-auto max-w-3xl space-y-6">
           <PageHeader
             eyebrow={t("governance")}

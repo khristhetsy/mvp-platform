@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { founderPlanApiBlock } from "@/lib/subscriptions/founder-access";
 import { requireApiProfile } from "@/lib/api/auth";
 import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
 import { checkFounderStageAccess } from "@/lib/founder-journey/stage-gate";
@@ -21,6 +22,8 @@ export async function gateBusinessPlanApi(): Promise<BusinessPlanGate> {
   if (!isFeatureEnabled(flags, "founder", "business_plan")) {
     return { error: NextResponse.json({ error: "This feature is not available." }, { status: 403 }) };
   }
+  const planBlock = await founderPlanApiBlock(auth.profile.id);
+  if (planBlock) return { error: planBlock };
   const access = await checkFounderStageAccess("qualify");
   if (!access.allowed) {
     return { error: NextResponse.json({ error: "The business plan unlocks at Stage 2." }, { status: 403 }) };

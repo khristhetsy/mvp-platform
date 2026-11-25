@@ -95,6 +95,22 @@ function featuresForPlan(planType: PlanType, subscription: SubscriptionRecord, _
     ]);
   }
 
+  // A paid plan whose subscription has ended (canceled or expired) no longer pays
+  // for the toolset. The row keeps the plan name, so without this guard a founder
+  // who cancelled would keep every tool. They fall back to the Free feature set;
+  // access returns as soon as the subscription is active again.
+  const isPaidFounderPlan =
+    planType === "founder_basic" ||
+    planType === "founder_professional" ||
+    planType === "founder_premium" ||
+    planType === "founder_managed_ir";
+  if (
+    isPaidFounderPlan &&
+    (subscription.subscription_status === "canceled" || subscription.subscription_status === "expired")
+  ) {
+    return new Set<FeatureKey>(FOUNDER_FREE_FEATURES);
+  }
+
   if (planType === "investor_free") {
     return new Set<FeatureKey>(["investor_workspace", "settings"]);
   }
@@ -172,17 +188,17 @@ export function canAccessFeature(
     };
   }
 
-  if (subscription.plan_type === "founder_basic") {
-    return {
-      allowed: false,
-      reason: "Upgrade to Professional for more distribution — up to 50 matched investors, intro requests, and a monthly presentation slot.",
-    };
-  }
-
   if (subscription.subscription_status === "expired" || subscription.subscription_status === "canceled") {
     return {
       allowed: false,
       reason: "Your subscription is inactive. Upgrade to continue using this feature.",
+    };
+  }
+
+  if (subscription.plan_type === "founder_basic") {
+    return {
+      allowed: false,
+      reason: "Upgrade to Professional for more distribution — up to 50 matched investors, intro requests, and a monthly presentation slot.",
     };
   }
 

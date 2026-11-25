@@ -152,7 +152,7 @@ export default async function FounderInvestorInterestPage() {
 
   return (
     <FounderAppShell profileName={profile.full_name ?? profile.email ?? "Founder"} profileSubtitle={company?.company_name ?? undefined}>
-      <FounderFeatureGate featureKey="dashboard">
+      <FounderFeatureGate featureKey="premium_tools">
         <WorkspacePageContainer>
           <PageHeader
             eyebrow="Investors"

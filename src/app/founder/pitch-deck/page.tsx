@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/supabase/auth";
+import { founderToolLock } from "@/components/founder/founderToolLock";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderJourneyGate } from "@/components/founder/FounderJourneyGate";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -20,6 +21,8 @@ export default async function FounderPitchDeckPage() {
   const supabase = await createServerSupabaseClient();
   const flags = await loadFeatureFlags(supabase);
   if (!isFeatureEnabled(flags, "founder", "business_plan")) notFound();
+  const planLock = !acting ? await founderToolLock(profile.full_name ?? profile.email ?? "Founder", "Pitch deck") : null;
+  if (planLock) return planLock;
 
   const company = acting ? acting.company : (await getActiveCompanyForUser(profile)).company;
   if (!company) {

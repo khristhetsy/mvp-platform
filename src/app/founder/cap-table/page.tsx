@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/supabase/auth";
+import { founderToolLock } from "@/components/founder/founderToolLock";
 import { getTranslations } from "next-intl/server";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderJourneyGate } from "@/components/founder/FounderJourneyGate";
@@ -23,6 +24,8 @@ export default async function FounderCapTablePage() {
   const supabase = await createServerSupabaseClient();
   const flags = await loadFeatureFlags(supabase);
   if (!isFeatureEnabled(flags, "founder", "cap_table")) notFound();
+  const planLock = !acting ? await founderToolLock(profile.full_name ?? profile.email ?? "Founder", "Cap table") : null;
+  if (planLock) return planLock;
 
   const company = acting ? acting.company : (await getActiveCompanyForUser(profile)).company;
   if (!company) {
