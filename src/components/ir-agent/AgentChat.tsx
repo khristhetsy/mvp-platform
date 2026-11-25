@@ -810,6 +810,15 @@ export function AgentChat({ config, sourceTag, preview = false }: { config: Agen
         await readback();
       }
     };
+    // One view per visitor session, written quietly. Never from the admin preview.
+    if (!preview) {
+      void fetch(`/api/ir-agent/${config.id}/view`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        keepalive: true,
+        body: JSON.stringify({ sessionId, source: sourceTag }),
+      }).catch(() => {});
+    }
     // A fresh conversation whenever the config changes: the preview restarts clean.
     const timer = setTimeout(() => {
       setMsgs([]);

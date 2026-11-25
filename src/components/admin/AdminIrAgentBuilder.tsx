@@ -3,15 +3,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AdminAgentsList } from "@/components/admin/AdminAgentsList";
 import { IrAgentStudio, type StudioTab } from "@/components/ir-agent/IrAgentStudio";
+import { AdminAgentTraction } from "@/components/admin/AdminAgentTraction";
 import type { AgentListItem } from "@/app/api/admin/ir-agent/agents/route";
 import { useToast } from "@/components/ui/ToastProvider";
 
 export type AgentCompany = { id: string; name: string; kind: "Company" | "SPV"; status: "draft" | "live" | "paused" | null };
 export type StandaloneAgent = { id: string; name: string; status: "draft" | "live" | "paused" };
 
-type PageTab = "agents" | StudioTab;
+type PageTab = "agents" | "traction" | StudioTab;
 const PAGE_TABS: Array<{ id: PageTab; label: string }> = [
   { id: "agents", label: "Agents" },
+  { id: "traction", label: "Traction" },
   { id: "build", label: "Build" },
   { id: "train", label: "Train" },
   { id: "share", label: "Share" },
@@ -248,7 +250,9 @@ export function AdminIrAgentBuilder({
 
       {tab === "agents" ? <AdminAgentsList onNew={newAgent} onEdit={editAgent} onRemoved={agentRemoved} /> : null}
 
-      {tab !== "agents" && tab !== "build" ? (
+      {tab === "traction" ? <AdminAgentTraction /> : null}
+
+      {tab !== "agents" && tab !== "traction" && tab !== "build" ? (
         <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
           {workingOn ? (
             <>
@@ -385,8 +389,8 @@ export function AdminIrAgentBuilder({
       </section>
       ) : null}
 
-      {tab !== "agents" && choice.kind === "org" ? <IrAgentStudio key={`org:${choice.id}`} orgId={choice.id} tab={tab} /> : null}
-      {tab !== "agents" && choice.kind === "agent" ? <IrAgentStudio key={`agent:${choice.id}`} agentId={choice.id} tab={tab} /> : null}
+      {tab !== "agents" && tab !== "traction" && choice.kind === "org" ? <IrAgentStudio key={`org:${choice.id}`} orgId={choice.id} tab={tab} /> : null}
+      {tab !== "agents" && tab !== "traction" && choice.kind === "agent" ? <IrAgentStudio key={`agent:${choice.id}`} agentId={choice.id} tab={tab} /> : null}
       {tab === "build" && blank ? <p className="py-2 text-sm text-slate-500">Choose a company, find one through your contacts, or create a new AI Agent to start building.</p> : null}
     </div>
   );
