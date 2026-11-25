@@ -288,6 +288,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
         label: "System",
         requiredPermission: "manage_integrations",
         children: [
+          { href: "/admin/system",          label: "Dashboard"       },
           { href: "/admin/integrations",    label: "Integrations"    },
           { href: "/admin/queues",          label: "Queues"          },
           { href: "/admin/automation",      label: "Automation"      },

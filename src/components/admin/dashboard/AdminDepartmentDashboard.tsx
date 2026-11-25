@@ -16,8 +16,8 @@ import type { DashPanel, DashboardData, TabData, TabId } from "@/lib/dashboard/a
 const RING_COLOR = "#1A6CE4";
 const WARN_COLOR = "#B45309";
 const PILL_CLASS = { good: "bg-emerald-50 text-emerald-700", bad: "bg-red-50 text-red-700", none: "bg-slate-100 text-slate-500" } as const;
-const ACTION_COLOR = { bad: "#b91c1c", warn: "#b45309", good: "#15803d" } as const;
-const ACTION_MARK = { bad: "!", warn: "●", good: "★" } as const;
+export const ACTION_COLOR = { bad: "#b91c1c", warn: "#b45309", good: "#15803d" } as const;
+export const ACTION_MARK = { bad: "!", warn: "●", good: "★" } as const;
 
 function Ring({ metric, period, onOpen }: Readonly<{ metric: DepartmentMetric; period: Period; onOpen: (m: DepartmentMetric) => void }>) {
   const c = 2 * Math.PI * 24;
@@ -42,7 +42,7 @@ function Ring({ metric, period, onOpen }: Readonly<{ metric: DepartmentMetric; p
   );
 }
 
-function RingGrid({ rings, period, onOpen }: Readonly<{ rings: DepartmentMetric[]; period: Period; onOpen: (m: DepartmentMetric) => void }>) {
+export function RingGrid({ rings, period, onOpen }: Readonly<{ rings: DepartmentMetric[]; period: Period; onOpen: (m: DepartmentMetric) => void }>) {
   return (
     <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${Math.min(Math.max(rings.length, 1), 8)}, minmax(0, 1fr))` }}>
       {rings.map((m) => <Ring key={m.id} metric={m} period={period} onOpen={onOpen} />)}
@@ -50,7 +50,7 @@ function RingGrid({ rings, period, onOpen }: Readonly<{ rings: DepartmentMetric[
   );
 }
 
-function MorePanel({ panel, period, onOpen }: Readonly<{ panel: DashPanel; period: Period; onOpen: (m: DepartmentMetric) => void }>) {
+export function MorePanel({ panel, period, onOpen }: Readonly<{ panel: DashPanel; period: Period; onOpen: (m: DepartmentMetric) => void }>) {
   if (panel.rings.length === 0) return null;
   return (
     <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
