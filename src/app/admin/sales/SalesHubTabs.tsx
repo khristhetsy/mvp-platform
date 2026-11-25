@@ -20,7 +20,22 @@ export const SALES_HUB_TABS: { label: string; href: string }[] = [
   { label: "Settings", href: "/admin/sales/settings" },
 ];
 
-const TABS = SALES_HUB_TABS;
+/** The tabs that stay in the Sales tab row; the rest live in the gear menu (SALES_GEAR_MENU). */
+const MAIN_TAB_HREFS = new Set(["/admin/sales", "/admin/sales/contacts", "/admin/sales/opportunities", "/admin/sales/pipeline", "/admin/sales/contracts"]);
+const TABS = SALES_HUB_TABS.filter((t) => MAIN_TAB_HREFS.has(t.href));
+
+/** The Sales pages reached from the gear menu, in three groups (a separator before each `sep`). */
+export const SALES_GEAR_MENU: { label: string; href: string; icon: string; sep?: boolean }[] = [
+  { label: "AI queue", href: "/admin/sales/queue", icon: "ti-list-check" },
+  { label: "AI training", href: "/admin/sales/training", icon: "ti-school" },
+  { label: "Automation", href: "/admin/sales/automation", icon: "ti-bolt" },
+  { label: "Sequences", href: "/admin/sales/sequences", icon: "ti-arrows-shuffle" },
+  { label: "Scheduled", href: "/admin/sales/scheduled-emails", icon: "ti-clock" },
+  { label: "Forecast", href: "/admin/sales/forecast", icon: "ti-chart-line", sep: true },
+  { label: "Analytics", href: "/admin/sales/analytics", icon: "ti-chart-bar" },
+  { label: "Task report", href: "/admin/sales/task-report", icon: "ti-report" },
+  { label: "Settings", href: "/admin/sales/settings", icon: "ti-adjustments", sep: true },
+];
 
 /** The Sales tab row (classic chrome). The View Me / Team control lives in each page's gear (SalesViewGear). */
 export function SalesHubTabs() {
