@@ -25,7 +25,8 @@ export type DashboardCardId =
   | "investor_activity"
   | "recent_activity"
   | "platform_overview"
-  | "system_health";
+  | "system_health"
+  | "department_dashboard";
 
 export interface DashboardCardDef {
   id: DashboardCardId;
@@ -49,6 +50,7 @@ export const DASHBOARD_CARDS: DashboardCardDef[] = [
   { id: "recent_activity", label: "Recent activity timeline", view: null, act: null },
   { id: "platform_overview", label: "Company portfolio overview", view: "manage_companies", act: null },
   { id: "system_health", label: "System health", view: "view_system_health", act: null },
+  { id: "department_dashboard", label: "Department dashboard", view: null, act: null },
 ];
 
 const CARD_BY_ID = new Map(DASHBOARD_CARDS.map((c) => [c.id, c]));
