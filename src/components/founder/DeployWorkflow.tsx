@@ -443,7 +443,7 @@ export function DeployWorkflow({
             </div>
           ) : (
             <div className="space-y-4">
-              <ManualOutreachGuide key={manualStarted ? "started" : "new"} defaultOpen={!manualStarted} />
+              <ManualOutreachGuide defaultOpen={false} />
               {manual}
             </div>
           )}

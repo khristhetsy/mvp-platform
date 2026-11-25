@@ -589,25 +589,27 @@ export function LaunchManualOutreach({ contacts, directoryDefaults }: { contacts
           </button>
         </div>
       ) : recipients.length === 0 ? (
-        <div className="flex flex-wrap items-center gap-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3.5">
+        <div className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3.5 sm:flex-row sm:items-center sm:gap-4">
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-amber-900">Launch your manual outreach</p>
             <p className="text-[13px] text-amber-800">
               You have not sent your first email yet. The wizard takes you through five short steps: investors, message, attachments, follow ups, then review and send. Nothing goes out until you start the campaign.
             </p>
           </div>
-          <button type="button" onClick={snoozeNudge} className="text-xs text-amber-800 underline">
-            Remind me later
-          </button>
-          <button
-            type="button"
-            onClick={openWizard}
-            disabled={capReached}
-            title={capReached ? `Email limit reached. Sending resumes ${emailCap?.resetsLabel}.` : undefined}
-            className={btnPrimary}
-          >
-            Launch the wizard
-          </button>
+          <div className="flex flex-col gap-2 sm:flex-row-reverse sm:items-center sm:gap-4">
+            <button
+              type="button"
+              onClick={openWizard}
+              disabled={capReached}
+              title={capReached ? `Email limit reached. Sending resumes ${emailCap?.resetsLabel}.` : undefined}
+              className={`${btnPrimary} w-full sm:w-auto`}
+            >
+              Launch the wizard
+            </button>
+            <button type="button" onClick={snoozeNudge} className="text-center text-xs text-amber-800 underline">
+              Remind me later
+            </button>
+          </div>
         </div>
       ) : (
       <div className="flex flex-wrap items-center gap-3">

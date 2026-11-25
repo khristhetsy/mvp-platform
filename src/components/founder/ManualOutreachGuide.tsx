@@ -199,10 +199,15 @@ export function ManualOutreachGuide({ defaultOpen }: { defaultOpen: boolean }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-700"
+        className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left"
       >
-        <HelpCircle className="h-4 w-4" aria-hidden="true" />
-        How manual outreach works
+        <span className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
+          <HelpCircle className="h-4 w-4 text-indigo-600" aria-hidden="true" />
+          How manual outreach works
+        </span>
+        <span className="inline-flex items-center gap-1 text-xs font-medium text-indigo-600">
+          Show <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
+        </span>
       </button>
     );
   }
