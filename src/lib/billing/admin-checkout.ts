@@ -1,4 +1,3 @@
-import { createCheckoutUrl } from "@/lib/lemonsqueezy";
 import { createStripeCheckoutUrl, stripeConfigured } from "@/lib/stripe";
 import { keepsLegacyPrice, lemonRenewalAnchor, managedPaymentsFor, stripePriceId, type PriceHolder } from "@/lib/billing/stripe-mapping";
 import { isCardSubscription } from "@/lib/billing/plan-change";
@@ -11,8 +10,6 @@ export type AdminCheckoutInput = {
   profileId: string;
   successUrl: string;
   name?: string;
-  /** Lemon Squeezy variant, used only when Stripe is not configured. */
-  variantId?: string;
   /**
    * The customer's current subscription row. When it is a live Lemon Squeezy card
    * subscription on this same plan, the link moves it to Stripe: the old price is
@@ -38,32 +35,36 @@ export function describeMove(
 }
 
 /**
- * The card checkout link an admin sends a customer. Stripe once it is configured
- * (the current price), Lemon Squeezy otherwise. The customer enters their own card.
- * Throws a readable message when the plan has no price or variant set.
+ * The card checkout link an admin sends a customer. Always Stripe: it is the only way a
+ * new payment can start, and this never falls back to Lemon Squeezy. The customer enters
+ * their own card. Throws a readable message, and logs it, when Stripe is not configured
+ * or the plan has no Stripe price.
  */
 export async function createAdminCheckoutUrl(input: AdminCheckoutInput): Promise<string> {
-  if (stripeConfigured()) {
-    const { moving } = describeMove(input.subscription, input.plan);
-    // A subscriber with a continuous active plan keeps their old price. Never fall
-    // back to the current price for one: they would be charged more than agreed.
-    const tier = moving && keepsLegacyPrice(input.subscription, input.plan) ? "legacy" : "current";
-    const priceId = stripePriceId(input.plan, tier);
-    if (!priceId) throw new Error(`No Stripe ${tier} price is configured for ${input.plan}.`);
-    const lsId = moving ? input.subscription?.ls_subscription_id ?? null : null;
-    return createStripeCheckoutUrl({
-      priceId,
-      profileId: input.profileId,
-      planType: input.plan,
-      email: input.email,
-      customerId: input.subscription?.stripe_customer_id ?? null,
-      successUrl: moving ? `${origin()}/billing?checkout=success` : input.successUrl,
-      cancelUrl: moving ? `${origin()}/billing` : input.successUrl,
-      managedPayments: managedPaymentsFor(input.plan),
-      replacesLsSubscriptionId: lsId,
-      billingCycleAnchor: lsId ? lemonRenewalAnchor(input.subscription?.current_period_end) : null,
-    });
+  if (!stripeConfigured()) {
+    console.error(`[billing/admin-checkout] refused ${input.plan} checkout: Stripe is not configured`);
+    throw new Error("Card checkout is not available: Stripe is not configured.");
   }
-  if (!input.variantId) throw new Error(`No Lemon Squeezy variant is configured for ${input.plan}.`);
-  return createCheckoutUrl({ variantId: input.variantId, email: input.email, profileId: input.profileId, successUrl: input.successUrl, name: input.name });
+  const { moving } = describeMove(input.subscription, input.plan);
+  // A subscriber with a continuous active plan keeps their old price. Never fall
+  // back to the current price for one: they would be charged more than agreed.
+  const tier = moving && keepsLegacyPrice(input.subscription, input.plan) ? "legacy" : "current";
+  const priceId = stripePriceId(input.plan, tier);
+  if (!priceId) {
+    console.error(`[billing/admin-checkout] refused ${input.plan} checkout: no Stripe ${tier} price is configured`);
+    throw new Error(`No Stripe ${tier} price is configured for ${input.plan}.`);
+  }
+  const lsId = moving ? input.subscription?.ls_subscription_id ?? null : null;
+  return createStripeCheckoutUrl({
+    priceId,
+    profileId: input.profileId,
+    planType: input.plan,
+    email: input.email,
+    customerId: input.subscription?.stripe_customer_id ?? null,
+    successUrl: moving ? `${origin()}/billing?checkout=success` : input.successUrl,
+    cancelUrl: moving ? `${origin()}/billing` : input.successUrl,
+    managedPayments: managedPaymentsFor(input.plan),
+    replacesLsSubscriptionId: lsId,
+    billingCycleAnchor: lsId ? lemonRenewalAnchor(input.subscription?.current_period_end) : null,
+  });
 }

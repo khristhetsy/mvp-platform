@@ -19,7 +19,7 @@ export type LaunchReadinessSnapshot = {
   generatedAt: string;
   operational: OperationalSystemSnapshot;
   environment: ReturnType<typeof getEnvironmentStatusSummary> & {
-    /** Lemon Squeezy checkout is wired (buy links or API). */
+    /** Card checkout is wired: Stripe is configured and a plan has a Stripe price. */
     paymentsConfigured: boolean;
     privateBetaMode: boolean;
   };

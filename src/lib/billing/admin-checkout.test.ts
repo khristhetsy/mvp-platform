@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@/lib/lemonsqueezy", () => ({ createCheckoutUrl: vi.fn() }));
 vi.mock("@/lib/stripe", () => ({ stripeConfigured: vi.fn(), createStripeCheckoutUrl: vi.fn() }));
 
 import { createStripeCheckoutUrl, stripeConfigured } from "@/lib/stripe";
@@ -62,6 +61,24 @@ describe("createAdminCheckoutUrl on Stripe", () => {
   it("charges the current price with no anchor for someone new", async () => {
     await createAdminCheckoutUrl({ ...base, subscription: null });
     expect(mockStripe).toHaveBeenCalledWith(expect.objectContaining({ priceId: "price_basic_99", replacesLsSubscriptionId: null, billingCycleAnchor: null }));
+  });
+  it("fails closed when Stripe is not configured, with a server log and no Lemon Squeezy call", async () => {
+    mockConfigured.mockReturnValue(false);
+    vi.stubEnv("LEMONSQUEEZY_API_KEY", "ls_key");
+    vi.stubEnv("LEMONSQUEEZY_VARIANT_ID_BASIC", "111");
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    await expect(createAdminCheckoutUrl({ ...base, subscription: null })).rejects.toThrow(/Stripe is not configured/);
+    expect(mockStripe).not.toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("Stripe is not configured"));
+  });
+  it("fails closed with a server log when the plan has no Stripe price", async () => {
+    vi.stubEnv("STRIPE_PRICE_BASIC", "");
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    await expect(createAdminCheckoutUrl({ ...base, subscription: null })).rejects.toThrow(/No Stripe current price/);
+    expect(mockStripe).not.toHaveBeenCalled();
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("no Stripe current price"));
   });
   it("never falls back to the current price when the legacy price is missing", async () => {
     vi.stubEnv("STRIPE_PRICE_BASIC_LEGACY", "");

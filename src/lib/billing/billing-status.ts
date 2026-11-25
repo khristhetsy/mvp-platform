@@ -12,9 +12,15 @@ export type BillingLifecycleStatus =
   | "free_investor"
   | "internal";
 
+/**
+ * `paymentsEnabled` is read on the server by default. A component that also renders in
+ * the browser must pass it in: the Stripe key is a server variable, so the default is
+ * always false there and the two renders would disagree.
+ */
 export function getBillingLifecycleStatus(
   subscription: SubscriptionRecord,
   requestedPlan?: PlanType | null,
+  paymentsEnabled: boolean = isPaymentsEnabled(),
 ): BillingLifecycleStatus {
   if (subscription.plan_type === "admin_internal") {
     return "internal";
@@ -44,7 +50,7 @@ export function getBillingLifecycleStatus(
     if (
       requestedPlan &&
       (requestedPlan === "founder_basic" || requestedPlan === "founder_professional" || requestedPlan === "founder_premium") &&
-      !isPaymentsEnabled()
+      !paymentsEnabled
     ) {
       return "paid_pending_activation";
     }

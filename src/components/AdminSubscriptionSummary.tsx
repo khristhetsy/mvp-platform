@@ -34,7 +34,10 @@ export function AdminSubscriptionSummary({
     return <p className="text-xs text-slate-500">{t("no_subscription_record")}</p>;
   }
 
-  const lifecycle = getBillingLifecycleStatus(subscription, requestedPlan ?? null);
+  // This summary renders in the browser, where the server only Stripe key cannot be read.
+  // Pass the flag so the server and browser renders agree. It is true because that is
+  // what this component has always computed here: the old guard was true in every browser.
+  const lifecycle = getBillingLifecycleStatus(subscription, requestedPlan ?? null, true);
 
   return (
     <dl className="grid gap-1 text-xs text-slate-600 sm:grid-cols-2">

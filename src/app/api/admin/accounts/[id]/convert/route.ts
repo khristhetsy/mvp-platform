@@ -4,7 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireApiProfile } from "@/lib/api/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getOrganization } from "@/lib/organizations/organizations";
-import { isConvertPlan, variantIdForPlan, type ConvertPlan } from "@/lib/organizations/convert-to-paid";
+import { isConvertPlan, type ConvertPlan } from "@/lib/organizations/convert-to-paid";
 import { createAdminCheckoutUrl } from "@/lib/billing/admin-checkout";
 import { stripeConfigured } from "@/lib/stripe";
 import { sendEmail } from "@/lib/email/send-email";
@@ -31,7 +31,7 @@ const schema = z.object({
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // POST — convert an admin-created demo Founder account to a paying one by card. Makes a
-// card checkout link (Stripe, or Lemon Squeezy until Stripe is configured) for the demo's founder profile, using the client's own
+// card checkout link (Stripe only, never Lemon Squeezy) for the demo's founder profile, using the client's own
 // bill to email (the demo login uses a placeholder address), and optionally emails it.
 // The account stays a comped demo until the first payment: the billing webhook then
 // activates it (activateConvertedOrg). Calling it again for a pending account reuses the
@@ -88,12 +88,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
   const name = (body.billToName ?? saved?.conversion_name ?? "").trim() || null;
 
-  const variantId = variantIdForPlan(plan);
-  if (plan === "founder_premium" && !stripeConfigured()) {
-    return NextResponse.json({ error: "Premium is paid through Stripe, which is not configured." }, { status: 400 });
-  }
-  if (!stripeConfigured() && !variantId) {
-    return NextResponse.json({ error: `No Lemon Squeezy variant is configured for ${PLAN_LABELS[plan]}.` }, { status: 400 });
+  // Stripe is the only way a new payment can start. Never falls back to Lemon Squeezy.
+  if (!stripeConfigured()) {
+    console.error(`[admin/accounts/convert] refused ${plan} checkout: Stripe is not configured`);
+    return NextResponse.json({ error: `${PLAN_LABELS[plan]} is paid through Stripe, which is not configured.` }, { status: 400 });
   }
 
   let url: string;
@@ -102,7 +100,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     // Premium: the client accepts the Services Agreement first, then goes on to Stripe from that page.
     url = plan === "founder_premium"
       ? `${appUrl}${agreementLinkPath(makeAgreementLinkToken(org.id))}`
-      : await createAdminCheckoutUrl({ plan, variantId, email, profileId: founder.founder_id, successUrl: `${appUrl}/admin/accounts`, name: name ?? undefined });
+      : await createAdminCheckoutUrl({ plan, email, profileId: founder.founder_id, successUrl: `${appUrl}/admin/accounts`, name: name ?? undefined });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "Could not create the checkout link." }, { status: 502 });
   }

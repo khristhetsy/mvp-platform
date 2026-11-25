@@ -4,20 +4,21 @@ import { readJsonResponse } from "@/test/mock-supabase";
 vi.mock("@/lib/api/auth", () => ({ requireApiProfile: vi.fn() }));
 vi.mock("@/lib/supabase/admin", () => ({ createServiceRoleClient: vi.fn() }));
 vi.mock("@/lib/organizations/organizations", () => ({ getOrganization: vi.fn() }));
-vi.mock("@/lib/lemonsqueezy", () => ({ createCheckoutUrl: vi.fn() }));
+vi.mock("@/lib/stripe", () => ({ stripeConfigured: vi.fn(), createStripeCheckoutUrl: vi.fn() }));
 vi.mock("@/lib/email/send-email", () => ({ sendEmail: vi.fn() }));
 
 import { POST } from "./route";
 import { requireApiProfile } from "@/lib/api/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getOrganization } from "@/lib/organizations/organizations";
-import { createCheckoutUrl } from "@/lib/lemonsqueezy";
+import { createStripeCheckoutUrl, stripeConfigured } from "@/lib/stripe";
 import { sendEmail } from "@/lib/email/send-email";
 
 const mockAuth = vi.mocked(requireApiProfile);
 const mockAdmin = vi.mocked(createServiceRoleClient);
 const mockOrg = vi.mocked(getOrganization);
-const mockCheckout = vi.mocked(createCheckoutUrl);
+const mockCheckout = vi.mocked(createStripeCheckoutUrl);
+const mockConfigured = vi.mocked(stripeConfigured);
 const mockSend = vi.mocked(sendEmail);
 
 const demoOrg = { id: "o1", name: "Christopher Williams", type: "founder", created_via: "admin_direct", purpose: "demo", tier: "professional" };
@@ -60,7 +61,8 @@ async function call(body: unknown): Promise<Response> {
 
 beforeEach(() => {
   vi.resetAllMocks();
-  vi.stubEnv("LEMONSQUEEZY_VARIANT_ID_PROFESSIONAL", "222");
+  vi.stubEnv("STRIPE_PRICE_PROFESSIONAL", "price_professional_199");
+  mockConfigured.mockReturnValue(true);
   mockAuth.mockResolvedValue({ profile: { id: "staff", role: "admin" } } as never);
   mockOrg.mockResolvedValue(demoOrg as never);
   mockCheckout.mockResolvedValue("https://pay.example/checkout");
@@ -97,7 +99,7 @@ describe("POST /api/admin/accounts/[id]/convert", () => {
     const body = await readJsonResponse<{ url: string; emailed: boolean }>(res);
     expect(res.status).toBe(200);
     expect(body).toMatchObject({ url: "https://pay.example/checkout", emailed: true });
-    expect(mockCheckout).toHaveBeenCalledWith(expect.objectContaining({ variantId: "222", email: "c@x.com", profileId: "f1", name: "Chris W" }));
+    expect(mockCheckout).toHaveBeenCalledWith(expect.objectContaining({ priceId: "price_professional_199", email: "c@x.com", profileId: "f1", replacesLsSubscriptionId: null }));
     expect(mockSend).toHaveBeenCalledWith(expect.objectContaining({ to: "c@x.com" }));
     expect(updates[0]).toMatchObject({ table: "organizations", payload: expect.objectContaining({ conversion_plan: "founder_professional", conversion_email: "c@x.com" }) });
   });
@@ -108,6 +110,21 @@ describe("POST /api/admin/accounts/[id]/convert", () => {
     expect(res.status).toBe(200);
     expect(mockSend).not.toHaveBeenCalled();
     expect(mockCheckout).toHaveBeenCalledWith(expect.objectContaining({ email: "c@x.com" }));
+  });
+
+  it("fails closed when Stripe is not configured, even with a Lemon Squeezy variant set", async () => {
+    mockConfigured.mockReturnValue(false);
+    vi.stubEnv("LEMONSQUEEZY_VARIANT_ID_PROFESSIONAL", "222");
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { client, updates } = adminClient({});
+    mockAdmin.mockReturnValue(client as never);
+    const res = await call({ plan: "founder_professional", billToEmail: "c@x.com" });
+    const body = await readJsonResponse<{ error: string }>(res);
+    expect(res.status).toBe(400);
+    expect(body.error).toContain("Stripe, which is not configured");
+    expect(mockCheckout).not.toHaveBeenCalled();
+    expect(mockSend).not.toHaveBeenCalled();
+    expect(updates).toEqual([]);
   });
 
   it("says the migration is missing instead of failing silently", async () => {
