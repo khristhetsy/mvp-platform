@@ -95,7 +95,7 @@ describe("loadDepartmentMetrics", () => {
     const out = await loadDepartmentMetrics(fakeDb({}), new Date(NOW));
     expect(out.length).toBe(departmentSpecs("").length);
     expect(out.find((m) => m.id === "sales_companies")).toMatchObject({ value: 4 });
-    expect(out.find((m) => m.id === "sales_companies")?.changes?.week.current).toBe(1);
+    expect(out.find((m) => m.id === "sales_companies")?.changes?.week?.current).toBe(1);
   });
 
   it("degrades one tile instead of the page when a query fails", async () => {
