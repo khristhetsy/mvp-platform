@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { founderPlanApiBlock } from "@/lib/subscriptions/founder-access";
 import { requireApiProfile } from "@/lib/api/auth";
 import { answerQuestion, getQuestionCompanyId } from "@/lib/data-room/qa";
 import { actingBlock } from "@/lib/admin/acting-central";
@@ -12,6 +13,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (actingBlocked) return actingBlocked;
   const auth = await requireApiProfile(["founder"]);
   if ("error" in auth) return auth.error;
+  const planBlock = await founderPlanApiBlock(auth.profile.id);
+  if (planBlock) return planBlock;
   const { supabase, profile } = auth;
 
   const { id } = await params;

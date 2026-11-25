@@ -68,7 +68,7 @@ export default async function FounderDataRoomPage() {
       profileName={profile.full_name ?? profile.email ?? "Founder"}
       profileSubtitle={company?.company_name ?? "Your company"}
     >
-      <FounderFeatureGate featureKey="readiness">
+      <FounderFeatureGate featureKey="premium_tools">
         <WorkspacePageContainer>
           <PageHeader
             eyebrow={t("due_diligence")}
