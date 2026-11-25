@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { founderPlanApiBlock } from "@/lib/subscriptions/founder-access";
 import { requireApiProfile } from "@/lib/api/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
@@ -25,6 +26,8 @@ const revokeSchema = z.object({ investorId: z.string().uuid() });
 export async function GET() {
   const auth = await requireApiProfile(["founder"]);
   if ("error" in auth) return auth.error;
+  const planBlock = await founderPlanApiBlock(auth.profile.id);
+  if (planBlock) return planBlock;
   const { company } = await getActiveCompanyForUser(auth.profile);
   if (!company) return NextResponse.json({ grants: [] });
   return NextResponse.json({ grants: await listDataRoomAccess(company.id) });
@@ -33,6 +36,8 @@ export async function GET() {
 export async function POST(request: Request) {
   const auth = await requireApiProfile(["founder"]);
   if ("error" in auth) return auth.error;
+  const planBlock = await founderPlanApiBlock(auth.profile.id);
+  if (planBlock) return planBlock;
   const { company } = await getActiveCompanyForUser(auth.profile);
   if (!company) return NextResponse.json({ error: "No company found." }, { status: 400 });
 
@@ -120,6 +125,8 @@ export async function POST(request: Request) {
 export async function DELETE(request: Request) {
   const auth = await requireApiProfile(["founder"]);
   if ("error" in auth) return auth.error;
+  const planBlock = await founderPlanApiBlock(auth.profile.id);
+  if (planBlock) return planBlock;
   const { company } = await getActiveCompanyForUser(auth.profile);
   if (!company) return NextResponse.json({ error: "No company found." }, { status: 400 });
 
