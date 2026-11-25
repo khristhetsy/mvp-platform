@@ -1,4 +1,5 @@
 import {
+  LayoutPanelTop,
   Radio,
   Podcast,
   Clapperboard,
@@ -366,6 +367,7 @@ export const workspaceNavIconByHref: Record<string, LucideIcon> = {
   "/admin/calendar": Calendar,
   "/admin/meet": Video,
   "/admin/signatures": Signature,
+  "/admin/administration/dashboard": LayoutPanelTop, // Administration dashboard
   "/admin/users/manage": UsersRound,
   "/admin/users/permissions": ShieldCheck,
   "/admin/feature-controls": ToggleRight,

@@ -271,6 +271,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
         href: "/admin/users/manage",
         label: "Administration",
         children: [
+          { href: "/admin/administration/dashboard", label: "Dashboard", requiredPermission: "manage_users" },
           { href: "/admin/users/manage",      label: "User Management",  requiredPermission: "manage_users"    },
           { href: "/admin/users/permissions", label: "User Permissions", requiredPermission: "manage_users"    },
           { href: "/admin/crm/connectors",    label: "Contact Sync",     requiredPermission: "manage_crm"      },

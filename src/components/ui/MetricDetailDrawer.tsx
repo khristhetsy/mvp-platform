@@ -24,7 +24,16 @@ export type MetricDetail = {
   note?: string;
   /** A graph of recent readings, shown under the note. Optional. */
   chart?: MetricChartData;
+  /** The records behind the number. Each row opens its own page. */
+  records?: MetricRecord[];
+  recordsLabel?: string;
+  /** Shown under the records, e.g. "15 more in Compliance". */
+  recordsMore?: string;
+  /** Shown instead of the records when there are none, or when they could not be read. */
+  recordsEmpty?: string;
 };
+
+export type MetricRecord = { label: string; sub?: string; href: string };
 
 /**
  * Detail panel for a metric tile.
@@ -147,6 +156,31 @@ export function MetricDetailDrawer({
               );
             })}
           </div>
+        ) : null}
+
+        {extra?.records?.length ? (
+          <div className="mt-4">
+            {extra.recordsLabel ? <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">{extra.recordsLabel}</p> : null}
+            <div className="space-y-1.5">
+              {extra.records.map((r) => (
+                <Link
+                  key={`${r.href}|${r.label}`}
+                  href={r.href}
+                  onClick={onClose}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2 hover:border-indigo-300 hover:bg-indigo-50/40"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate text-[12.5px] font-semibold text-slate-900">{r.label}</span>
+                    {r.sub ? <span className="block truncate text-[11.5px] text-slate-500">{r.sub}</span> : null}
+                  </span>
+                  <span className="shrink-0 text-xs font-semibold text-indigo-700">Open →</span>
+                </Link>
+              ))}
+            </div>
+            {extra.recordsMore ? <p className="mt-1.5 text-[11.5px] text-slate-500">{extra.recordsMore}</p> : null}
+          </div>
+        ) : extra?.recordsEmpty ? (
+          <p className="mt-4 rounded-lg border border-dashed border-slate-200 px-3 py-3 text-center text-[12.5px] text-slate-500">{extra.recordsEmpty}</p>
         ) : null}
 
         {/* AI on demand. Nothing is fetched until asked. */}
