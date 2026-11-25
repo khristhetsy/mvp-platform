@@ -118,6 +118,7 @@ export const ADMIN_NAV_SOP_COVERAGE: Record<string, number[]> = {
   "/admin/learning/founders": [34],
   "/admin/learning/coach": [33],
   "/admin/manual": [64],
+  "/admin/administration/dashboard": [64],
   "/admin/users/manage": [3, 4],
   "/admin/users/permissions": [11],
   "/admin/crm/connectors": [99],
