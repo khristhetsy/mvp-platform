@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { founderPlanApiBlock } from "@/lib/subscriptions/founder-access";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
@@ -145,6 +146,8 @@ export async function GET() {
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const planBlock = await founderPlanApiBlock(profile.id, "capital_raise");
+  if (planBlock) return planBlock;
 
   const admin = createServiceRoleClient();
   const { company } = await getActiveCompanyForUser(profile);

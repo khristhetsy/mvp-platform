@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
+import { founderPlanApiBlock } from "@/lib/subscriptions/founder-access";
 import { requireApiProfile } from "@/lib/api/auth";
 import { getActiveCompanyForUser } from "@/lib/organizations/active-company";
 
 export async function GET() {
   const auth = await requireApiProfile(["founder"]);
   if ("error" in auth) return auth.error;
+  const planBlock = await founderPlanApiBlock(auth.profile.id);
+  if (planBlock) return planBlock;
 
   const { company } = await getActiveCompanyForUser(auth.profile);
   if (!company) return NextResponse.json({ rooms: [] });
