@@ -3,13 +3,26 @@ import { AppShell } from "@/components/AppShell";
 import { MetricCard } from "@/components/MetricCard";
 import { requirePermissionPage } from "@/lib/api/permissions";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { loadEventsDashboard } from "@/lib/icfo-events/dashboard";
+import { DashboardPopup } from "@/components/admin-events/DashboardPopup";
+import type { MetricDetail } from "@/components/ui/MetricDetailDrawer";
+import { loadEventsDashboard, type RecordList } from "@/lib/icfo-events/dashboard";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Events dashboard" };
 
 const fmtDate = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "No date";
+
+/** Records behind a number, as popup rows that each link to their page. */
+function panel(list: RecordList | undefined, href: string, hrefLabel: string, note?: string): MetricDetail {
+  const l = list ?? { total: 0, records: [] };
+  return {
+    breakdown: l.records.map((r) => ({ label: r.label, sub: r.sub, value: r.value, href: r.href })),
+    note: l.total > l.records.length ? `Showing ${l.records.length} of ${l.total}. ${note ?? ""}`.trim() : note,
+    href,
+    hrefLabel,
+  };
+}
 
 const TONE_DOT: Record<string, string> = { bad: "bg-red-500", warn: "bg-amber-500", info: "bg-[#1A6CE4]" };
 
@@ -43,12 +56,12 @@ export default async function AdminEventsDashboardPage({
   const invited = selected ? d.invitedByEvent[selected.id] ?? 0 : 0;
   const started = selected ? selected.datePassed || selected.status === "ended" || selected.status === "live" : false;
 
-  const funnel = selected
+  const funnel: Array<{ key: string; value: number; show: string; popup?: MetricDetail }> = selected
     ? [
-        { key: "Invited", value: invited, show: String(invited) },
-        { key: "Registered", value: selected.registered, show: String(selected.registered) },
-        { key: "Attended", value: selected.attended, show: started ? String(selected.attended) : "Not started" },
-        { key: "No show", value: selected.noShow, show: started ? String(selected.noShow) : "Not started" },
+        { key: "Invited", value: invited, show: String(invited), popup: panel(d.records.campaigns[`event:${selected.id}`], "/admin/events/invitations", "Open invitations") },
+        { key: "Registered", value: selected.registered, show: String(selected.registered), popup: panel(d.records.registrations[selected.id], `/admin/events/${selected.id}/registrations`, "Open registrations") },
+        { key: "Attended", value: selected.attended, show: started ? String(selected.attended) : "Not started", popup: started ? panel(d.records.attended[selected.id], `/admin/events/${selected.id}/registrations`, "Open registrations") : undefined },
+        { key: "No show", value: selected.noShow, show: started ? String(selected.noShow) : "Not started", popup: started ? panel(d.records.noShow[selected.id], `/admin/events/${selected.id}/registrations`, "Open registrations") : undefined },
       ]
     : [];
   const funnelMax = Math.max(1, ...funnel.map((f) => f.value));
@@ -73,11 +86,7 @@ export default async function AdminEventsDashboardPage({
           ring={{ percent: t.events > 0 ? Math.round((t.published / t.events) * 100) : null, center: String(t.published), pending: t.events === 0 }}
           flag={t.draftsPastDate > 0 ? { text: `${t.draftsPastDate} draft with a date that has passed`, tone: "warn" } : null}
           audience="admin"
-          detailPanel={{
-            breakdown: d.rows.map((r) => ({ label: r.title, value: r.status })),
-            href: "/admin/events",
-            hrefLabel: "All events",
-          }}
+          detailPanel={panel(d.records.events, "/admin/events", "All events")}
         />
         <MetricCard
           label="Registrations"
@@ -88,11 +97,7 @@ export default async function AdminEventsDashboardPage({
           ring={{ percent: null, center: t.registrations.toLocaleString(), pending: t.registrations === 0 }}
           flag={d.nextEvent ? { text: `${d.nextEvent.title} is ${d.nextEvent.daysAway} days out`, tone: "good" } : null}
           audience="admin"
-          detailPanel={{
-            breakdown: d.rows.map((r) => ({ label: r.title, value: String(r.registered) })),
-            href: "/admin/events/registrations",
-            hrefLabel: "Registrations",
-          }}
+          detailPanel={panel(d.records.registrations.all, "/admin/events/registrations", "Open all registrations")}
         />
         <MetricCard
           label="Speaker applications"
@@ -103,14 +108,7 @@ export default async function AdminEventsDashboardPage({
           ring={{ percent: null, center: String(t.applicationsOpen), pending: t.applicationsOpen === 0 }}
           flag={t.applicationsSubmitted > 0 ? { text: `${t.applicationsSubmitted} waiting on a first review`, tone: "warn" } : null}
           audience="admin"
-          detailPanel={{
-            breakdown: [
-              { label: "Submitted", value: String(t.applicationsSubmitted) },
-              { label: "Under review", value: String(t.applicationsUnderReview) },
-            ],
-            href: "/admin/events/applications",
-            hrefLabel: "Applications",
-          }}
+          detailPanel={panel(d.records.applicationsOpen, "/admin/events/applications", "Open applications")}
         />
         <MetricCard
           label="Sponsors"
@@ -121,11 +119,7 @@ export default async function AdminEventsDashboardPage({
           ring={{ percent: null, center: String(t.sponsors), pending: true }}
           flag={null}
           audience="admin"
-          detailPanel={{
-            note: "Counts sponsor listings on events. No sponsor pipeline status is recorded, so there is no stage breakdown.",
-            href: "/admin/events/sponsors",
-            hrefLabel: "Sponsors",
-          }}
+          detailPanel={panel(d.records.sponsors, "/admin/events/sponsors", "Open sponsors", "No sponsor pipeline status is recorded, so there is no stage breakdown.")}
         />
       </div>
 
@@ -159,7 +153,24 @@ export default async function AdminEventsDashboardPage({
                     return (
                       <tr key={r.id} className="border-t border-slate-100">
                         <td className="px-4 py-2.5">
-                          <Link href={`/admin/events/dashboard?event=${r.id}`} className="font-medium text-slate-800 hover:text-[#1A6CE4]">{r.title}</Link>
+                          <DashboardPopup
+                            label={r.title}
+                            value={String(r.registered)}
+                            unit="registered"
+                            detail={`${fmtDate(r.startsAt)}, ${r.status}`}
+                            detailPanel={{
+                              breakdown: [
+                                { label: "Registrations", value: String(r.registered), href: `/admin/events/${r.id}/registrations` },
+                                { label: "Invitation campaigns", value: String(d.records.campaigns[`event:${r.id}`]?.total ?? 0), href: "/admin/events/invitations" },
+                                { label: "Manage this event", value: "", href: `/admin/events/${r.id}` },
+                              ],
+                              href: `/admin/events/dashboard?event=${r.id}`,
+                              hrefLabel: "Show its funnel",
+                            }}
+                            className="text-left font-medium text-slate-800 hover:text-[#1A6CE4]"
+                          >
+                            {r.title}
+                          </DashboardPopup>
                         </td>
                         <td className="px-4 py-2.5 text-slate-600">{fmtDate(r.startsAt)}</td>
                         <td className="px-4 py-2.5">
@@ -167,8 +178,20 @@ export default async function AdminEventsDashboardPage({
                             {stale ? "Draft, date passed" : r.status}
                           </span>
                         </td>
-                        <td className="px-4 py-2.5 text-right text-slate-700">{r.registered}</td>
-                        <td className="px-4 py-2.5 text-right text-slate-700">{begun ? r.attended : "Not started"}</td>
+                        <td className="px-4 py-2.5 text-right text-slate-700">
+                          <DashboardPopup label={`Registrations, ${r.title}`} value={String(r.registered)} unit="registered" detailPanel={panel(d.records.registrations[r.id], `/admin/events/${r.id}/registrations`, "Open registrations")} className="font-semibold text-[#1A6CE4] hover:underline">
+                            {r.registered}
+                          </DashboardPopup>
+                        </td>
+                        <td className="px-4 py-2.5 text-right text-slate-700">
+                          {begun ? (
+                            <DashboardPopup label={`Attended, ${r.title}`} value={String(r.attended)} unit="attended" detailPanel={panel(d.records.attended[r.id], `/admin/events/${r.id}/registrations`, "Open registrations")} className="font-semibold text-[#1A6CE4] hover:underline">
+                              {r.attended}
+                            </DashboardPopup>
+                          ) : (
+                            "Not started"
+                          )}
+                        </td>
                       </tr>
                     );
                   })}
@@ -193,7 +216,15 @@ export default async function AdminEventsDashboardPage({
                     <span className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
                       <span className="block h-full rounded-full bg-[#1A6CE4]" style={{ width: `${Math.round((f.value / funnelMax) * 100)}%` }} />
                     </span>
-                    <span className="w-24 text-right font-bold text-[var(--navy)]">{f.show}</span>
+                    <span className="w-24 text-right font-bold text-[var(--navy)]">
+                      {f.popup ? (
+                        <DashboardPopup label={`${f.key}, ${selected.title}`} value={f.show} detailPanel={f.popup} className="font-bold text-[#1A6CE4] hover:underline">
+                          {f.show}
+                        </DashboardPopup>
+                      ) : (
+                        f.show
+                      )}
+                    </span>
                   </div>
                 ))}
                 <p className="border-t border-slate-100 px-4 py-2 text-[11px] text-slate-400">
@@ -213,12 +244,25 @@ export default async function AdminEventsDashboardPage({
             {d.attention.length === 0 ? (
               <p className="px-4 py-6 text-center text-sm text-slate-400">Nothing needs attention.</p>
             ) : (
-              d.attention.map((a) => (
-                <div key={a.text} className="flex gap-2 border-t border-slate-100 px-4 py-2.5 text-sm first:border-t-0">
-                  <span className={`mt-1.5 h-2 w-2 flex-none rounded-full ${TONE_DOT[a.tone]}`} />
-                  <span className="text-slate-700">{a.text}</span>
-                </div>
-              ))
+              d.attention.map((a) => {
+                const pn =
+                  a.kind === "drafts"
+                    ? panel(d.records.draftsPastDate, "/admin/events", "All events")
+                    : a.kind === "applications"
+                      ? panel(d.records.applicationsOpen, "/admin/events/applications", "Open applications")
+                      : a.kind === "paused"
+                        ? panel(d.records.campaigns.paused, "/admin/events/invitations", "Open invitations")
+                        : panel(d.nextEvent ? { total: 1, records: d.records.events.records.filter((r) => r.href === `/admin/events/${d.nextEvent?.id}`) } : undefined, "/admin/events", "All events");
+                const total = a.kind === "drafts" ? d.records.draftsPastDate.total : a.kind === "applications" ? d.records.applicationsOpen.total : a.kind === "paused" ? d.records.campaigns.paused.total : 1;
+                return (
+                  <div key={a.text} className="flex gap-2 border-t border-slate-100 px-4 py-2.5 text-sm first:border-t-0">
+                    <span className={`mt-1.5 h-2 w-2 flex-none rounded-full ${TONE_DOT[a.tone]}`} />
+                    <DashboardPopup label="Needs attention" value={String(total)} detail={a.text} detailPanel={pn} className="text-left text-slate-700 hover:text-[#1A6CE4]">
+                      {a.text}
+                    </DashboardPopup>
+                  </div>
+                );
+              })
             )}
           </section>
 
@@ -230,7 +274,13 @@ export default async function AdminEventsDashboardPage({
             {(["sending", "scheduled", "paused", "done", "draft"] as const).map((k) => (
               <div key={k} className="flex items-center justify-between border-t border-slate-100 px-4 py-2.5 text-sm first:border-t-0">
                 <span className="capitalize text-slate-700">{k}</span>
-                <span className="font-bold text-[var(--navy)]">{d.campaigns[k]}</span>
+                {d.campaigns[k] > 0 ? (
+                  <DashboardPopup label={`${k[0].toUpperCase()}${k.slice(1)} campaigns`} value={String(d.campaigns[k])} unit="campaigns" detailPanel={panel(d.records.campaigns[k], "/admin/events/invitations", "Open invitations")} className="font-bold text-[#1A6CE4] hover:underline">
+                    {d.campaigns[k]}
+                  </DashboardPopup>
+                ) : (
+                  <span className="font-bold text-[var(--navy)]">0</span>
+                )}
               </div>
             ))}
             <p className="border-t border-slate-100 px-4 py-2 text-[11px] text-slate-400">Source: invitation campaigns, by status.</p>
