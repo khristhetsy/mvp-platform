@@ -8,6 +8,8 @@ import { needsEmailReview } from "./recipient";
 import { isMatchCampaign } from "./match-campaign/types";
 import { sendMatchCampaign } from "./match-campaign/send";
 import { queueCampaignNotesLog } from "@/lib/notes-log";
+import { createSequence, addSequenceStep, enrollList, updateSequenceStatus } from "./sequences";
+import { followUpSteps, type FollowUpInput } from "./campaign-follow-ups";
 
 export async function getCampaigns(): Promise<MarketingCampaign[]> {
   const db = await marketingDb();
@@ -35,6 +37,41 @@ export async function createCampaign(
     .single();
   if (error) throw error;
   return data as MarketingCampaign;
+}
+
+/**
+ * Creates a campaign together with its follow up emails (the New campaign wizard). The follow
+ * ups become a marketing sequence; the campaign remembers it so the list is enrolled once
+ * email 1 has gone out. Sequence batches still wait for human approval before sending.
+ */
+export async function createCampaignWithFollowUps(
+  input: Partial<MarketingCampaign>,
+  followUps: FollowUpInput[],
+  createdBy?: string,
+): Promise<MarketingCampaign> {
+  if (followUps.length === 0) return createCampaign(input, createdBy);
+  const sequence = await createSequence(`${input.name ?? "Campaign"} follow ups`, createdBy, input.department ?? null);
+  try {
+    const sender = { from_name: input.from_name ?? "iCapOS", from_email: input.from_email ?? "outreach@icapos.com" };
+    for (const step of followUpSteps(followUps, sequence.id, sender)) await addSequenceStep(step);
+    return await createCampaign({ ...input, follow_up_sequence_id: sequence.id }, createdBy);
+  } catch (err) {
+    // Don't leave an orphan sequence behind when the campaign could not be saved.
+    const db = await marketingDb();
+    await db.from("marketing_sequences").delete().eq("id", sequence.id);
+    throw err;
+  }
+}
+
+/** Enrolls the campaign's list in its follow up sequence once the send has finished. Best effort. */
+async function enrollFollowUps(campaign: { follow_up_sequence_id?: string | null; list_id?: string | null }): Promise<void> {
+  if (!campaign.follow_up_sequence_id || !campaign.list_id) return;
+  try {
+    await enrollList(campaign.follow_up_sequence_id, campaign.list_id);
+    await updateSequenceStatus(campaign.follow_up_sequence_id, "active");
+  } catch (err) {
+    console.error("Follow up enrollment failed:", err);
+  }
 }
 
 /**
@@ -384,6 +421,9 @@ export async function sendCampaign(campaignId: string, opts?: {
     .from("marketing_campaigns")
     .update({ status: finalStatus, sent_at: sentSoFar > 0 ? new Date().toISOString() : null, stat_sent: sentSoFar })
     .eq("id", campaignId);
+
+  // Follow ups: only a finished send enrolls the list (a paused one is resumed first).
+  if (finalStatus === "sent") await enrollFollowUps(campaign);
 
   // Notify — "batch send complete". Goes to the campaign owner, or all admins if
   // there's no owner. Best-effort: never let a notification failure break a send.

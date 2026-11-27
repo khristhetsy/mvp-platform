@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import type { MarketingCampaign, MarketingList, MarketingTemplate } from "@/lib/marketing/types";
 import { DEPARTMENTS, UNASSIGNED, deptMeta, departmentOf, groupByDepartment } from "@/lib/marketing/department-grouping";
-import { fromPlatformInput, platformInputToIso, toPlatformInput } from "@/lib/time/platform-input";
+import { platformInputToIso, toPlatformInput } from "@/lib/time/platform-input";
 import { SandboxedHtmlPreview } from "@/components/admin/SandboxedHtmlPreview";
+import { CampaignWizard } from "@/components/admin/marketing/CampaignWizard";
 
 interface Props {
   campaigns: MarketingCampaign[];
@@ -45,7 +46,6 @@ const EDITABLE_STATUSES = ["draft", "scheduled", "paused"];
 export function CampaignsClient({ campaigns, lists, templates, resendReady = true, defaultSender, senders = [], matchEnabled = false }: Props) {
   const router = useRouter();
   const [showCreate, setShowCreate] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [acting, setActing] = useState<string | null>(null);
   const [sendingDue, setSendingDue] = useState(false);
   const [dueMsg, setDueMsg] = useState<string | null>(null);
@@ -61,18 +61,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
   const [editing, setEditing] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [editForm, setEditForm] = useState({ name: "", from_name: "", from_email: "", reply_to: "", list_id: "", template_id: "", scheduled_at: "", department: "" });
-  const [form, setForm] = useState({
-    name: "",
-    list_id: lists[0]?.id ?? "",
-    template_id: templates[0]?.id ?? "",
-    from_name: defaultSender?.name || "iCapOS",
-    from_email: defaultSender?.email || "outreach@icapos.com",
-    reply_to: defaultSender?.replyTo || "admin@myicfos.com",
-    scheduled_at: "",
-    group_type: "founder",
-    department: "",
-  });
-  const [customFrom, setCustomFrom] = useState(false);
+  const [initialListId, setInitialListId] = useState<string | undefined>(undefined);
   const [groupFilter, setGroupFilter] = useState<"all" | "founder" | "investor" | "event">("all");
   const [view, setView] = useState<"grid" | "list">("list"); // List default; toggle persists below
   // eslint-disable-next-line react-hooks/set-state-in-effect -- read saved view after mount (avoids hydration mismatch)
@@ -112,65 +101,8 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
     if (!nv) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- open composer from deep link on mount
     setShowCreate(true);
-    if (nv !== "1" && lists.some((l) => l.id === nv)) setForm((f) => ({ ...f, list_id: nv }));
+    if (nv !== "1" && lists.some((l) => l.id === nv)) setInitialListId(nv);
   }, [lists]);
-
-  // Editable email preview for the campaign being composed.
-  const selectedTemplate = templates.find((t) => t.id === form.template_id) ?? null;
-  const [subjectDraft, setSubjectDraft] = useState("");
-  const [previewSaved, setPreviewSaved] = useState(false);
-  const bodyRef = useRef<HTMLDivElement>(null);
-
-  // Re-seed the preview whenever the picked template changes.
-  useEffect(() => {
-    if (!selectedTemplate) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync draft to the newly picked template
-    setSubjectDraft(selectedTemplate.subject ?? "");
-    setPreviewSaved(false);
-    if (bodyRef.current) bodyRef.current.innerHTML = selectedTemplate.html_body ?? "";
-  }, [selectedTemplate?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  function savePreview() {
-    setPreviewSaved(true);
-  }
-  function undoPreview() {
-    if (!selectedTemplate) return;
-    setSubjectDraft(selectedTemplate.subject ?? "");
-    if (bodyRef.current) bodyRef.current.innerHTML = selectedTemplate.html_body ?? "";
-    setPreviewSaved(false);
-  }
-
-  async function handleCreate(sendNow = false) {
-    setSaving(true);
-    try {
-      const body: Record<string, string> = { ...form, status: "draft" };
-      // Omit an empty department so create still works before the column migration
-      // is applied; a picked department is inserted straight onto the campaign.
-      if (!form.department) delete body.department;
-      // Convert the local datetime-picker value to an absolute UTC instant so the
-      // scheduled send fires at the intended local time (not misread as UTC).
-      if (form.scheduled_at) body.scheduled_at = platformInputToIso(form.scheduled_at) ?? new Date(form.scheduled_at).toISOString();
-      // Attach per-campaign overrides only when the preview diverges from the template.
-      if (selectedTemplate) {
-        const bodyHtml = bodyRef.current?.innerHTML ?? "";
-        body.subject_override = subjectDraft && subjectDraft !== selectedTemplate.subject ? subjectDraft : "";
-        body.body_override = bodyHtml && bodyHtml !== selectedTemplate.html_body ? bodyHtml : "";
-      }
-      if (sendNow) body.action = "send";
-      else if (form.scheduled_at) body.action = "schedule";
-      await fetch("/api/marketing/campaigns", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      setShowCreate(false);
-      router.refresh();
-    } catch (err) {
-      console.error("Failed to create campaign:", err);
-    } finally {
-      setSaving(false);
-    }
-  }
 
   async function testEmailConnection() {
     setTesting(true); setHealthMsg(null);
@@ -396,149 +328,13 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
         </div>
       )}
 
-      {/* Create form */}
+      {/* Create wizard (desktop; the list below is hidden while it is open) */}
       {showCreate && (
-        <div style={{ background: "#ffffff", border: "0.5px solid #e2e6ed", borderRadius: 12, padding: "18px 20px", marginBottom: 20, boxShadow: "0 1px 3px rgb(12 35 64 / 0.06)" }}>
-          <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 14 }}>New campaign</div>
-          {matchEnabled && (
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 11, color: "var(--muted-foreground)", display: "block", marginBottom: 6 }}>Campaign type</label>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <div style={{ border: "1.5px solid #1A6CE4", background: "#F3F8FF", borderRadius: 10, padding: "10px 12px" }}>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>Email</div>
-                  <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", marginTop: 2 }}>Send to a list you choose. Existing flow, unchanged.</div>
-                </div>
-                <button type="button" onClick={() => router.push("/admin/marketing/campaigns/match/new")} style={{ textAlign: "left", border: "0.5px solid #e2e6ed", background: "#fff", borderRadius: 10, padding: "10px 12px", cursor: "pointer" }}>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>Match <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 8, fontWeight: 700, background: "#FFF4E0", color: "#8A5A00", marginLeft: 4 }}>NEW</span></div>
-                  <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", marginTop: 2 }}>Email founders their current investor matches. Matches are hidden until they choose a plan.</div>
-                </button>
-              </div>
-            </div>
-          )}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            {[
-              { key: "name",         label: "Campaign name",         type: "text" },
-              { key: "from_name",    label: "From name",             type: "text" },
-              { key: "from_email",   label: "From email",            type: "email" },
-              { key: "reply_to",     label: "Reply-to (optional)",   type: "email" },
-              { key: "scheduled_at", label: "Schedule send (optional)", type: "datetime-local" },
-            ].map((f) => (
-              <div key={f.key}>
-                <label style={{ fontSize: 11, color: "var(--muted-foreground)", display: "block", marginBottom: 4 }}>{f.label}</label>
-                {f.key === "from_email" && senders.length > 0 && !customFrom ? (
-                  <select
-                    value={form.from_email}
-                    onChange={(e) => {
-                      if (e.target.value === "__custom__") { setCustomFrom(true); return; }
-                      const s = senders.find((x) => x.email === e.target.value);
-                      setForm({ ...form, from_email: e.target.value, from_name: s?.name ?? form.from_name });
-                    }}
-                    style={{ width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--muted)", color: "var(--foreground)" }}
-                  >
-                    {!senders.some((s) => s.email === form.from_email) && form.from_email && <option value={form.from_email}>{form.from_email}</option>}
-                    {senders.map((s) => <option key={s.email} value={s.email}>{s.name} &lt;{s.email}&gt;</option>)}
-                    <option value="__custom__">Custom address…</option>
-                  </select>
-                ) : (
-                  <input
-                    type={f.type}
-                    value={(form as Record<string, string>)[f.key]}
-                    onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
-                    style={{ width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--muted)", color: "var(--foreground)" }}
-                  />
-                )}
-              </div>
-            ))}
-            <div>
-              <label style={{ fontSize: 11, color: "var(--muted-foreground)", display: "block", marginBottom: 4 }}>Group type</label>
-              <select value={form.group_type} onChange={(e) => setForm({ ...form, group_type: e.target.value })}
-                style={{ width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--muted)", color: "var(--foreground)" }}>
-                <option value="founder">Founder</option>
-                <option value="investor">Investor</option>
-                <option value="event">Event</option>
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: 11, color: "var(--muted-foreground)", display: "block", marginBottom: 4 }}>Department</label>
-              <select value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })}
-                style={{ width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--muted)", color: "var(--foreground)" }}>
-                <option value="">— Unassigned —</option>
-                {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: 11, color: "var(--muted-foreground)", display: "block", marginBottom: 4 }}>Audience list</label>
-              <select value={form.list_id} onChange={(e) => setForm({ ...form, list_id: e.target.value })}
-                style={{ width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--muted)", color: "var(--foreground)" }}>
-                <option value="">— select list —</option>
-                {lists.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: 11, color: "var(--muted-foreground)", display: "block", marginBottom: 4 }}>Email template</label>
-              <select value={form.template_id} onChange={(e) => setForm({ ...form, template_id: e.target.value })}
-                style={{ width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--muted)", color: "var(--foreground)" }}>
-                <option value="">— select template —</option>
-                {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-              </select>
-            </div>
-          </div>
-          {/* Editable email preview */}
-          {selectedTemplate && (
-            <div style={{ marginTop: 16, border: "0.5px solid #e2e6ed", borderRadius: 10, overflow: "hidden" }}>
-              <div style={{ padding: "10px 14px", borderBottom: "0.5px solid #e2e6ed", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", background: "var(--muted)" }}>
-                <span style={{ fontSize: 12.5, fontWeight: 600 }}>Preview &amp; edit</span>
-                <span style={{ fontSize: 10.5, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 6, padding: "1px 7px" }}>Editing this campaign only</span>
-                {previewSaved && <span style={{ fontSize: 10.5, color: "#0F6E56" }}><i className="ti ti-check" aria-hidden="true" /> Saved</span>}
-                <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
-                  <button type="button" onClick={undoPreview} style={{ fontSize: 11.5, fontWeight: 600, color: "var(--muted-foreground)", background: "#fff", border: "0.5px solid var(--border)", borderRadius: 6, padding: "5px 11px", cursor: "pointer" }}>↩ Undo</button>
-                  <button type="button" onClick={savePreview} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 6, padding: "5px 11px", cursor: "pointer" }}>Save changes</button>
-                </div>
-              </div>
-              <div style={{ padding: "10px 14px", background: "#FAFBFC", borderBottom: "0.5px solid #e2e6ed", fontSize: 11.5, color: "var(--muted-foreground)", display: "flex", flexDirection: "column", gap: 3 }}>
-                <div><span style={{ display: "inline-block", width: 42 }}>From</span> <span style={{ color: "var(--foreground)" }}>{form.from_name} &lt;{form.from_email}&gt;</span></div>
-                <div><span style={{ display: "inline-block", width: 42 }}>To</span> <span style={{ color: "var(--foreground)" }}>{lists.find((l) => l.id === form.list_id)?.name ?? "— no list —"}</span></div>
-              </div>
-              <div style={{ padding: "12px 14px" }}>
-                <label style={{ display: "block", fontSize: 10.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--muted-foreground)", marginBottom: 5 }}>Subject</label>
-                <input value={subjectDraft} onChange={(e) => { setSubjectDraft(e.target.value); setPreviewSaved(false); }}
-                  style={{ width: "100%", boxSizing: "border-box", fontSize: 13.5, fontWeight: 500, padding: "8px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)" }} />
-                <label style={{ display: "block", fontSize: 10.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--muted-foreground)", margin: "12px 0 5px" }}>Body <span style={{ textTransform: "none", fontWeight: 400 }}>· click to edit</span></label>
-                <div ref={bodyRef} contentEditable suppressContentEditableWarning onInput={() => setPreviewSaved(false)}
-                  style={{ border: "0.5px solid var(--border)", borderRadius: 8, padding: "12px 14px", fontSize: 13, lineHeight: 1.7, color: "var(--foreground)", minHeight: 140, outline: "none", background: "var(--background)" }} />
-                <div style={{ marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 10, color: "var(--muted-foreground)", background: "var(--muted)", borderRadius: 5, padding: "2px 7px" }}>{"{{first_name}}"}</span>
-                  <span style={{ fontSize: 10, color: "var(--muted-foreground)", background: "var(--muted)", borderRadius: 5, padding: "2px 7px" }}>{"{{company}}"}</span>
-                  <span style={{ fontSize: 10, color: "var(--muted-foreground)", background: "var(--muted)", borderRadius: 5, padding: "2px 7px" }}>unsubscribe link auto-added</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {form.scheduled_at && (
-            <div style={{ marginTop: 10, fontSize: 12, color: "#185FA5", padding: "6px 10px", background: "#E6F1FB", borderRadius: 6 }}>
-<i className="ti ti-calendar" aria-hidden="true" /> Will be scheduled to send at {(fromPlatformInput(form.scheduled_at) ?? new Date(form.scheduled_at)).toLocaleString()} PT
-            </div>
-          )}
-          <div style={{ marginTop: 14, display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <button type="button" onClick={() => handleCreate(false)}
-              disabled={saving || !form.name || !form.list_id || !form.template_id}
-              style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "0.5px solid #e2e6ed", background: "transparent", color: "var(--foreground)", cursor: "pointer", opacity: (!form.name || !form.list_id || !form.template_id) ? 0.5 : 1 }}>
-              {saving ? "Saving…" : form.scheduled_at ? "Save as scheduled" : "Save as draft"}
-            </button>
-            {!form.scheduled_at && (
-              <button type="button" onClick={() => handleCreate(true)}
-                disabled={saving || !form.name || !form.list_id || !form.template_id}
-                style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer", opacity: (!form.name || !form.list_id || !form.template_id) ? 0.5 : 1 }}>
-                Send now
-              </button>
-            )}
-            <button type="button" onClick={() => setShowCreate(false)}
-              style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--foreground)" }}>
-              Cancel
-            </button>
-          </div>
-        </div>
+        <CampaignWizard
+          lists={lists} templates={templates} defaultSender={defaultSender} senders={senders} initialListId={initialListId} matchEnabled={matchEnabled}
+          onClose={() => setShowCreate(false)}
+          onCreated={() => { setShowCreate(false); router.refresh(); }}
+        />
       )}
 
       {/* Filter row: group pills + view toggle + sort + archived */}
