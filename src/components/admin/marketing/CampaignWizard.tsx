@@ -7,6 +7,8 @@ import { DEPARTMENTS } from "@/lib/marketing/department-grouping";
 import { platformInputToIso } from "@/lib/time/platform-input";
 import { WizardFrame } from "@/components/founder/social/LaunchFrame";
 import { btn } from "@/components/founder/social/FounderSocialShared";
+import { matchRows, type SearchField } from "@/lib/ui/live-search";
+import { Highlight, NoSearchMatches, SearchCount } from "@/components/ui/SearchStatus";
 import { EmailImageLibrary } from "@/components/marketing/EmailImagePicker";
 import { FOLLOW_UP_CONDITIONS, MAX_FOLLOW_UPS, type FollowUpCondition } from "@/lib/marketing/campaign-follow-ups";
 import { appendMedia, mediaBlockHtml, safeHttpUrl } from "@/lib/marketing/campaign-media";
@@ -17,6 +19,12 @@ const MONTHS = ["January", "February", "March", "April", "May", "June", "July", 
 const field = "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-[#1A6CE4] focus:outline-none";
 const lbl = "mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500";
 
+const LIST_SEARCH_FIELDS: SearchField<MarketingList>[] = [
+  { label: "list name", get: (l) => l.name },
+  { label: "description", get: (l) => l.description },
+  { label: "department", get: (l) => l.department },
+];
+
 type FollowUpRow = { key: number; template_id: string; delay_days: number; condition: FollowUpCondition };
 
 /** Today in Pacific time as YYYY-MM-DDTHH:MM, matching how the platform reads schedule input. */
@@ -26,7 +34,7 @@ function ptNow(): string {
   return `${g("year")}-${g("month")}-${g("day")}T${g("hour")}:${g("minute")}`;
 }
 
-export function CampaignWizard({ lists, templates, defaultSender, senders = [], initialListId, matchEnabled = false, onClose, onCreated }: {
+export function CampaignWizard({ lists: listsProp, templates, defaultSender, senders = [], initialListId, matchEnabled = false, onClose, onCreated }: {
   lists: MarketingList[];
   templates: MarketingTemplate[];
   defaultSender?: { name: string; email: string; replyTo: string };
@@ -38,6 +46,15 @@ export function CampaignWizard({ lists, templates, defaultSender, senders = [], 
   onCreated: () => void;
 }) {
   const [step, setStep] = useState(0);
+  // Lists created inside the wizard are added here so they can be picked straight away.
+  const [lists, setLists] = useState<MarketingList[]>(listsProp);
+  const [listQuery, setListQuery] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newDept, setNewDept] = useState("");
+  const [newDesc, setNewDesc] = useState("");
+  const [newBusy, setNewBusy] = useState(false);
+  const [newError, setNewError] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [groupType, setGroupType] = useState("founder");
   const [department, setDepartment] = useState("");
@@ -88,6 +105,26 @@ export function CampaignWizard({ lists, templates, defaultSender, senders = [], 
     setBodyHtml(next);
   }
 
+  async function createNewList() {
+    if (!newName.trim()) return;
+    setNewBusy(true);
+    setNewError(null);
+    try {
+      const res = await fetch("/api/marketing/lists", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: newName.trim(), description: newDesc.trim(), department: newDept }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? `Request failed (${res.status})`);
+      setLists((all) => [{ ...(data as MarketingList), contact_count: 0 }, ...all]);
+      setListId((data as MarketingList).id);
+      setListQuery("");
+      setCreating(false);
+      setNewName(""); setNewDept(""); setNewDesc("");
+    } catch (e) {
+      setNewError(e instanceof Error ? e.message : "Could not create the list.");
+    } finally {
+      setNewBusy(false);
+    }
+  }
+
   function addFollowUp() {
     if (followUps.length >= MAX_FOLLOW_UPS) return;
     setFollowUps((f) => [...f, { key: nextKey.current++, template_id: templates[0]?.id ?? "", delay_days: f.length === 0 ? 3 : 5, condition: "no_reply" }]);
@@ -96,7 +133,7 @@ export function CampaignWizard({ lists, templates, defaultSender, senders = [], 
 
   const stepValid = [
     name.trim().length > 0 && fromEmail.trim().length > 0,
-    !!listId,
+    !!listId && list?.contact_count !== 0,
     !!templateId && subject.trim().length > 0,
     followUps.every((f) => !!f.template_id),
     scheduleOk,
@@ -176,18 +213,47 @@ export function CampaignWizard({ lists, templates, defaultSender, senders = [], 
 
       {step === 1 && (
         <div className="max-w-2xl">
-          <label className={lbl}>Audience list</label>
-          {lists.length === 0 ? <p className="text-sm text-slate-500">No marketing lists yet. Create one under Marketing, Lists.</p> : (
-            <div className="grid gap-2">
-              {lists.map((l) => (
-                <button key={l.id} type="button" onClick={() => setListId(l.id)}
-                  className={`flex items-center justify-between rounded-lg border px-3 py-2 text-left text-sm ${l.id === listId ? "border-[#1A6CE4] bg-[#EEF4FE]" : "border-slate-200 bg-white hover:bg-slate-50"}`}>
-                  <span className="font-medium text-slate-900">{l.name}</span>
-                  <span className="text-xs text-slate-500">{l.contact_count ?? 0} contacts</span>
-                </button>
-              ))}
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <label className={lbl + " mb-0"}>Audience list</label>
+            <button type="button" className={btn + " !bg-[#1A6CE4] !text-white"} onClick={() => setCreating((v) => !v)}>{creating ? "Cancel" : "+ New list"}</button>
+          </div>
+          {creating && (
+            <div className="mb-3 grid gap-3 rounded-lg border border-[#1A6CE4] bg-[#EEF4FE] p-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className={lbl}>List name</label><input className={field} value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Seed founders, Q1" autoFocus /></div>
+                <div><label className={lbl}>Department</label>
+                  <select className={field} value={newDept} onChange={(e) => setNewDept(e.target.value)}><option value="">Unassigned</option>{DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}</select></div>
+              </div>
+              <div><label className={lbl}>Description <span className="font-normal normal-case">optional</span></label><input className={field} value={newDesc} onChange={(e) => setNewDesc(e.target.value)} /></div>
+              <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">A new list starts empty. Add its members from Contacts, then come back and send to it.</p>
+              {newError && <p className="text-sm text-red-600">{newError}</p>}
+              <div className="flex justify-end"><button type="button" className={btn + " !bg-[#1A6CE4] !text-white"} disabled={!newName.trim() || newBusy} onClick={() => void createNewList()}>{newBusy ? "Creating" : "Create list"}</button></div>
             </div>
           )}
+          {lists.length === 0 ? <p className="text-sm text-slate-500">No marketing lists yet. Use New list to create one.</p> : (() => {
+            const found = matchRows(lists, LIST_SEARCH_FIELDS, listQuery);
+            return (
+              <>
+                <input className={field + " mb-1"} value={listQuery} onChange={(e) => setListQuery(e.target.value)} placeholder="Search lists" />
+                <SearchCount result={found} noun="lists" className="mb-2" />
+                {found.rows.length === 0 ? (
+                  <NoSearchMatches query={listQuery} fields={LIST_SEARCH_FIELDS.map((f) => f.label)} onClear={() => setListQuery("")} />
+                ) : (
+                  <div className="grid gap-2">
+                    {found.rows.map((l) => (
+                      <button key={l.id} type="button" onClick={() => setListId(l.id)}
+                        className={`flex items-center justify-between rounded-lg border px-3 py-2 text-left text-sm ${l.id === listId ? "border-[#1A6CE4] bg-[#EEF4FE]" : "border-slate-200 bg-white hover:bg-slate-50"}`}>
+                        <span className="font-medium text-slate-900"><Highlight text={l.name} query={listQuery} />
+                          {l.department ? <span className="ml-2 text-xs font-normal text-slate-500"><Highlight text={l.department} query={listQuery} /></span> : null}</span>
+                        <span className="text-xs text-slate-500">{l.contact_count ?? 0} contacts</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            );
+          })()}
+          {list?.contact_count === 0 && <p className="mt-3 text-sm font-medium text-amber-800">This list has no contacts yet. Add contacts to it, or pick another list.</p>}
           <p className="mt-3 text-xs text-slate-500">Unsubscribed contacts are skipped automatically at send time.</p>
         </div>
       )}
