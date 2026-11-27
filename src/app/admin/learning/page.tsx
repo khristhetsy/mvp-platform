@@ -197,8 +197,8 @@ export default async function AdminLearningDashboardPage({ searchParams }: { sea
           />
         </section>
 
-        <div className="mt-6 grid gap-4 lg:grid-cols-[1.6fr_1fr]">
-          <div className="space-y-4">
+        <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-[1.6fr_1fr]">
+          <div className="min-w-0 space-y-4">
             <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
               <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
                 <div className="flex items-center gap-2">
@@ -315,7 +315,7 @@ export default async function AdminLearningDashboardPage({ searchParams }: { sea
                             </td>
                             <td className="px-4 py-3">
                               <span
-                                className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                                className="whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold"
                                 style={{ background: sc.bg, color: sc.text }}
                               >
                                 {stageMeta.label.split(" — ")[0]}
@@ -383,11 +383,11 @@ export default async function AdminLearningDashboardPage({ searchParams }: { sea
                   extra={{ breakdown: recordRows(r.records, r.empty), href: r.href, hrefLabel: r.hrefLabel }}
                   className="flex w-full items-center gap-4 border-t border-slate-100 px-4 py-3 text-left text-sm first:border-t-0 hover:bg-slate-50"
                 >
-                  <span className="w-32 text-slate-700">{r.label.replace(" courses", "")}</span>
+                  <span className="w-24 shrink-0 text-slate-700 sm:w-32">{r.label.replace(" courses", "")}</span>
                   <span className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
                     <span className="block h-full rounded-full bg-[#1A6CE4]" style={{ width: `${tot.coursesTotal > 0 ? Math.round((r.n / tot.coursesTotal) * 100) : 0}%` }} />
                   </span>
-                  <span className="w-8 text-right font-bold text-[var(--navy)]">{r.n}</span>
+                  <span className="w-8 shrink-0 text-right font-bold text-[var(--navy)]">{r.n}</span>
                 </DetailRow>
               ))}
             </section>
@@ -395,7 +395,7 @@ export default async function AdminLearningDashboardPage({ searchParams }: { sea
             <AdminLearningAtRisk />
           </div>
 
-          <div className="space-y-4">
+          <div className="min-w-0 space-y-4">
             <section className="rounded-2xl border border-slate-200 bg-white">
               <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
                 <h2 className="text-sm font-semibold text-[var(--navy)]">Needs attention</h2>

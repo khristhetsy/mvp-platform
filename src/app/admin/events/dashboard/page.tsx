@@ -123,8 +123,8 @@ export default async function AdminEventsDashboardPage({
         />
       </div>
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-[1.6fr_1fr]">
-        <div className="space-y-4">
+      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-[1.6fr_1fr]">
+        <div className="min-w-0 space-y-4">
           <section className="rounded-2xl border border-slate-200 bg-white">
             <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
               <h2 className="text-sm font-semibold text-[var(--navy)]">Events</h2>
@@ -203,8 +203,8 @@ export default async function AdminEventsDashboardPage({
 
           <section className="rounded-2xl border border-slate-200 bg-white">
             <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-              <h2 className="text-sm font-semibold text-[var(--navy)]">Registration funnel{selected ? `, ${selected.title}` : ""}</h2>
-              <Link href="/admin/events/registrations" className="rounded-md border border-slate-200 px-2.5 py-1 text-xs font-semibold text-[#1A6CE4]">Registrations</Link>
+              <h2 className="min-w-0 text-sm font-semibold text-[var(--navy)]">Registration funnel{selected ? `, ${selected.title}` : ""}</h2>
+              <Link href="/admin/events/registrations" className="shrink-0 rounded-md border border-slate-200 px-2.5 py-1 text-xs font-semibold text-[#1A6CE4]">Registrations</Link>
             </div>
             {!selected ? (
               <p className="px-4 py-10 text-center text-sm text-slate-400">No events yet.</p>
@@ -212,11 +212,11 @@ export default async function AdminEventsDashboardPage({
               <>
                 {funnel.map((f) => (
                   <div key={f.key} className="flex items-center gap-3 border-t border-slate-100 px-4 py-2.5 first:border-t-0 text-sm">
-                    <span className="w-24 text-slate-700">{f.key}</span>
+                    <span className="w-20 shrink-0 text-slate-700 sm:w-24">{f.key}</span>
                     <span className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
                       <span className="block h-full rounded-full bg-[#1A6CE4]" style={{ width: `${Math.round((f.value / funnelMax) * 100)}%` }} />
                     </span>
-                    <span className="w-24 text-right font-bold text-[var(--navy)]">
+                    <span className="w-14 shrink-0 text-right font-bold text-[var(--navy)] sm:w-24">
                       {f.popup ? (
                         <DashboardPopup label={`${f.key}, ${selected.title}`} value={f.show} detailPanel={f.popup} className="font-bold text-[#1A6CE4] hover:underline">
                           {f.show}
@@ -235,7 +235,7 @@ export default async function AdminEventsDashboardPage({
           </section>
         </div>
 
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <section className="rounded-2xl border border-slate-200 bg-white">
             <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
               <h2 className="text-sm font-semibold text-[var(--navy)]">Needs attention</h2>
@@ -255,7 +255,7 @@ export default async function AdminEventsDashboardPage({
                         : panel(d.nextEvent ? { total: 1, records: d.records.events.records.filter((r) => r.href === `/admin/events/${d.nextEvent?.id}`) } : undefined, "/admin/events", "All events");
                 const total = a.kind === "drafts" ? d.records.draftsPastDate.total : a.kind === "applications" ? d.records.applicationsOpen.total : a.kind === "paused" ? d.records.campaigns.paused.total : 1;
                 return (
-                  <div key={a.text} className="flex gap-2 border-t border-slate-100 px-4 py-2.5 text-sm first:border-t-0">
+                  <div key={a.text} className="flex min-w-0 gap-2 border-t border-slate-100 px-4 py-2.5 text-sm first:border-t-0">
                     <span className={`mt-1.5 h-2 w-2 flex-none rounded-full ${TONE_DOT[a.tone]}`} />
                     <DashboardPopup label="Needs attention" value={String(total)} detail={a.text} detailPanel={pn} className="text-left text-slate-700 hover:text-[#1A6CE4]">
                       {a.text}

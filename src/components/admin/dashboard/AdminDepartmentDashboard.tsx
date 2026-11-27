@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { MetricDetailDrawer, type MetricDetail } from "@/components/ui/MetricDetailDrawer";
 import {
@@ -26,7 +26,7 @@ function Ring({ metric, period, onOpen }: Readonly<{ metric: DepartmentMetric; p
   const filled = typeof metric.percent === "number";
   const warn = metric.higherIsWorse === true && metric.value > 0 && !metric.note;
   return (
-    <button type="button" onClick={() => onOpen(metric)} aria-haspopup="dialog" className="rounded-xl px-1 py-1 text-center text-[11.5px] text-slate-600 transition hover:bg-slate-50">
+    <button type="button" onClick={() => onOpen(metric)} aria-haspopup="dialog" className="min-w-0 rounded-xl px-1 py-1 text-center text-[11.5px] text-slate-600 transition hover:bg-slate-50 max-sm:border max-sm:border-slate-200 max-sm:p-3">
       <svg width="60" height="60" viewBox="0 0 60 60" className="mx-auto mb-1.5" role="img" aria-label={`${metric.label} ${text}`}>
         <circle cx="30" cy="30" r="24" fill="none" stroke="#eef2f7" strokeWidth="5" strokeDasharray={filled ? undefined : "3 4"} />
         {filled ? (
@@ -35,7 +35,7 @@ function Ring({ metric, period, onOpen }: Readonly<{ metric: DepartmentMetric; p
         ) : null}
         <text x="30" y="35" textAnchor="middle" fontSize={text.length > 6 ? 9 : text.length > 3 ? 11 : 15} fontWeight={600} fill="#0f172a">{text}</text>
       </svg>
-      <span className="block font-medium text-slate-900">{metric.label}</span>
+      <span className="block break-words font-medium text-slate-900">{metric.label}</span>
       <span className="block text-slate-500">{filled ? `${metric.percent}%` : "no ceiling"}</span>
       <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] ${PILL_CLASS[pill.tone]}`}>{pill.text}</span>
     </button>
@@ -44,7 +44,7 @@ function Ring({ metric, period, onOpen }: Readonly<{ metric: DepartmentMetric; p
 
 export function RingGrid({ rings, period, onOpen }: Readonly<{ rings: DepartmentMetric[]; period: Period; onOpen: (m: DepartmentMetric) => void }>) {
   return (
-    <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${Math.min(Math.max(rings.length, 1), 8)}, minmax(0, 1fr))` }}>
+    <div className="grid grid-cols-2 gap-2 sm:gap-1.5 sm:[grid-template-columns:repeat(var(--cols),minmax(0,1fr))]" style={{ "--cols": Math.min(Math.max(rings.length, 1), 8) } as CSSProperties}>
       {rings.map((m) => <Ring key={m.id} metric={m} period={period} onOpen={onOpen} />)}
     </div>
   );
