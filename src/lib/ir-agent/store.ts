@@ -281,6 +281,7 @@ export async function buildPublicConfig(agent: AgentRow): Promise<AgentPublicCon
     taughtAnswers,
     bookingReady,
     demo,
+    agentType: agent.agent_type,
   };
 }
 

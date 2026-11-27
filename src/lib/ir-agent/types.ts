@@ -42,6 +42,8 @@ export interface AgentPublicConfig {
   bookingReady: boolean;
   /** Demo and internal accounts: never send real email or create real bookings. */
   demo: boolean;
+  /** Which kind of agent this is. Decides who the visitor is: an investor, or a prospect. */
+  agentType?: AgentType;
 }
 
 export interface AgentRow {
