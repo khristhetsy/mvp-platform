@@ -79,6 +79,8 @@ export type MarketingCampaign = {
   department?: string | null;
   /** Non-null marks a Match campaign (see lib/marketing/match-campaign). */
   match_config?: Record<string, unknown> | null;
+  /** Follow up sequence made by the New campaign wizard. Its audience list is enrolled once the send finishes. */
+  follow_up_sequence_id?: string | null;
   // joined
   list?: MarketingList | null;
   template?: MarketingTemplate | null;

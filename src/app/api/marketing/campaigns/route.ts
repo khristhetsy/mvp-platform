@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/supabase/auth";
-import { createCampaign, sendCampaign, sendCampaignTest, updateCampaignStatus } from "@/lib/marketing/campaigns";
+import { createCampaignWithFollowUps, sendCampaign, sendCampaignTest, updateCampaignStatus } from "@/lib/marketing/campaigns";
+import { cleanFollowUps } from "@/lib/marketing/campaign-follow-ups";
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     const profile = await requireRole(["admin"]);
     const body = await req.json();
-    const { action, campaign_id, ...rest } = body;
+    const { action, campaign_id, follow_ups, ...rest } = body;
 
     if (action === "send" && campaign_id) {
       const result = await sendCampaign(campaign_id);
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
 
     // Create campaign (optionally pre-scheduled)
-    const campaign = await createCampaign(rest, profile.id);
+    const campaign = await createCampaignWithFollowUps(rest, cleanFollowUps(follow_ups), profile.id);
     // If scheduled_at provided at creation, set status to scheduled
     if (rest.scheduled_at) {
       const { createServiceRoleClient } = await import("@/lib/supabase/admin");
