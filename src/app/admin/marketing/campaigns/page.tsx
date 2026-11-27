@@ -1,7 +1,7 @@
 import { requireRole } from "@/lib/supabase/auth";
 import { getTranslations } from "next-intl/server";
 import { getCampaigns } from "@/lib/marketing/campaigns";
-import { getLists } from "@/lib/marketing/contacts";
+import { getListsWithCounts } from "@/lib/marketing/contacts";
 import { getTemplates } from "@/lib/marketing/templates";
 import { emailConfigured } from "@/lib/marketing/send";
 import { getMarketingSettings } from "@/lib/marketing/settings";
@@ -19,7 +19,7 @@ export default async function MarketingCampaignsPage() {
   // shouldn't take down the whole Campaigns page.
   const [campaigns, lists, templates, sender] = await Promise.all([
     getCampaigns(),
-    getLists().catch(() => []),
+    getListsWithCounts().catch(() => []),
     getTemplates().catch(() => []),
     getMarketingSettings().catch(() => null),
   ]);

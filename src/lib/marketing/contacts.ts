@@ -173,6 +173,21 @@ export async function getLists(): Promise<MarketingList[]> {
   return (data ?? []) as MarketingList[];
 }
 
+/** Lists with their member count, the same head count the lists API attaches. */
+export async function getListsWithCounts(): Promise<MarketingList[]> {
+  const lists = await getLists();
+  const db = await marketingDb();
+  return Promise.all(
+    lists.map(async (list) => {
+      const { count } = await db
+        .from("marketing_list_contacts")
+        .select("*", { count: "exact", head: true })
+        .eq("list_id", list.id);
+      return { ...list, contact_count: count ?? 0 };
+    }),
+  );
+}
+
 export async function createList(name: string, description?: string): Promise<MarketingList> {
   const db = await marketingDb();
   const { data, error } = await db
