@@ -7,7 +7,6 @@ import { DEPARTMENTS } from "@/lib/marketing/department-grouping";
 import { platformInputToIso } from "@/lib/time/platform-input";
 import { WizardFrame } from "@/components/founder/social/LaunchFrame";
 import { btn } from "@/components/founder/social/FounderSocialShared";
-import { SandboxedHtmlPreview } from "@/components/admin/SandboxedHtmlPreview";
 import { EmailImageLibrary } from "@/components/marketing/EmailImagePicker";
 import { FOLLOW_UP_CONDITIONS, MAX_FOLLOW_UPS, type FollowUpCondition } from "@/lib/marketing/campaign-follow-ups";
 import { appendMedia, mediaBlockHtml, safeHttpUrl } from "@/lib/marketing/campaign-media";
@@ -194,14 +193,14 @@ export function CampaignWizard({ lists, templates, defaultSender, senders = [], 
       )}
 
       {step === 2 && (
-        <div className="grid gap-5 lg:grid-cols-2">
+        <div className="max-w-3xl">
           <div className="grid content-start gap-3">
             <div><label className={lbl}>Template</label>
               <select className={field} value={templateId} onChange={(e) => setTemplateId(e.target.value)}>{templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
             <div><label className={lbl}>Subject</label><input className={field} value={subject} onChange={(e) => setSubject(e.target.value)} /></div>
             <div><label className={lbl}>Body <span className="font-normal normal-case">click to edit</span></label>
               <div ref={bodyRef} contentEditable suppressContentEditableWarning onInput={(e) => setBodyHtml((e.currentTarget as HTMLDivElement).innerHTML)}
-                className="max-h-72 overflow-auto rounded-lg border border-slate-300 bg-white p-3 text-sm" /></div>
+                className="max-h-[32rem] overflow-auto rounded-lg border border-slate-300 bg-white p-3 text-sm" /></div>
             <div className="rounded-lg border border-slate-200 p-3">
               <div className="mb-2 flex items-center justify-between"><span className={lbl + " mb-0"}>Image or video</span>
                 <button type="button" className={btn} onClick={() => setShowImages((v) => !v)}>{showImages ? "Hide library" : "Choose image"}</button></div>
@@ -215,16 +214,6 @@ export function CampaignWizard({ lists, templates, defaultSender, senders = [], 
                 <button type="button" className={btn} disabled={!safeHttpUrl(videoUrl)} onClick={() => { addMedia(null, null, videoUrl); setVideoUrl(""); }}>Add video</button>
               </div>
               <p className="mt-1 text-xs text-slate-500">Inboxes can&rsquo;t play video, so the link shows as a button that opens it.</p>
-            </div>
-          </div>
-          <div>
-            <span className={lbl}>Live preview</span>
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-              <div className="mb-2 rounded-md bg-white px-3 py-2 text-xs"><b className="text-slate-900">{fromName}</b> <span className="text-slate-700">{subject || "No subject"}</span></div>
-              <div className="rounded-md bg-white">
-                <div className="border-b border-slate-100 px-3 py-2 text-xs text-slate-500">From {fromName} &lt;{fromEmail}&gt; to {list?.name ?? "no list"}</div>
-                <SandboxedHtmlPreview html={bodyHtml} title="Email preview" minHeight={160} maxHeight={420} padding={12} />
-              </div>
             </div>
           </div>
         </div>
