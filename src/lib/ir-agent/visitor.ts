@@ -10,3 +10,16 @@ import type { AgentType } from "./agent-types";
 export function visitorIsInvestor(type?: AgentType | null): boolean {
   return !type || type === "founder" || type === "ir";
 }
+
+/**
+ * The readback for a prospect: what they told the agent, in their own words,
+ * not the investor line ("checks of $2M"). Bare yes or no taps carry no
+ * meaning without their question, so they are left out.
+ */
+export function prospectSummary(custom: Record<string, string>): string {
+  const parts = Object.values(custom)
+    .map((v) => v.trim().replace(/[.!\s]+$/, ""))
+    .filter((v) => v && !/^(yes|no|not yet|yes, that is right)$/i.test(v));
+  if (!parts.length) return "";
+  return `So: ${parts.join("; ")}.`;
+}

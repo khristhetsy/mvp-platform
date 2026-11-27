@@ -23,7 +23,7 @@ import {
   type JohnnyAiReply,
 } from "@/lib/johnny/profile";
 import { statedPart } from "@/lib/ir-agent/answer-part";
-import { visitorIsInvestor } from "@/lib/ir-agent/visitor";
+import { prospectSummary, visitorIsInvestor } from "@/lib/ir-agent/visitor";
 import { AGENT_LINES, fill, matchAgent, type AgentScripted } from "@/lib/ir-agent/scripted";
 import { FIELD_TO_KEY, KEY_TO_FIELD, type ProfileField } from "@/lib/ir-agent/defaults";
 import type { AgentContactField, AgentPublicConfig, AgentQuestion } from "@/lib/ir-agent/types";
@@ -366,6 +366,17 @@ export function AgentChat({ config, sourceTag, preview = false }: { config: Agen
 
     const readback = async () => {
       mode = "confirm";
+      if (!visitorIsInvestor(config.agentType)) {
+        // A prospect hears their own answers, never the investor line ("checks of $2M").
+        const mine = prospectSummary(custom);
+        if (!mine) {
+          await reflect();
+          return;
+        }
+        await say([mine, freshOne(AGENT_LINES.confirm)]);
+        confirmOptions();
+        return;
+      }
       if (!hasAnything(profile)) {
         await reflect();
         return;
