@@ -775,6 +775,14 @@ export function AgentChat({ config, sourceTag, preview = false }: { config: Agen
       const s = matchAgent(value, config.taughtAnswers);
       if (s) {
         answered.add(questionKey(value));
+        // "SaaS, I am the founder. How much do you charge?" is answered by a taught line: keep the stated part first.
+        if (mode === "chat" && isQuestion(value)) {
+          const stated = statedPart(value);
+          if (stated) {
+            if (asked && asked.field === "custom" && !(asked.prompt in custom)) custom[asked.prompt] = stated.slice(0, 300);
+            extractFields(profile, stated, asked ? keyOf(asked) : null);
+          }
+        }
         await scripted(s);
         return;
       }
