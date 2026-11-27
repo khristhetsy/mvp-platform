@@ -22,6 +22,8 @@ import {
   type FieldKey,
   type JohnnyAiReply,
 } from "@/lib/johnny/profile";
+import { statedPart } from "@/lib/ir-agent/answer-part";
+import { visitorIsInvestor } from "@/lib/ir-agent/visitor";
 import { AGENT_LINES, fill, matchAgent, type AgentScripted } from "@/lib/ir-agent/scripted";
 import { FIELD_TO_KEY, KEY_TO_FIELD, type ProfileField } from "@/lib/ir-agent/defaults";
 import type { AgentContactField, AgentPublicConfig, AgentQuestion } from "@/lib/ir-agent/types";
@@ -239,6 +241,7 @@ export function AgentChat({ config, sourceTag, preview = false }: { config: Agen
 
     const react = (changed: FieldKey[]): string => {
       if (!changed.length) {
+        if (!visitorIsInvestor(config.agentType)) return freshOne(AGENT_LINES.noFieldsProspect);
         const k = asked ? keyOf(asked) : null;
         return k ? freshOne(AGENT_LINES.hints[k]) : freshOne(AGENT_LINES.noFields);
       }
@@ -267,8 +270,10 @@ export function AgentChat({ config, sourceTag, preview = false }: { config: Agen
     const chipAnswer = async (q: AgentQuestion, option: string) => {
       const key = keyOf(q);
       if (!key) {
+        // A tapped answer to a custom question is kept as given, like a typed one.
         custom[q.prompt] = option;
-        await chat(option, []);
+        extractFields(profile, option, null);
+        await askNext([freshOne(AGENT_LINES.thanks)]);
         return;
       }
       if (option === OTHER && (key === "sect" || key === "stage" || key === "cap")) {
@@ -309,6 +314,12 @@ export function AgentChat({ config, sourceTag, preview = false }: { config: Agen
         }
       }
       if (!tapped && isQuestion(text)) {
+        // "Software. Pre revenue. How much do you charge?" answers and asks: keep the answer, then reply to the question.
+        const stated = statedPart(text);
+        if (stated) {
+          if (asked && asked.field === "custom" && !(asked.prompt in custom)) custom[asked.prompt] = stated.slice(0, 300);
+          extractFields(profile, stated, askedKey);
+        }
         await converse();
         return;
       }
@@ -383,7 +394,12 @@ export function AgentChat({ config, sourceTag, preview = false }: { config: Agen
 
     const reflect = async () => {
       const s = profile.sect.length && profile.sect[0] !== OTHER ? profile.sect[0] : "your range of sectors";
-      await say([`Thank you, that gives me a clear picture. If ${config.companyName} fits an investor in ${s}, that is you.`]);
+      if (visitorIsInvestor(config.agentType)) {
+        await say([`Thank you, that gives me a clear picture. If ${config.companyName} fits an investor in ${s}, that is you.`]);
+      } else {
+        const topic = profile.sect.length && profile.sect[0] !== OTHER ? profile.sect[0] : "";
+        await say([topic ? `Thank you, that gives me a clear picture of ${topic}.` : "Thank you, that gives me a clear picture."]);
+      }
       if (canBook) {
         await offerTimes(`Next step is ${config.slotMinutes} minutes with the founder. We cover the rest there.`);
       } else {
@@ -646,7 +662,9 @@ export function AgentChat({ config, sourceTag, preview = false }: { config: Agen
       const ai = await callAi();
       if (cancelled) return;
       const lines = ai ? ai.lines : [AGENT_LINES.fallback];
-      await say(lines);
+      // In the contact steps the next prompt comes from resume(); a question here would ask for the name twice.
+      const spoken = mode === "contact" ? lines.filter((l) => !/\?\s*$/.test(l)) : lines;
+      if (spoken.length) await say(spoken);
       if (mode === "done") return;
       const open = openQuestions();
       if (mode === "chat" && !other && open.length && /\?\s*$/.test(lines[lines.length - 1])) {

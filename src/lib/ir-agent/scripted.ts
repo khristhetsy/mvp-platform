@@ -104,6 +104,8 @@ export const AGENT_LINES = {
   acks: ["Got it, thank you.", "Understood.", "Right."],
   thanks: ["Thank you.", "Understood.", "That helps.", "Good to know."],
   noFields: ["I want to be sure I follow you. Tell me a little more about how you invest.", "Thank you. Tell me a bit more about how you invest, and I will take it from there."],
+  /** The same moment for a prospect, never "how you invest". */
+  noFieldsProspect: ["I want to be sure I follow you. Tell me a little more about what you need.", "Thank you. Tell me a bit more about what you are looking for, and I will take it from there.", "Got it. Tell me a little more, and I will point you the right way."],
   confirm: ["Did I get that right?", "Is that right?", "Have I got that right?"],
   leads: ["Back to you: ", "Anyway, ", "So, "],
   hints: {
