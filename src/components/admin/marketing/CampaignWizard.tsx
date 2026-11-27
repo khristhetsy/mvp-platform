@@ -11,7 +11,7 @@ import { matchRows, type SearchField } from "@/lib/ui/live-search";
 import { Highlight, NoSearchMatches, SearchCount } from "@/components/ui/SearchStatus";
 import { EmailImageLibrary } from "@/components/marketing/EmailImagePicker";
 import { FOLLOW_UP_CONDITIONS, MAX_FOLLOW_UPS, type FollowUpCondition } from "@/lib/marketing/campaign-follow-ups";
-import { appendMedia, mediaBlockHtml, safeHttpUrl } from "@/lib/marketing/campaign-media";
+import { CTA_LABEL_AGENT, CTA_LABEL_START, ctaButtonHtml, mediaBlockHtml, placeCta, placeMediaAtTop, removeTopAccentLine, safeHttpUrl } from "@/lib/marketing/campaign-media";
 import { WEEKDAY_LETTERS, combineDateTime, formatTime12, monthGrid, nextQuarterHour, shiftMonth, timeOptions } from "@/lib/marketing/campaign-schedule-picker";
 
 const LABELS = ["Name", "Audience", "Message", "Sequence", "Schedule", "Review"];
@@ -25,6 +25,10 @@ const LIST_SEARCH_FIELDS: SearchField<MarketingList>[] = [
   { label: "department", get: (l) => l.department },
 ];
 
+const seg = (on: boolean) => `flex-1 rounded-lg border px-2 py-2 text-center text-sm ${on ? "border-[#1A6CE4] bg-[#EEF4FE] font-semibold text-[#185FA5]" : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"}`;
+
+type AgentLink = { key: string; label: string; url: string };
+type CtaChoice = "start" | "agent" | "custom";
 type FollowUpRow = { key: number; template_id: string; delay_days: number; condition: FollowUpCondition };
 
 /** Today in Pacific time as YYYY-MM-DDTHH:MM, matching how the platform reads schedule input. */
@@ -69,6 +73,12 @@ export function CampaignWizard({ lists: listsProp, templates, defaultSender, sen
   const bodyRef = useRef<HTMLDivElement>(null);
   const [showImages, setShowImages] = useState(false);
   const [videoUrl, setVideoUrl] = useState("");
+  const [mediaKind, setMediaKind] = useState<"image" | "video">("image");
+  const [ctaChoice, setCtaChoice] = useState<CtaChoice>("agent");
+  const [ctaCustom, setCtaCustom] = useState("");
+  const [agentKey, setAgentKey] = useState("");
+  // null until the list of active agents has loaded.
+  const [agentLinks, setAgentLinks] = useState<AgentLink[] | null>(null);
   const [followUps, setFollowUps] = useState<FollowUpRow[]>([]);
   const nextKey = useRef(1);
   const [when, setWhen] = useState<"now" | "later">("now");
@@ -83,13 +93,29 @@ export function CampaignWizard({ lists: listsProp, templates, defaultSender, sen
   const todayPt = ptNow().split("T")[0];
   const scheduleOk = when === "now" || (scheduledLocal !== "" && (platformInputToIso(scheduledLocal) ?? "") > new Date().toISOString());
 
-  // Load the template into the editable body whenever the pick changes.
+  // Active agents for the Link to AI Agent dropdown, each with its email tracked link.
+  useEffect(() => {
+    fetch("/api/admin/social/agent-links?channel=email")
+      .then((r) => (r.ok ? r.json() : { links: [] }))
+      .then((d) => setAgentLinks((d.links ?? []) as AgentLink[]))
+      .catch(() => setAgentLinks([]));
+  }, []);
+
+  /** The button for the current settings, or null when no agent is selected or the label is empty. */
+  function ctaBlock(choice: CtaChoice, custom: string, key: string): string | null {
+    const label = choice === "start" ? CTA_LABEL_START : choice === "agent" ? CTA_LABEL_AGENT : custom;
+    return ctaButtonHtml({ label, url: (agentLinks ?? []).find((a) => a.key === key)?.url });
+  }
+
+  // Load the template into the editable body whenever the pick changes: without the
+  // colored line at its top, and with the button for the current settings.
   useEffect(() => {
     if (!template) return;
+    const html = placeCta(removeTopAccentLine(template.html_body ?? ""), ctaBlock(ctaChoice, ctaCustom, agentKey));
     // eslint-disable-next-line react-hooks/set-state-in-effect -- seed the draft from the newly picked template
     setSubject(template.subject ?? "");
-    setBodyHtml(template.html_body ?? "");
-    if (bodyRef.current) bodyRef.current.innerHTML = template.html_body ?? "";
+    setBodyHtml(html);
+    if (bodyRef.current) bodyRef.current.innerHTML = html;
   }, [template?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Seed the editor once it mounts on the Message step.
@@ -100,7 +126,20 @@ export function CampaignWizard({ lists: listsProp, templates, defaultSender, sen
   function addMedia(imageUrl: string | null, imageAlt: string | null, video: string | null) {
     const block = mediaBlockHtml({ imageUrl, imageAlt, videoUrl: video });
     if (!block) return;
-    const next = appendMedia(bodyRef.current?.innerHTML ?? bodyHtml, block);
+    const next = placeMediaAtTop(bodyRef.current?.innerHTML ?? bodyHtml, block);
+    if (bodyRef.current) bodyRef.current.innerHTML = next;
+    setBodyHtml(next);
+  }
+
+  /** Changes the button settings and redraws the button in the email (or removes it). */
+  function updateCta(patch: { choice?: CtaChoice; custom?: string; key?: string }) {
+    const choice = patch.choice ?? ctaChoice;
+    const custom = patch.custom ?? ctaCustom;
+    const key = patch.key ?? agentKey;
+    setCtaChoice(choice);
+    setCtaCustom(custom);
+    setAgentKey(key);
+    const next = placeCta(bodyRef.current?.innerHTML ?? bodyHtml, ctaBlock(choice, custom, key));
     if (bodyRef.current) bodyRef.current.innerHTML = next;
     setBodyHtml(next);
   }
@@ -259,28 +298,64 @@ export function CampaignWizard({ lists: listsProp, templates, defaultSender, sen
       )}
 
       {step === 2 && (
-        <div className="max-w-3xl">
-          <div className="grid content-start gap-3">
+        <div className="grid items-start gap-5 md:grid-cols-[320px_1fr]">
+          <div className="grid content-start gap-3 rounded-lg border border-slate-200 p-3">
             <div><label className={lbl}>Template</label>
               <select className={field} value={templateId} onChange={(e) => setTemplateId(e.target.value)}>{templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
             <div><label className={lbl}>Subject</label><input className={field} value={subject} onChange={(e) => setSubject(e.target.value)} /></div>
-            <div><label className={lbl}>Body <span className="font-normal normal-case">click to edit</span></label>
-              <div ref={bodyRef} contentEditable suppressContentEditableWarning onInput={(e) => setBodyHtml((e.currentTarget as HTMLDivElement).innerHTML)}
-                className="max-h-[32rem] overflow-auto rounded-lg border border-slate-300 bg-white p-3 text-sm" /></div>
-            <div className="rounded-lg border border-slate-200 p-3">
-              <div className="mb-2 flex items-center justify-between"><span className={lbl + " mb-0"}>Image or video</span>
-                <button type="button" className={btn} onClick={() => setShowImages((v) => !v)}>{showImages ? "Hide library" : "Choose image"}</button></div>
-              {showImages && (
-                <div className="max-h-60 overflow-auto">
-                  <EmailImageLibrary mode="insert" onSelect={(img) => { addMedia(img.public_url, img.alt_text ?? img.name, null); setShowImages(false); }} />
+            <div>
+              <label className={lbl}>Image or video <span className="font-normal normal-case">shown at the top</span></label>
+              <div className="flex gap-2">
+                <button type="button" className={seg(mediaKind === "image")} aria-pressed={mediaKind === "image"} onClick={() => setMediaKind("image")}>Image</button>
+                <button type="button" className={seg(mediaKind === "video")} aria-pressed={mediaKind === "video"} onClick={() => setMediaKind("video")}>Video</button>
+              </div>
+              {mediaKind === "image" ? (
+                <div className="mt-2">
+                  <button type="button" className={btn} onClick={() => setShowImages((v) => !v)}>{showImages ? "Hide library" : "Choose image"}</button>
+                  {showImages && (
+                    <div className="mt-2 max-h-60 overflow-auto">
+                      <EmailImageLibrary mode="insert" onSelect={(img) => { addMedia(img.public_url, img.alt_text ?? img.name, null); setShowImages(false); }} />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="mt-2">
+                  <div className="flex gap-2">
+                    <input className={field} value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="Paste a video link (YouTube, Vimeo, Loom)" />
+                    <button type="button" className={btn + " shrink-0"} disabled={!safeHttpUrl(videoUrl)} onClick={() => { addMedia(null, null, videoUrl); setVideoUrl(""); }}>Add video</button>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-500">Inboxes can&rsquo;t play video, so the link shows as a button that opens it.</p>
                 </div>
               )}
-              <div className="mt-2 flex gap-2">
-                <input className={field} value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="Paste a video link (YouTube, Vimeo, Loom)" />
-                <button type="button" className={btn} disabled={!safeHttpUrl(videoUrl)} onClick={() => { addMedia(null, null, videoUrl); setVideoUrl(""); }}>Add video</button>
-              </div>
-              <p className="mt-1 text-xs text-slate-500">Inboxes can&rsquo;t play video, so the link shows as a button that opens it.</p>
+              <p className="mt-1 text-xs text-slate-500">Placed first in the email, above the text.</p>
             </div>
+            <div>
+              <label className={lbl}>Call to action button</label>
+              <div className="flex gap-2">
+                <button type="button" className={seg(ctaChoice === "start")} aria-pressed={ctaChoice === "start"} onClick={() => updateCta({ choice: "start" })}>{CTA_LABEL_START}</button>
+                <button type="button" className={seg(ctaChoice === "agent")} aria-pressed={ctaChoice === "agent"} onClick={() => updateCta({ choice: "agent" })}>{CTA_LABEL_AGENT}</button>
+                <button type="button" className={seg(ctaChoice === "custom")} aria-pressed={ctaChoice === "custom"} onClick={() => updateCta({ choice: "custom" })}>Custom</button>
+              </div>
+              {ctaChoice === "custom" && <input className={field + " mt-2"} value={ctaCustom} maxLength={40} onChange={(e) => updateCta({ custom: e.target.value })} placeholder="Button text" aria-label="Custom button text" />}
+            </div>
+            <div>
+              <label className={lbl} htmlFor="campaign-cta-agent">Link to AI Agent</label>
+              <select id="campaign-cta-agent" className={field} value={agentKey} disabled={agentLinks === null} onChange={(e) => updateCta({ key: e.target.value })}>
+                <option value="">{agentLinks === null ? "Loading agents" : "Select an AI agent"}</option>
+                {(agentLinks ?? []).map((a) => <option key={a.key} value={a.key}>{a.label}</option>)}
+              </select>
+              <p className="mt-1 text-xs text-slate-500">
+                {agentLinks !== null && agentLinks.length === 0 ? "The agents could not be loaded, so the email has no button."
+                  : !agentKey ? "The button links to the selected agent\u2019s page. Only active agents are listed. With no agent selected the email has no button."
+                  : ctaChoice === "custom" && !ctaCustom.trim() ? "Type the button text to show the button."
+                  : "The button links to the selected agent\u2019s page. Only active agents are listed."}
+              </p>
+            </div>
+          </div>
+          <div className="min-w-0">
+            <label className={lbl}>Email preview <span className="font-normal normal-case">click to edit</span></label>
+            <div ref={bodyRef} contentEditable suppressContentEditableWarning onInput={(e) => setBodyHtml((e.currentTarget as HTMLDivElement).innerHTML)}
+              className="max-h-[36rem] overflow-auto rounded-lg border border-slate-300 bg-white p-3 text-sm" />
           </div>
         </div>
       )}
